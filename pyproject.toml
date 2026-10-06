@@ -1,0 +1,28 @@
+[project]
+name = "dxf-autoparam"
+version = "0.1.0"
+description = "Reverse-engineer an existing 2D DXF into a parametric model (generic, deterministic, reviewable)"
+readme = "README.md"
+authors = [
+    { name = "Lakshya Sharma", email = "lakshya4568@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "ezdxf>=1.4.4",
+]
+
+[project.scripts]
+dxf-autoparam = "dxf_autoparam.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.12.7,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning:ezdxf.*"]

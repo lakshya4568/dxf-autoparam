@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DXF Auto-Parametrize</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --ink: #1f2937; --muted: #6b7280; --line: #e5e7eb;
+    --struct: #111827; --anno: #9ca3af; --ref: #dc2626; --fixed: #d1d5db; --hatch: rgba(99,102,241,.08);
+    --hi: #ea580c; --ok: #15803d; --warn: #b45309; --bad: #b91c1c; --accent: #2563eb; --chip: #eef2ff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1115; --panel: #171a21; --ink: #e5e7eb; --muted: #9ca3af; --line: #2a2f3a;
+      --struct: #e5e7eb; --anno: #6b7280; --ref: #f87171; --fixed: #374151; --hatch: rgba(129,140,248,.12);
+      --hi: #fb923c; --ok: #4ade80; --warn: #fbbf24; --bad: #f87171; --accent: #60a5fa; --chip: #1e2537;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 13px/1.4 system-ui, -apple-system, Segoe UI, sans-serif; background: var(--bg); color: var(--ink); height: 100vh; display: flex; flex-direction: column; }
+  header { display: flex; gap: 10px; align-items: center; padding: 8px 14px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
+  header h1 { font-size: 15px; margin: 0 8px 0 0; }
+  header .file { color: var(--muted); }
+  button, select, .btn { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button:disabled { opacity: .5; cursor: default; }
+  main { flex: 1; display: flex; min-height: 0; }
+  aside { width: 420px; min-width: 320px; border-right: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; min-height: 0; }
+  .tabs { display: flex; border-bottom: 1px solid var(--line); }
+  .tabs button { border: 0; border-radius: 0; flex: 1; padding: 8px 4px; background: transparent; color: var(--muted); border-bottom: 2px solid transparent; }
+  .tabs button.on { color: var(--ink); border-bottom-color: var(--accent); }
+  .pane { overflow: auto; padding: 10px 12px; flex: 1; }
+  .grp { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 12px 0 6px; }
+  .row { display: grid; grid-template-columns: 1fr 110px 26px; gap: 6px; align-items: center; padding: 5px 6px; border-radius: 6px; }
+  .row:hover, .row.hl { background: var(--chip); }
+  .row .nm { min-width: 0; }
+  .row .nm b { font-weight: 600; }
+  .row .nm .sub { color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row input { width: 100%; font: inherit; padding: 3px 6px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--ink); text-align: right; }
+  .row input.changed { border-color: var(--hi); }
+  .row .x { border: 0; background: transparent; color: var(--muted); padding: 0; }
+  .chip { display: inline-block; font-size: 10px; padding: 0 6px; border-radius: 9px; margin-left: 4px; background: var(--chip); color: var(--muted); vertical-align: 1px; }
+  .chip.confirmed { color: var(--ok); } .chip.probable { color: var(--accent); } .chip.candidate { color: var(--warn); }
+  .ev { margin: 2px 6px 8px 6px; padding: 6px 8px; border-left: 2px solid var(--line); color: var(--muted); font-size: 12px; }
+  .ev div { margin: 1px 0; }
+  .rel { padding: 4px 6px; border-bottom: 1px dashed var(--line); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  .rel .v { color: var(--muted); }
+  .note { color: var(--muted); font-size: 12px; margin: 4px 0; }
+  .canvas { flex: 1; position: relative; min-width: 0; }
+  svg { width: 100%; height: 100%; display: block; background: var(--bg); cursor: grab; }
+  svg.panning { cursor: grabbing; }
+  .toolbar { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; }
+  .banner { position: absolute; left: 10px; right: 10px; bottom: 10px; padding: 8px 12px; border-radius: 6px; background: var(--panel); border: 1px solid var(--bad); color: var(--bad); display: none; }
+  .hint { position: absolute; left: 10px; top: 10px; color: var(--muted); font-size: 12px; background: var(--panel); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--line); }
+  .stat { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; }
+  .stat .k { color: var(--muted); }
+  .ok { color: var(--ok); } .bad { color: var(--bad); }
+  .empty { padding: 30px; color: var(--muted); }
+  @media (max-width: 760px) { main { flex-direction: column; } aside { width: 100%; height: 50%; border-right: 0; border-bottom: 1px solid var(--line); } }
+</style>
+</head>
+<body>
+<header>
+  <h1>DXF → Parametric</h1>
+  <span class="file" id="file">no drawing</span>
+  <label class="btn">Open DXF<input type="file" id="open" accept=".dxf" hidden /></label>
+  <select id="domain" title="Optional semantic layer: names values and pins site levels; never changes geometry">
+    <option value="">Generic engine only</option>
+    <option value="bridge">+ bridge vocabulary pack</option>
+  </select>
+  <select id="views" title="A sheet is split into views; parametrize one at a time"></select>
+  <span style="flex:1"></span>
+  <button id="reset">Reset values</button>
+  <button id="json">Model JSON</button>
+  <button id="export" class="primary">Export DXF</button>
+</header>
+<main>
+  <aside>
+    <div class="tabs">
+      <button data-tab="params" class="on">Parameters</button>
+      <button data-tab="review">Review</button>
+      <button data-tab="rels">Relationships</button>
+      <button data-tab="valid">Validation</button>
+    </div>
+    <div class="pane" id="pane"></div>
+  </aside>
+  <section class="canvas">
+    <svg id="svg"><g id="world"></g><rect id="sel" fill="rgba(37,99,235,.08)" stroke="#2563eb" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" display="none"/></svg>
+    <div class="hint">drag: pan · wheel: zoom · shift+drag: pick a region to parametrize</div>
+    <div class="toolbar"><button id="fit">Fit</button><button id="useSel" style="display:none" class="primary">Parametrize selection</button><button id="whole">Whole sheet</button></div>
+    <div class="banner" id="banner"></div>
+  </section>
+</main>
+<script>
+const $ = (s) => document.querySelector(s);
+const NS = "http://www.w3.org/2000/svg";
+let S = null;          // server state
+let values = {};       // current values
+let tab = "params";
+let open = new Set();  // expanded evidence rows
+let decisions = { accept: [], reject: [], rename: {}, anchor: {} };
+let view = { x: 0, y: 0, w: 1, h: 1 };
+let sel = null;
+
+async function api(path, body) {
+  const r = await fetch(path, body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const j = await r.json();
+  if (j && j.ok === false && j.error) throw new Error(j.error);
+  return j;
+}
+
+async function load() {
+  S = await api("/api/state");
+  if (S.empty) { $("#pane").innerHTML = '<div class="empty">Open a DXF to begin.</div>'; return; }
+  values = { ...S.values };
+  $("#file").textContent = `${S.file}${S.region ? " · region" : ""}`;
+  $("#domain").value = S.domain || "";
+  const vs = $("#views");
+  vs.innerHTML = '<option value="">Views: whole sheet</option>' + S.views.slice(0, 20).map((v) => `<option value="${v.id}">View ${v.id + 1} · ${v.entities} entities</option>`).join("");
+  draw(S.geometry);
+  if (!load.fitted) { fit(); load.fitted = true; }
+  render();
+}
+
+// ── canvas ──────────────────────────────────────────────────────────────────
+let dimSize = 100;
+function draw(geom, highlight = new Set()) {
+  const g = $("#world");
+  { const [x0, y0, x1, y1] = bounds(geom); dimSize = Math.max(x1 - x0, y1 - y0) * 0.012 || 100; }
+  g.innerHTML = "";
+  const frag = document.createDocumentFragment();
+  for (const e of geom) {
+    const hl = highlight.has(e.i);
+    const col = hl ? "var(--hi)" : e.role === "structural" ? "var(--struct)" : e.role === "reference" ? "var(--ref)" : e.role === "fixed" ? "var(--fixed)" : "var(--anno)";
+    const w = hl ? 2.5 : e.role === "structural" ? 1.2 : 0.8;
+    const stroke = (el) => { el.setAttribute("stroke", col); el.setAttribute("stroke-width", w); el.setAttribute("fill", "none"); el.setAttribute("vector-effect", "non-scaling-stroke"); if (e.role === "reference") el.setAttribute("stroke-dasharray", "12 4 2 4"); return el; };
+    if (e.pts && e.t !== "HATCH") {
+      const el = document.createElementNS(NS, e.closed ? "polygon" : "polyline");
+      el.setAttribute("points", e.pts.map((p) => `${p[0]},${p[1]}`).join(" "));
+      frag.appendChild(stroke(el));
+    } else if (e.t === "HATCH") {
+      for (const poly of e.polys || []) {
+        const el = document.createElementNS(NS, "polygon");
+        el.setAttribute("points", poly.map((p) => `${p[0]},${p[1]}`).join(" "));
+        el.setAttribute("fill", hl ? "rgba(234,88,12,.15)" : "var(--hatch)"); el.setAttribute("stroke", "none");
+        frag.appendChild(el);
+      }
+    } else if (e.t === "CIRCLE") {
+      const el = document.createElementNS(NS, "circle");
+      el.setAttribute("cx", e.c[0]); el.setAttribute("cy", e.c[1]); el.setAttribute("r", e.r);
+      frag.appendChild(stroke(el));
+    } else if (e.t === "ARC") {
+      const a0 = e.a0 * Math.PI / 180, a1 = e.a1 * Math.PI / 180;
+      let sweep = a1 - a0; if (sweep < 0) sweep += 2 * Math.PI;
+      const p0 = [e.c[0] + e.r * Math.cos(a0), e.c[1] + e.r * Math.sin(a0)], p1 = [e.c[0] + e.r * Math.cos(a1), e.c[1] + e.r * Math.sin(a1)];
+      const el = document.createElementNS(NS, "path");
+      el.setAttribute("d", `M${p0[0]},${p0[1]} A${e.r},${e.r} 0 ${sweep > Math.PI ? 1 : 0} 1 ${p1[0]},${p1[1]}`);
+      frag.appendChild(stroke(el));
+    } else if (e.text !== undefined && e.at) {
+      const t = document.createElementNS(NS, "text");
+      t.setAttribute("transform", `translate(${e.at[0]},${e.at[1]}) scale(1,-1)`);
+      t.setAttribute("font-size", e.h); t.setAttribute("fill", hl ? "var(--hi)" : "var(--muted)");
+      t.textContent = e.text;
+      frag.appendChild(t);
+    } else if (e.dim) {
+      const d = e.dim;
+      for (const [p, q] of [[d.p1, d.a], [d.p2, d.b], [d.a, d.b]]) {
+        const l = document.createElementNS(NS, "line");
+        l.setAttribute("x1", p[0]); l.setAttribute("y1", p[1]); l.setAttribute("x2", q[0]); l.setAttribute("y2", q[1]);
+        stroke(l); l.setAttribute("stroke", hl ? "var(--hi)" : "var(--anno)"); l.setAttribute("stroke-width", 0.7);
+        frag.appendChild(l);
+      }
+      const t = document.createElementNS(NS, "text");
+      const m = [(d.a[0] + d.b[0]) / 2, (d.a[1] + d.b[1]) / 2];
+      const len = Math.hypot(d.b[0] - d.a[0], d.b[1] - d.a[1]);
+      t.setAttribute("transform", `translate(${m[0]},${m[1]}) scale(1,-1)`);
+      t.setAttribute("font-size", Math.min(dimSize, Math.max(len * 0.25, dimSize * 0.5))); t.setAttribute("text-anchor", "middle"); t.setAttribute("dy", "-0.3em");
+      t.setAttribute("fill", hl ? "var(--hi)" : "var(--muted)"); t.textContent = d.text;
+      frag.appendChild(t);
+    }
+  }
+  g.appendChild(frag);
+  g.setAttribute("transform", "scale(1,-1)");
+  setViewBox();
+}
+
+function bounds(geom) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  const add = (p) => { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); };
+  for (const e of geom) { if (e.role === "fixed") continue; if (e.pts) e.pts.forEach(add); if (e.c) { add([e.c[0] - e.r, e.c[1] - e.r]); add([e.c[0] + e.r, e.c[1] + e.r]); } }
+  return [x0, y0, x1, y1];
+}
+function fit() {
+  if (!S) return;
+  const [x0, y0, x1, y1] = S.region || bounds(lastGeom());
+  const pad = 0.06 * Math.max(x1 - x0, y1 - y0);
+  view = { x: x0 - pad, y: -(y1 + pad), w: x1 - x0 + 2 * pad, h: y1 - y0 + 2 * pad };
+  setViewBox();
+}
+function setViewBox() { $("#svg").setAttribute("viewBox", `${view.x} ${view.y} ${view.w} ${view.h}`); $("#svg").setAttribute("preserveAspectRatio", "xMidYMid meet"); }
+function toWorld(ev) {
+  const svg = $("#svg"); const pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
+  const p = pt.matrixTransform(svg.getScreenCTM().inverse()); return [p.x, -p.y];
+}
+(() => {
+  const svg = $("#svg"); let drag = null;
+  svg.addEventListener("wheel", (ev) => {
+    ev.preventDefault(); const [wx, wy] = toWorld(ev); const k = ev.deltaY > 0 ? 1.15 : 1 / 1.15;
+    view = { x: wx - (wx - view.x) * k, y: -wy - (-wy - view.y) * k, w: view.w * k, h: view.h * k }; setViewBox();
+  }, { passive: false });
+  svg.addEventListener("pointerdown", (ev) => {
+    svg.setPointerCapture(ev.pointerId);
+    drag = { shift: ev.shiftKey, start: toWorld(ev), sx: ev.clientX, sy: ev.clientY, v: { ...view } };
+    svg.classList.add("panning");
+  });
+  svg.addEventListener("pointermove", (ev) => {
+    if (!drag) return;
+    if (drag.shift) {
+      const [x, y] = toWorld(ev); const [a, b] = drag.start;
+      sel = [Math.min(a, x), Math.min(b, y), Math.max(a, x), Math.max(b, y)];
+      const r = $("#sel"); r.setAttribute("display", "inline");
+      r.setAttribute("x", sel[0]); r.setAttribute("y", -sel[3]); r.setAttribute("width", sel[2] - sel[0]); r.setAttribute("height", sel[3] - sel[1]);
+    } else {
+      const rect = svg.getBoundingClientRect(); const s = Math.max(view.w / rect.width, view.h / rect.height);
+      view = { ...drag.v, x: drag.v.x - (ev.clientX - drag.sx) * s, y: drag.v.y - (ev.clientY - drag.sy) * s }; setViewBox();
+    }
+  });
+  svg.addEventListener("pointerup", () => { drag = null; svg.classList.remove("panning"); $("#useSel").style.display = sel ? "" : "none"; });
+})();
+
+// ── panels ──────────────────────────────────────────────────────────────────
+function fmt(v, unit) { return unit === "m" ? Number(v).toFixed(3) : Math.round(Number(v) * 10) / 10; }
+function render() {
+  const P = $("#pane");
+  if (!S) return;
+  if (tab === "params") {
+    const levels = S.parameters.filter((p) => p.kind === "level" || p.kind === "position");
+    const sizes = S.parameters.filter((p) => !(p.kind === "level" || p.kind === "position"));
+    const row = (p) => {
+      const u = S.units_mm, isLvl = p.kind === "level" || p.kind === "position";
+      const val = isLvl ? values[p.name] : values[p.name] * u;
+      const changed = Math.abs(values[p.name] - p.value) > 1e-9;
+      const ev = open.has(p.name) ? `<div class="ev">${p.label}${p.suggested ? ` · the drawing says “${p.suggested}”` : ""}<br>${p.evidence.map((e) => `<div>${e.weight >= 0 ? "+" : ""}${e.weight.toFixed(2)} ${e.kind}: ${e.detail}</div>`).join("")}<div>moves ${p.affects} entities · ${p.occurrences} occurrence(s)</div></div>` : "";
+      return `<div class="row" data-p="${p.name}"><div class="nm"><b>${p.name}</b><span class="chip ${p.status}">${p.status} ${Math.round(p.confidence * 100)}%</span><div class="sub">${p.label} · ×${p.occurrences} · moves ${p.affects}</div></div>
+        <input type="number" step="${isLvl ? 0.001 : 10}" value="${fmt(val, isLvl ? "m" : "mm")}" data-in="${p.name}" class="${changed ? "changed" : ""}" title="${isLvl ? "m" : "mm"}"/>
+        <button class="x" data-rej="${p.name}" title="Not a parameter — keep as a fixed size">✕</button></div>${ev}`;
+    };
+    P.innerHTML = (levels.length ? `<div class="grp">Levels held as inputs (m)</div>${levels.map(row).join("")}` : "") +
+      `<div class="grp">Sizes found in the geometry (mm) — most influential first</div>${sizes.map(row).join("") || '<div class="note">none</div>'}` +
+      `<div class="note">Click a name for its evidence. ✕ keeps a size fixed. Values are mm (levels in m).</div>`;
+    P.querySelectorAll("[data-in]").forEach((el) => el.addEventListener("change", () => setValue(el.dataset.in, el.value)));
+    P.querySelectorAll("[data-rej]").forEach((el) => el.addEventListener("click", () => { decisions.reject.push(el.dataset.rej); rebuild(); }));
+    P.querySelectorAll(".row").forEach((el) => {
+      const p = S.parameters.find((q) => q.name === el.dataset.p);
+      el.addEventListener("mouseenter", () => draw(lastGeom(), new Set(p.influence)));
+      el.addEventListener("mouseleave", () => draw(lastGeom()));
+      el.querySelector(".nm").addEventListener("click", () => { open.has(p.name) ? open.delete(p.name) : open.add(p.name); render(); });
+      el.querySelector(".nm").addEventListener("dblclick", () => { const n = prompt(`Rename ${p.name}`, p.suggested || p.name); if (n && /^[A-Za-z_]\w*$/.test(n)) { decisions.rename[p.name] = n; rebuild(); } });
+    });
+  } else if (tab === "review") {
+    P.innerHTML = `<div class="grp">Set-out anchor (which line stays put)</div>
+      ${["x", "y"].map((a) => `<div class="row"><div class="nm">${a === "x" ? "Horizontal" : "Vertical"}</div><select data-anchor="${a}"><option value="">automatic</option><option value="min">${a === "x" ? "left" : "bottom"}</option><option value="max">${a === "x" ? "right" : "top"}</option><option value="axis">centre line</option></select><span></span></div>`).join("")}
+      <div class="grp">Other candidate values (not used as parameters)</div>
+      ${S.candidates.map((c) => `<div class="row"><div class="nm"><b>${c.name}</b><span class="chip ${c.status}">${c.status} ${Math.round(c.confidence * 100)}%</span><div class="sub">${c.label} · ${fmt(c.value_mm)} mm · ×${c.occurrences}</div></div><span class="note">${c.accepted ? "closes a loop" : "fixed"}</span><button class="x" data-acc="${c.name}" title="Make it a parameter">＋</button></div>`).join("") || '<div class="note">none</div>'}
+      <div class="note">Your decisions so far: ${JSON.stringify(decisions)}</div>`;
+    P.querySelectorAll("[data-acc]").forEach((el) => el.addEventListener("click", () => { decisions.accept.push(el.dataset.acc); rebuild(); }));
+    P.querySelectorAll("[data-anchor]").forEach((el) => { el.value = decisions.anchor[el.dataset.anchor] || ""; el.addEventListener("change", () => { if (el.value) decisions.anchor[el.dataset.anchor] = el.value; else delete decisions.anchor[el.dataset.anchor]; rebuild(); }); });
+  } else if (tab === "rels") {
+    P.innerHTML = `<div class="grp">Discovered relationships (worked out, not typed)</div>
+      ${(lastResults() || []).map((r) => `<div class="rel">${r.dimensioned ? "📏 " : ""}${r.label} <span class="v">= ${fmt(r.value)}</span><br>= ${r.expr}</div>`).join("") || '<div class="note">none</div>'}
+      <div class="grp">Geometric constraints</div>${S.constraints.map((c) => `<div class="note">• <b>${c.kind}</b> — ${c.detail} <i>(kept by ${c.kept_by})</i></div>`).join("")}
+      <div class="grp">Notes</div>${S.notes.map((n) => `<div class="note">${n}</div>`).join("")}`;
+  } else {
+    const v = S.validation;
+    P.innerHTML = `<div class="grp">Validation</div><div class="stat">
+      <span class="k">Identity (regenerated at defaults vs original)</span><span class="${v.identity_max_error < 1e-6 ? "ok" : "bad"}">${v.identity_max_error.toExponential(1)}</span>
+      <span class="k">Parameters regenerating validly at ±10%</span><span class="${v.regenerate_ok === v.parameters ? "ok" : "bad"}">${v.regenerate_ok}/${v.parameters}</span>
+      <span class="k">Entities / structural</span><span>${v.entities} / ${v.structural_entities}</span>
+      <span class="k">Not positioned (kept as drawn)</span><span>${JSON.stringify(S.unsupported)}</span></div>
+      ${v.failing.length ? `<div class="grp">Values that break the drawing when changed</div>${v.failing.map((f) => `<div class="note bad">${f.name}: ${f.issues[0] || ""}</div>`).join("")}` : ""}
+      <div class="grp">DXF</div><button id="aud">Write + re-open the DXF strictly</button><div id="audr" class="note"></div>`;
+    $("#aud").onclick = async () => { $("#audr").textContent = "checking…"; const r = await api("/api/audit", {}); $("#audr").textContent = JSON.stringify(r); };
+  }
+}
+let _geom = null, _results = null;
+const lastGeom = () => _geom || S.geometry;
+const lastResults = () => _results || S.results;
+
+async function setValue(name, raw) {
+  const p = S.parameters.find((q) => q.name === name);
+  const isLvl = p.kind === "level" || p.kind === "position";
+  const v = isLvl ? Number(raw) : Number(raw) / S.units_mm;
+  const r = await api("/api/regen", { values: { [name]: v } });
+  if (!r.ok) {
+    $("#banner").style.display = "block";
+    $("#banner").textContent = `Refused — ${name} = ${raw} would break the drawing: ${r.issues.slice(0, 3).join("; ")}`;
+    setTimeout(() => ($("#banner").style.display = "none"), 6000);
+    render(); return;
+  }
+  values = r.values; _geom = r.geometry; _results = r.results;
+  draw(_geom); render();
+}
+async function rebuild(body = {}) {
+  $("#pane").innerHTML = '<div class="empty">Analysing…</div>';
+  await api("/api/analyse", { ...body, decisions });
+  _geom = null; _results = null; await load();
+}
+
+document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => { tab = b.dataset.tab; document.querySelectorAll(".tabs button").forEach((x) => x.classList.toggle("on", x === b)); render(); }));
+$("#fit").onclick = fit;
+$("#useSel").onclick = async () => { const r = sel; sel = null; $("#sel").setAttribute("display", "none"); $("#useSel").style.display = "none"; await rebuild({ region: r }); fit(); };
+$("#whole").onclick = async () => { await rebuild({ region: null }); fit(); };
+$("#views").onchange = async (ev) => { const v = ev.target.value; await rebuild(v === "" ? { region: null } : { view: Number(v) }); fit(); };
+$("#domain").onchange = (ev) => rebuild({ domain: ev.target.value });
+$("#reset").onclick = async () => { const r = await api("/api/regen", { values: Object.fromEntries(S.parameters.map((p) => [p.name, p.value])) }); values = r.values; _geom = r.geometry; _results = r.results; draw(_geom); render(); };
+$("#export").onclick = () => { location.href = "/api/export.dxf?values=" + encodeURIComponent(JSON.stringify(values)); };
+$("#json").onclick = () => { location.href = "/api/model.json"; };
+$("#open").onchange = async (ev) => {
+  const f = ev.target.files[0]; if (!f) return;
+  $("#pane").innerHTML = '<div class="empty">Analysing…</div>';
+  await fetch("/api/upload?name=" + encodeURIComponent(f.name), { method: "POST", body: await f.arrayBuffer() });
+  decisions = { accept: [], reject: [], rename: {}, anchor: {} }; load.fitted = false; _geom = null; _results = null; await load();
+};
+load();
+</script>
+</body>
+</html>

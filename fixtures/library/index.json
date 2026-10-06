@@ -1,0 +1,189 @@
+[
+  {
+    "id": "ir.rcc_box.half_section",
+    "name": "RCC box — half section & half elevation",
+    "file": "ir_rcc_box_half_section.json",
+    "lengthParams": 26,
+    "otherParams": [
+      "Status:choice",
+      "CellCount:count",
+      "BedLevel:level",
+      "HFL:level",
+      "FormationLevel:level",
+      "RailLevel:level",
+      "EmbankmentSlope:ratio",
+      "ReturnSlope:ratio",
+      "ShowCoping:choice",
+      "ShowWeepHoles:choice",
+      "ShowSteps:choice",
+      "ShowParapetGap:choice"
+    ]
+  },
+  {
+    "id": "ir.level_set",
+    "name": "Level set — HFL, bed, formation, rail",
+    "file": "ir_level_set.json",
+    "lengthParams": 2,
+    "otherParams": [
+      "HFL:level",
+      "LWL:level",
+      "BedLevel:level",
+      "FormationLevel:level",
+      "RailLevel:level",
+      "DangerLevel:level",
+      "ShowHFL:choice",
+      "ShowLWL:choice",
+      "ShowBed:choice",
+      "ShowFormation:choice",
+      "ShowRail:choice",
+      "ShowDanger:choice"
+    ]
+  },
+  {
+    "id": "ir.box_culvert.gad",
+    "name": "Box culvert GAD — section at levels",
+    "file": "ir_box_culvert_gad.json",
+    "lengthParams": 10,
+    "otherParams": [
+      "CellCount:count",
+      "InvertLevel:level",
+      "BedLevel:level",
+      "HFL:level",
+      "FormationLevel:level",
+      "RailLevel:level",
+      "EmbankmentSlope:ratio"
+    ]
+  },
+  {
+    "id": "ir.bridge.plan",
+    "name": "Bridge — plan",
+    "file": "ir_bridge_plan.json",
+    "lengthParams": 15,
+    "otherParams": [
+      "SpanCount:count",
+      "WingSplay:angle"
+    ]
+  },
+  {
+    "id": "ir.bridge.gad",
+    "name": "Railway bridge GAD — elevation, plan, section",
+    "file": "ir_bridge_gad.json",
+    "lengthParams": 41,
+    "otherParams": [
+      "SpanCount:count",
+      "RailLevel:level",
+      "FormationLevel:level",
+      "HFL:level",
+      "LWL:level",
+      "BedLevel:level",
+      "FoundationLevel:level",
+      "DeckType:choice",
+      "GirderCount:count",
+      "PierBatter:ratio",
+      "AbutBatter:ratio",
+      "WingSlope:ratio",
+      "WingSplay:angle"
+    ]
+  },
+  {
+    "id": "generic.railing_post",
+    "name": "Railing post",
+    "file": "generic_railing_post.json",
+    "lengthParams": 2,
+    "otherParams": []
+  },
+  {
+    "id": "generic.railing_run",
+    "name": "Railing run",
+    "file": "generic_railing_run.json",
+    "lengthParams": 3,
+    "otherParams": []
+  },
+  {
+    "id": "ir.box_culvert.section",
+    "name": "RCC box culvert — section",
+    "file": "ir_box_culvert_section.json",
+    "lengthParams": 9,
+    "otherParams": [
+      "CellCount:count"
+    ]
+  },
+  {
+    "id": "ir.pipe_culvert.section",
+    "name": "Pipe culvert — section",
+    "file": "ir_pipe_culvert_section.json",
+    "lengthParams": 6,
+    "otherParams": [
+      "PipeCount:count"
+    ]
+  },
+  {
+    "id": "ir.pier.elevation",
+    "name": "Pier — elevation",
+    "file": "ir_pier_elevation.json",
+    "lengthParams": 11,
+    "otherParams": [
+      "Batter:ratio"
+    ]
+  },
+  {
+    "id": "ir.abutment.elevation",
+    "name": "Abutment — elevation",
+    "file": "ir_abutment_elevation.json",
+    "lengthParams": 16,
+    "otherParams": [
+      "StemBatter:ratio",
+      "WingSlope:ratio"
+    ]
+  },
+  {
+    "id": "ir.span.elevation",
+    "name": "Superstructure span — elevation",
+    "file": "ir_span_elevation.json",
+    "lengthParams": 5,
+    "otherParams": []
+  },
+  {
+    "id": "ir.deck_slab.section",
+    "name": "Ballasted deck slab — section",
+    "file": "ir_deck_slab_section.json",
+    "lengthParams": 10,
+    "otherParams": []
+  },
+  {
+    "id": "ir.girder_deck.section",
+    "name": "Girder deck — section",
+    "file": "ir_girder_deck_section.json",
+    "lengthParams": 9,
+    "otherParams": [
+      "GirderCount:count"
+    ]
+  },
+  {
+    "id": "ir.pile_group.plan",
+    "name": "Pile group — plan",
+    "file": "ir_pile_group_plan.json",
+    "lengthParams": 4,
+    "otherParams": [
+      "Rows:count",
+      "Columns:count",
+      "PileType:choice"
+    ]
+  },
+  {
+    "id": "ir.well_foundation.section",
+    "name": "Well foundation — section",
+    "file": "ir_well_foundation_section.json",
+    "lengthParams": 9,
+    "otherParams": [
+      "SandHearting:choice"
+    ]
+  },
+  {
+    "id": "ir.retaining_wall.section",
+    "name": "Retaining / wing wall — section",
+    "file": "ir_retaining_wall_section.json",
+    "lengthParams": 7,
+    "otherParams": []
+  }
+]
