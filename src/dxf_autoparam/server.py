@@ -190,8 +190,12 @@ def make_handler(session: Session):
             self.send_header("Content-Length", str(len(body)))
             for k, v in (extra or {}).items():
                 self.send_header(k, v)
-            self.end_headers()
-            self.wfile.write(body)
+            try:
+                self.end_headers()
+                self.wfile.write(body)
+            except (BrokenPipeError, ConnectionResetError):
+                # The page reloaded or moved on before the answer arrived; nothing to send it to.
+                pass
 
         def _json(self, obj, code: int = 200) -> None:
             self._send(code, json.dumps(obj, default=str).encode(), "application/json")
