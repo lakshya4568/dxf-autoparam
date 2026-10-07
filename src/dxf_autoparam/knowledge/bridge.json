@@ -1,0 +1,1818 @@
+{
+ "source": "aagento-bridge/knowledge (concepts, families, formulas) \u2014 compiled by tools/export_knowledge.py",
+ "naming": "Parameter names are PascalCase forms of concept ids (clear_span \u2192 ClearSpan); levels end in Level and are metres.",
+ "concepts": [
+  {
+   "name": "RailLevel",
+   "id": "rail_level",
+   "kind": "level",
+   "unit": "m",
+   "label": "Rail level",
+   "aliases": [
+    "RAIL LEVEL",
+    "RL OF RAIL",
+    "R.L. OF RAIL",
+    "RAIL"
+   ],
+   "definition": "Level of the top of the rail."
+  },
+  {
+   "name": "FormationLevel",
+   "id": "formation_level",
+   "kind": "level",
+   "unit": "m",
+   "label": "Formation level",
+   "aliases": [
+    "FORMATION LEVEL",
+    "FORMATION",
+    "F.L.",
+    "F L",
+    "FRL",
+    "FORMATION RL"
+   ],
+   "definition": "Top of the railway embankment on which the ballast rests; free board is measured to it (IRBM 313)."
+  },
+  {
+   "name": "TopSlabLevel",
+   "id": "top_slab_level",
+   "kind": "level",
+   "unit": "m",
+   "label": "Top of the structure (top slab / deck / pipe outside crown)",
+   "aliases": [
+    "TOP OF SLAB",
+    "TOP OF TOP SLAB",
+    "T.O.S.",
+    "TOS",
+    "SLAB TOP",
+    "TOP OF DECK"
+   ],
+   "definition": "Top face of the top slab of a box, of a deck, or the outside crown of a pipe."
+  },
+  {
+   "name": "SoffitLevel",
+   "id": "soffit_level",
+   "kind": "level",
+   "unit": "m",
+   "label": "Soffit level",
+   "aliases": [
+    "SOFFIT",
+    "SOFFIT LEVEL",
+    "B.O.S.",
+    "BOS",
+    "BOTTOM OF TOP SLAB",
+    "UNDERSIDE OF TOP SLAB"
+   ],
+   "definition": "Underside of the top slab / deck (the inside crown of a pipe). Vertical clearance is measured to it (IRBM 312)."
+  },
+  {
+   "name": "SeatLevel",
+   "id": "seat_level",
+   "kind": "level",
+   "unit": "m",
+   "label": "Bearing / seat level",
+   "aliases": [
+    "BEARING LEVEL",
+    "SEAT LEVEL",
+    "TOP OF BED BLOCK",
+    "TOP OF PIER",
+    "TOP OF ABUTMENT",
+    "ABUTMENT CAP"
+   ],
+   "definition": "Top of the abutment, pier or bed block on which the superstructure bears."
+  },
+  {
+   "name": "FloorLevel",
+   "id": "floor_level",
+   "kind": "level",
+   "unit": "m",
+   "label": "Floor (top of bottom slab) / pipe invert",
+   "aliases": [
+    "TOP OF BOTTOM SLAB",
+    "FLOOR",
+    "FLOOR LEVEL",
+    "INVERT",
+    "INVERT LEVEL"
+   ],
+   "definition": "Top face of a box's bottom slab (under any wearing course), or a pipe's inside invert."
+  },
+  {
+   "name": "SlabBottomLevel",
+   "id": "slab_bottom_level",
+   "kind": "level",
+   "unit": "m",
+   "label": "Underside of the bottom slab",
+   "aliases": [
+    "BOTTOM OF BOTTOM SLAB",
+    "UNDERSIDE OF BOTTOM SLAB",
+    "BOTTOM OF BASE SLAB",
+    "UNDERSIDE OF BASE SLAB"
+   ],
+   "definition": "Underside of a box's bottom slab (a pipe's outside invert)."
+  },
+  {
+   "name": "Hfl",
+   "id": "hfl",
+   "kind": "level",
+   "unit": "m",
+   "label": "High flood level (HFL)",
+   "aliases": [
+    "HFL",
+    "H.F.L.",
+    "HIGH FLOOD LEVEL",
+    "HIGHEST FLOOD LEVEL"
+   ],
+   "definition": "Highest water level known to have occurred at the site \u2014 a survey fact."
+  },
+  {
+   "name": "DesignWaterLevel",
+   "id": "design_water_level",
+   "kind": "level",
+   "unit": "m",
+   "label": "Water level of the design discharge (Q), including afflux",
+   "aliases": [
+    "DESIGN FLOOD LEVEL",
+    "DFL",
+    "D.F.L.",
+    "DESIGN WATER LEVEL",
+    "DESIGN HFL",
+    "WATER LEVEL OF DESIGN DISCHARGE"
+   ],
+   "definition": "The level vertical clearance (IRBM 312) and free board (IRBM 313) are measured from. Not the same as the HFL unless the project says so (KC-6)."
+  },
+  {
+   "name": "Lwl",
+   "id": "lwl",
+   "kind": "level",
+   "unit": "m",
+   "label": "Low water level (LWL)",
+   "aliases": [
+    "LWL",
+    "L.W.L.",
+    "LOW WATER LEVEL"
+   ],
+   "definition": "Ordinary low / dry-weather water level."
+  },
+  {
+   "name": "FoundationBottom",
+   "id": "foundation_bottom",
+   "kind": "level",
+   "unit": "m",
+   "label": "Bottom of foundation (B.O.F.)",
+   "aliases": [
+    "B.O.F.",
+    "BOF",
+    "BOTTOM OF FOUNDATION",
+    "FOUNDATION LEVEL",
+    "FOUNDING LEVEL",
+    "BOTTOM OF FOOTING"
+   ],
+   "definition": "Underside of the foundation / footing \u2014 the founding level."
+  },
+  {
+   "name": "FootingTopLevel",
+   "id": "footing_top_level",
+   "kind": "level",
+   "unit": "m",
+   "label": "Top of footing",
+   "aliases": [
+    "TOP OF FOOTING",
+    "FOOTING TOP",
+    "TOP OF FOUNDATION",
+    "TOP OF WING FOOTING"
+   ],
+   "definition": "Top face of a wing, abutment or pier footing."
+  },
+  {
+   "name": "WingTopLevel",
+   "id": "wing_top_level",
+   "kind": "level",
+   "unit": "m",
+   "label": "Top of the wing / return wall (its coping)",
+   "aliases": [
+    "TOP OF WING WALL",
+    "WING TOP",
+    "WING WALL TOP",
+    "TOP OF RETURN WALL",
+    "RETURN WALL TOP",
+    "COPING LEVEL"
+   ],
+   "definition": "The level top of a wing or return wall \u2014 the top of its coping where it has one."
+  },
+  {
+   "name": "BedLevel",
+   "id": "bed_level",
+   "kind": "level",
+   "unit": "m",
+   "label": "Bed level",
+   "aliases": [
+    "BED LEVEL",
+    "BED",
+    "B.L.",
+    "BL",
+    "BED.L",
+    "BED L"
+   ],
+   "definition": "Level of the stream bed at the bridge; in a box on the railway convention, the top of the wearing course in the cells."
+  },
+  {
+   "name": "GroundLevel",
+   "id": "ground_level",
+   "kind": "level",
+   "unit": "m",
+   "label": "Ground level (natural / existing)",
+   "aliases": [
+    "GROUND LEVEL",
+    "GL",
+    "G.L.",
+    "NGL",
+    "N.G.L.",
+    "EGL"
+   ],
+   "definition": "Natural or existing ground level at the site, before fill or excavation."
+  },
+  {
+   "name": "FinishedGroundLevel",
+   "id": "finished_ground_level",
+   "kind": "level",
+   "unit": "m",
+   "label": "Finished ground level (FGL)",
+   "aliases": [
+    "FGL",
+    "F.G.L.",
+    "FINISHED GROUND LEVEL"
+   ],
+   "definition": "Ground level after the works (fill, paving). Not the natural ground level."
+  },
+  {
+   "name": "ScourLevel",
+   "id": "scour_level",
+   "kind": "level",
+   "unit": "m",
+   "label": "Lowest anticipated scoured bed level",
+   "aliases": [
+    "SCOUR LEVEL",
+    "MAXIMUM SCOUR LEVEL",
+    "MAX SCOUR LEVEL",
+    "LOWEST SCOUR LEVEL"
+   ],
+   "definition": "The bed level after the design scour; open foundations of other bridges go at least 1.75 m below it in ordinary soil (IRBM 403(2))."
+  },
+  {
+   "name": "DangerLevel",
+   "id": "danger_level",
+   "kind": "level",
+   "unit": "m",
+   "label": "Danger level",
+   "aliases": [
+    "DANGER LEVEL"
+   ],
+   "definition": "Level at which the safety of the bridge is likely to be affected; fixed per bridge (IRBM 703)."
+  },
+  {
+   "name": "Fsl",
+   "id": "fsl",
+   "kind": "level",
+   "unit": "m",
+   "label": "Full supply level (canals)",
+   "aliases": [
+    "FSL",
+    "F.S.L.",
+    "FULL SUPPLY LEVEL"
+   ],
+   "definition": "Full supply level of a canal; weep holes stay above it (IRBM 207(3))."
+  },
+  {
+   "name": "ClearSpan",
+   "id": "clear_span",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Clear span of a cell / span",
+   "aliases": [
+    "CLEAR SPAN",
+    "CLEAR OPENING",
+    "CLEAR WIDTH",
+    "CELL WIDTH",
+    "SPAN"
+   ],
+   "definition": "Inside-to-inside opening of a cell or span."
+  },
+  {
+   "name": "ClearHeight",
+   "id": "clear_height",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Clear height of a cell",
+   "aliases": [
+    "CLEAR HEIGHT",
+    "CELL HEIGHT",
+    "INTERNAL HEIGHT",
+    "HEADROOM"
+   ],
+   "definition": "Inside height of a cell. Its lower datum (the structural floor or the top of the wearing course) is a project convention the written levels decide (KC-4)."
+  },
+  {
+   "name": "Cells",
+   "id": "cells",
+   "kind": "quantity",
+   "unit": "-",
+   "label": "Number of cells",
+   "aliases": [
+    "CELLS",
+    "NUMBER OF CELLS",
+    "VENTS"
+   ],
+   "definition": "Count of the repeated openings of a box (topology input)."
+  },
+  {
+   "name": "Spans",
+   "id": "spans",
+   "kind": "quantity",
+   "unit": "-",
+   "label": "Number of spans",
+   "aliases": [
+    "SPANS",
+    "NUMBER OF SPANS"
+   ],
+   "definition": "Count of spans (topology input)."
+  },
+  {
+   "name": "DeckSlab",
+   "id": "deck_slab",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Deck slab thickness",
+   "aliases": [
+    "DECK SLAB",
+    "DECK THICKNESS",
+    "SLAB DEPTH"
+   ],
+   "definition": "Depth of a slab deck."
+  },
+  {
+   "name": "GirderDepth",
+   "id": "girder_depth",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Girder depth",
+   "aliases": [
+    "GIRDER DEPTH",
+    "DEPTH OF GIRDER",
+    "SUPERSTRUCTURE DEPTH"
+   ],
+   "definition": "Depth of the superstructure girders."
+  },
+  {
+   "name": "BearingHeight",
+   "id": "bearing_height",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Bearing + pedestal height",
+   "aliases": [
+    "BEARING HEIGHT",
+    "BEARING",
+    "PEDESTAL"
+   ],
+   "definition": "Seat to soffit, through bearing and pedestal."
+  },
+  {
+   "name": "AbutmentFrontBatter",
+   "id": "abutment_front_batter",
+   "kind": "quantity",
+   "unit": "-",
+   "label": "Abutment front batter (H per V)",
+   "aliases": [
+    "ABUTMENT FRONT BATTER",
+    "FRONT BATTER"
+   ],
+   "definition": "Horizontal per vertical of the abutment's front face."
+  },
+  {
+   "name": "AbutmentBackBatter",
+   "id": "abutment_back_batter",
+   "kind": "quantity",
+   "unit": "-",
+   "label": "Abutment back batter (H per V)",
+   "aliases": [
+    "ABUTMENT BACK BATTER",
+    "BACK BATTER",
+    "REAR BATTER"
+   ],
+   "definition": "Horizontal per vertical of the abutment's back face."
+  },
+  {
+   "name": "AbutmentTopWidth",
+   "id": "abutment_top_width",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Abutment top width",
+   "aliases": [
+    "ABUTMENT TOP WIDTH",
+    "ABUTMENT WIDTH",
+    "TOP WIDTH OF ABUTMENT"
+   ],
+   "definition": "Width of the abutment at its top."
+  },
+  {
+   "name": "PierBatter",
+   "id": "pier_batter",
+   "kind": "quantity",
+   "unit": "-",
+   "label": "Pier batter (H per V, each face)",
+   "aliases": [
+    "PIER BATTER"
+   ],
+   "definition": "Horizontal per vertical of each pier face."
+  },
+  {
+   "name": "PierWidth",
+   "id": "pier_width",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Pier width (top)",
+   "aliases": [
+    "PIER WIDTH",
+    "PIER TOP WIDTH",
+    "PIER THICKNESS"
+   ],
+   "definition": "Width of a pier at its top."
+  },
+  {
+   "name": "FootingProjection",
+   "id": "footing_projection",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Footing projection",
+   "aliases": [
+    "FOOTING PROJECTION",
+    "FOUNDATION PROJECTION",
+    "OFFSET OF FOOTING"
+   ],
+   "definition": "Projection of a footing beyond the wall or pier faces."
+  },
+  {
+   "name": "Pipes",
+   "id": "pipes",
+   "kind": "quantity",
+   "unit": "-",
+   "label": "Number of pipes (rows)",
+   "aliases": [
+    "PIPES",
+    "NUMBER OF PIPES",
+    "ROWS"
+   ],
+   "definition": "Count of pipe barrels (topology input)."
+  },
+  {
+   "name": "PipeDiameter",
+   "id": "pipe_diameter",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Pipe internal diameter",
+   "aliases": [
+    "PIPE DIAMETER",
+    "PIPE DIA",
+    "INTERNAL DIAMETER",
+    "INSIDE DIAMETER"
+   ],
+   "definition": "Inside diameter of a pipe barrel."
+  },
+  {
+   "name": "PipeThickness",
+   "id": "pipe_thickness",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Pipe wall thickness",
+   "aliases": [
+    "PIPE THICKNESS",
+    "PIPE WALL THICKNESS",
+    "BARREL THICKNESS"
+   ],
+   "definition": "Wall thickness of a pipe barrel."
+  },
+  {
+   "name": "PipeSpacing",
+   "id": "pipe_spacing",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Clear gap between pipes",
+   "aliases": [
+    "PIPE SPACING",
+    "GAP BETWEEN PIPES",
+    "SPACING OF PIPES"
+   ],
+   "definition": "Clear distance between adjacent pipes."
+  },
+  {
+   "name": "MidWall",
+   "id": "mid_wall",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Wall between cells",
+   "aliases": [
+    "MID WALL",
+    "INNER WALL",
+    "INTERMEDIATE WALL",
+    "INTERNAL WALL",
+    "PARTITION WALL"
+   ],
+   "definition": "Thickness of an internal (intermediate) wall of a box."
+  },
+  {
+   "name": "OuterWall",
+   "id": "outer_wall",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Outer wall",
+   "aliases": [
+    "OUTER WALL",
+    "SIDE WALL",
+    "END WALL",
+    "EXTERNAL WALL"
+   ],
+   "definition": "Thickness of a box's outer (side) wall."
+  },
+  {
+   "name": "TopSlab",
+   "id": "top_slab",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Top slab thickness",
+   "aliases": [
+    "TOP SLAB",
+    "TOP SLAB THICKNESS"
+   ],
+   "definition": "Thickness of a box's top slab."
+  },
+  {
+   "name": "BottomSlab",
+   "id": "bottom_slab",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Bottom slab thickness",
+   "aliases": [
+    "BOTTOM SLAB",
+    "BASE SLAB",
+    "RAFT"
+   ],
+   "definition": "Thickness of a box's bottom (base) slab."
+  },
+  {
+   "name": "Haunch",
+   "id": "haunch",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Haunch",
+   "aliases": [
+    "HAUNCH"
+   ],
+   "definition": "Chamfer in the corners of a cell. No minimum is established by a source in hand (KC-3)."
+  },
+  {
+   "name": "BottomHaunch",
+   "id": "bottom_haunch",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Bottom haunch",
+   "aliases": [
+    "BOTTOM HAUNCH"
+   ],
+   "definition": "Chamfer in the bottom corners of a cell, when it differs from the top."
+  },
+  {
+   "name": "WearingCourse",
+   "id": "wearing_course",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Wearing course",
+   "aliases": [
+    "WEARING COURSE",
+    "WEARING COAT"
+   ],
+   "definition": "Concrete course on the bottom slab inside the cells."
+  },
+  {
+   "name": "Cushion",
+   "id": "cushion",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Earth cushion",
+   "aliases": [
+    "EARTH CUSHION",
+    "CUSHION",
+    "EARTH FILL",
+    "E.FILL",
+    "E FILL",
+    "EARTH FILLING"
+   ],
+   "definition": "Fill between the top of a buried structure and the formation (formation \u2212 top of structure). Its datum and minimum are not settled by a source in hand (KC-5)."
+  },
+  {
+   "name": "EndCushion",
+   "id": "end_cushion",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Fill over the top slab at the box end (elevation)",
+   "aliases": [
+    "END CUSHION",
+    "ELEVATION CUSHION"
+   ],
+   "definition": "Height of the fill above the top slab where the elevation shows the structure's end."
+  },
+  {
+   "name": "BackingWidth",
+   "id": "backing_width",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Boulder backing width",
+   "aliases": [
+    "BOULDER BACKING",
+    "HAND PACKED BOULDERS",
+    "BACKING",
+    "BOULDER FILLING"
+   ],
+   "definition": "Thickness of the hand-packed boulder filling behind a wall; not less than 600 mm behind abutments and wing walls (IRBM 605(3))."
+  },
+  {
+   "name": "WingSlope",
+   "id": "wing_slope",
+   "kind": "quantity",
+   "unit": "-",
+   "label": "Wing top slope (H per V)",
+   "aliases": [
+    "WING SLOPE",
+    "WING TOP SLOPE",
+    "SLOPE OF WING"
+   ],
+   "definition": "Slope of the sloping top of a wing / return wall."
+  },
+  {
+   "name": "FillSlope",
+   "id": "fill_slope",
+   "kind": "quantity",
+   "unit": "-",
+   "label": "Fill / embankment slope (H per V)",
+   "aliases": [
+    "FILL SLOPE",
+    "EMBANKMENT SLOPE",
+    "SIDE SLOPE",
+    "SLOPE"
+   ],
+   "definition": "Side slope of the approach bank or fill."
+  },
+  {
+   "name": "WingGap",
+   "id": "wing_gap",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Gap between the structure and the wing wall",
+   "aliases": [
+    "GAP",
+    "EXPANSION JOINT",
+    "BUTT JOINT"
+   ],
+   "definition": "Joint between the structure and the wing wall (IRBM 604(2) butt joints)."
+  },
+  {
+   "name": "WingKnee",
+   "id": "wing_knee",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Level stretch of the wing top at the structure",
+   "aliases": [
+    "WING KNEE"
+   ],
+   "definition": "Level portion of the wing top at the structure face."
+  },
+  {
+   "name": "WingLevelLength",
+   "id": "wing_level_length",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Level portion at the far end of the wing",
+   "aliases": [
+    "WING LEVEL LENGTH"
+   ],
+   "definition": "Level portion of the wing top at its far end."
+  },
+  {
+   "name": "WingLength",
+   "id": "wing_length",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Wing wall length",
+   "aliases": [
+    "WING LENGTH",
+    "WING WALL LENGTH",
+    "LENGTH OF WING",
+    "RETURN WALL LENGTH"
+   ],
+   "definition": "Length of a wing / return wall."
+  },
+  {
+   "name": "WingCoping",
+   "id": "wing_coping",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Wing coping depth",
+   "aliases": [
+    "COPING",
+    "COPING DEPTH",
+    "COPING THICKNESS"
+   ],
+   "definition": "Depth of the coping on a wing / return wall."
+  },
+  {
+   "name": "WingCopingChamfer",
+   "id": "wing_coping_chamfer",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Coping chamfer",
+   "aliases": [
+    "CHAMFER",
+    "COPING CHAMFER"
+   ],
+   "definition": "Chamfer of the coping edge."
+  },
+  {
+   "name": "WingCopingNear",
+   "id": "wing_coping_near",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Coping overhang at the structure",
+   "aliases": [
+    "COPING OVERHANG AT BOX"
+   ],
+   "definition": "Overhang of the coping at the structure end."
+  },
+  {
+   "name": "WingCopingFar",
+   "id": "wing_coping_far",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Coping overhang at the far end",
+   "aliases": [
+    "COPING OVERHANG AT END"
+   ],
+   "definition": "Overhang of the coping at the far end."
+  },
+  {
+   "name": "FootingCourse",
+   "id": "footing_course",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Course under the wing footing",
+   "aliases": [
+    "FOOTING COURSE",
+    "COURSE UNDER FOOTING"
+   ],
+   "definition": "Levelling / PCC course under a wing footing."
+  },
+  {
+   "name": "FootingCourseProjection",
+   "id": "footing_course_projection",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Projection of that course",
+   "aliases": [
+    "COURSE PROJECTION"
+   ],
+   "definition": "Projection of the course under a footing beyond the wall end."
+  },
+  {
+   "name": "FootingEmbedment",
+   "id": "footing_embedment",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Bed to the top of the footing",
+   "aliases": [
+    "FOOTING EMBEDMENT",
+    "FOUNDING DEPTH",
+    "DEPTH BELOW BED"
+   ],
+   "definition": "Depth from the bed (or ground) down to the top of a footing."
+  },
+  {
+   "name": "FootingDepth",
+   "id": "footing_depth",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Footing thickness",
+   "aliases": [
+    "FOOTING THICKNESS",
+    "FOOTING DEPTH",
+    "FOUNDATION THICKNESS"
+   ],
+   "definition": "The footing's own thickness (top of footing to B.O.F.). 'Footing depth' alone may also mean the embedment \u2014 the levels decide."
+  },
+  {
+   "name": "Clearance",
+   "id": "clearance",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Vertical clearance (soffit \u2212 design water level)",
+   "aliases": [
+    "VERTICAL CLEARANCE",
+    "CLEARANCE",
+    "V.C."
+   ],
+   "definition": "Soffit minus the water level of the design discharge incl. afflux (IRBM 312). Written as CL- or V.C. on drawings."
+  },
+  {
+   "name": "Freeboard",
+   "id": "freeboard",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Free board (formation \u2212 design water level)",
+   "aliases": [
+    "FREE BOARD",
+    "FREEBOARD",
+    "F.B.",
+    "FB"
+   ],
+   "definition": "Formation level minus the water level of the design discharge incl. afflux; not less than 1 m (IRBM 313(1)). Drawings often write F.B. against the HFL."
+  },
+  {
+   "name": "DepthOfFlow",
+   "id": "depth_of_flow",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Depth of flow (HFL \u2212 bed)",
+   "aliases": [
+    "D.O.F.",
+    "DOF",
+    "DEPTH OF FLOW"
+   ],
+   "definition": "Water depth above the bed at the flood level a drawing writes (HFL \u2212 bed level). A check between levels, never a position."
+  },
+  {
+   "name": "FormationWidth",
+   "id": "formation_width",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Formation width",
+   "aliases": [
+    "FORMATION WIDTH"
+   ],
+   "definition": "Top width of the formation. No standard value is established in hand (KC-13)."
+  },
+  {
+   "name": "BarrelLength",
+   "id": "barrel_length",
+   "kind": "quantity",
+   "unit": "mm",
+   "label": "Barrel length",
+   "aliases": [
+    "BARREL LENGTH"
+   ],
+   "definition": "Length of a box or pipe barrel through the embankment (decided from the fill and cross-section; the documented formula is disputed, KC-2)."
+  },
+  {
+   "name": "SkewAngle",
+   "id": "skew_angle",
+   "kind": "quantity",
+   "unit": "deg",
+   "label": "Skew angle",
+   "aliases": [
+    "SKEW",
+    "SKEW ANGLE"
+   ],
+   "definition": "Angle between the structure axis and the normal to the track; advisably \u2264 30\u00b0 (IRBM 301(3))."
+  },
+  {
+   "name": "DesignDischarge",
+   "id": "design_discharge",
+   "kind": "quantity",
+   "unit": "m3/s",
+   "label": "Design discharge Q",
+   "aliases": [
+    "DESIGN DISCHARGE",
+    "Q"
+   ],
+   "definition": "Design discharge for waterway, normally the 50-year flood (IRBM 309)."
+  },
+  {
+   "name": "CatchmentArea",
+   "id": "catchment_area",
+   "kind": "quantity",
+   "unit": "km2",
+   "label": "Catchment area",
+   "aliases": [
+    "CATCHMENT AREA"
+   ],
+   "definition": "Catchment area; sets the Qf increase band (IRBM 310)."
+  },
+  {
+   "name": "LevelLeftX",
+   "id": "level_left_x",
+   "kind": "drafting",
+   "unit": "mm",
+   "label": "Left end of the level lines (drafting)",
+   "aliases": [],
+   "definition": "Where the level lines end on the left \u2014 a drafting position, never a size."
+  },
+  {
+   "name": "LevelRightX",
+   "id": "level_right_x",
+   "kind": "drafting",
+   "unit": "mm",
+   "label": "Right end of the level lines (drafting)",
+   "aliases": [],
+   "definition": "Where the right-hand level lines end \u2014 a drafting position."
+  },
+  {
+   "name": "GroundLeftX",
+   "id": "ground_left_x",
+   "kind": "drafting",
+   "unit": "mm",
+   "label": "Left end of the ground line (drafting)",
+   "aliases": [],
+   "definition": "Drafting position."
+  },
+  {
+   "name": "GroundRightX",
+   "id": "ground_right_x",
+   "kind": "drafting",
+   "unit": "mm",
+   "label": "Right end of the ground line (drafting)",
+   "aliases": [],
+   "definition": "Drafting position."
+  },
+  {
+   "name": "Box",
+   "id": "box",
+   "kind": "component",
+   "unit": null,
+   "label": "RCC box (barrel)",
+   "aliases": [
+    "BOX",
+    "RCC BOX",
+    "BOX CULVERT",
+    "BARREL",
+    "CULVERT"
+   ],
+   "definition": "Closed RCC frame of one or more cells: top slab, bottom slab, outer and inner walls, haunches."
+  },
+  {
+   "name": "Pipe",
+   "id": "pipe",
+   "kind": "component",
+   "unit": null,
+   "label": "Pipe barrel",
+   "aliases": [
+    "PIPE",
+    "HUME PIPE",
+    "NP4 PIPE",
+    "RCC PIPE"
+   ],
+   "definition": "Circular RCC / hume pipe barrel."
+  },
+  {
+   "name": "Deck",
+   "id": "deck",
+   "kind": "component",
+   "unit": null,
+   "label": "Deck / superstructure",
+   "aliases": [
+    "DECK",
+    "DECK SLAB",
+    "SUPERSTRUCTURE",
+    "TRACK SLAB"
+   ],
+   "definition": "Slab or deck carrying the track over a span."
+  },
+  {
+   "name": "Slab",
+   "id": "slab",
+   "kind": "component",
+   "unit": null,
+   "label": "Slab element",
+   "aliases": [
+    "SLAB",
+    "APPROACH SLAB",
+    "CUTOFF"
+   ],
+   "definition": "A slab element (cut-off, approach slab, slab unit)."
+  },
+  {
+   "name": "Girder",
+   "id": "girder",
+   "kind": "component",
+   "unit": null,
+   "label": "Girder",
+   "aliases": [
+    "GIRDER",
+    "BEAM",
+    "STRINGER",
+    "CROSS GIRDER",
+    "DIAPHRAGM"
+   ],
+   "definition": "Primary girder / beam of a girder superstructure."
+  },
+  {
+   "name": "Abutment",
+   "id": "abutment",
+   "kind": "component",
+   "unit": null,
+   "label": "Abutment",
+   "aliases": [
+    "ABUTMENT",
+    "ABUT"
+   ],
+   "definition": "End support retaining the approach fill (IRBM 604)."
+  },
+  {
+   "name": "Pier",
+   "id": "pier",
+   "kind": "component",
+   "unit": null,
+   "label": "Pier",
+   "aliases": [
+    "PIER",
+    "PIERS",
+    "TRESTLE",
+    "COLUMN"
+   ],
+   "definition": "Intermediate support (IRBM 604)."
+  },
+  {
+   "name": "PierCap",
+   "id": "pier_cap",
+   "kind": "component",
+   "unit": null,
+   "label": "Pier cap / bed block",
+   "aliases": [
+    "PIER CAP",
+    "PIER HEAD",
+    "BED BLOCK"
+   ],
+   "definition": "Cap or bed block on a pier or abutment on which bearings sit."
+  },
+  {
+   "name": "Bearing",
+   "id": "bearing",
+   "kind": "component",
+   "unit": null,
+   "label": "Bearing",
+   "aliases": [
+    "BEARING",
+    "ELASTOMERIC BEARING",
+    "POT PTFE BEARING",
+    "PEDESTAL"
+   ],
+   "definition": "Interface transferring superstructure reactions; selection needs a controlled source (unknown)."
+  },
+  {
+   "name": "Footing",
+   "id": "footing",
+   "kind": "component",
+   "unit": null,
+   "label": "Footing / open foundation",
+   "aliases": [
+    "FOOTING",
+    "FOUNDATION",
+    "RAFT",
+    "OPEN FOUNDATION"
+   ],
+   "definition": "Widened open foundation (IRBM 403)."
+  },
+  {
+   "name": "Well",
+   "id": "well",
+   "kind": "component",
+   "unit": null,
+   "label": "Well foundation",
+   "aliases": [
+    "WELL",
+    "WELL CAP",
+    "CAISSON",
+    "STEINING"
+   ],
+   "definition": "Circular or double-D well (IRBM 417\u2013432)."
+  },
+  {
+   "name": "Pile",
+   "id": "pile",
+   "kind": "component",
+   "unit": null,
+   "label": "Pile",
+   "aliases": [
+    "PILE",
+    "PILES",
+    "BORED PILE"
+   ],
+   "definition": "Pile of a pile foundation (IRBM 405\u2013416)."
+  },
+  {
+   "name": "PileCap",
+   "id": "pile_cap",
+   "kind": "component",
+   "unit": null,
+   "label": "Pile cap",
+   "aliases": [
+    "PILE CAP"
+   ],
+   "definition": "Cap joining a pile group."
+  },
+  {
+   "name": "Arch",
+   "id": "arch",
+   "kind": "component",
+   "unit": null,
+   "label": "Arch barrel",
+   "aliases": [
+    "ARCH",
+    "INTRADOS",
+    "EXTRADOS",
+    "SPANDREL"
+   ],
+   "definition": "Arch ring / barrel (intrados, extrados, spandrel)."
+  },
+  {
+   "name": "WingWall",
+   "id": "wing_wall",
+   "kind": "component",
+   "unit": null,
+   "label": "Wing wall",
+   "aliases": [
+    "WING WALL",
+    "WING"
+   ],
+   "definition": "Wall retaining the approach-bank slope beside an abutment or box; splayed, straight, square or box type (IRBM 604(2))."
+  },
+  {
+   "name": "ReturnWall",
+   "id": "return_wall",
+   "kind": "component",
+   "unit": null,
+   "label": "Return wall",
+   "aliases": [
+    "RETURN WALL",
+    "RETURN"
+   ],
+   "definition": "Wall parallel to the track retaining the bank (IRBM 604(2), 818)."
+  },
+  {
+   "name": "DropWall",
+   "id": "drop_wall",
+   "kind": "component",
+   "unit": null,
+   "label": "Drop wall",
+   "aliases": [
+    "DROP WALL"
+   ],
+   "definition": "Downstream wall of a floor; depth 1.25 \u00d7 D_Lacey for minor bridges (IRBM 818)."
+  },
+  {
+   "name": "CurtainWall",
+   "id": "curtain_wall",
+   "kind": "component",
+   "unit": null,
+   "label": "Curtain wall",
+   "aliases": [
+    "CURTAIN WALL"
+   ],
+   "definition": "Upstream cut-off wall of a floor (IRBM 818, Annexure 2/2)."
+  },
+  {
+   "name": "ToeWall",
+   "id": "toe_wall",
+   "kind": "component",
+   "unit": null,
+   "label": "Toe wall",
+   "aliases": [
+    "TOE WALL"
+   ],
+   "definition": "Wall at the toe of pitching (Annexure 2/3)."
+  },
+  {
+   "name": "Flooring",
+   "id": "flooring",
+   "kind": "component",
+   "unit": null,
+   "label": "Flooring / apron / pitching",
+   "aliases": [
+    "FLOORING",
+    "FLOOR",
+    "APRON",
+    "PITCHING",
+    "LAUNCHING APRON"
+   ],
+   "definition": "Floor covering the full width and length of abutments incl. wing walls, with its curtain and drop walls (IRBM 818)."
+  },
+  {
+   "name": "BoulderBacking",
+   "id": "boulder_backing",
+   "kind": "component",
+   "unit": null,
+   "label": "Boulder backing",
+   "aliases": [
+    "BOULDER BACKING",
+    "BOULDERS",
+    "HAND PACKED BOULDERS"
+   ],
+   "definition": "Hand-packed boulders \u2265 600 mm behind abutments and wing walls, full height (IRBM 605(3))."
+  },
+  {
+   "name": "Courses",
+   "id": "courses",
+   "kind": "component",
+   "unit": null,
+   "label": "Courses under the structure",
+   "aliases": [
+    "PCC",
+    "GSB",
+    "SAND FILL",
+    "LEVELLING COURSE",
+    "BASE COURSE",
+    "BEDDING"
+   ],
+   "definition": "PCC, sand, GSB, levelling and wearing courses."
+  },
+  {
+   "name": "Slope",
+   "id": "slope",
+   "kind": "component",
+   "unit": null,
+   "label": "Slope / embankment",
+   "aliases": [
+    "SLOPE",
+    "EMBANKMENT",
+    "BATTER",
+    "CUTTING"
+   ],
+   "definition": "Sloping face of fill or cutting."
+  },
+  {
+   "name": "EarthFill",
+   "id": "earth_fill",
+   "kind": "component",
+   "unit": null,
+   "label": "Earth fill / backfill",
+   "aliases": [
+    "EARTH FILL",
+    "BACK FILL",
+    "BACKFILL",
+    "FILL"
+   ],
+   "definition": "Fill, backfill and the earth cushion; backfill of GW / GP / SW granular material (IRBM 605(3))."
+  },
+  {
+   "name": "Track",
+   "id": "track",
+   "kind": "component",
+   "unit": null,
+   "label": "Track",
+   "aliases": [
+    "TRACK",
+    "RAIL",
+    "SLEEPER"
+   ],
+   "definition": "Rails and sleepers on the ballast bed."
+  },
+  {
+   "name": "Ballast",
+   "id": "ballast",
+   "kind": "component",
+   "unit": null,
+   "label": "Ballast bed",
+   "aliases": [
+    "BALLAST"
+   ],
+   "definition": "Ballast under the sleepers on the formation."
+  },
+  {
+   "name": "Road",
+   "id": "road",
+   "kind": "component",
+   "unit": null,
+   "label": "Road",
+   "aliases": [
+    "ROAD",
+    "CARRIAGEWAY"
+   ],
+   "definition": "Road carriageway (RUB / ROB)."
+  },
+  {
+   "name": "WeepHole",
+   "id": "weep_hole",
+   "kind": "component",
+   "unit": null,
+   "label": "Weep hole",
+   "aliases": [
+    "WEEP HOLE",
+    "WEEP HOLES",
+    "WEEPHOLE"
+   ],
+   "definition": "Drainage hole at 1 m \u00d7 1 m staggered in abutments and wing walls; lowest row above LWL in flowing streams, 250 mm above bed otherwise, above FSL in canals (IRBM"
+  },
+  {
+   "name": "Reinforcement",
+   "id": "reinforcement",
+   "kind": "component",
+   "unit": null,
+   "label": "Reinforcement / dowels",
+   "aliases": [
+    "DOWEL",
+    "DOWEL BARS",
+    "REINFORCEMENT"
+   ],
+   "definition": "Bars, dowels, studs."
+  },
+  {
+   "name": "Joint",
+   "id": "joint",
+   "kind": "component",
+   "unit": null,
+   "label": "Joint",
+   "aliases": [
+    "JOINT",
+    "EXPANSION JOINT",
+    "CONSTRUCTION JOINT"
+   ],
+   "definition": "Expansion / construction / butt joint (IRBM 604(2))."
+  },
+  {
+   "name": "Datum",
+   "id": "datum",
+   "kind": "component",
+   "unit": null,
+   "label": "Datum / axis",
+   "aliases": [
+    "CENTRE LINE",
+    "AXIS",
+    "DATUM"
+   ],
+   "definition": "Centre lines, level lines, axes."
+  },
+  {
+   "name": "TemporaryWorks",
+   "id": "temporary_works",
+   "kind": "component",
+   "unit": null,
+   "label": "Temporary works",
+   "aliases": [
+    "RAIL SHORING",
+    "SHORING",
+    "SHEET PILE",
+    "COFFERDAM",
+    "FALSEWORK"
+   ],
+   "definition": "Shoring, sheet piles, falsework, cofferdams (IRBM 403(4), 404)."
+  },
+  {
+   "name": "BatteredWall",
+   "id": "battered_wall",
+   "kind": "component",
+   "unit": null,
+   "label": "Battered wall",
+   "aliases": [],
+   "definition": "A wall with a leaning face and coping (a part)."
+  },
+  {
+   "name": "CtxProposed",
+   "id": "ctx_proposed",
+   "kind": "context",
+   "unit": null,
+   "label": "Proposed work",
+   "aliases": [
+    "PRO",
+    "PROP",
+    "PROPOSED",
+    "NEW"
+   ],
+   "definition": "New work shown in the proposed state."
+  },
+  {
+   "name": "CtxExisting",
+   "id": "ctx_existing",
+   "kind": "context",
+   "unit": null,
+   "label": "Existing work",
+   "aliases": [
+    "EXG",
+    "EXIST",
+    "EXISTING",
+    "EXT"
+   ],
+   "definition": "Work that exists and stays."
+  },
+  {
+   "name": "CtxDismantled",
+   "id": "ctx_dismantled",
+   "kind": "context",
+   "unit": null,
+   "label": "To be dismantled",
+   "aliases": [
+    "TO BE DISMANTLED",
+    "DISMANTLED"
+   ],
+   "definition": "Existing work removed by the proposal."
+  },
+  {
+   "name": "CtxExtension",
+   "id": "ctx_extension",
+   "kind": "context",
+   "unit": null,
+   "label": "Extension of an existing structure",
+   "aliases": [
+    "TO BE EXTENDED",
+    "EXTENSION",
+    "EXTENDED"
+   ],
+   "definition": "A proposal that extends an existing bridge (doubling, extension); existing and proposed work and their junction are shown together."
+  }
+ ],
+ "families": [
+  {
+   "id": "rcc_box",
+   "label": "RCC box",
+   "components": [
+    "box",
+    "courses",
+    "boulder_backing",
+    "earth_fill",
+    "wing_wall",
+    "track",
+    "datum"
+   ]
+  },
+  {
+   "id": "slab",
+   "label": "slab span",
+   "components": [
+    "deck",
+    "abutment",
+    "pier",
+    "courses",
+    "datum"
+   ]
+  },
+  {
+   "id": "girder",
+   "label": "girder span",
+   "components": [
+    "girder",
+    "abutment",
+    "pier",
+    "courses",
+    "datum"
+   ]
+  },
+  {
+   "id": "pipe",
+   "label": "pipe",
+   "components": [
+    "pipe",
+    "courses",
+    "earth_fill",
+    "wing_wall",
+    "datum"
+   ]
+  },
+  {
+   "id": "arch",
+   "label": "arch",
+   "components": [
+    "arch",
+    "abutment",
+    "datum"
+   ]
+  },
+  {
+   "id": "rub",
+   "label": "RUB / LHS (box pushing)",
+   "components": []
+  },
+  {
+   "id": "rob",
+   "label": "ROB",
+   "components": []
+  }
+ ],
+ "formulas": [
+  {
+   "output": "FloorLevel",
+   "expression": "bed_level - wearing_course",
+   "condition": "the bed level marks the top of the wearing course in the cells (layout bed_is = wearing_top)",
+   "families": [
+    "rcc_box"
+   ],
+   "status": "DERIVED"
+  },
+  {
+   "output": "FloorLevel",
+   "expression": "bed_level",
+   "condition": "the bed level marks the floor of the cells, or a pipe's invert",
+   "families": [
+    "rcc_box",
+    "pipe"
+   ],
+   "status": "DERIVED"
+  },
+  {
+   "output": "FloorLevel",
+   "expression": "soffit_level - clear_height",
+   "condition": "",
+   "families": [
+    "rcc_box"
+   ],
+   "status": "DERIVED"
+  },
+  {
+   "output": "SoffitLevel",
+   "expression": "floor_level + clear_height",
+   "condition": "",
+   "families": [
+    "rcc_box"
+   ],
+   "status": "DERIVED"
+  },
+  {
+   "output": "SoffitLevel",
+   "expression": "bed_level + clear_height",
+   "condition": "",
+   "families": [
+    "rcc_box"
+   ],
+   "status": "DERIVED"
+  },
+  {
+   "output": "CellHeight",
+   "expression": "clear_height + wearing_course",
+   "condition": "",
+   "families": [
+    "rcc_box"
+   ],
+   "status": "DERIVED"
+  },
+  {
+   "output": "TopSlabLevel",
+   "expression": "soffit_level + top_slab",
+   "condition": "",
+   "families": [
+    "rcc_box"
+   ],
+   "status": "DERIVED"
+  },
+  {
+   "output": "SlabBottomLevel",
+   "expression": "floor_level - bottom_slab",
+   "condition": "",
+   "families": [
+    "rcc_box"
+   ],
+   "status": "DERIVED"
+  },
+  {
+   "output": "OutsideWidth",
+   "expression": "cells * clear_span + (cells - 1) * mid_wall + 2 * outer_wall",
+   "condition": "orthogonal box, equal cells, equal inner walls (not skew-projected)",
+   "families": [
+    "rcc_box"
+   ],
+   "status": "DERIVED"
+  },
+  {
+   "output": "OutsideWidth",
+   "expression": "cells * clear_span + 2 * outer_wall",
+   "condition": "one cell: there is no inner wall",
+   "families": [
+    "rcc_box"
+   ],
+   "status": "DERIVED"
+  },
+  {
+   "output": "FootingTopLevel",
+   "expression": "foundation_bottom + footing_depth",
+   "condition": "",
+   "families": [],
+   "status": "DERIVED"
+  },
+  {
+   "output": "FootingTopLevel",
+   "expression": "bed_level - footing_embedment",
+   "condition": "",
+   "families": [],
+   "status": "DERIVED"
+  },
+  {
+   "output": "FoundationBottom",
+   "expression": "footing_top_level - footing_depth",
+   "condition": "",
+   "families": [],
+   "status": "DERIVED"
+  },
+  {
+   "output": "FoundationBottom",
+   "expression": "bed_level - (footing_embedment + footing_depth)",
+   "condition": "",
+   "families": [
+    "slab",
+    "girder"
+   ],
+   "status": "DERIVED"
+  },
+  {
+   "output": "SoffitLevel",
+   "expression": "top_slab_level - deck_slab",
+   "condition": "",
+   "families": [
+    "slab"
+   ],
+   "status": "DERIVED"
+  },
+  {
+   "output": "SoffitLevel",
+   "expression": "top_slab_level - girder_depth",
+   "condition": "",
+   "families": [
+    "girder"
+   ],
+   "status": "DERIVED"
+  },
+  {
+   "output": "SoffitLevel",
+   "expression": "seat_level + bearing_height",
+   "condition": "",
+   "families": [
+    "slab",
+    "girder"
+   ],
+   "status": "DERIVED"
+  },
+  {
+   "output": "SoffitLevel",
+   "expression": "seat_level",
+   "condition": "no bearing read: the deck sits on the seat (defaults.json DEF-NO-BEARING)",
+   "families": [
+    "slab",
+    "girder"
+   ],
+   "status": "ASSUMPTION"
+  },
+  {
+   "output": "TopSlabLevel",
+   "expression": "soffit_level + deck_slab",
+   "condition": "",
+   "families": [
+    "slab"
+   ],
+   "status": "DERIVED"
+  },
+  {
+   "output": "TopSlabLevel",
+   "expression": "soffit_level + girder_depth",
+   "condition": "",
+   "families": [
+    "girder"
+   ],
+   "status": "DERIVED"
+  },
+  {
+   "output": "SeatLevel",
+   "expression": "soffit_level - bearing_height",
+   "condition": "",
+   "families": [
+    "slab",
+    "girder"
+   ],
+   "status": "DERIVED"
+  },
+  {
+   "output": "SeatLevel",
+   "expression": "soffit_level",
+   "condition": "no bearing read (DEF-NO-BEARING)",
+   "families": [
+    "slab",
+    "girder"
+   ],
+   "status": "ASSUMPTION"
+  },
+  {
+   "output": "WaterwayWidth",
+   "expression": "spans * clear_span + (spans - 1) * pier_width",
+   "condition": "",
+   "families": [
+    "slab",
+    "girder"
+   ],
+   "status": "DERIVED"
+  },
+  {
+   "output": "WaterwayWidth",
+   "expression": "spans * clear_span",
+   "condition": "one span: there is no pier",
+   "families": [
+    "slab",
+    "girder"
+   ],
+   "status": "DERIVED"
+  },
+  {
+   "output": "SoffitLevel",
+   "expression": "floor_level + pipe_diameter",
+   "condition": "",
+   "families": [
+    "pipe"
+   ],
+   "status": "DERIVED"
+  },
+  {
+   "output": "TopSlabLevel",
+   "expression": "soffit_level + pipe_thickness",
+   "condition": "",
+   "families": [
+    "pipe"
+   ],
+   "status": "DERIVED"
+  },
+  {
+   "output": "SlabBottomLevel",
+   "expression": "floor_level - pipe_thickness",
+   "condition": "",
+   "families": [
+    "pipe"
+   ],
+   "status": "DERIVED"
+  },
+  {
+   "output": "CourseBottom",
+   "expression": "course_top - course_thickness",
+   "condition": "each course under a structure hangs from the one above it, top down",
+   "families": [],
+   "status": "DERIVED"
+  },
+  {
+   "output": "FootingEmbedment",
+   "expression": "bed_level - footing_top_level",
+   "condition": "",
+   "families": [],
+   "status": "DERIVED"
+  },
+  {
+   "output": "FootingDepth",
+   "expression": "footing_top_level - foundation_bottom",
+   "condition": "",
+   "families": [],
+   "status": "DERIVED"
+  },
+  {
+   "output": "Clearance",
+   "expression": "soffit_level - hfl",
+   "condition": "drawings write CL-/V.C. against the HFL; IRBM 312 measures clearance from the design-discharge water level incl. afflux (KC-6)",
+   "families": [],
+   "status": "COMMON_PRACTICE"
+  },
+  {
+   "output": "Freeboard",
+   "expression": "formation_level - hfl",
+   "condition": "drawings write F.B. against the HFL; IRBM 313 measures free board from the design-discharge water level incl. afflux (KC-6)",
+   "families": [],
+   "status": "COMMON_PRACTICE"
+  },
+  {
+   "output": "Cushion",
+   "expression": "formation_level - top_slab_level",
+   "condition": "the datum of a standard drawing's 'fill height' (formation, sleeper or rail) is not settled (KC-5); the drawing's own cushion is formation \u2212 top of structure",
+   "families": [],
+   "status": "DERIVED"
+  },
+  {
+   "output": "ClearHeight",
+   "expression": "soffit_level - floor_level",
+   "condition": "",
+   "families": [],
+   "status": "DERIVED"
+  },
+  {
+   "output": "ClearHeight",
+   "expression": "soffit_level - bed_level",
+   "condition": "",
+   "families": [
+    "rcc_box"
+   ],
+   "status": "DERIVED"
+  },
+  {
+   "output": "TopSlab",
+   "expression": "top_slab_level - soffit_level",
+   "condition": "",
+   "families": [],
+   "status": "DERIVED"
+  },
+  {
+   "output": "BottomSlab",
+   "expression": "floor_level - slab_bottom_level",
+   "condition": "",
+   "families": [],
+   "status": "DERIVED"
+  },
+  {
+   "output": "DepthOfFlow",
+   "expression": "hfl - bed_level",
+   "condition": "",
+   "families": [],
+   "status": "DERIVED"
+  }
+ ]
+}

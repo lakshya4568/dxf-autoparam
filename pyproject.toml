@@ -9,6 +9,9 @@ authors = [
 requires-python = ">=3.14"
 dependencies = [
     "ezdxf>=1.4.4",
+    "google-genai>=2.28.0",
+    "pillow>=12.3.0",
+    "pymupdf>=1.28.2",
 ]
 
 [project.scripts]
@@ -21,8 +24,17 @@ build-backend = "uv_build"
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",
+    "ruff>=0.16.10",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-filterwarnings = ["ignore::DeprecationWarning:ezdxf.*"]
+filterwarnings = ["ignore::DeprecationWarning:ezdxf.*", "ignore::DeprecationWarning:google.genai.*",
+                  "ignore:builtin type .* has no __module__ attribute:DeprecationWarning"]
+
+[tool.ruff]
+# The rules are ruff 0.16's defaults (blind except, try/except/pass, closures over loop variables, imports, pyupgrade,
+# simplifications …); the version is pinned so the rule set does not move under the code. They caught real issues
+# here: excepts that hid broken DXF data and unevaluable relations, a NaN test written as v != v, a duplicated branch.
+required-version = ">=0.16,<0.17"
+line-length = 160

@@ -55,6 +55,15 @@ class Item:
     # Point index pairs that are straight segments (polyline edges without bulge).
     segments: list[tuple[int, int]] = field(default_factory=list)
     extra: dict = field(default_factory=dict)
+    # Where it came from, for writing back: the top-level handle, then the index path
+    # through nested block references ("2A4/7/3"). Top-level entities: just the handle.
+    src: str = ""
+    # A rigid symbol (a small block: a level marker, a north arrow) moves as one piece
+    # with its insertion point; this is the index of that insertion point's item.
+    anchor: int | None = None
+    # Curves the prototype does not reshape (ellipse, spline, text outlines), as
+    # flattened world polylines for display; they translate with pts[0].
+    display: list[list[tuple[float, float]]] = field(default_factory=list)
 
 
 @dataclass
@@ -65,6 +74,8 @@ class Drawing:
     items: list[Item]
     extent: tuple[float, float, float, float]  # minx, miny, maxx, maxy of structural geometry
     unsupported: dict[str, int] = field(default_factory=dict)
+    notes: list[str] = field(default_factory=list)  # what the reader repaired, skipped or assumed
+    layout: str = "Model"
 
 
 # ── Analysis: what the geometry says about itself ───────────────────────────────
@@ -182,6 +193,11 @@ class Analysis:
     # (y datum id, text item, the note's words, the stated value in m)
     stated_levels: list[tuple[str, int, str, float]] = field(default_factory=list)
     sym_counts: dict[str, int] = field(default_factory=dict)  # axis datum -> gaps centred on it
+    # The drawing's level datum: RL (mm) = y (mm) + level_offset_mm. 0 when drawn at RL×1000;
+    # found from the level notes themselves, so a sheet drawn at any origin still reads its levels.
+    level_offset_mm: float = 0.0
+    # Derived structures computed once on demand (the planar topology, …); not part of the analysis proper.
+    cache: dict = field(default_factory=dict, repr=False)
 
 
 # ── Model: the recovered parametric program ─────────────────────────────────────
@@ -197,7 +213,7 @@ class LinearForm:
     def evaluate(self, values: dict[str, float]) -> float:
         return self.const + sum(c * values[p] for p, c in self.terms.items())
 
-    def plus(self, other: "LinearForm", k: float = 1.0) -> "LinearForm":
+    def plus(self, other: LinearForm, k: float = 1.0) -> LinearForm:
         terms = dict(self.terms)
         for p, c in other.terms.items():
             terms[p] = terms.get(p, 0.0) + k * c
@@ -206,7 +222,7 @@ class LinearForm:
         return LinearForm(self.const + k * other.const, terms)
 
     @staticmethod
-    def param(name: str, k: float = 1.0) -> "LinearForm":
+    def param(name: str, k: float = 1.0) -> LinearForm:
         return LinearForm(0.0, {name: k})
 
 

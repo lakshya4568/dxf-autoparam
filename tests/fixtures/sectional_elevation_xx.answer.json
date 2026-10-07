@@ -1,0 +1,1535 @@
+{
+ "structure_type": "RCC box culvert extension, 1 cell",
+ "family": "rcc_box",
+ "views": [
+  "Sectional elevation at X-X (longitudinal section along barrel)"
+ ],
+ "summary": "Longitudinal sectional elevation showing the proposed extension of an existing single-cell RCC box culvert under quadrupled railway tracks. The existing barrel on the left (length 9376 mm, clear height 900 mm) is extended on the right by a proposed RCC box barrel (length 11073 mm, clear height 1200 mm) across a 464 mm sheet pile shoring gap. The proposed barrel features 350 mm thick top and bottom slabs on 300 mm sand fill and 300 mm compacted GSB layers, terminating in a 3516 mm downstream flooring apron and a 700 mm thick drop wall. Four tracks cross overhead: Existing Main Line, Proposed Overshoot Line, Proposed Main Line, and Proposed Overshoot Line.",
+ "components": [
+  {
+   "name": "ProposedBoxCulvert",
+   "type": "box",
+   "level": "assembly",
+   "parent": null,
+   "regions": [],
+   "entities": [],
+   "datums": [],
+   "existing": false,
+   "parametrize": true,
+   "confidence": 0.98,
+   "evidence": [
+    "Title states 'SECTIONAL ELEVATION AT X-X'",
+    "Dimension text T270: 'BARREL LENGTH=11073'",
+    "Proposed barrel with 1200 mm clear height and 350 mm slabs"
+   ],
+   "description": "Entire proposed extension assembly including the new box barrel, flooring apron, drop wall, courses, and parapet.",
+   "outlines": []
+  },
+  {
+   "name": "ProposedBarrel",
+   "type": "box",
+   "level": "component",
+   "parent": "ProposedBoxCulvert",
+   "regions": [
+    "R26"
+   ],
+   "entities": [],
+   "datums": [],
+   "existing": false,
+   "parametrize": true,
+   "confidence": 0.95,
+   "evidence": [
+    "Region R26 spans 11073 mm length between x56 and x91 and 1200 mm height",
+    "Dimension T376 states '1200'"
+   ],
+   "description": "Interior waterway opening / vent of the proposed RCC box culvert barrel.",
+   "outlines": []
+  },
+  {
+   "name": "ProposedTopSlab",
+   "type": "top_slab",
+   "level": "component",
+   "parent": "ProposedBoxCulvert",
+   "regions": [
+    "R24"
+   ],
+   "entities": [],
+   "datums": [],
+   "existing": false,
+   "parametrize": true,
+   "confidence": 0.9,
+   "evidence": [
+    "Region R24 sits between y18 (84470) and y19 (84820)",
+    "Dimension T382 states '350'"
+   ],
+   "description": "350 mm thick RCC top slab of the proposed barrel.",
+   "outlines": []
+  },
+  {
+   "name": "ProposedBottomSlab",
+   "type": "bottom_slab",
+   "level": "component",
+   "parent": "ProposedBoxCulvert",
+   "regions": [
+    "R38"
+   ],
+   "entities": [],
+   "datums": [],
+   "existing": false,
+   "parametrize": true,
+   "confidence": 0.95,
+   "evidence": [
+    "Region R38 spans between y8 (82920) and y10 (83270)",
+    "Dimension T388 states '350'"
+   ],
+   "description": "350 mm thick RCC bottom raft slab of the proposed barrel.",
+   "outlines": []
+  },
+  {
+   "name": "ProposedCourses",
+   "type": "courses",
+   "level": "component",
+   "parent": "ProposedBoxCulvert",
+   "regions": [
+    "R45",
+    "R51"
+   ],
+   "entities": [],
+   "datums": [],
+   "existing": false,
+   "parametrize": true,
+   "confidence": 0.95,
+   "evidence": [
+    "Note T73/T74: '300 MM THICK SAND FILL'",
+    "Note T69/T70: '300 MM THICK COMPACTED GSB LAYER'",
+    "Note T79: 'PCC (M15) 150 TH.'"
+   ],
+   "description": "Granular sub-base (GSB) and sand fill foundation courses supporting the proposed culvert bottom slab.",
+   "outlines": []
+  },
+  {
+   "name": "ProposedParapet",
+   "type": "wing_wall",
+   "level": "component",
+   "parent": "ProposedBoxCulvert",
+   "regions": [
+    "R4",
+    "R22"
+   ],
+   "entities": [],
+   "datums": [],
+   "existing": false,
+   "parametrize": true,
+   "confidence": 0.9,
+   "evidence": [
+    "Polyline PL80 forms the parapet wall coping and stem",
+    "Dimension T398 states '762'",
+    "Dimension T228 states '684'",
+    "Note T82 states '1 IN 4' batter"
+   ],
+   "description": "Downstream parapet headwall with 684 mm coping, 450 mm stem width and 1:4 rear batter.",
+   "outlines": []
+  },
+  {
+   "name": "ProposedApron",
+   "type": "flooring",
+   "level": "component",
+   "parent": "ProposedBoxCulvert",
+   "regions": [
+    "R39",
+    "R40",
+    "R44",
+    "R46",
+    "R49",
+    "R52"
+   ],
+   "entities": [],
+   "datums": [],
+   "existing": false,
+   "parametrize": true,
+   "confidence": 0.95,
+   "evidence": [
+    "Text T405: 'FLOORING'",
+    "Dimension T276 states '3516'",
+    "Dimension T404 states '400'"
+   ],
+   "description": "Downstream flooring apron, 3516 mm long and 400 mm thick below bed level 83.270.",
+   "outlines": []
+  },
+  {
+   "name": "ProposedDropWall",
+   "type": "drop_wall",
+   "level": "component",
+   "parent": "ProposedBoxCulvert",
+   "regions": [
+    "R41"
+   ],
+   "entities": [],
+   "datums": [],
+   "existing": false,
+   "parametrize": true,
+   "confidence": 0.95,
+   "evidence": [
+    "Text T104/T105: 'DROP WALL'",
+    "Dimension T282 states '700'",
+    "Dimension T417 states '1700'",
+    "Dimension T411 states '1400'"
+   ],
+   "description": "Downstream terminal drop wall, 700 mm stem width, 1000 mm footing width, and 1700 mm total depth.",
+   "outlines": []
+  },
+  {
+   "name": "ProposedEarthFill",
+   "type": "earth_fill",
+   "level": "component",
+   "parent": "ProposedBoxCulvert",
+   "regions": [
+    "R1",
+    "R3",
+    "R21",
+    "R23",
+    "R27",
+    "R33"
+   ],
+   "entities": [],
+   "datums": [],
+   "existing": false,
+   "parametrize": true,
+   "confidence": 0.9,
+   "evidence": [
+    "Text T392: 'EARTH FILL 342'",
+    "Text T86: 'SLOPE 2:1'",
+    "Text T84: '1 IN 8'"
+   ],
+   "description": "Earth cushion over the proposed slab and downstream embankment fill with 2:1 side slope.",
+   "outlines": []
+  },
+  {
+   "name": "ExistingBoxCulvert",
+   "type": "box",
+   "level": "assembly",
+   "parent": null,
+   "regions": [],
+   "entities": [],
+   "datums": [],
+   "existing": true,
+   "parametrize": true,
+   "confidence": 0.95,
+   "evidence": [
+    "Dimension T264: 'BARREL LENGTH 9376'",
+    "Text T14: 'CL OF EXG. MAIN LINE'",
+    "Text T111: 'U/S'"
+   ],
+   "description": "Existing upstream single-cell box culvert structure being retained and extended.",
+   "outlines": []
+  },
+  {
+   "name": "ExistingBarrel",
+   "type": "box",
+   "level": "component",
+   "parent": "ExistingBoxCulvert",
+   "regions": [
+    "R31"
+   ],
+   "entities": [],
+   "datums": [],
+   "existing": true,
+   "parametrize": true,
+   "confidence": 0.95,
+   "evidence": [
+    "Dimension T342 states '900' clear height",
+    "Text T1 states 'BED.L-83.270'"
+   ],
+   "description": "Existing culvert barrel opening with 900 mm internal height.",
+   "outlines": []
+  },
+  {
+   "name": "ExistingTopSlab",
+   "type": "top_slab",
+   "level": "component",
+   "parent": "ExistingBoxCulvert",
+   "regions": [
+    "R30"
+   ],
+   "entities": [],
+   "datums": [],
+   "existing": true,
+   "parametrize": true,
+   "confidence": 0.85,
+   "evidence": [
+    "Dimension T348 states '100' thickness above vent"
+   ],
+   "description": "100 mm top slab / wearing layer of the existing culvert.",
+   "outlines": []
+  },
+  {
+   "name": "ExistingBottomSlab",
+   "type": "bottom_slab",
+   "level": "component",
+   "parent": "ExistingBoxCulvert",
+   "regions": [
+    "R35",
+    "R42"
+   ],
+   "entities": [],
+   "datums": [],
+   "existing": true,
+   "parametrize": true,
+   "confidence": 0.9,
+   "evidence": [
+    "Dimension T354 states '100'",
+    "Dimension T360 states '300'"
+   ],
+   "description": "Bottom raft slab of existing culvert comprising 100 mm wearing coat and 300 mm base slab.",
+   "outlines": []
+  },
+  {
+   "name": "ExistingBedding",
+   "type": "courses",
+   "level": "component",
+   "parent": "ExistingBoxCulvert",
+   "regions": [
+    "R47"
+   ],
+   "entities": [],
+   "datums": [],
+   "existing": true,
+   "parametrize": true,
+   "confidence": 0.9,
+   "evidence": [
+    "Dimension T366 states '300'"
+   ],
+   "description": "300 mm foundation course under existing culvert base slab.",
+   "outlines": []
+  },
+  {
+   "name": "ExistingHeadwall",
+   "type": "wall",
+   "level": "component",
+   "parent": "ExistingBoxCulvert",
+   "regions": [
+    "R25",
+    "R28",
+    "R29",
+    "R32"
+   ],
+   "entities": [],
+   "datums": [],
+   "existing": true,
+   "parametrize": false,
+   "confidence": 0.9,
+   "evidence": [
+    "Polyline PL38 forms parapet coping (570 mm wide, 120 mm deep)",
+    "Dimension T300 states '450' wall stem"
+   ],
+   "description": "Upstream headwall with coping and haunch above existing barrel inlet.",
+   "outlines": []
+  },
+  {
+   "name": "ExistingDropWall",
+   "type": "drop_wall",
+   "level": "component",
+   "parent": "ExistingBoxCulvert",
+   "regions": [
+    "R34"
+   ],
+   "entities": [],
+   "datums": [],
+   "existing": true,
+   "parametrize": false,
+   "confidence": 0.9,
+   "evidence": [
+    "Dimension T312 states '1500'",
+    "Dimension T318 states '300'",
+    "Dimension T324 states '600'"
+   ],
+   "description": "Stepped upstream cutoff / drop wall with 1500 mm wide foundation.",
+   "outlines": []
+  },
+  {
+   "name": "ShoringAndJoint",
+   "type": "temporary_works",
+   "level": "component",
+   "parent": null,
+   "regions": [
+    "R36",
+    "R37",
+    "R43",
+    "R48",
+    "R50"
+   ],
+   "entities": [],
+   "datums": [],
+   "existing": false,
+   "parametrize": true,
+   "confidence": 0.92,
+   "evidence": [
+    "Note T49/T50: 'RAIL SHORING WITH SHEET PILE / ISMB...'",
+    "Dimension T258 states '464' gap",
+    "Note T57/T58: 'DOWEL BARS 20mm O AT 450mm C/C'"
+   ],
+   "description": "Construction interface between existing and proposed barrels including 464 mm sand-filled gap, sheet pile shoring, and 20 mm dia dowel bars.",
+   "outlines": []
+  },
+  {
+   "name": "RailwayTracks",
+   "type": "track",
+   "level": "assembly",
+   "parent": null,
+   "regions": [],
+   "entities": [],
+   "datums": [],
+   "existing": false,
+   "parametrize": true,
+   "confidence": 0.95,
+   "evidence": [
+    "Layers BRG-TRACK, BRG-CENTRE",
+    "Track dimensions: 1676 mm gauge, ballast cushion, sleepers and rails"
+   ],
+   "description": "Four railway tracks crossing over the culvert barrels.",
+   "outlines": []
+  },
+  {
+   "name": "ExistingTracks",
+   "type": "track",
+   "level": "component",
+   "parent": "RailwayTracks",
+   "regions": [
+    "R5",
+    "R6",
+    "R7",
+    "R10",
+    "R11",
+    "R12",
+    "R17",
+    "R18",
+    "R19",
+    "R20"
+   ],
+   "entities": [],
+   "datums": [],
+   "existing": true,
+   "parametrize": true,
+   "confidence": 0.92,
+   "evidence": [
+    "Text T14/T15: 'CL OF EXG. MAIN LINE'",
+    "Text T17: 'CL OF PRO. OVERSHOOT LINE'",
+    "Rail level 85.921 m and Formation level 85.233 m"
+   ],
+   "description": "Existing Main Line and Proposed Overshoot Line tracks over the existing barrel.",
+   "outlines": []
+  },
+  {
+   "name": "ProposedTracks",
+   "type": "track",
+   "level": "component",
+   "parent": "RailwayTracks",
+   "regions": [
+    "R2",
+    "R8",
+    "R9",
+    "R13",
+    "R14",
+    "R15",
+    "R16"
+   ],
+   "entities": [],
+   "datums": [],
+   "existing": false,
+   "parametrize": true,
+   "confidence": 0.92,
+   "evidence": [
+    "Text T20: 'CL OF PRO. MAIN LINE'",
+    "Text T22: 'CL OF PRO. OVERSHOOT LINE'",
+    "PRO. RAIL LEVEL-85.924M and PRO. FORMATION LEVEL-85.162M"
+   ],
+   "description": "Proposed Main Line and Proposed Overshoot Line tracks over the proposed barrel.",
+   "outlines": []
+  }
+ ],
+ "line_roles": [
+  {
+   "datum": "y10",
+   "component": "ProposedBarrel",
+   "role": "cell floor / bed level",
+   "confidence": 0.98
+  },
+  {
+   "datum": "y18",
+   "component": "ProposedBarrel",
+   "role": "soffit",
+   "confidence": 0.98
+  },
+  {
+   "datum": "y19",
+   "component": "ProposedTopSlab",
+   "role": "top",
+   "confidence": 0.95
+  },
+  {
+   "datum": "y8",
+   "component": "ProposedBottomSlab",
+   "role": "bottom",
+   "confidence": 0.95
+  },
+  {
+   "datum": "y5",
+   "component": "ProposedCourses",
+   "role": "bottom of sand fill / top of GSB",
+   "confidence": 0.9
+  },
+  {
+   "datum": "y2",
+   "component": "ProposedCourses",
+   "role": "bottom of GSB course",
+   "confidence": 0.9
+  },
+  {
+   "datum": "y20",
+   "component": "ProposedEarthFill",
+   "role": "proposed formation level",
+   "confidence": 0.98
+  },
+  {
+   "datum": "y30",
+   "component": "ProposedTracks",
+   "role": "proposed rail level",
+   "confidence": 0.98
+  },
+  {
+   "datum": "y21",
+   "component": "ExistingTracks",
+   "role": "existing formation level",
+   "confidence": 0.98
+  },
+  {
+   "datum": "y29",
+   "component": "ExistingTracks",
+   "role": "existing rail level",
+   "confidence": 0.98
+  },
+  {
+   "datum": "y0",
+   "component": "ProposedDropWall",
+   "role": "bottom of foundation",
+   "confidence": 0.95
+  },
+  {
+   "datum": "y1",
+   "component": "ProposedDropWall",
+   "role": "top of footing",
+   "confidence": 0.9
+  },
+  {
+   "datum": "y12",
+   "component": "ExistingBarrel",
+   "role": "soffit",
+   "confidence": 0.95
+  },
+  {
+   "datum": "y15",
+   "component": "ExistingTopSlab",
+   "role": "top",
+   "confidence": 0.9
+  },
+  {
+   "datum": "x56",
+   "component": "ProposedBarrel",
+   "role": "inner face at expansion joint / start of proposed barrel",
+   "confidence": 0.98
+  },
+  {
+   "datum": "x91",
+   "component": "ProposedBarrel",
+   "role": "outer face of proposed barrel / start of apron",
+   "confidence": 0.98
+  },
+  {
+   "datum": "x96",
+   "component": "ProposedApron",
+   "role": "toe of apron / inner face of drop wall",
+   "confidence": 0.95
+  },
+  {
+   "datum": "x97",
+   "component": "ProposedDropWall",
+   "role": "outer face of drop wall stem",
+   "confidence": 0.95
+  },
+  {
+   "datum": "x55",
+   "component": "ShoringAndJoint",
+   "role": "sheet pile shoring face / end of existing barrel",
+   "confidence": 0.95
+  },
+  {
+   "datum": "x23",
+   "component": "ExistingTracks",
+   "role": "centre line of existing main line",
+   "confidence": 0.99
+  },
+  {
+   "datum": "x36",
+   "component": "ExistingTracks",
+   "role": "centre line of proposed overshoot line",
+   "confidence": 0.99
+  },
+  {
+   "datum": "x56",
+   "component": "ProposedTracks",
+   "role": "centre line of proposed main line",
+   "confidence": 0.99
+  },
+  {
+   "datum": "x74",
+   "component": "ProposedTracks",
+   "role": "centre line of proposed overshoot line",
+   "confidence": 0.99
+  }
+ ],
+ "levels": [
+  {
+   "datum": "y10",
+   "name": "BedLevel",
+   "role": "site_input"
+  },
+  {
+   "datum": "y20",
+   "name": "ProposedFormationLevel",
+   "role": "site_input"
+  },
+  {
+   "datum": "y21",
+   "name": "ExistingFormationLevel",
+   "role": "site_input"
+  },
+  {
+   "datum": "y29",
+   "name": "ExistingRailLevel",
+   "role": "site_input"
+  },
+  {
+   "datum": "y30",
+   "name": "ProposedRailLevel",
+   "role": "site_input"
+  },
+  {
+   "datum": "y18",
+   "name": "SoffitLevel",
+   "role": "derived"
+  },
+  {
+   "datum": "y19",
+   "name": "TopSlabLevel",
+   "role": "derived"
+  },
+  {
+   "datum": "y8",
+   "name": "SlabBottomLevel",
+   "role": "derived"
+  },
+  {
+   "datum": "y0",
+   "name": "FoundationBottom",
+   "role": "derived"
+  }
+ ],
+ "parameters": [
+  {
+   "name": "ClearHeight",
+   "label": "Clear height of proposed box cell",
+   "component": "ProposedBarrel",
+   "kind": "length",
+   "candidate": null,
+   "from_datum": "y10",
+   "to_datum": "y18",
+   "value": 1200.0,
+   "importance": "primary",
+   "recommended": true,
+   "confidence": 0.98,
+   "evidence": [
+    "Dimension T376 states '1200'",
+    "Spans vertical opening of region R26"
+   ],
+   "reason": "Primary hydraulic opening height for the proposed culvert cell"
+  },
+  {
+   "name": "ProposedBarrelLength",
+   "label": "Barrel length of proposed box culvert",
+   "component": "ProposedBarrel",
+   "kind": "length",
+   "candidate": "c38",
+   "from_datum": null,
+   "to_datum": null,
+   "value": 11073.0,
+   "importance": "primary",
+   "recommended": true,
+   "confidence": 0.99,
+   "evidence": [
+    "Dimension T270 states 'BARREL LENGTH=11073'",
+    "Measures full proposed barrel between x56 and x91"
+   ],
+   "reason": "Overall structural length of the proposed box extension"
+  },
+  {
+   "name": "TopSlab",
+   "label": "Thickness of proposed top slab",
+   "component": "ProposedTopSlab",
+   "kind": "length",
+   "candidate": null,
+   "from_datum": "y18",
+   "to_datum": "y19",
+   "value": 350.0,
+   "importance": "secondary",
+   "recommended": true,
+   "confidence": 0.95,
+   "evidence": [
+    "Dimension T382 states '350'",
+    "Spans region R24 vertically"
+   ],
+   "reason": "Structural slab depth designed for rail traffic load"
+  },
+  {
+   "name": "BottomSlab",
+   "label": "Thickness of proposed bottom slab",
+   "component": "ProposedBottomSlab",
+   "kind": "length",
+   "candidate": null,
+   "from_datum": "y8",
+   "to_datum": "y10",
+   "value": 350.0,
+   "importance": "secondary",
+   "recommended": true,
+   "confidence": 0.95,
+   "evidence": [
+    "Dimension T388 states '350'",
+    "Spans region R38 vertically"
+   ],
+   "reason": "Structural raft foundation thickness of the proposed culvert"
+  },
+  {
+   "name": "ProposedEarthCushion",
+   "label": "Earth cushion over proposed top slab",
+   "component": "ProposedEarthFill",
+   "kind": "length",
+   "candidate": "c83",
+   "from_datum": null,
+   "to_datum": null,
+   "value": 342.0,
+   "importance": "secondary",
+   "recommended": true,
+   "confidence": 0.95,
+   "evidence": [
+    "Dimension text T392 states 'EARTH FILL 342'",
+    "Measured between top of slab 84.820 and formation 85.162"
+   ],
+   "reason": "Height of embankment fill above culvert roof up to formation level"
+  },
+  {
+   "name": "FlooringLength",
+   "label": "Length of downstream flooring apron",
+   "component": "ProposedApron",
+   "kind": "length",
+   "candidate": "c61",
+   "from_datum": null,
+   "to_datum": null,
+   "value": 3516.0,
+   "importance": "secondary",
+   "recommended": true,
+   "confidence": 0.95,
+   "evidence": [
+    "Dimension T276 states '3516'",
+    "Measures region R40 between culvert face and drop wall"
+   ],
+   "reason": "Downstream scour protection apron length"
+  },
+  {
+   "name": "FlooringThickness",
+   "label": "Thickness of downstream flooring",
+   "component": "ProposedApron",
+   "kind": "length",
+   "candidate": "c85",
+   "from_datum": null,
+   "to_datum": null,
+   "value": 400.0,
+   "importance": "secondary",
+   "recommended": true,
+   "confidence": 0.92,
+   "evidence": [
+    "Dimension T404 states '400'",
+    "Depth of region R40 below bed level"
+   ],
+   "reason": "Depth of apron concrete floor"
+  },
+  {
+   "name": "DropWallThickness",
+   "label": "Thickness of downstream drop wall stem",
+   "component": "ProposedDropWall",
+   "kind": "length",
+   "candidate": "c57",
+   "from_datum": null,
+   "to_datum": null,
+   "value": 700.0,
+   "importance": "secondary",
+   "recommended": true,
+   "confidence": 0.95,
+   "evidence": [
+    "Dimension T282 states '700'",
+    "Width of region R41 stem"
+   ],
+   "reason": "Stem thickness of the cutoff drop wall"
+  },
+  {
+   "name": "DropWallFootingWidth",
+   "label": "Width of drop wall footing",
+   "component": "ProposedDropWall",
+   "kind": "length",
+   "candidate": "c58",
+   "from_datum": null,
+   "to_datum": null,
+   "value": 1000.0,
+   "importance": "secondary",
+   "recommended": true,
+   "confidence": 0.9,
+   "evidence": [
+    "Candidate c58 measures 1000 mm base of polyline PL102"
+   ],
+   "reason": "Width of footing course beneath drop wall"
+  },
+  {
+   "name": "DropWallDepth",
+   "label": "Total depth of drop wall below bed level",
+   "component": "ProposedDropWall",
+   "kind": "length",
+   "candidate": "c74",
+   "from_datum": null,
+   "to_datum": null,
+   "value": 1700.0,
+   "importance": "secondary",
+   "recommended": true,
+   "confidence": 0.95,
+   "evidence": [
+    "Dimension T417 states '1700'",
+    "Measured from bed level 83.270 to foundation bottom 81.570"
+   ],
+   "reason": "Cutoff depth protecting apron against downstream bed scour"
+  },
+  {
+   "name": "DropWallEmbedment",
+   "label": "Depth to top of drop wall footing below bed",
+   "component": "ProposedDropWall",
+   "kind": "length",
+   "candidate": null,
+   "from_datum": "y1",
+   "to_datum": "y10",
+   "value": 1400.0,
+   "importance": "detail",
+   "recommended": true,
+   "confidence": 0.9,
+   "evidence": [
+    "Dimension T411 states '1400'"
+   ],
+   "reason": "Height of drop wall stem above footing"
+  },
+  {
+   "name": "DropWallFootingDepth",
+   "label": "Thickness of drop wall footing",
+   "component": "ProposedDropWall",
+   "kind": "length",
+   "candidate": "c66",
+   "from_datum": null,
+   "to_datum": null,
+   "value": 300.0,
+   "importance": "detail",
+   "recommended": true,
+   "confidence": 0.9,
+   "evidence": [
+    "Difference between 1700 and 1400 mm dimensions"
+   ],
+   "reason": "Thickness of footing slab of drop wall"
+  },
+  {
+   "name": "ParapetStemWidth",
+   "label": "Width of parapet wall stem",
+   "component": "ProposedParapet",
+   "kind": "length",
+   "candidate": "c53",
+   "from_datum": null,
+   "to_datum": null,
+   "value": 450.0,
+   "importance": "secondary",
+   "recommended": true,
+   "confidence": 0.95,
+   "evidence": [
+    "Dimension T234 states '450'"
+   ],
+   "reason": "Wall stem thickness of proposed parapet headwall"
+  },
+  {
+   "name": "ParapetCopingWidth",
+   "label": "Width of parapet coping",
+   "component": "ProposedParapet",
+   "kind": "length",
+   "candidate": "c56",
+   "from_datum": null,
+   "to_datum": null,
+   "value": 684.0,
+   "importance": "detail",
+   "recommended": true,
+   "confidence": 0.9,
+   "evidence": [
+    "Dimension T228 states '684'"
+   ],
+   "reason": "Overhang coping width of downstream parapet"
+  },
+  {
+   "name": "SandFillThickness",
+   "label": "Thickness of sand fill course",
+   "component": "ProposedCourses",
+   "kind": "length",
+   "candidate": null,
+   "from_datum": "y5",
+   "to_datum": "y8",
+   "value": 300.0,
+   "importance": "secondary",
+   "recommended": true,
+   "confidence": 0.95,
+   "evidence": [
+    "Note T73 states '300 MM THICK SAND FILL'"
+   ],
+   "reason": "Sand bedding cushion beneath raft slab"
+  },
+  {
+   "name": "GsbThickness",
+   "label": "Thickness of compacted GSB layer",
+   "component": "ProposedCourses",
+   "kind": "length",
+   "candidate": null,
+   "from_datum": "y2",
+   "to_datum": "y5",
+   "value": 300.0,
+   "importance": "secondary",
+   "recommended": true,
+   "confidence": 0.95,
+   "evidence": [
+    "Note T69/T70 states '300 MM THICK COMPACTED GSB LAYER'"
+   ],
+   "reason": "Sub-base granular layer under culvert"
+  },
+  {
+   "name": "WearingCourse",
+   "label": "Thickness of wearing course inside cell",
+   "component": "ProposedBoxCulvert",
+   "kind": "length",
+   "candidate": null,
+   "from_datum": "y10",
+   "to_datum": "y11",
+   "value": 150.0,
+   "importance": "detail",
+   "recommended": true,
+   "confidence": 0.9,
+   "evidence": [
+    "Note T77/T78 states '150 TH. WEARING COURSE'"
+   ],
+   "reason": "Sacrificial wearing coat over cell floor"
+  },
+  {
+   "name": "ExistingClearHeight",
+   "label": "Clear height of existing box culvert",
+   "component": "ExistingBarrel",
+   "kind": "length",
+   "candidate": null,
+   "from_datum": "y10",
+   "to_datum": "y12",
+   "value": 900.0,
+   "importance": "primary",
+   "recommended": false,
+   "confidence": 0.95,
+   "evidence": [
+    "Dimension T342 states '900'"
+   ],
+   "reason": "As-built opening height of existing box"
+  },
+  {
+   "name": "ExistingTopSlab",
+   "label": "Top slab thickness of existing box culvert",
+   "component": "ExistingTopSlab",
+   "kind": "length",
+   "candidate": null,
+   "from_datum": "y12",
+   "to_datum": "y15",
+   "value": 100.0,
+   "importance": "secondary",
+   "recommended": false,
+   "confidence": 0.9,
+   "evidence": [
+    "Dimension T348 states '100'"
+   ],
+   "reason": "As-built top slab thickness of existing structure"
+  },
+  {
+   "name": "ExistingBaseSlab",
+   "label": "Base slab thickness of existing culvert",
+   "component": "ExistingBottomSlab",
+   "kind": "length",
+   "candidate": null,
+   "from_datum": "y7",
+   "to_datum": "y9",
+   "value": 300.0,
+   "importance": "secondary",
+   "recommended": false,
+   "confidence": 0.9,
+   "evidence": [
+    "Dimension T360 states '300'"
+   ],
+   "reason": "As-built raft thickness of existing culvert"
+  },
+  {
+   "name": "ExistingBedding",
+   "label": "Bedding thickness under existing culvert",
+   "component": "ExistingBedding",
+   "kind": "length",
+   "candidate": null,
+   "from_datum": "y4",
+   "to_datum": "y7",
+   "value": 300.0,
+   "importance": "secondary",
+   "recommended": false,
+   "confidence": 0.9,
+   "evidence": [
+    "Dimension T366 states '300'"
+   ],
+   "reason": "Existing foundation course thickness"
+  },
+  {
+   "name": "ExistingEarthFilling",
+   "label": "Earth fill height over existing top slab",
+   "component": "ExistingBoxCulvert",
+   "kind": "length",
+   "candidate": null,
+   "from_datum": "y15",
+   "to_datum": "y21",
+   "value": 963.0,
+   "importance": "secondary",
+   "recommended": false,
+   "confidence": 0.92,
+   "evidence": [
+    "Dimension text T370 states 'EARTH FILLING 963'"
+   ],
+   "reason": "Cushion depth between existing slab and existing formation level"
+  },
+  {
+   "name": "ExistingHeadwallFootingWidth",
+   "label": "Width of existing headwall footing",
+   "component": "ExistingHeadwall",
+   "kind": "length",
+   "candidate": "c6",
+   "from_datum": null,
+   "to_datum": null,
+   "value": 1500.0,
+   "importance": "secondary",
+   "recommended": false,
+   "confidence": 0.95,
+   "evidence": [
+    "Dimension T312 states '1500'"
+   ],
+   "reason": "Existing drop wall footing base width"
+  },
+  {
+   "name": "ExistingHeadwallStemWidth",
+   "label": "Stem thickness of existing headwall",
+   "component": "ExistingHeadwall",
+   "kind": "length",
+   "candidate": "c1",
+   "from_datum": null,
+   "to_datum": null,
+   "value": 450.0,
+   "importance": "secondary",
+   "recommended": false,
+   "confidence": 0.95,
+   "evidence": [
+    "Dimension T300 states '450'"
+   ],
+   "reason": "Existing headwall thickness"
+  },
+  {
+   "name": "ShoringGap",
+   "label": "Gap between existing and proposed barrels at shoring",
+   "component": "ShoringAndJoint",
+   "kind": "length",
+   "candidate": "c54",
+   "from_datum": null,
+   "to_datum": null,
+   "value": 464.0,
+   "importance": "secondary",
+   "recommended": true,
+   "confidence": 0.95,
+   "evidence": [
+    "Dimension T258 states '464'",
+    "Measures space for rail sheet pile shoring"
+   ],
+   "reason": "Construction joint clearance accommodating temporary sheet pile works"
+  },
+  {
+   "name": "TrackCenterDistanceExgToOvershoot",
+   "label": "Center distance between Exg Main Line and Pro Overshoot Line",
+   "component": "RailwayTracks",
+   "kind": "length",
+   "candidate": "c204",
+   "from_datum": null,
+   "to_datum": null,
+   "value": 1800.0,
+   "importance": "primary",
+   "recommended": true,
+   "confidence": 0.98,
+   "evidence": [
+    "Dimension T204 states '1800'"
+   ],
+   "reason": "Track track-centre distance on existing side"
+  },
+  {
+   "name": "TrackCenterDistanceExgToProMain",
+   "label": "Center distance between Exg Main Line and Pro Main Line",
+   "component": "RailwayTracks",
+   "kind": "length",
+   "candidate": null,
+   "from_datum": "x23",
+   "to_datum": "x56",
+   "value": 5300.0,
+   "importance": "primary",
+   "recommended": true,
+   "confidence": 0.98,
+   "evidence": [
+    "Dimension T210 states 'C/C DISTANCE 5300'"
+   ],
+   "reason": "Track spacing between existing and proposed main lines"
+  },
+  {
+   "name": "TrackCenterDistanceProMainToProOvershoot",
+   "label": "Center distance between Pro Main Line and Pro Overshoot Line",
+   "component": "RailwayTracks",
+   "kind": "length",
+   "candidate": "c205",
+   "from_datum": null,
+   "to_datum": null,
+   "value": 6000.0,
+   "importance": "primary",
+   "recommended": true,
+   "confidence": 0.98,
+   "evidence": [
+    "Dimension T216 states 'C/C DISTANCE 6000'"
+   ],
+   "reason": "Track spacing between proposed main and proposed overshoot lines"
+  },
+  {
+   "name": "TrackGauge",
+   "label": "Broad gauge track width",
+   "component": "RailwayTracks",
+   "kind": "length",
+   "candidate": "c7",
+   "from_datum": null,
+   "to_datum": null,
+   "value": 1676.0,
+   "importance": "detail",
+   "recommended": false,
+   "confidence": 0.99,
+   "evidence": [
+    "Dimensions T139, T152, T175, T198 state '1676' across all tracks"
+   ],
+   "reason": "Standard broad gauge rail dimension"
+  }
+ ],
+ "datum_formulas": [
+  {
+   "datum": "y18",
+   "expr": "y10 + ClearHeight",
+   "reason": "Proposed box soffit level is cell floor level plus clear height"
+  },
+  {
+   "datum": "y19",
+   "expr": "y18 + TopSlab",
+   "reason": "Top of proposed slab is soffit level plus slab thickness"
+  },
+  {
+   "datum": "y8",
+   "expr": "y10 - BottomSlab",
+   "reason": "Underside of proposed bottom slab is cell floor level minus bottom slab thickness"
+  },
+  {
+   "datum": "y5",
+   "expr": "y8 - SandFillThickness",
+   "reason": "Top of GSB is underside of bottom slab minus sand fill course"
+  },
+  {
+   "datum": "y2",
+   "expr": "y5 - GsbThickness",
+   "reason": "Bottom of foundation is top of GSB minus GSB layer thickness"
+  },
+  {
+   "datum": "y12",
+   "expr": "y10 + ExistingClearHeight",
+   "reason": "Existing soffit is bed level plus existing clear height"
+  },
+  {
+   "datum": "y15",
+   "expr": "y12 + ExistingTopSlab",
+   "reason": "Top of existing slab is existing soffit plus existing slab thickness"
+  },
+  {
+   "datum": "x91",
+   "expr": "x56 + ProposedBarrelLength",
+   "reason": "Downstream face of proposed barrel sets out from inner joint face plus barrel length"
+  },
+  {
+   "datum": "x55",
+   "expr": "x56 - ShoringGap",
+   "reason": "Shoring face on existing side is proposed joint face minus shoring gap"
+  }
+ ],
+ "relations": [
+  {
+   "name": "TotalHeightProposedBox",
+   "label": "Total structural height of proposed RCC box",
+   "expr": "BottomSlab + ClearHeight + TopSlab",
+   "from_datum": "y8",
+   "to_datum": "y19"
+  },
+  {
+   "name": "TotalFoundationDepthBelowBed",
+   "label": "Depth to founding level below bed level",
+   "expr": "BottomSlab + SandFillThickness + GsbThickness",
+   "from_datum": "y2",
+   "to_datum": "y10"
+  },
+  {
+   "name": "TotalDownstreamProtectionLength",
+   "label": "Length of downstream protection works (apron plus drop wall)",
+   "expr": "FlooringLength + DropWallThickness",
+   "from_datum": "x91",
+   "to_datum": "x97"
+  }
+ ],
+ "behaviours": [
+  {
+   "parameter": "ClearHeight",
+   "effects": [
+    {
+     "target": "ProposedBarrel",
+     "behaviour": "grows",
+     "axis": "y",
+     "why": "Vent opening height increases"
+    },
+    {
+     "target": "ProposedTopSlab",
+     "behaviour": "moves",
+     "axis": "y",
+     "why": "Top slab rides upward on the higher vent opening"
+    },
+    {
+     "target": "ProposedParapet",
+     "behaviour": "moves",
+     "axis": "y",
+     "why": "Parapet sits atop the raised top slab"
+    },
+    {
+     "target": "ProposedBottomSlab",
+     "behaviour": "fixed",
+     "axis": "y",
+     "why": "Bottom slab remains founded at the same level relative to bed level"
+    },
+    {
+     "target": "BedLevel",
+     "behaviour": "keeps_level",
+     "axis": "y",
+     "why": "Site bed level remains constant"
+    }
+   ]
+  },
+  {
+   "parameter": "ProposedBarrelLength",
+   "effects": [
+    {
+     "target": "ProposedBarrel",
+     "behaviour": "grows",
+     "axis": "x",
+     "why": "Length of new barrel extends toward downstream side"
+    },
+    {
+     "target": "ProposedTopSlab",
+     "behaviour": "moves",
+     "axis": "x",
+     "why": "Top slab shifts horizontally with the barrel face"
+    },
+    {
+     "target": "ProposedBottomSlab",
+     "behaviour": "grows",
+     "axis": "x",
+     "why": "Bottom slab extends horizontally with the barrel"
+    },
+    {
+     "target": "ProposedCourses",
+     "behaviour": "grows",
+     "axis": "x",
+     "why": "Foundation bedding extends with the box barrel"
+    },
+    {
+     "target": "ProposedApron",
+     "behaviour": "moves",
+     "axis": "x",
+     "why": "Flooring apron pushes downstream as barrel elongates"
+    },
+    {
+     "target": "ProposedDropWall",
+     "behaviour": "moves",
+     "axis": "x",
+     "why": "Drop wall at apron end shifts outward with the apron"
+    },
+    {
+     "target": "ExistingBoxCulvert",
+     "behaviour": "fixed",
+     "axis": "x",
+     "why": "Existing structure remains in place"
+    }
+   ]
+  },
+  {
+   "parameter": "TopSlab",
+   "effects": [
+    {
+     "target": "ProposedTopSlab",
+     "behaviour": "grows",
+     "axis": "y",
+     "why": "Slab thickens upward from soffit"
+    },
+    {
+     "target": "ProposedParapet",
+     "behaviour": "moves",
+     "axis": "y",
+     "why": "Parapet base shifts upward with slab top"
+    },
+    {
+     "target": "ProposedBarrel",
+     "behaviour": "keeps_thickness",
+     "axis": "y",
+     "why": "Clear internal vent height is preserved"
+    }
+   ]
+  },
+  {
+   "parameter": "BottomSlab",
+   "effects": [
+    {
+     "target": "ProposedBottomSlab",
+     "behaviour": "grows",
+     "axis": "y",
+     "why": "Raft slab thickens downward from bed level"
+    },
+    {
+     "target": "ProposedCourses",
+     "behaviour": "moves",
+     "axis": "y",
+     "why": "Underlying GSB and sand fill layers shift downward"
+    },
+    {
+     "target": "BedLevel",
+     "behaviour": "keeps_level",
+     "axis": "y",
+     "why": "Cell floor bed level remains fixed"
+    }
+   ]
+  },
+  {
+   "parameter": "FlooringLength",
+   "effects": [
+    {
+     "target": "ProposedApron",
+     "behaviour": "grows",
+     "axis": "x",
+     "why": "Apron extends downstream"
+    },
+    {
+     "target": "ProposedDropWall",
+     "behaviour": "moves",
+     "axis": "x",
+     "why": "Drop wall moves further downstream with apron extension"
+    },
+    {
+     "target": "ProposedBarrel",
+     "behaviour": "fixed",
+     "axis": "x",
+     "why": "Culvert barrel length is independent of apron length"
+    }
+   ]
+  },
+  {
+   "parameter": "DropWallDepth",
+   "effects": [
+    {
+     "target": "ProposedDropWall",
+     "behaviour": "grows",
+     "axis": "y",
+     "why": "Drop wall footing deepens further below bed level"
+    },
+    {
+     "target": "ProposedApron",
+     "behaviour": "fixed",
+     "axis": "y",
+     "why": "Apron floor level remains intact"
+    }
+   ]
+  }
+ ],
+ "constraints": [
+  {
+   "type": "distance",
+   "datums": [
+    "y10",
+    "y18"
+   ],
+   "components": [],
+   "entities": [],
+   "value": "ClearHeight",
+   "description": "Clear height between cell floor and soffit equals ClearHeight",
+   "confidence": 0.99,
+   "evidence": [
+    "Dimension T376: 1200"
+   ]
+  },
+  {
+   "type": "distance",
+   "datums": [
+    "y18",
+    "y19"
+   ],
+   "components": [],
+   "entities": [],
+   "value": "TopSlab",
+   "description": "Top slab thickness equals TopSlab",
+   "confidence": 0.99,
+   "evidence": [
+    "Dimension T382: 350"
+   ]
+  },
+  {
+   "type": "distance",
+   "datums": [
+    "y8",
+    "y10"
+   ],
+   "components": [],
+   "entities": [],
+   "value": "BottomSlab",
+   "description": "Bottom raft slab thickness equals BottomSlab",
+   "confidence": 0.99,
+   "evidence": [
+    "Dimension T388: 350"
+   ]
+  },
+  {
+   "type": "distance",
+   "datums": [
+    "x56",
+    "x91"
+   ],
+   "components": [],
+   "entities": [],
+   "value": "ProposedBarrelLength",
+   "description": "Proposed barrel length equals ProposedBarrelLength",
+   "confidence": 0.99,
+   "evidence": [
+    "Dimension T270: BARREL LENGTH=11073"
+   ]
+  },
+  {
+   "type": "distance",
+   "datums": [
+    "x91",
+    "x96"
+   ],
+   "components": [],
+   "entities": [],
+   "value": "FlooringLength",
+   "description": "Length of downstream flooring apron equals FlooringLength",
+   "confidence": 0.98,
+   "evidence": [
+    "Dimension T276: 3516"
+   ]
+  },
+  {
+   "type": "distance",
+   "datums": [
+    "x96",
+    "x97"
+   ],
+   "components": [],
+   "entities": [],
+   "value": "DropWallThickness",
+   "description": "Thickness of downstream drop wall stem equals DropWallThickness",
+   "confidence": 0.98,
+   "evidence": [
+    "Dimension T282: 700"
+   ]
+  },
+  {
+   "type": "fixed",
+   "datums": [
+    "y10"
+   ],
+   "components": [],
+   "entities": [],
+   "value": null,
+   "description": "Bed level (83.270 m) is a fixed site input",
+   "confidence": 0.99,
+   "evidence": [
+    "Text T1 and T2: BED.L-83.270"
+   ]
+  },
+  {
+   "type": "fixed",
+   "datums": [
+    "y20"
+   ],
+   "components": [],
+   "entities": [],
+   "value": null,
+   "description": "Proposed formation level (85.162 m) is a fixed site input",
+   "confidence": 0.99,
+   "evidence": [
+    "Text T10: PRO. FORMATION LEVEL-85.162M"
+   ]
+  },
+  {
+   "type": "fixed",
+   "datums": [
+    "y21"
+   ],
+   "components": [],
+   "entities": [],
+   "value": null,
+   "description": "Existing formation level (85.233 m) is a fixed site input",
+   "confidence": 0.99,
+   "evidence": [
+    "Text T4: FORMATION LEVEL 85.233"
+   ]
+  },
+  {
+   "type": "connected",
+   "datums": [],
+   "components": [
+    "ProposedApron",
+    "ProposedDropWall"
+   ],
+   "entities": [],
+   "value": null,
+   "description": "Drop wall connects monolithically to downstream edge of apron",
+   "confidence": 0.99,
+   "evidence": [
+    "Drop wall R41 shares vertical face at x96 with apron R40"
+   ]
+  }
+ ],
+ "questions": [
+  "The existing barrel has a clear height of 900 mm while the proposed barrel has a clear height of 1200 mm, creating a 300 mm soffit step across the 464 mm shoring joint. Confirm if a transition haunch or chamfer is required at the joint.",
+  "Should the existing barrel length (9376 mm) and existing track centers (1800 mm) remain fixed as as-built reference geometry under all parametric redesign scenarios?"
+ ]
+}

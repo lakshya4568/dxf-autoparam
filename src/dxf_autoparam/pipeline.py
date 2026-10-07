@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import itertools
 import json
 import math
 import time
@@ -81,7 +82,7 @@ def validate(model: Model, step: float = 0.1) -> dict:
                 row["issues"].extend(r.issues[:3])
             for ax in ("x", "y"):
                 vals = [r.datum[d] for d in order0[ax]]
-                swaps = sum(1 for a, b in zip(vals, vals[1:]) if b < a - dr.tol)
+                swaps = sum(1 for a, b in itertools.pairwise(vals) if b < a - dr.tol)
                 row["order_changes"] = max(row["order_changes"], swaps)
         per_param.append(row)
     return {

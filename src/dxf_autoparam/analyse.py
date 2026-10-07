@@ -22,13 +22,27 @@ Every result carries its evidence, so a person can review it in minutes.
 
 from __future__ import annotations
 
+import itertools
 import math
 import re
 from bisect import bisect_left, bisect_right
 from collections import defaultdict
 from dataclasses import dataclass
 
-from .ir import Analysis, Axis, Cluster, Constraint, Datum, Drawing, Evidence, Gap, GapKind, Item, Role, Status
+from .ir import (
+    Analysis,
+    Axis,
+    Cluster,
+    Constraint,
+    Datum,
+    Drawing,
+    Evidence,
+    Gap,
+    GapKind,
+    Item,
+    Role,
+    Status,
+)
 
 FACE_KINDS = {GapKind.SOLID, GapKind.VOID, GapKind.OPEN}
 STRONG_KINDS = FACE_KINDS | {GapKind.LEG, GapKind.PITCH, GapKind.DIM}
@@ -237,9 +251,9 @@ def analyse(dr: Drawing, opts: AnalyseOptions | None = None) -> Analysis:
             owners[(did(it, k, "x"), did(it, k, "y"))] += 1
     loose: set[int] = set()
     for it in structural:
-        if len(it.pts) == 2 and not it.closed and it.dxftype in ("LINE", "LWPOLYLINE", "POLYLINE"):
-            if all(owners[(did(it, k, "x"), did(it, k, "y"))] == 1 for k in (0, 1)):
-                loose.add(it.index)
+        if (len(it.pts) == 2 and not it.closed and it.dxftype in ("LINE", "LWPOLYLINE", "POLYLINE")
+                and all(owners[(did(it, k, "x"), did(it, k, "y"))] == 1 for k in (0, 1))):
+            loose.add(it.index)
     for d in [*dx.datums, *dy.datums]:
         if d.items and d.items <= loose:
             d.weak = True
@@ -346,7 +360,7 @@ def analyse(dr: Drawing, opts: AnalyseOptions | None = None) -> Analysis:
             for _, d in stations[i0:i1]:
                 if not seen or seen[-1] != d:
                     seen.append(d)
-            for a, b in zip(seen, seen[1:]):
+            for a, b in itertools.pairwise(seen):
                 add_gap(axis, a, b, GapKind.CHAIN)
 
     chain(horz, "x")
@@ -483,7 +497,7 @@ def analyse(dr: Drawing, opts: AnalyseOptions | None = None) -> Analysis:
                     rows[row].append(own)
             for row_axes in rows.values():
                 ordered = sorted(set(row_axes), key=lambda i: datum_by_id[i].value)
-                for a, b in zip(ordered, ordered[1:]):
+                for a, b in itertools.pairwise(ordered):
                     g = add_gap(ax, a, b, GapKind.PITCH)
                     if g is not None and g.sym_axis is None:
                         mid = (datum_by_id[g.a].value + datum_by_id[g.b].value) / 2
@@ -531,7 +545,7 @@ def analyse(dr: Drawing, opts: AnalyseOptions | None = None) -> Analysis:
         if "x" in m:
             poly = [items[item].pts[k] for k in items[item].vertex_pts]
             x0, y0, x1, y1 = _bbox(poly)
-            pts_for_offset.append((m["x"], loop_axis[item].get("y") or did(items[item], items[item].vertex_pts[0], "y"), (x0 + x1) / 2, (y0 + y1) / 2))
+            pts_for_offset.append((m["x"], m.get("y") or did(items[item], items[item].vertex_pts[0], "y"), (x0 + x1) / 2, (y0 + y1) / 2))
     if len(pts_for_offset) <= 400:
         offsets(pts_for_offset)
 
@@ -618,7 +632,7 @@ def analyse(dr: Drawing, opts: AnalyseOptions | None = None) -> Analysis:
     datums = {d.id: d for d in [*dx.datums, *dy.datums]}
     # annotation / reference / free points follow the nearest structural vertex (both axes from it)
     _attach_free_points(dr, slot_datum, datums)
-    stated = _stated_levels(dr, dy)
+    stated, level_offset = _stated_levels(dr, dy)
     sym_counts: dict[str, int] = defaultdict(int)
     for g in gap_list:
         if g.sym_axis:
@@ -634,6 +648,7 @@ def analyse(dr: Drawing, opts: AnalyseOptions | None = None) -> Analysis:
         global_axis=global_axis,
         notes=notes,
         stated_levels=stated,
+        level_offset_mm=level_offset,
         sym_counts=dict(sym_counts),
     )
 
@@ -672,31 +687,52 @@ def _drawn_patterns(structural: list[Item], tol: float) -> list[Item]:
         if len(members) < 8:
             continue
         members.sort(key=lambda m: m[0])
-        steps = [b[0] - a[0] for a, b in zip(members, members[1:])]
+        steps = [b[0] - a[0] for a, b in itertools.pairwise(members)]
         mean = sum(steps) / len(steps)
         if mean > tol and all(abs(s - mean) <= max(tol, 0.02 * mean) for s in steps):
             out.extend(it for _, it in members)
     return out
 
 
-def _stated_levels(dr: Drawing, dy: _Datums) -> list[tuple[str, int, str, float]]:
-    """Notes that state a line's height in metres: '… 101.250' beside a line drawn at y = 101250 mm."""
-    out = []
+def _stated_levels(dr: Drawing, dy: _Datums) -> tuple[list[tuple[str, int, str, float]], float]:
+    """Notes that state a line's level in metres, and the drawing's level datum.
+
+    A level note ("BED LEVEL 96.100", "R.L. 94.150") sits beside the line it states. A sheet
+    may be drawn at y = RL × 1000, or anywhere else; the offset RL − y is the same for every
+    level note of a view, so it is found by consensus: each note votes for the offsets that
+    would put it on a nearby horizontal line, and the offset most notes agree on wins.
+    """
+    u = dr.units_mm
+    notes = []
     for it in dr.items:
-        if it.dxftype not in ("TEXT", "MTEXT") or not it.text:
+        if it.dxftype not in ("TEXT", "MTEXT", "ATTRIB") or not it.text:
             continue
-        x, y = it.pts[0]
-        h = it.text_height or 1.0
         for tok in NUM_RE.findall(it.text):
-            if "." not in tok or len(tok.split(".")[1]) < 2:
-                continue
-            target = float(tok) * 1000 / dr.units_mm
-            d = dy.near(target)
-            if d is not None and not d.virtual and abs(d.value - y) <= 40 * h:
-                words = " ".join(w for w in re.findall(r"[A-Za-z][A-Za-z.]*", it.text.upper()))
-                out.append((d.id, it.index, words, float(tok)))
+            if "." in tok and 2 <= len(tok.split(".")[1]) <= 3 and 0 < float(tok) < 10000:
+                notes.append((it, tok, float(tok)))
                 break
-    return out
+    if not notes:
+        return [], 0.0
+    ys = [d for d in dy.datums if not d.virtual]
+    votes: dict[int, set[int]] = defaultdict(set)
+    for it, _tok, v in notes:
+        y, h = it.pts[0][1], (it.text_height or 1.0)
+        for d in ys:
+            if abs(d.value - y) <= 40 * h:
+                votes[round(v * 1000 - d.value * u)].add(it.index)
+    if not votes:
+        return [], 0.0
+    best = max(votes, key=lambda k: (len(votes[k]), k == 0))
+    if len(votes[best]) < 2 and best != 0:
+        return [], 0.0
+    out = []
+    for it, tok, v in notes:
+        y, h = it.pts[0][1], (it.text_height or 1.0)
+        d = dy.near((v * 1000 - best) / u)
+        if d is not None and not d.virtual and abs(d.value - y) <= 40 * h:
+            words = " ".join(w for w in re.findall(r"[A-Za-z][A-Za-z.]*", it.text.upper()))
+            out.append((d.id, it.index, words, v))
+    return out, float(best)
 
 
 def _segment_keys(structural: list[Item], did) -> tuple[set[frozenset], list[tuple[str, str, str, str]]]:
@@ -941,7 +977,7 @@ def _attach_free_points(dr: Drawing, slot_datum, datums: dict[str, Datum]) -> No
     def nearest(x: float, y: float):
         cx, cy = int(x // cell), int(y // cell)
         best = None
-        for r in range(0, 200):
+        for r in range(200):
             for gx in range(cx - r, cx + r + 1):
                 for gy in (cy - r, cy + r) if r else (cy,):
                     for v in grid.get((gx, gy), ()):
@@ -960,7 +996,7 @@ def _attach_free_points(dr: Drawing, slot_datum, datums: dict[str, Datum]) -> No
         return best[1] if best else None
 
     for it in dr.items:
-        if it.role == Role.FIXED:
+        if it.role == Role.FIXED or it.anchor is not None:  # symbol content rides on its insertion point
             continue
         for k, (x, y) in enumerate(it.pts):
             if (it.index, k, "x") in slot_datum and (it.index, k, "y") in slot_datum:
@@ -973,3 +1009,12 @@ def _attach_free_points(dr: Drawing, slot_datum, datums: dict[str, Datum]) -> No
                 slot_datum[(it.index, k, "x")] = (ddx, x - datums[ddx].value)
             if (it.index, k, "y") not in slot_datum:
                 slot_datum[(it.index, k, "y")] = (ddy, y - datums[ddy].value)
+        # A horizontal / vertical annotation line stays horizontal / vertical: both ends
+        # follow the same line in the other direction.
+        if len(it.pts) == 2 and it.dxftype in ("LINE", "LWPOLYLINE", "POLYLINE") and it.role != Role.STRUCTURAL:
+            (x1, y1), (x2, y2) = it.pts
+            for axis, same in (("y", abs(y1 - y2) <= dr.tol), ("x", abs(x1 - x2) <= dr.tol)):
+                if same and (it.index, 0, axis) in slot_datum:
+                    d0, _off0 = slot_datum[(it.index, 0, axis)]
+                    v1 = y2 if axis == "y" else x2
+                    slot_datum[(it.index, 1, axis)] = (d0, v1 - datums[d0].value)

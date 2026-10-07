@@ -4,8 +4,8 @@ trip, the generic/domain boundary, and a guard that no structure type is coded i
 from __future__ import annotations
 
 import ast
-import re
 import importlib.util
+import re
 from pathlib import Path
 
 import ezdxf
@@ -65,7 +65,7 @@ def test_regenerating_at_the_defaults_reproduces_the_drawing_exactly(path):
 
 # ── intent recovery against independently drawn variants ──────────────────────
 
-BASE = dict(cells=3, span=2500, height=2000, wall=300, mid=250, top=300, base=350, haunch=150, pcc=150, proj=150)
+BASE = {"cells": 3, "span": 2500, "height": 2000, "wall": 300, "mid": 250, "top": 300, "base": 350, "haunch": 150, "pcc": 150, "proj": 150}
 
 
 @pytest.mark.parametrize(
@@ -150,7 +150,8 @@ def test_the_domain_pack_only_names_and_pins():
     assert validate(with_pack)["identity_max_error"] < 1e-6
 
 
-ENGINE = ["ir.py", "dxf_read.py", "analyse.py", "build.py", "regen.py", "dxf_write.py", "views.py", "pipeline.py"]
+ENGINE = ["ir.py", "dxf_read.py", "dxf_repair.py", "analyse.py", "build.py", "regen.py", "dxf_write.py", "views.py", "pipeline.py",
+          "program.py", "validator.py", "facts.py", "display.py", "render.py"]
 STRUCTURE_WORDS = ["culvert", "girder", "slab", "pier", "abutment", "haunch", "rcc", "psc", "bridge", "wing", "deck",
                    "kerb", "ballast", "rail", "formation", "hfl", "cushion", "footing", "pile", "well", "box", "barrel"]
 
@@ -162,10 +163,11 @@ def test_no_structure_type_is_coded_in_the_engine(module):
     tree = ast.parse((ROOT / "src" / "dxf_autoparam" / module).read_text())
     docstrings = {id(n.body[0].value) for n in ast.walk(tree) if isinstance(n, (ast.Module, ast.FunctionDef, ast.ClassDef))
                   and n.body and isinstance(n.body[0], ast.Expr) and isinstance(n.body[0].value, ast.Constant)}
+    imported = {a.asname or a.name for n in ast.walk(tree) if isinstance(n, (ast.Import, ast.ImportFrom)) for a in n.names}
     found = []
     for n in ast.walk(tree):
         words = []
-        if isinstance(n, ast.Name):
+        if isinstance(n, ast.Name) and n.id not in imported:  # library names (BoundingBox2d) are not ours
             words = [n.id]
         elif isinstance(n, ast.Attribute):
             words = [n.attr]

@@ -12,3 +12,4 @@ wheels/
 out/
 .cache/
 .claude/
+.env

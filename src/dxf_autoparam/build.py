@@ -31,7 +31,17 @@ from collections import defaultdict, deque
 from dataclasses import dataclass, field
 
 from .analyse import NUM_RE, STRONG_KINDS
-from .ir import Analysis, GapKind, LinearForm, Model, Parameter, Result, Role, Status, TreeEdge
+from .ir import (
+    Analysis,
+    GapKind,
+    LinearForm,
+    Model,
+    Parameter,
+    Result,
+    Role,
+    Status,
+    TreeEdge,
+)
 
 KIND_ORDER = {GapKind.SOLID: 0, GapKind.VOID: 0, GapKind.LEG: 1, GapKind.PITCH: 1, GapKind.OPEN: 2, GapKind.DIM: 3,
               GapKind.RUN: 4, GapKind.RISE: 4, GapKind.OFFSET: 5, GapKind.CHAIN: 6, GapKind.ARC: 0}
@@ -121,7 +131,7 @@ def build(an: Analysis, dec: Decisions | None = None) -> Model:
             {datums[e].value for g in ax_gaps if group(g) == 0 for e in (g.a, g.b) if not datums[e].virtual}
         )
 
-        def between(g) -> int:
+        def between(g, major=major) -> int:
             lo, hi = datums[g.a].value, datums[g.b].value
             return max(0, bisect_left(major, hi - an.drawing.tol) - bisect_right(major, lo + an.drawing.tol))
 
@@ -140,7 +150,7 @@ def build(an: Analysis, dec: Decisions | None = None) -> Model:
         # below (it stands on its bed / foundation), so the lower level is tried first.
         pinned_ids = {d for d in dec.pin}
 
-        def pin_key(g) -> tuple[int, float]:
+        def pin_key(g, pinned_ids=pinned_ids, axis=axis) -> tuple[int, float]:
             ends = [e for e in (g.a, g.b) if e in pinned_ids]
             if not ends:
                 return (0, 0.0)
@@ -278,11 +288,12 @@ def build(an: Analysis, dec: Decisions | None = None) -> Model:
         d = datums[did_]
         level = d.axis == "y"
         params[name] = Parameter(
-            name=name, label=f"{'Level' if level else 'Position'} ({name})", value=d.value * u / (1000 if level else 1),
+            name=name, label=f"{'Level' if level else 'Position'} ({name})",
+            value=(d.value * u + an.level_offset_mm) / 1000 if level else d.value * u,
             unit="m" if level else "mm", kind="level" if level else "position", axes=[d.axis], confidence=1.0,
             status=Status.CONFIRMED.value, evidence=[], occurrences=1,
         )
-        forms[did_] = LinearForm(0.0, {name: (1000 if level else 1) / u})
+        forms[did_] = LinearForm(-an.level_offset_mm / u if level else 0.0, {name: (1000 if level else 1) / u})
     defaults = {p.name: p.value for p in params.values()}
     for axis, root in roots.items():
         if root not in forms:
@@ -377,7 +388,7 @@ def build(an: Analysis, dec: Decisions | None = None) -> Model:
     # entity hangs from) is folded back into a constant.
     for name in [n for n, p in params.items() if p.affects == 0]:
         v = params.pop(name).value
-        for f in [*forms.values(), *radius.values()]:
+        for f in [*forms.values(), *radius.values(), *(r.form for r in results)]:
             if name in f.terms:
                 f.const += f.terms.pop(name) * v
 
@@ -424,7 +435,7 @@ def _link_texts(an: Analysis, params, gaps, clusters, cluster_param, forms) -> d
             v = float(tok)
             dec = len(tok.split(".")[1]) if "." in tok else 0
             if dec >= 2:
-                level = next((d for d in ydatums if abs(d.value * dr.units_mm - v * 1000) <= 0.5 and abs(d.value - y) <= 40 * h), None)
+                level = next((d for d in ydatums if abs(d.value * dr.units_mm + an.level_offset_mm - v * 1000) <= 0.5 and abs(d.value - y) <= 40 * h), None)
                 if level is not None:
                     found.append((tok, f"datum:{level.id}", dec))
                     continue
@@ -451,8 +462,8 @@ def describe(model: Model) -> str:
     an = model.analysis
     dr = an.drawing
     u = dr.units_mm
-    lines = [f"{dr.path}: {len(dr.items)} entities, {sum(1 for i in dr.items if i.role == Role.STRUCTURAL)} structural; "
-             f"{len(an.datums)} datums, {len([g for g in an.gaps.values() if g.axis in ('x', 'y')])} candidate relationships, {len(an.clusters)} candidate values."]
+    lines = [(f"{dr.path}: {len(dr.items)} entities, {sum(1 for i in dr.items if i.role == Role.STRUCTURAL)} structural; "
+              f"{len(an.datums)} datums, {len([g for g in an.gaps.values() if g.axis in ('x', 'y')])} candidate relationships, {len(an.clusters)} candidate values.")]
     for n in an.notes:
         lines.append(f"  {n}")
     lines.append(f"PARAMETERS ({len(model.parameters)}):")

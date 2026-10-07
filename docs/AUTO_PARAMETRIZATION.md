@@ -1,4 +1,19 @@
-# Existing DXF → parametric CAD model, automatically
+# Existing DXF → parametric CAD model
+
+> **Update (v2, 2026-10-06): Gemini names it, the validator decides.** The geometry engine below stays the
+> foundation; on top of it Gemini 3.8 Flash (your Vertex project) now identifies the structure, views, components
+> and engineering names, re-bases set-out lines, and states relationships — and a deterministic validator accepts
+> each claim only if the geometry proves it (value = measured; formula reproduces its line; no cycle; valid at ±10%).
+> Measured on first use: 2-cell box section → *RCC box culvert, 2 cells*, ClearSpan/ClearHeight/OuterWall/MidWall/
+> TopSlab/BottomSlab/Haunch/FootingCourse/FootingProjection, `OutsideWidth = 2·ClearSpan + MidWall + 2·OuterWall`,
+> 13/13 claims accepted. RCC half-section GAD → *RCC box culvert, 1 cell*, 6 components, 14 named values, site
+> levels held as inputs (HFL check-only), soffit re-based on bed + ClearHeight; 36 accepted / 0 rejected after one
+> repair round. A 300-entity view of a block-based sheet → *RCC box beside an existing pipe culvert*, 10 components.
+> The reader was rebuilt too: views stored as blocks (previously invisible), mirrored and nested blocks, symbol
+> blocks kept rigid, hidden layers skipped, malformed old exports rebuilt, units cross-checked against dimensions.
+> Code: `dxf_read.py`, `dxf_repair.py`, `program.py` (UPCE program), `validator.py`, `facts.py`, `render.py`,
+> `display.py`, `ai/` (schema, prompt, Vertex client with disk cache), `knowledge/bridge.json` (from aagento-bridge).
+
 
 **Question.** Given a fully digitized GAD/DXF (lines, polylines, arcs, circles, dimensions, texts, hatches, blocks), can
 we recover a *genuinely* parametric model (parameters → relationships → geometry, regenerating when a value changes)

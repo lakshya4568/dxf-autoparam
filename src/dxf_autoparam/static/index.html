@@ -3,61 +3,84 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>DXF Auto-Parametrize</title>
+<title>DXF Parametrizer</title>
 <style>
   :root {
     --bg: #f6f7f9; --panel: #ffffff; --ink: #1f2937; --muted: #6b7280; --line: #e5e7eb;
-    --struct: #111827; --anno: #9ca3af; --ref: #dc2626; --fixed: #d1d5db; --hatch: rgba(99,102,241,.08);
-    --hi: #ea580c; --ok: #15803d; --warn: #b45309; --bad: #b91c1c; --accent: #2563eb; --chip: #eef2ff;
+    --struct: #111827; --anno: #8b95a3; --ref: #dc2626; --fixed: #c7ccd4; --fill: rgba(99,102,241,.10); --ghost: rgba(37,99,235,.35);
+    --hi: #ea580c; --ok: #15803d; --warn: #b45309; --bad: #b91c1c; --accent: #2563eb; --chip: #eef2ff; --ai: #7c3aed;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       --bg: #0f1115; --panel: #171a21; --ink: #e5e7eb; --muted: #9ca3af; --line: #2a2f3a;
-      --struct: #e5e7eb; --anno: #6b7280; --ref: #f87171; --fixed: #374151; --hatch: rgba(129,140,248,.12);
-      --hi: #fb923c; --ok: #4ade80; --warn: #fbbf24; --bad: #f87171; --accent: #60a5fa; --chip: #1e2537;
+      --struct: #e5e7eb; --anno: #6b7280; --ref: #f87171; --fixed: #3b4250; --fill: rgba(129,140,248,.14); --ghost: rgba(96,165,250,.45);
+      --hi: #fb923c; --ok: #4ade80; --warn: #fbbf24; --bad: #f87171; --accent: #60a5fa; --chip: #1e2537; --ai: #a78bfa;
     }
   }
   * { box-sizing: border-box; }
   body { margin: 0; font: 13px/1.4 system-ui, -apple-system, Segoe UI, sans-serif; background: var(--bg); color: var(--ink); height: 100vh; display: flex; flex-direction: column; }
-  header { display: flex; gap: 10px; align-items: center; padding: 8px 14px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
-  header h1 { font-size: 15px; margin: 0 8px 0 0; }
-  header .file { color: var(--muted); }
+  header { display: flex; gap: 8px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
+  header h1 { font-size: 15px; margin: 0 6px 0 0; }
+  .file { color: var(--muted); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   button, select, .btn { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
   button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
-  button:disabled { opacity: .5; cursor: default; }
+  button.ai { background: var(--ai); color: #fff; border-color: var(--ai); }
+  button.stop { background: var(--bad); color: #fff; border-color: var(--bad); }
+  button.small { padding: 1px 7px; font-size: 11px; }
+  button:disabled { opacity: .55; cursor: wait; }
   main { flex: 1; display: flex; min-height: 0; }
-  aside { width: 420px; min-width: 320px; border-right: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; min-height: 0; }
+  aside { width: 470px; min-width: 320px; border-right: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; min-height: 0; }
   .tabs { display: flex; border-bottom: 1px solid var(--line); }
-  .tabs button { border: 0; border-radius: 0; flex: 1; padding: 8px 4px; background: transparent; color: var(--muted); border-bottom: 2px solid transparent; }
+  .tabs button { border: 0; border-radius: 0; flex: 1; padding: 8px 2px; background: transparent; color: var(--muted); border-bottom: 2px solid transparent; }
   .tabs button.on { color: var(--ink); border-bottom-color: var(--accent); }
   .pane { overflow: auto; padding: 10px 12px; flex: 1; }
-  .grp { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 12px 0 6px; }
-  .row { display: grid; grid-template-columns: 1fr 110px 26px; gap: 6px; align-items: center; padding: 5px 6px; border-radius: 6px; }
-  .row:hover, .row.hl { background: var(--chip); }
+  .card { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; }
+  .card h3 { margin: 0 0 4px; font-size: 14px; }
+  .grp { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 12px 0 4px; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+  .row { display: grid; grid-template-columns: 18px 1fr 140px; gap: 6px; align-items: center; padding: 4px 6px; border-radius: 6px; }
+  .row.off { opacity: .55; }
+  .val { display: flex; align-items: center; gap: 4px; }
+  .row:hover, .node:hover { background: var(--chip); }
   .row .nm { min-width: 0; }
-  .row .nm b { font-weight: 600; }
-  .row .nm .sub { color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .row input { width: 100%; font: inherit; padding: 3px 6px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--ink); text-align: right; }
+  .row .nm b { font-weight: 600; cursor: pointer; }
+  .sub { color: var(--muted); font-size: 11px; }
+  .row .sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row input[type=number] { width: 108px; font: inherit; padding: 3px 6px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--ink); text-align: right; }
   .row input.changed { border-color: var(--hi); }
-  .row .x { border: 0; background: transparent; color: var(--muted); padding: 0; }
-  .chip { display: inline-block; font-size: 10px; padding: 0 6px; border-radius: 9px; margin-left: 4px; background: var(--chip); color: var(--muted); vertical-align: 1px; }
-  .chip.confirmed { color: var(--ok); } .chip.probable { color: var(--accent); } .chip.candidate { color: var(--warn); }
-  .ev { margin: 2px 6px 8px 6px; padding: 6px 8px; border-left: 2px solid var(--line); color: var(--muted); font-size: 12px; }
-  .ev div { margin: 1px 0; }
-  .rel { padding: 4px 6px; border-bottom: 1px dashed var(--line); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
-  .rel .v { color: var(--muted); }
-  .note { color: var(--muted); font-size: 12px; margin: 4px 0; }
+  .more { grid-column: 2 / 4; padding: 4px 0 6px; }
+  .sweep { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+  .unit { color: var(--muted); font-size: 11px; }
+  .chip { display: inline-block; font-size: 10px; padding: 0 6px; border-radius: 9px; margin-left: 4px; background: var(--chip); color: var(--muted); white-space: nowrap; }
+  .chip.ai { color: var(--ai); } .chip.ok { color: var(--ok); } .chip.bad { color: var(--bad); } .chip.warn { color: var(--warn); }
+  .node { padding: 3px 6px; border-radius: 6px; display: flex; align-items: flex-start; gap: 6px; }
+  .node .body { flex: 1; min-width: 0; }
+  .rel { padding: 4px 6px; border-bottom: 1px dashed var(--line); }
+  .rel code { font-size: 12px; }
+  .note { color: var(--muted); font-size: 12px; margin: 3px 0; }
+  .f-error { color: var(--bad); } .f-warn { color: var(--warn); }
+  .st-confirmed, .st-always { color: var(--ok); } .st-contradicted, .st-false, .st-rejected { color: var(--bad); } .st-now_only { color: var(--warn); } .st-held, .st-unchecked { color: var(--muted); }
+  details summary { cursor: pointer; color: var(--muted); margin: 6px 0; }
   .canvas { flex: 1; position: relative; min-width: 0; }
   svg { width: 100%; height: 100%; display: block; background: var(--bg); cursor: grab; }
-  svg.panning { cursor: grabbing; }
-  .toolbar { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; }
-  .banner { position: absolute; left: 10px; right: 10px; bottom: 10px; padding: 8px 12px; border-radius: 6px; background: var(--panel); border: 1px solid var(--bad); color: var(--bad); display: none; }
+  .toolbar { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
   .hint { position: absolute; left: 10px; top: 10px; color: var(--muted); font-size: 12px; background: var(--panel); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--line); }
-  .stat { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; }
-  .stat .k { color: var(--muted); }
-  .ok { color: var(--ok); } .bad { color: var(--bad); }
+  .banner { position: absolute; left: 10px; right: 10px; bottom: 10px; padding: 8px 12px; border-radius: 6px; background: var(--panel); border: 1px solid var(--bad); color: var(--bad); display: none; }
+  .busy { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.25); color: #fff; font-size: 15px; }
   .empty { padding: 30px; color: var(--muted); }
-  @media (max-width: 760px) { main { flex-direction: column; } aside { width: 100%; height: 50%; border-right: 0; border-bottom: 1px solid var(--line); } }
+  .bar { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 10px; }
+  textarea { width: 100%; min-height: 96px; font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); resize: vertical; }
+  .chips { display: flex; gap: 4px; flex-wrap: wrap; margin: 6px 0; }
+  .chips button { font-size: 11px; padding: 1px 8px; border-radius: 10px; }
+  .stream { border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; max-height: 46vh; overflow: auto; background: var(--bg); }
+  .ev { padding: 3px 0; border-bottom: 1px dashed var(--line); font-size: 12px; }
+  .ev.thought { color: var(--ink); white-space: pre-wrap; }
+  .ev.call { color: var(--ai); font-weight: 600; }
+  .ev.round { color: var(--ok); } .ev.err { color: var(--bad); } .ev.retry { color: var(--warn); }
+  .ev .t { color: var(--muted); font-size: 10px; margin-right: 6px; }
+  .live { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--ai); margin-right: 6px; animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity: .3; } }
+  #world text[data-r] { cursor: pointer; }
+  @media (max-width: 760px) { main { flex-direction: column; } aside { width: 100%; height: 50%; } .hint { display: none; } }
 </style>
 </head>
 <body>
@@ -65,43 +88,50 @@
   <h1>DXF → Parametric</h1>
   <span class="file" id="file">no drawing</span>
   <label class="btn">Open DXF<input type="file" id="open" accept=".dxf" hidden /></label>
-  <select id="domain" title="Optional semantic layer: names values and pins site levels; never changes geometry">
-    <option value="">Generic engine only</option>
-    <option value="bridge">+ bridge vocabulary pack</option>
-  </select>
-  <select id="views" title="A sheet is split into views; parametrize one at a time"></select>
+  <select id="views" title="Parametrize one view of a sheet at a time"></select>
+  <button id="ai" class="ai" title="Gemini segments the drawing into parts, names the values, states what grows and what stays; the engine measures every claim">✨ Parametrize with Gemini</button>
+  <button id="geo" title="Only the deterministic geometry engine (regions and generic names)">Geometry only</button>
+  <label class="btn" id="holdwrap" title="Existing structures (e.g. the old bridge beside a doubling) are parametric too; tick to keep them exactly as drawn">
+    <input type="checkbox" id="hold" /> Hold existing fixed</label>
   <span style="flex:1"></span>
   <button id="reset">Reset values</button>
-  <button id="json">Model JSON</button>
+  <button id="cadjson" title="The drawing as the AI sees it: entities, regions, relationships, datums">CAD JSON</button>
+  <button id="json">Program JSON</button>
+  <button id="answer" title="Gemini's answer as validated — re-open later with: dxf-autoparam serve drawing.dxf --answer file.json">AI answer</button>
+  <label class="btn" title="Upload the same drawing after a designer changed it: the engine learns what was edited, what grew and what stayed">Learn from edit<input type="file" id="learn" accept=".dxf" hidden /></label>
   <button id="export" class="primary">Export DXF</button>
 </header>
 <main>
   <aside>
     <div class="tabs">
-      <button data-tab="params" class="on">Parameters</button>
-      <button data-tab="review">Review</button>
-      <button data-tab="rels">Relationships</button>
+      <button data-tab="gemini">Gemini</button>
+      <button data-tab="struct" class="on">Structure</button>
+      <button data-tab="params">Parameters</button>
+      <button data-tab="intent">Intent</button>
+      <button data-tab="rels">Relations</button>
       <button data-tab="valid">Validation</button>
     </div>
-    <div class="pane" id="pane"></div>
+    <div class="pane" id="pane"><div class="empty">Open a DXF to begin.</div></div>
   </aside>
   <section class="canvas">
     <svg id="svg"><g id="world"></g><rect id="sel" fill="rgba(37,99,235,.08)" stroke="#2563eb" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" display="none"/></svg>
-    <div class="hint">drag: pan · wheel: zoom · shift+drag: pick a region to parametrize</div>
-    <div class="toolbar"><button id="fit">Fit</button><button id="useSel" style="display:none" class="primary">Parametrize selection</button><button id="whole">Whole sheet</button></div>
+    <div class="hint">drag: pan · wheel: zoom · shift+drag: pick a region</div>
+    <div class="toolbar">
+      <label class="btn"><input type="checkbox" id="ghost" checked /> original</label>
+      <label class="btn"><input type="checkbox" id="showRegions" /> regions</label>
+      <button id="fit">Fit</button><button id="useSel" class="primary" style="display:none">Use this region</button><button id="whole">Whole sheet</button>
+    </div>
     <div class="banner" id="banner"></div>
+    <div class="busy" id="busy">Working…</div>
   </section>
 </main>
 <script>
 const $ = (s) => document.querySelector(s);
 const NS = "http://www.w3.org/2000/svg";
-let S = null;          // server state
-let values = {};       // current values
-let tab = "params";
-let open = new Set();  // expanded evidence rows
-let decisions = { accept: [], reject: [], rename: {}, anchor: {} };
-let view = { x: 0, y: 0, w: 1, h: 1 };
-let sel = null;
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+let S = null, values = {}, geom = [], geom0 = [], relVals = [], tab = "struct", view = { x: 0, y: 0, w: 1, h: 1 }, sel = null, fitted = false;
+let hold = new Set(), exclude = new Set(), drop = new Set(), open = new Set(), lesson = null;
+let job = { running: false, events: [], next: 0 }, poller = null, draft = null;
 
 async function api(path, body) {
   const r = await fetch(path, body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -109,218 +139,352 @@ async function api(path, body) {
   if (j && j.ok === false && j.error) throw new Error(j.error);
   return j;
 }
+function busy(on, text) { $("#busy").style.display = on ? "flex" : "none"; $("#busy").textContent = text || "Working…"; document.querySelectorAll("header button").forEach((b) => (b.disabled = on)); }
+function banner(msg, ok = false) { const b = $("#banner"); b.style.display = "block"; b.style.borderColor = ok ? "var(--ok)" : "var(--bad)"; b.style.color = ok ? "var(--ok)" : "var(--bad)"; b.textContent = msg; setTimeout(() => (b.style.display = "none"), ok ? 3000 : 9000); }
 
 async function load() {
   S = await api("/api/state");
-  if (S.empty) { $("#pane").innerHTML = '<div class="empty">Open a DXF to begin.</div>'; return; }
-  values = { ...S.values };
-  $("#file").textContent = `${S.file}${S.region ? " · region" : ""}`;
-  $("#domain").value = S.domain || "";
-  const vs = $("#views");
-  vs.innerHTML = '<option value="">Views: whole sheet</option>' + S.views.slice(0, 20).map((v) => `<option value="${v.id}">View ${v.id + 1} · ${v.entities} entities</option>`).join("");
-  draw(S.geometry);
-  if (!load.fitted) { fit(); load.fitted = true; }
+  if (S.empty) return;
+  values = { ...S.values }; geom = S.geometry; relVals = S.relation_values;
+  const atDefaults = S.parameters.every((p) => Math.abs((values[p.name] ?? p.value) - p.value) < 1e-9);
+  if (atDefaults) geom0 = geom;
+  const sl = S.selection || {};
+  hold = new Set(sl.hold || []); exclude = new Set(sl.exclude || []); drop = new Set(sl.drop || []);
+  $("#file").textContent = S.file + (S.region ? " · region" : "");
+  $("#hold").checked = !!S.hold_existing;
+  $("#holdwrap").style.display = S.components.some((c) => c.existing) ? "" : "none";
+  $("#answer").style.display = S.mode === "ai" ? "" : "none";
+  $("#views").innerHTML = '<option value="">Whole sheet</option>' + S.views.slice(0, 25).map((v) => `<option value="${v.id}">View ${v.id + 1} · ${v.entities} entities</option>`).join("");
+  if (draft === null) draft = S.instructions || "";
+  draw();
+  if (!fitted) { fit(); fitted = true; }
   render();
+  if (S.ai_job && S.ai_job.running && !poller) { job.stopping = S.ai_job.stopping; watch(); }
 }
 
 // ── canvas ──────────────────────────────────────────────────────────────────
-let dimSize = 100;
-function draw(geom, highlight = new Set()) {
-  const g = $("#world");
-  { const [x0, y0, x1, y1] = bounds(geom); dimSize = Math.max(x1 - x0, y1 - y0) * 0.012 || 100; }
-  g.innerHTML = "";
+let textSize = 100;
+function bounds(g) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const p of g) { if (p.role === "fixed") continue; for (const q of p.pts || (p.at ? [p.at] : [])) { x0 = Math.min(x0, q[0]); y0 = Math.min(y0, q[1]); x1 = Math.max(x1, q[0]); y1 = Math.max(y1, q[1]); } }
+  return [x0, y0, x1, y1];
+}
+function poly(p, col, width, dash) {
+  const el = document.createElementNS(NS, p.closed ? "polygon" : "polyline");
+  el.setAttribute("points", p.pts.map((q) => q[0] + "," + q[1]).join(" "));
+  el.setAttribute("fill", "none"); el.setAttribute("stroke", col); el.setAttribute("vector-effect", "non-scaling-stroke");
+  el.setAttribute("stroke-width", width); if (dash) el.setAttribute("stroke-dasharray", dash);
+  return el;
+}
+function draw(hl = new Set()) {
+  const g = $("#world"); g.innerHTML = "";
+  const [bx0, by0, bx1, by1] = bounds(geom); textSize = Math.max(bx1 - bx0, by1 - by0) * 0.010 || 100;
   const frag = document.createDocumentFragment();
-  for (const e of geom) {
-    const hl = highlight.has(e.i);
-    const col = hl ? "var(--hi)" : e.role === "structural" ? "var(--struct)" : e.role === "reference" ? "var(--ref)" : e.role === "fixed" ? "var(--fixed)" : "var(--anno)";
-    const w = hl ? 2.5 : e.role === "structural" ? 1.2 : 0.8;
-    const stroke = (el) => { el.setAttribute("stroke", col); el.setAttribute("stroke-width", w); el.setAttribute("fill", "none"); el.setAttribute("vector-effect", "non-scaling-stroke"); if (e.role === "reference") el.setAttribute("stroke-dasharray", "12 4 2 4"); return el; };
-    if (e.pts && e.t !== "HATCH") {
-      const el = document.createElementNS(NS, e.closed ? "polygon" : "polyline");
-      el.setAttribute("points", e.pts.map((p) => `${p[0]},${p[1]}`).join(" "));
-      frag.appendChild(stroke(el));
-    } else if (e.t === "HATCH") {
-      for (const poly of e.polys || []) {
-        const el = document.createElementNS(NS, "polygon");
-        el.setAttribute("points", poly.map((p) => `${p[0]},${p[1]}`).join(" "));
-        el.setAttribute("fill", hl ? "rgba(234,88,12,.15)" : "var(--hatch)"); el.setAttribute("stroke", "none");
-        frag.appendChild(el);
-      }
-    } else if (e.t === "CIRCLE") {
-      const el = document.createElementNS(NS, "circle");
-      el.setAttribute("cx", e.c[0]); el.setAttribute("cy", e.c[1]); el.setAttribute("r", e.r);
-      frag.appendChild(stroke(el));
-    } else if (e.t === "ARC") {
-      const a0 = e.a0 * Math.PI / 180, a1 = e.a1 * Math.PI / 180;
-      let sweep = a1 - a0; if (sweep < 0) sweep += 2 * Math.PI;
-      const p0 = [e.c[0] + e.r * Math.cos(a0), e.c[1] + e.r * Math.sin(a0)], p1 = [e.c[0] + e.r * Math.cos(a1), e.c[1] + e.r * Math.sin(a1)];
-      const el = document.createElementNS(NS, "path");
-      el.setAttribute("d", `M${p0[0]},${p0[1]} A${e.r},${e.r} 0 ${sweep > Math.PI ? 1 : 0} 1 ${p1[0]},${p1[1]}`);
-      frag.appendChild(stroke(el));
-    } else if (e.text !== undefined && e.at) {
+  if ($("#ghost").checked && geom0 !== geom) for (const p of geom0) if (p.k === "p" && p.role === "structural") frag.appendChild(poly(p, "var(--ghost)", 0.9, "6 4"));
+  for (const p of geom) {
+    const h = hl.has(p.i);
+    const col = h ? "var(--hi)" : p.role === "structural" ? "var(--struct)" : p.role === "reference" ? "var(--ref)" : p.role === "fixed" ? "var(--fixed)" : "var(--anno)";
+    if (p.k === "p") frag.appendChild(poly(p, col, h ? 2.4 : p.role === "structural" ? 1.2 : 0.7, p.role === "reference" ? "10 4 2 4" : null));
+    else if (p.k === "g") {
+      const el = document.createElementNS(NS, "polygon");
+      el.setAttribute("points", p.pts.map((q) => q[0] + "," + q[1]).join(" "));
+      el.setAttribute("fill", h ? "rgba(234,88,12,.18)" : "var(--fill)"); el.setAttribute("stroke", "none");
+      frag.appendChild(el);
+    } else if (p.k === "t" && p.text) {
       const t = document.createElementNS(NS, "text");
-      t.setAttribute("transform", `translate(${e.at[0]},${e.at[1]}) scale(1,-1)`);
-      t.setAttribute("font-size", e.h); t.setAttribute("fill", hl ? "var(--hi)" : "var(--muted)");
-      t.textContent = e.text;
-      frag.appendChild(t);
-    } else if (e.dim) {
-      const d = e.dim;
-      for (const [p, q] of [[d.p1, d.a], [d.p2, d.b], [d.a, d.b]]) {
-        const l = document.createElementNS(NS, "line");
-        l.setAttribute("x1", p[0]); l.setAttribute("y1", p[1]); l.setAttribute("x2", q[0]); l.setAttribute("y2", q[1]);
-        stroke(l); l.setAttribute("stroke", hl ? "var(--hi)" : "var(--anno)"); l.setAttribute("stroke-width", 0.7);
-        frag.appendChild(l);
-      }
-      const t = document.createElementNS(NS, "text");
-      const m = [(d.a[0] + d.b[0]) / 2, (d.a[1] + d.b[1]) / 2];
-      const len = Math.hypot(d.b[0] - d.a[0], d.b[1] - d.a[1]);
-      t.setAttribute("transform", `translate(${m[0]},${m[1]}) scale(1,-1)`);
-      t.setAttribute("font-size", Math.min(dimSize, Math.max(len * 0.25, dimSize * 0.5))); t.setAttribute("text-anchor", "middle"); t.setAttribute("dy", "-0.3em");
-      t.setAttribute("fill", hl ? "var(--hi)" : "var(--muted)"); t.textContent = d.text;
+      t.setAttribute("transform", `translate(${p.at[0]},${p.at[1]}) rotate(${p.rot || 0}) scale(1,-1)`);
+      t.setAttribute("font-size", p.h || textSize * 0.8); t.setAttribute("fill", h ? "var(--hi)" : "var(--muted)");
+      if (p.dim) { t.setAttribute("text-anchor", "middle"); t.setAttribute("dy", "-0.3em"); }
+      t.textContent = p.text.replace(/\\P/g, " ");
       frag.appendChild(t);
     }
   }
-  g.appendChild(frag);
-  g.setAttribute("transform", "scale(1,-1)");
-  setViewBox();
-}
-
-function bounds(geom) {
-  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  const add = (p) => { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); };
-  for (const e of geom) { if (e.role === "fixed") continue; if (e.pts) e.pts.forEach(add); if (e.c) { add([e.c[0] - e.r, e.c[1] - e.r]); add([e.c[0] + e.r, e.c[1] + e.r]); } }
-  return [x0, y0, x1, y1];
+  if ($("#showRegions").checked && S) for (const r of S.regions) {
+    const t = document.createElementNS(NS, "text");
+    t.setAttribute("transform", `translate(${r.inside[0]},${r.inside[1]}) scale(1,-1)`);
+    t.setAttribute("font-size", Math.max(textSize * 0.9, Math.min(r.width, r.height) * 0.25)); t.setAttribute("fill", "var(--accent)"); t.setAttribute("text-anchor", "middle");
+    t.textContent = r.id; t.setAttribute("data-r", r.id); frag.appendChild(t);
+  }
+  g.appendChild(frag); g.setAttribute("transform", "scale(1,-1)"); setVB();
 }
 function fit() {
-  if (!S) return;
-  const [x0, y0, x1, y1] = S.region || bounds(lastGeom());
-  const pad = 0.06 * Math.max(x1 - x0, y1 - y0);
-  view = { x: x0 - pad, y: -(y1 + pad), w: x1 - x0 + 2 * pad, h: y1 - y0 + 2 * pad };
-  setViewBox();
+  const [x0, y0, x1, y1] = S && S.region ? S.region : bounds(geom);
+  const pad = 0.05 * Math.max(x1 - x0, y1 - y0);
+  view = { x: x0 - pad, y: -(y1 + pad), w: x1 - x0 + 2 * pad, h: y1 - y0 + 2 * pad }; setVB();
 }
-function setViewBox() { $("#svg").setAttribute("viewBox", `${view.x} ${view.y} ${view.w} ${view.h}`); $("#svg").setAttribute("preserveAspectRatio", "xMidYMid meet"); }
-function toWorld(ev) {
-  const svg = $("#svg"); const pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
-  const p = pt.matrixTransform(svg.getScreenCTM().inverse()); return [p.x, -p.y];
-}
+function setVB() { $("#svg").setAttribute("viewBox", `${view.x} ${view.y} ${view.w} ${view.h}`); }
+function toWorld(ev) { const svg = $("#svg"); const pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY; const p = pt.matrixTransform(svg.getScreenCTM().inverse()); return [p.x, -p.y]; }
 (() => {
   const svg = $("#svg"); let drag = null;
-  svg.addEventListener("wheel", (ev) => {
-    ev.preventDefault(); const [wx, wy] = toWorld(ev); const k = ev.deltaY > 0 ? 1.15 : 1 / 1.15;
-    view = { x: wx - (wx - view.x) * k, y: -wy - (-wy - view.y) * k, w: view.w * k, h: view.h * k }; setViewBox();
-  }, { passive: false });
-  svg.addEventListener("pointerdown", (ev) => {
-    svg.setPointerCapture(ev.pointerId);
-    drag = { shift: ev.shiftKey, start: toWorld(ev), sx: ev.clientX, sy: ev.clientY, v: { ...view } };
-    svg.classList.add("panning");
-  });
+  svg.addEventListener("wheel", (ev) => { ev.preventDefault(); const [wx, wy] = toWorld(ev); const k = ev.deltaY > 0 ? 1.15 : 1 / 1.15; view = { x: wx - (wx - view.x) * k, y: -wy - (-wy - view.y) * k, w: view.w * k, h: view.h * k }; setVB(); }, { passive: false });
+  svg.addEventListener("pointerdown", (ev) => { svg.setPointerCapture(ev.pointerId); drag = { shift: ev.shiftKey, start: toWorld(ev), sx: ev.clientX, sy: ev.clientY, v: { ...view } }; });
   svg.addEventListener("pointermove", (ev) => {
     if (!drag) return;
-    if (drag.shift) {
-      const [x, y] = toWorld(ev); const [a, b] = drag.start;
-      sel = [Math.min(a, x), Math.min(b, y), Math.max(a, x), Math.max(b, y)];
-      const r = $("#sel"); r.setAttribute("display", "inline");
-      r.setAttribute("x", sel[0]); r.setAttribute("y", -sel[3]); r.setAttribute("width", sel[2] - sel[0]); r.setAttribute("height", sel[3] - sel[1]);
-    } else {
-      const rect = svg.getBoundingClientRect(); const s = Math.max(view.w / rect.width, view.h / rect.height);
-      view = { ...drag.v, x: drag.v.x - (ev.clientX - drag.sx) * s, y: drag.v.y - (ev.clientY - drag.sy) * s }; setViewBox();
-    }
+    if (drag.shift) { const [x, y] = toWorld(ev), [a, b] = drag.start; sel = [Math.min(a, x), Math.min(b, y), Math.max(a, x), Math.max(b, y)]; const r = $("#sel"); r.setAttribute("display", "inline"); r.setAttribute("x", sel[0]); r.setAttribute("y", -sel[3]); r.setAttribute("width", sel[2] - sel[0]); r.setAttribute("height", sel[3] - sel[1]); }
+    else { const rect = svg.getBoundingClientRect(); const s = Math.max(view.w / rect.width, view.h / rect.height); view = { ...drag.v, x: drag.v.x - (ev.clientX - drag.sx) * s, y: drag.v.y - (ev.clientY - drag.sy) * s }; setVB(); }
   });
-  svg.addEventListener("pointerup", () => { drag = null; svg.classList.remove("panning"); $("#useSel").style.display = sel ? "" : "none"; });
+  svg.addEventListener("pointerup", () => { drag = null; $("#useSel").style.display = sel ? "" : "none"; });
 })();
 
 // ── panels ──────────────────────────────────────────────────────────────────
-function fmt(v, unit) { return unit === "m" ? Number(v).toFixed(3) : Math.round(Number(v) * 10) / 10; }
-function render() {
-  const P = $("#pane");
-  if (!S) return;
-  if (tab === "params") {
-    const levels = S.parameters.filter((p) => p.kind === "level" || p.kind === "position");
-    const sizes = S.parameters.filter((p) => !(p.kind === "level" || p.kind === "position"));
-    const row = (p) => {
-      const u = S.units_mm, isLvl = p.kind === "level" || p.kind === "position";
-      const val = isLvl ? values[p.name] : values[p.name] * u;
-      const changed = Math.abs(values[p.name] - p.value) > 1e-9;
-      const ev = open.has(p.name) ? `<div class="ev">${p.label}${p.suggested ? ` · the drawing says “${p.suggested}”` : ""}<br>${p.evidence.map((e) => `<div>${e.weight >= 0 ? "+" : ""}${e.weight.toFixed(2)} ${e.kind}: ${e.detail}</div>`).join("")}<div>moves ${p.affects} entities · ${p.occurrences} occurrence(s)</div></div>` : "";
-      return `<div class="row" data-p="${p.name}"><div class="nm"><b>${p.name}</b><span class="chip ${p.status}">${p.status} ${Math.round(p.confidence * 100)}%</span><div class="sub">${p.label} · ×${p.occurrences} · moves ${p.affects}</div></div>
-        <input type="number" step="${isLvl ? 0.001 : 10}" value="${fmt(val, isLvl ? "m" : "mm")}" data-in="${p.name}" class="${changed ? "changed" : ""}" title="${isLvl ? "m" : "mm"}"/>
-        <button class="x" data-rej="${p.name}" title="Not a parameter — keep as a fixed size">✕</button></div>${ev}`;
+const fmt = (v, unit) => unit === "m" ? Number(v).toFixed(3) : (Math.round(Number(v) * 10) / 10).toString();
+const conf = (c) => c == null ? "" : `<span class="chip ${c >= 0.85 ? "ok" : c >= 0.75 ? "" : "warn"}" title="the AI's confidence">${Math.round(c * 100)}%</span>`;
+function head() {
+  const st = S.structure || {};
+  return S.mode === "ai"
+    ? `<div class="card"><h3>${esc(st.structure_type || "—")} <span class="chip ai">Gemini + measured</span></h3><div class="note">${esc((st.views || []).join(" · "))}</div><div class="note">${esc(st.summary || "")}</div></div>`
+    : `<div class="card"><h3>Geometry engine only <span class="chip">regions · generic names</span></h3><div class="note">The engine found ${S.regions.length} closed regions (the atomic parts). Press <b>✨ Parametrize with Gemini</b> to group them into components, name the values and state what grows and what stays — every claim is measured.</div></div>`;
+}
+function selectionBar() {
+  const changed = JSON.stringify([...hold].sort()) !== JSON.stringify((S.selection.hold || []).slice().sort()) || JSON.stringify([...exclude].sort()) !== JSON.stringify((S.selection.exclude || []).slice().sort()) || JSON.stringify([...drop].sort()) !== JSON.stringify((S.selection.drop || []).slice().sort());
+  return `<div class="bar"><button class="primary" id="applySel" ${changed ? "" : "disabled"}>Apply selection</button><button id="allSel">Parametrize entire drawing</button>
+    <span class="note">${hold.size} part(s) held · ${exclude.size} value(s) kept as drawn${drop.size ? ` · ${drop.size} constraint(s) dropped` : ""}</span></div>`;
+}
+function wireSelection() {
+  const a = $("#applySel"); if (a) a.onclick = () => run("/api/selection", { selection: { hold: [...hold], exclude: [...exclude], drop: [...drop] } }, "Re-applying your selection…");
+  const b = $("#allSel"); if (b) b.onclick = () => { hold.clear(); exclude.clear(); drop.clear(); run("/api/selection", { selection: { hold: [], exclude: [], drop: [] } }, "Parametrizing everything…"); };
+}
+function renderStruct() {
+  const st = S.structure || {};
+  let html = head();
+  if (S.mode === "ai") {
+    const kids = {}; for (const c of S.components) (kids[c.parent && S.components.some((x) => x.name === c.parent) ? c.parent : ""] ||= []).push(c);
+    const heldAbove = (c) => { let p = c.parent; while (p) { if (hold.has(p)) return true; p = (S.components.find((x) => x.name === p) || {}).parent; } return false; };
+    const node = (c, depth) => {
+      const inherited = heldAbove(c);
+      return `<div class="node" data-c="${esc(c.name)}" style="padding-left:${6 + depth * 18}px">
+        <input type="checkbox" data-hold="${esc(c.name)}" ${hold.has(c.name) || inherited ? "" : "checked"} ${inherited ? "disabled" : ""} title="parametric (untick to keep it as drawn)"/>
+        <div class="body"><b>${esc(c.name)}</b> <span class="chip">${esc(c.level)}</span><span class="chip">${esc(c.type)}</span>${conf(c.confidence)}${c.existing ? ' <span class="chip warn">existing</span>' : ""}${c.held ? ' <span class="chip">held</span>' : ""}${!c.parametrize ? ' <span class="chip" title="the AI recommends keeping it as drawn">keep as drawn?</span>' : ""}
+          <div class="sub">${c.regions.length ? c.regions.join(" ") : "no regions"}${c.description ? " · " + esc(c.description) : ""}</div>
+          ${c.evidence && c.evidence.length ? `<div class="sub">${c.evidence.map(esc).join(" · ")}</div>` : ""}</div></div>` + (kids[c.name] || []).map((k) => node(k, depth + 1)).join("");
     };
-    P.innerHTML = (levels.length ? `<div class="grp">Levels held as inputs (m)</div>${levels.map(row).join("")}` : "") +
-      `<div class="grp">Sizes found in the geometry (mm) — most influential first</div>${sizes.map(row).join("") || '<div class="note">none</div>'}` +
-      `<div class="note">Click a name for its evidence. ✕ keeps a size fixed. Values are mm (levels in m).</div>`;
-    P.querySelectorAll("[data-in]").forEach((el) => el.addEventListener("change", () => setValue(el.dataset.in, el.value)));
-    P.querySelectorAll("[data-rej]").forEach((el) => el.addEventListener("click", () => { decisions.reject.push(el.dataset.rej); rebuild(); }));
-    P.querySelectorAll(".row").forEach((el) => {
-      const p = S.parameters.find((q) => q.name === el.dataset.p);
-      el.addEventListener("mouseenter", () => draw(lastGeom(), new Set(p.influence)));
-      el.addEventListener("mouseleave", () => draw(lastGeom()));
-      el.querySelector(".nm").addEventListener("click", () => { open.has(p.name) ? open.delete(p.name) : open.add(p.name); render(); });
-      el.querySelector(".nm").addEventListener("dblclick", () => { const n = prompt(`Rename ${p.name}`, p.suggested || p.name); if (n && /^[A-Za-z_]\w*$/.test(n)) { decisions.rename[p.name] = n; rebuild(); } });
-    });
-  } else if (tab === "review") {
-    P.innerHTML = `<div class="grp">Set-out anchor (which line stays put)</div>
-      ${["x", "y"].map((a) => `<div class="row"><div class="nm">${a === "x" ? "Horizontal" : "Vertical"}</div><select data-anchor="${a}"><option value="">automatic</option><option value="min">${a === "x" ? "left" : "bottom"}</option><option value="max">${a === "x" ? "right" : "top"}</option><option value="axis">centre line</option></select><span></span></div>`).join("")}
-      <div class="grp">Other candidate values (not used as parameters)</div>
-      ${S.candidates.map((c) => `<div class="row"><div class="nm"><b>${c.name}</b><span class="chip ${c.status}">${c.status} ${Math.round(c.confidence * 100)}%</span><div class="sub">${c.label} · ${fmt(c.value_mm)} mm · ×${c.occurrences}</div></div><span class="note">${c.accepted ? "closes a loop" : "fixed"}</span><button class="x" data-acc="${c.name}" title="Make it a parameter">＋</button></div>`).join("") || '<div class="note">none</div>'}
-      <div class="note">Your decisions so far: ${JSON.stringify(decisions)}</div>`;
-    P.querySelectorAll("[data-acc]").forEach((el) => el.addEventListener("click", () => { decisions.accept.push(el.dataset.acc); rebuild(); }));
-    P.querySelectorAll("[data-anchor]").forEach((el) => { el.value = decisions.anchor[el.dataset.anchor] || ""; el.addEventListener("change", () => { if (el.value) decisions.anchor[el.dataset.anchor] = el.value; else delete decisions.anchor[el.dataset.anchor]; rebuild(); }); });
-  } else if (tab === "rels") {
-    P.innerHTML = `<div class="grp">Discovered relationships (worked out, not typed)</div>
-      ${(lastResults() || []).map((r) => `<div class="rel">${r.dimensioned ? "📏 " : ""}${r.label} <span class="v">= ${fmt(r.value)}</span><br>= ${r.expr}</div>`).join("") || '<div class="note">none</div>'}
-      <div class="grp">Geometric constraints</div>${S.constraints.map((c) => `<div class="note">• <b>${c.kind}</b> — ${c.detail} <i>(kept by ${c.kept_by})</i></div>`).join("")}
-      <div class="grp">Notes</div>${S.notes.map((n) => `<div class="note">${n}</div>`).join("")}`;
+    html += `<div class="grp"><span>What to parametrize</span><span>${S.components.length} parts</span></div>` + selectionBar()
+      + `<div class="bar"><button id="tellG" title="Turn these ticks into instructions Gemini follows on its next run or revision">Tell Gemini…</button></div>` + (kids[""] || []).map((c) => node(c, 0)).join("");
+    const un = (S.intent || {}).uncovered_regions || [];
+    if (un.length) html += `<div class="note f-warn">${un.length} region(s) are in no part: ${un.slice(0, 20).join(" ")}</div>`;
+  } else {
+    html += `<div class="grp"><span>Atomic regions</span><span>${S.regions.length}</span></div>` + selectionBar()
+      + S.regions.map((r) => `<div class="node" data-r="${r.id}"><input type="checkbox" data-hold="${r.id}" ${hold.has(r.id) ? "" : "checked"} title="parametric (untick to keep it as drawn)"/><div class="body"><b>${r.id}</b> <span class="sub">${fmt(r.width)} × ${fmt(r.height)}${r.fill ? " · " + esc(r.fill) : ""}${r.parent ? " · inside " + r.parent : ""}</span></div></div>`).join("");
+  }
+  if ((st.questions || []).length) html += `<div class="grp"><span>Questions for you</span></div>` + st.questions.map((q) => `<div class="note">• ${esc(q)}</div>`).join("");
+  html += `<div class="grp"><span>Reading the file</span></div>` + S.reader_notes.map((n) => `<div class="note">${esc(n)}</div>`).join("") + `<div class="note">${S.entities} entities read; not positioned: ${esc(JSON.stringify(S.unsupported))}</div>`;
+  $("#pane").innerHTML = html;
+  document.querySelectorAll("[data-hold]").forEach((el) => el.addEventListener("change", () => { el.checked ? hold.delete(el.dataset.hold) : hold.add(el.dataset.hold); renderStruct(); }));
+  const tg = $("#tellG");
+  if (tg) tg.onclick = () => {
+    const under = (c) => { let p = c.parent; while (p) { if (hold.has(p)) return true; p = (S.components.find((x) => x.name === p) || {}).parent; } return false; };
+    const keep = [...hold], params = S.components.filter((c) => !hold.has(c.name) && !under(c) && !S.components.some((k) => k.parent === c.name)).map((c) => c.name);
+    const text = `Parametrize: ${params.join(", ") || "nothing else"}.` + (keep.length ? ` Keep exactly as drawn: ${keep.join(", ")}.` : "") + (exclude.size ? ` Keep these values as drawn: ${[...exclude].join(", ")}.` : "");
+    draft = ((draft || "").trim() + "\n" + text).trim(); tab = "gemini"; setTab(); render();
+  };
+  document.querySelectorAll(".node[data-c]").forEach((el) => { const c = S.components.find((x) => x.name === el.dataset.c); el.addEventListener("mouseenter", () => draw(new Set(c.items))); el.addEventListener("mouseleave", () => draw()); });
+  document.querySelectorAll(".node[data-r]").forEach((el) => { const r = S.regions.find((x) => x.id === el.dataset.r); el.addEventListener("mouseenter", () => draw(new Set(r.items))); el.addEventListener("mouseleave", () => draw()); });
+  wireSelection();
+}
+function renderParams() {
+  const ai = Object.fromEntries(((S.intent || {}).impact ? Object.keys(S.intent.impact) : []).map((k) => [k, S.intent.impact[k]]));
+  const named = S.parameters.filter((p) => p.named), other = S.parameters.filter((p) => !p.named);
+  const groups = {}; for (const p of named) (groups[p.component || "Other"] ||= []).push(p);
+  const row = (p) => {
+    const changed = Math.abs((values[p.name] ?? p.value) - p.value) > 1e-9;
+    const imp = ai[p.name] || {};
+    const sweep = (p.unit === "m" ? [-0.5, -0.25, 0.25, 0.5, 1] : [-0.2, -0.1, 0.1, 0.2, 0.4]).map((f) => { const v = p.unit === "m" ? p.value + f : Math.round(p.value * (1 + f)); return `<button class="small" data-sw="${p.name}" data-v="${v}">${p.unit === "m" ? (f > 0 ? "+" : "") + f + " m" : fmt(v)}</button>`; }).join("") + `<button class="small" data-sw="${p.name}" data-v="${p.value}">as drawn</button>`;
+    return `<div class="row ${exclude.has(p.name) ? "off" : ""}" data-p="${p.name}">
+      <input type="checkbox" data-ex="${p.name}" ${exclude.has(p.name) ? "" : "checked"} title="editable input (untick to keep it as drawn)"/>
+      <div class="nm"><b data-open="${p.name}">${esc(p.name)}</b>${p.source === "ai" ? '<span class="chip ai">AI · validated</span>' : ""}${conf(p.confidence)}<div class="sub" title="${esc(p.note || p.label || "")}">${esc(p.label || "")}${p.occurrences > 1 ? " · ×" + p.occurrences : ""} · moves ${p.influence.length} entities${p.parts.length ? " · " + p.parts.length + " parts" : ""}</div></div>
+      <div class="val"><input type="number" step="${p.unit === "m" ? 0.001 : 10}" value="${fmt(values[p.name] ?? p.value, p.unit)}" data-in="${p.name}" class="${changed ? "changed" : ""}"/> <span class="unit">${p.unit}</span></div>
+      ${open.has(p.name) ? `<div class="more">
+        ${(p.evidence || []).length ? `<div class="sub">Evidence: ${p.evidence.map((e) => esc(typeof e === "string" ? e : e.detail || JSON.stringify(e))).join(" · ")}</div>` : ""}
+        <div class="sub">Drives: ${p.parts.slice(0, 12).map(esc).join(", ") || "—"}${p.relations.length ? " · relations " + p.relations.map(esc).join(", ") : ""}${p.texts ? " · " + p.texts + " note(s)" : ""}</div>
+        ${Object.keys(imp).length ? `<div class="sub">Measured: ${Object.entries(imp).slice(0, 10).map(([k, v]) => `${esc(k)} ${esc(v)}`).join(" · ")}</div>` : ""}
+        <div class="sweep">Preview: ${sweep}</div></div>` : ""}
+    </div>`;
+  };
+  const kept = (S.selection.exclude || []).filter((n) => !S.parameters.some((p) => p.name === n));
+  $("#pane").innerHTML = head() + selectionBar() + Object.entries(groups).map(([g, ps]) => `<div class="grp"><span>${esc(g)}</span><span>${ps.length}</span></div>${ps.map(row).join("")}`).join("")
+    + (kept.length ? `<div class="grp"><span>Kept as drawn</span></div>` + kept.map((n) => `<div class="row off"><input type="checkbox" data-ex="${esc(n)}"/><div class="nm"><b>${esc(n)}</b><div class="sub">tick and apply to make it editable again</div></div><div></div></div>`).join("") : "")
+    + (other.length ? `<details ${named.length ? "" : "open"}><summary>${other.length} more values found in the geometry (not named)</summary>${other.map(row).join("")}</details>` : "");
+  document.querySelectorAll("[data-in]").forEach((el) => el.addEventListener("change", () => setValue(el.dataset.in, Number(el.value))));
+  document.querySelectorAll("[data-ex]").forEach((el) => el.addEventListener("change", () => { el.checked ? exclude.delete(el.dataset.ex) : exclude.add(el.dataset.ex); renderParams(); }));
+  document.querySelectorAll("[data-open]").forEach((el) => el.addEventListener("click", () => { open.has(el.dataset.open) ? open.delete(el.dataset.open) : open.add(el.dataset.open); renderParams(); }));
+  document.querySelectorAll("[data-sw]").forEach((el) => el.addEventListener("click", () => setValue(el.dataset.sw, Number(el.dataset.v))));
+  document.querySelectorAll(".row[data-p]").forEach((el) => { const p = S.parameters.find((q) => q.name === el.dataset.p); if (!p) return; el.addEventListener("mouseenter", () => draw(new Set(p.influence))); el.addEventListener("mouseleave", () => draw()); });
+  wireSelection();
+}
+function renderIntent() {
+  const I = S.intent || {};
+  let html = head();
+  if (lesson) {
+    html += `<div class="card"><h3>Learned from the edited drawing</h3>${lesson.rules.map((r) => `<div class="note">• ${esc(r)}</div>`).join("")}
+      <details><summary>details</summary><pre style="white-space:pre-wrap;font-size:11px">${esc(JSON.stringify(lesson, null, 1))}</pre></details></div>`;
+  }
+  const rev = I.review || [];
+  if (rev.length) html += `<div class="grp"><span>Review (low confidence)</span><span>${rev.length}</span></div>` + rev.map((r) => `<div class="rel"><b>${esc(r.name)}</b> <span class="chip">${r.kind}</span>${conf(r.confidence)}
+      <div class="sub">${(r.evidence || []).map(esc).join(" · ")}</div>
+      <button class="small" data-acc="${esc(r.kind)}|${esc(r.name)}">Accept</button> <button class="small" data-rej="${esc(r.kind)}|${esc(r.name)}">Reject</button></div>`).join("") + selectionBar();
+  const beh = I.behaviours || [];
+  if (beh.length) {
+    const byP = {}; for (const b of beh) (byP[b.parameter] ||= []).push(b);
+    html += `<div class="grp"><span>When a value increases (AI's intent, measured)</span></div>` + Object.entries(byP).map(([p, rows]) => `<div class="rel"><b>${esc(p)}</b>${rows.map((b) => `<div class="sub st-${b.status}">${b.status === "confirmed" ? "✓" : b.status === "contradicted" ? "✗" : "·"} ${esc(b.target)} ${esc(b.behaviour)}${b.axis && b.axis !== "both" ? " " + b.axis : ""}${b.status === "contradicted" || b.status === "held" ? " — model: " + esc(b.measured) : ""}</div>`).join("")}</div>`).join("");
+  }
+  const cons = I.constraints || [];
+  if (cons.length) html += `<div class="grp"><span>Constraints</span><span>${cons.filter((c) => c.status === "always").length}/${cons.length} kept</span></div>` + cons.map((c) => `<div class="rel"><span class="st-${c.status}">${c.status === "always" ? "✓" : c.status === "now_only" ? "!" : c.status === "unchecked" ? "·" : "✗"}</span> ${esc(c.label)} ${conf(c.confidence)}
+      <div class="sub">${c.status === "always" ? "kept under every change" : c.status === "now_only" ? "holds as drawn, breaks when " + esc(c.breaks_under.join(", ")) + " change" : esc(c.status)}${c.enforced_on ? ` · enforced by the engine on ${c.enforced_on}` : ""}</div>
+      <button class="small" data-drop="${esc(c.label)}">${drop.has(c.label) ? "Keep" : "Drop"}</button></div>`).join("");
+  const imp = I.impact || {};
+  if (Object.keys(imp).length) html += `<details><summary>What each value does (engine, measured on every part)</summary>${Object.entries(imp).map(([p, row]) => `<div class="rel"><b>${esc(p)}</b><div class="sub">${Object.entries(row).map(([k, v]) => `${esc(k)}: ${esc(v)}`).join(" · ") || "moves nothing it names"}</div></div>`).join("")}</details>`;
+  const roles = I.line_roles || [];
+  if (roles.length) html += `<details><summary>${roles.length} set-out line roles</summary>${roles.map((r) => `<div class="sub">${esc(r.datum)} — ${esc(r.role)} of ${esc(r.component)}${conf(r.confidence)}</div>`).join("")}</details>`;
+  if (!beh.length && !cons.length && !lesson) html += `<div class="note">Run Gemini to state the design intent (what grows, what stays), or use <b>Learn from edit</b> with an edited copy of this drawing.</div>`;
+  $("#pane").innerHTML = html;
+  document.querySelectorAll("[data-drop]").forEach((el) => el.addEventListener("click", () => { const k = el.dataset.drop; drop.has(k) ? drop.delete(k) : drop.add(k); renderIntent(); }));
+  document.querySelectorAll("[data-rej]").forEach((el) => el.addEventListener("click", () => { const [kind, name] = el.dataset.rej.split("|"); if (kind === "component") hold.add(name); else if (kind === "parameter") exclude.add(name); else drop.add(name); renderIntent(); }));
+  document.querySelectorAll("[data-acc]").forEach((el) => el.addEventListener("click", () => { const [kind, name] = el.dataset.acc.split("|"); hold.delete(name); exclude.delete(name); drop.delete(name); el.parentElement.style.opacity = 0.5; }));
+  wireSelection();
+}
+function md(text) { return esc(text).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>"); }
+function evHtml(e) {
+  const t = `<span class="t">${e.t ?? ""}s</span>`;
+  if (e.kind === "thought") return `<div class="ev thought">${t}${md(e.text)}</div>`;
+  if (e.kind === "call") return `<div class="ev call">${t}${e.cached ? `${esc(e.label)} — from the answer cache (free)` : `${esc(e.label)} · ${esc(e.model)} @${esc(e.thinking)} · prompt cache ${esc(e.prompt_cache)}${e.attempt > 1 ? " · attempt " + e.attempt : ""}`}</div>`;
+  if (e.kind === "round") return `<div class="ev round">${t}round ${e.round}: accepted ${Object.values(e.accepted).reduce((a, b) => a + b, 0)} · rejected ${Object.values(e.rejected).reduce((a, b) => a + b, 0)}${e.errors.length ? `<div class="sub">${e.errors.map(esc).join("<br>")}</div>` : ""}</div>`;
+  if (e.kind === "retry") return `<div class="ev retry">${t}${esc(e.label || "")} retry: ${esc(e.why)}</div>`;
+  if (e.kind === "done") return `<div class="ev round">${t}done in ${e.seconds} s — ${e.tokens_in} tokens in (${e.tokens_cached} from the prompt cache), ${e.tokens_out} out</div>`;
+  if (e.kind === "error") return `<div class="ev err">${t}${esc(e.text)}</div>`;
+  if (e.kind === "stopped") return `<div class="ev retry">${t}■ ${esc(e.text)}</div>`;
+  if (e.kind === "tool") return `<div class="ev ${e.ok ? "" : "err"}">${t}${e.ok ? "✓" : "✗"} <b>${esc(e.name)}</b> <code>${esc(e.args || "")}</code>${e.why ? `<div class="sub">${esc(e.why)}</div>` : ""}</div>`;
+  if (e.kind === "status") return `<div class="ev round">${t}${e.parts} parts${e.regions_without_part ? ` (${e.regions_without_part} regions without one)` : ""} · ${e.parameters} parameters · ${e.open_problems} open problem(s)</div>`;
+  if (e.kind === "note") return `<div class="ev retry">${t}${esc(e.text)}</div>`;
+  return `<div class="ev">${t}${esc(e.text || "")}</div>`;
+}
+function renderGemini() {
+  const ai = S.mode === "ai";
+  const presets = ["Parametrize only the proposed structure; keep existing work exactly as drawn.", "Every repeated size (cells, spans, spacings) is one value.",
+    "Keep tracks, annotation details and title block as drawn.", "The main span / clear height will change; levels stay fixed.", "Make wing / return wall length and slope parameters."];
+  let html = `<div class="grp"><span>Tell Gemini what to parametrize</span></div>
+    <textarea id="instr" placeholder="e.g. Parametrize the proposed box and its wing walls; keep the existing bridge and the tracks as drawn. The clear span will change; the bed level stays. R12 and R13 are one footing.">${esc(draft ?? "")}</textarea>
+    <div class="chips">${presets.map((p, i) => `<button data-preset="${i}">+ ${esc(p.split(";")[0])}</button>`).join("")}</div>
+    <div class="note">Tip: tick <b>regions</b> on the drawing and click a region's label to add it here; or use <b>Tell Gemini…</b> in Structure.</div>
+    <div class="bar">${job.running ? `<button class="stop" id="stopG" ${job.stopping ? "disabled" : ""}>${job.stopping ? "Stopping…" : "■ Stop Gemini"}</button>` : ""}
+      <button class="ai" id="runG" ${job.running ? "disabled" : ""}>✨ Run Gemini with these instructions</button>
+      <button id="revG" ${job.running || !ai ? "disabled" : ""} title="${ai ? "Gemini changes its current answer as you ask; the drawing's facts come from the prompt cache" : "run Gemini first"}">Revise current answer</button></div>`;
+  if (job.running || job.events.length) {
+    html += `<div class="grp"><span>${job.running ? '<span class="live"></span>Gemini is working' : "Last run"}</span><span>${job.events.filter((e) => e.kind === "thought").length} thoughts</span></div>
+      <div class="stream" id="stream">${job.events.map(evHtml).join("") || '<div class="ev">waiting for the first thought…</div>'}</div>`;
+  }
+  const th = S.thoughts || [];
+  if (ai && th.length && !job.running) {
+    html += `<details ${job.events.length ? "" : "open"}><summary>How Gemini reasoned for the current answer (${th.reduce((a, c) => a + c.thoughts.length, 0)} thought summaries)</summary>`
+      + th.map((c) => `<div class="card"><b>${esc(c.label)}</b> <span class="chip">${esc(c.model || "")} @${esc(c.thinking || "")}</span>${c.cached ? '<span class="chip">from cache</span>' : ""}
+        ${c.thoughts.length ? c.thoughts.map((x) => `<div class="ev thought">${md(x)}</div>`).join("") : '<div class="note">no thought summaries were kept for this call</div>'}</div>`).join("") + `</details>`;
+  }
+  if ((S.history || []).length) html += `<div class="grp"><span>Asked so far</span></div>` + S.history.map((h) => `<div class="rel"><span class="chip ai">${h.kind}</span> <span class="unit">${h.at}</span> ${esc(h.text || "(no instructions)")}<div class="sub">${h.rejected} rejected · ${h.tokens_in} in / ${h.tokens_out} out tokens</div></div>`).join("");
+  $("#pane").innerHTML = html;
+  const box = $("#instr"); box.addEventListener("input", () => { draft = box.value; });
+  document.querySelectorAll("[data-preset]").forEach((b) => b.addEventListener("click", () => { draft = ((draft || "").trim() + "\n" + presets[Number(b.dataset.preset)]).trim(); box.value = draft; }));
+  $("#runG").onclick = () => startAI("/api/ai", { rounds: 2, instructions: box.value });
+  const sg = $("#stopG"); if (sg) sg.onclick = stopAI;
+  $("#revG").onclick = () => { if (!box.value.trim()) return banner("Write what Gemini should change, then press Revise."); startAI("/api/ai/revise", { rounds: 2, request: box.value }); };
+  const st = $("#stream"); if (st) st.scrollTop = st.scrollHeight;
+}
+async function startAI(path, body) {
+  try { await api(path, body); job = { running: true, events: [], next: 0 }; tab = "gemini"; setTab(); render(); watch(); }
+  catch (e) { banner(e.message); }
+}
+async function stopAI() {
+  try { await api("/api/ai/stop", {}); job.stopping = true; headerAI(); if (tab === "gemini") render(); }
+  catch (e) { banner(e.message); }
+}
+function headerAI() {
+  const b = $("#ai");
+  b.className = job.running ? "stop" : "ai";
+  b.textContent = job.running ? (job.stopping ? "Stopping…" : "■ Stop Gemini") : "✨ Parametrize with Gemini";
+  b.disabled = !!job.stopping;
+}
+function watch() {
+  if (poller) return;
+  job.running = true; headerAI();
+  poller = setInterval(async () => {
+    try {
+      const p = await api("/api/ai/progress?since=" + job.next);
+      const wasStopping = job.stopping;
+      job.events.push(...p.events); job.next = p.next; job.running = p.running; job.stopping = p.stopping && p.running; headerAI();
+      if (tab === "gemini" && job.stopping !== wasStopping) render();
+      if (tab === "gemini") {
+        const st = $("#stream");
+        if (st && p.events.length) { st.insertAdjacentHTML("beforeend", p.events.map(evHtml).join("")); st.scrollTop = st.scrollHeight; }
+        else if (!st) render();
+      }
+      if (!p.running) { clearInterval(poller); poller = null; geom0 = []; await load(); if (p.error) banner(p.error); }
+    } catch (e) { clearInterval(poller); poller = null; banner(e.message); }
+  }, 1000);
+}
+function setTab() { document.querySelectorAll(".tabs button").forEach((x) => x.classList.toggle("on", x.dataset.tab === tab)); }
+function render() {
+  if (!S) return;
+  if (tab === "gemini") return renderGemini();
+  if (tab === "struct") return renderStruct();
+  if (tab === "params") return renderParams();
+  if (tab === "intent") return renderIntent();
+  const P = $("#pane");
+  if (tab === "rels") {
+    const live = Object.fromEntries(relVals.map((r) => [r.name, r.value]));
+    P.innerHTML = head() + `<div class="grp"><span>Relationships (worked out from the values)</span></div>` + S.relations.map((r) => `<div class="rel"><b>${esc(r.name)}</b> <span class="unit">${r.label && r.label !== r.name ? esc(r.label) : ""}</span> = <b>${live[r.name] !== undefined ? fmt(live[r.name]) : ""}</b><br><code>${esc(r.expr)}</code> ${r.enforced ? '<span class="chip ok">kept by the model</span>' : '<span class="chip warn">holds now only</span>'}</div>`).join("")
+      + (S.formulas_ai.length ? `<div class="grp"><span>Set-out lines the AI re-based (validated)</span></div>` + S.formulas_ai.map((f) => `<div class="rel"><code>${esc(f.datum)} = ${esc(f.expr)}</code></div>`).join("") : "");
   } else {
     const v = S.validation;
-    P.innerHTML = `<div class="grp">Validation</div><div class="stat">
-      <span class="k">Identity (regenerated at defaults vs original)</span><span class="${v.identity_max_error < 1e-6 ? "ok" : "bad"}">${v.identity_max_error.toExponential(1)}</span>
-      <span class="k">Parameters regenerating validly at ±10%</span><span class="${v.regenerate_ok === v.parameters ? "ok" : "bad"}">${v.regenerate_ok}/${v.parameters}</span>
-      <span class="k">Entities / structural</span><span>${v.entities} / ${v.structural_entities}</span>
-      <span class="k">Not positioned (kept as drawn)</span><span>${JSON.stringify(S.unsupported)}</span></div>
-      ${v.failing.length ? `<div class="grp">Values that break the drawing when changed</div>${v.failing.map((f) => `<div class="note bad">${f.name}: ${f.issues[0] || ""}</div>`).join("")}` : ""}
-      <div class="grp">DXF</div><button id="aud">Write + re-open the DXF strictly</button><div id="audr" class="note"></div>`;
-    $("#aud").onclick = async () => { $("#audr").textContent = "checking…"; const r = await api("/api/audit", {}); $("#audr").textContent = JSON.stringify(r); };
+    const ai = S.ai ? `<div class="note">Gemini: ${S.ai.usage.length} call(s), ${S.ai.tokens_in} tokens in / ${S.ai.tokens_out} out, ${S.ai.seconds} s${S.ai.usage.some((u) => u.cached) ? " (some answers from cache — free)" : ""}${S.ai.usage.some((u) => u.fallback) ? " · fallback model used" : ""}</div>` : "";
+    P.innerHTML = head() + `<div class="grp"><span>Validator</span></div><div class="note">accepted ${esc(JSON.stringify(v.accepted))} · rejected ${esc(JSON.stringify(v.rejected))}</div>${ai}`
+      + v.findings.map((f) => `<div class="note f-${f.severity}">${f.severity === "error" ? "✗ rejected" : f.severity === "info" ? "·" : "!"} ${esc(f.code)} ${esc(f.item)}: ${esc(f.message)}</div>`).join("")
+      + `<div class="grp"><span>DXF</span></div><button id="aud">Write and re-open the DXF strictly</button> <button id="graph">Dependency graph JSON</button><div id="audr" class="note"></div>`;
+    $("#aud").onclick = async () => { $("#audr").textContent = "checking…"; $("#audr").textContent = JSON.stringify(await api("/api/audit", {})); };
+    $("#graph").onclick = () => { location.href = "/api/graph.json"; };
   }
 }
-let _geom = null, _results = null;
-const lastGeom = () => _geom || S.geometry;
-const lastResults = () => _results || S.results;
-
-async function setValue(name, raw) {
-  const p = S.parameters.find((q) => q.name === name);
-  const isLvl = p.kind === "level" || p.kind === "position";
-  const v = isLvl ? Number(raw) : Number(raw) / S.units_mm;
+async function setValue(name, v) {
   const r = await api("/api/regen", { values: { [name]: v } });
-  if (!r.ok) {
-    $("#banner").style.display = "block";
-    $("#banner").textContent = `Refused — ${name} = ${raw} would break the drawing: ${r.issues.slice(0, 3).join("; ")}`;
-    setTimeout(() => ($("#banner").style.display = "none"), 6000);
-    render(); return;
-  }
-  values = r.values; _geom = r.geometry; _results = r.results;
-  draw(_geom); render();
+  if (!r.ok) { banner(`Refused — ${name} = ${v} would break the drawing: ${r.issues.slice(0, 2).join("; ")}`); render(); return; }
+  values = r.values; geom = r.geometry; relVals = r.relation_values; draw(); render();
 }
-async function rebuild(body = {}) {
-  $("#pane").innerHTML = '<div class="empty">Analysing…</div>';
-  await api("/api/analyse", { ...body, decisions });
-  _geom = null; _results = null; await load();
+async function run(path, body, text) {
+  busy(true, text);
+  try { await api(path, body); fitted = path !== "/api/ai" && path !== "/api/geometry-only" && path !== "/api/selection" && path !== "/api/hold-existing" ? false : fitted; geom0 = []; await load(); }
+  catch (e) { banner(e.message); }
+  finally { busy(false); }
 }
-
-document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => { tab = b.dataset.tab; document.querySelectorAll(".tabs button").forEach((x) => x.classList.toggle("on", x === b)); render(); }));
+document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => { tab = b.dataset.tab; setTab(); render(); }));
+$("#svg").addEventListener("click", (ev) => {
+  const r = ev.target && ev.target.getAttribute && ev.target.getAttribute("data-r");
+  if (!r) return;
+  draft = ((draft || "").trim() + " " + r).trim();
+  if (tab === "gemini" && $("#instr")) $("#instr").value = draft;
+  banner(`${r} added to the instructions for Gemini`, true);
+});
 $("#fit").onclick = fit;
-$("#useSel").onclick = async () => { const r = sel; sel = null; $("#sel").setAttribute("display", "none"); $("#useSel").style.display = "none"; await rebuild({ region: r }); fit(); };
-$("#whole").onclick = async () => { await rebuild({ region: null }); fit(); };
-$("#views").onchange = async (ev) => { const v = ev.target.value; await rebuild(v === "" ? { region: null } : { view: Number(v) }); fit(); };
-$("#domain").onchange = (ev) => rebuild({ domain: ev.target.value });
-$("#reset").onclick = async () => { const r = await api("/api/regen", { values: Object.fromEntries(S.parameters.map((p) => [p.name, p.value])) }); values = r.values; _geom = r.geometry; _results = r.results; draw(_geom); render(); };
+$("#ghost").onchange = () => draw();
+$("#showRegions").onchange = () => draw();
+$("#ai").onclick = () => (job.running ? stopAI() : startAI("/api/ai", { rounds: 2, instructions: draft || "" }));
+$("#geo").onclick = () => run("/api/geometry-only", {}, "Analysing…");
+$("#hold").onchange = (ev) => run("/api/hold-existing", { on: ev.target.checked }, "Re-applying…");
+$("#views").onchange = (ev) => run("/api/region", ev.target.value === "" ? { region: null } : { view: Number(ev.target.value) }, "Analysing the view…");
+$("#useSel").onclick = () => { const r = sel; sel = null; $("#sel").setAttribute("display", "none"); $("#useSel").style.display = "none"; run("/api/region", { region: r }, "Analysing the region…"); };
+$("#whole").onclick = () => run("/api/region", { region: null }, "Analysing…");
+$("#reset").onclick = async () => { const r = await api("/api/regen", { values: Object.fromEntries(S.parameters.map((p) => [p.name, p.value])) }); values = r.values; geom = r.geometry; relVals = r.relation_values; draw(); render(); };
 $("#export").onclick = () => { location.href = "/api/export.dxf?values=" + encodeURIComponent(JSON.stringify(values)); };
-$("#json").onclick = () => { location.href = "/api/model.json"; };
+$("#json").onclick = () => { location.href = "/api/program.json"; };
+$("#cadjson").onclick = () => { location.href = "/api/cad.json"; };
+$("#answer").onclick = () => { location.href = "/api/answer.json"; };
 $("#open").onchange = async (ev) => {
   const f = ev.target.files[0]; if (!f) return;
-  $("#pane").innerHTML = '<div class="empty">Analysing…</div>';
-  await fetch("/api/upload?name=" + encodeURIComponent(f.name), { method: "POST", body: await f.arrayBuffer() });
-  decisions = { accept: [], reject: [], rename: {}, anchor: {} }; load.fitted = false; _geom = null; _results = null; await load();
+  busy(true, "Reading " + f.name + "…");
+  try { await fetch("/api/upload?name=" + encodeURIComponent(f.name), { method: "POST", body: await f.arrayBuffer() }); fitted = false; geom0 = []; lesson = null; await load(); }
+  catch (e) { banner(e.message); } finally { busy(false); ev.target.value = ""; }
+};
+$("#learn").onchange = async (ev) => {
+  const f = ev.target.files[0]; if (!f) return;
+  busy(true, "Comparing with " + f.name + "…");
+  try { const r = await (await fetch("/api/learn?name=" + encodeURIComponent(f.name), { method: "POST", body: await f.arrayBuffer() })).json(); if (r.ok === false) throw new Error(r.error); lesson = r.lesson; tab = "intent"; document.querySelectorAll(".tabs button").forEach((x) => x.classList.toggle("on", x.dataset.tab === "intent")); render(); }
+  catch (e) { banner(e.message); } finally { busy(false); ev.target.value = ""; }
 };
 load();
 </script>

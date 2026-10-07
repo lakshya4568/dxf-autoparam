@@ -1,0 +1,435 @@
+"""Gemini on Vertex AI, configured the way the Aagento sidecar is — from the environment or gcloud.
+
+    GOOGLE_CLOUD_PROJECT (or GCLOUD_PROJECT / GCP_PROJECT, else `gcloud config get-value project`)
+    VERTEX_LOCATION (or GOOGLE_CLOUD_LOCATION; default "global")
+    VERTEX_MODEL (or GEMINI_MODEL; default "gemini-3.8-flash"), thinking VERTEX_THINKING_LEVEL (default "high")
+    VERTEX_FALLBACK_MODEL (default "gemini-3.7-flash", thinking VERTEX_FALLBACK_THINKING_LEVEL "high") — used when
+        the primary is out of capacity or past its deadline (429 / 503 / 504)
+    VERTEX_EXPLICIT_CACHE (default on; "0" turns it off), VERTEX_CACHE_TTL_S (default 1200)
+    VERTEX_TIMEOUT_MS (default 600000) — also the server's deadline: shorter makes long thinking end in a 504
+    credentials: Application Default Credentials (`gcloud auth application-default login`)
+
+Nothing is hardcoded. Two caches, for two different things:
+  • answers on disk (.cache/ai/), keyed by a hash of everything sent (model and thinking level included): asking
+    the same question about the same drawing twice costs nothing;
+  • a Vertex EXPLICIT prompt cache for the part of the request that repeats within one run — the system prompt,
+    the pictures, the knowledge and the CAD JSON. The first call creates it, each repair round sends only its own
+    rejection list against it (cached tokens are billed at a discount), and it is deleted when the run ends.
+Every call's tokens (and how many were served from the prompt cache) are logged in .cache/ai/usage.jsonl.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import subprocess
+import time
+from dataclasses import dataclass
+from pathlib import Path
+
+CACHE = Path(".cache") / "ai"
+# Below this many prefix tokens Vertex refuses an explicit cache (the same floor aagento-bridge's sidecar uses
+# for 3.8 Flash); a shorter request is simply sent whole.
+MIN_CACHE_TOKENS = 6144
+IMAGE_TOKENS = 1300  # rough cost of one drawing picture, for that estimate only
+
+
+@dataclass
+class VertexConfig:
+    project: str
+    location: str
+    model: str
+    thinking: str  # low | medium | high
+    fallback_model: str = ""
+    fallback_thinking: str = "high"
+    explicit_cache: bool = True
+    cache_ttl_s: int = 1200
+    max_output_tokens: int = 65536  # thinking counts against it: high thinking on a big drawing needs room
+
+
+def load_env_file(path: str = ".env") -> None:
+    p = Path(path)
+    if not p.exists():
+        return
+    for line in p.read_text().splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            k, v = line.split("=", 1)
+            os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+
+
+class GeminiUnavailable(RuntimeError):
+    """Every model in the plan was out of capacity, past its deadline, or gave no usable answer."""
+
+
+class GeminiStopped(RuntimeError):
+    """The person stopped the run."""
+
+
+@dataclass
+class Reply:
+    """One streamed answer: the JSON text, the model's thought summaries, the last usage and finish reason."""
+
+    text: str
+    thoughts: list[str]
+    usage_metadata: object
+    finish: str
+
+
+def _stream(client, model: str, contents, config, on_event, stop=None) -> Reply:
+    """Stream one answer. Thought summaries are passed on as they arrive (the person watches the model work).
+    `stop()` is checked at every streamed message; when it says stop, the stream is closed (Vertex stops generating)."""
+    text, thoughts, um, finish = [], [], None, "UNKNOWN"
+    stream = client.models.generate_content_stream(model=model, contents=contents, config=config)
+    try:
+        for chunk in stream:
+            if stop and stop():
+                raise GeminiStopped("stopped by the person")
+            um, finish = _take(chunk, text, thoughts, on_event, um, finish)
+    finally:
+        close = getattr(stream, "close", None)
+        if close:
+            close()
+    return Reply("".join(text), thoughts, um, finish)
+
+
+def _take(chunk, text: list[str], thoughts: list[str], on_event, um, finish):
+    """One streamed message: answer text, thought summaries, usage, finish reason."""
+    um = getattr(chunk, "usage_metadata", None) or um
+    for cand in getattr(chunk, "candidates", None) or []:
+        fr = getattr(cand, "finish_reason", None)
+        if fr is not None:
+            finish = getattr(fr, "name", None) or str(fr)
+        for part in getattr(getattr(cand, "content", None), "parts", None) or []:
+            if not getattr(part, "text", None):
+                continue
+            if getattr(part, "thought", False):
+                thoughts.append(part.text)
+                if on_event:
+                    on_event({"kind": "thought", "text": part.text})
+            else:
+                text.append(part.text)
+    return um, finish
+
+
+def _read(reply: Reply, schema) -> dict | None:
+    """The structured answer, or None when the reply is not complete, valid JSON (cut off, blocked, empty)."""
+    from pydantic import ValidationError
+
+    try:
+        return schema.model_validate(json.loads(reply.text or "")).model_dump()
+    except (json.JSONDecodeError, ValidationError, TypeError, ValueError):
+        return None
+
+
+def _tokens(reply: Reply) -> dict:
+    um = reply.usage_metadata
+    return {"input_tokens": getattr(um, "prompt_token_count", 0) or 0, "output_tokens": getattr(um, "candidates_token_count", 0) or 0,
+            "thinking_tokens": getattr(um, "thoughts_token_count", 0) or 0,
+            # input tokens served from a prompt cache (explicit, or Vertex's implicit one), billed at a discount
+            "vertex_cached_tokens": getattr(um, "cached_content_token_count", 0) or 0}
+
+
+def _wait(seconds: float, stop) -> None:
+    """A back-off the person can cut short."""
+    end = time.monotonic() + seconds
+    while time.monotonic() < end:
+        if stop and stop():
+            raise GeminiStopped("stopped by the person")
+        time.sleep(min(0.2, end - time.monotonic()) if end > time.monotonic() else 0)
+
+
+def _log(entry: dict) -> None:
+    with open(CACHE / "usage.jsonl", "a") as f:
+        f.write(json.dumps({**entry, "at": time.strftime("%Y-%m-%d %H:%M:%S")}) + "\n")
+
+
+def config() -> VertexConfig:
+    load_env_file()
+    project = os.environ.get("GOOGLE_CLOUD_PROJECT") or os.environ.get("GCLOUD_PROJECT") or os.environ.get("GCP_PROJECT")
+    if not project:
+        try:
+            project = subprocess.run(["gcloud", "config", "get-value", "project"], capture_output=True, text=True, timeout=20, check=False).stdout.strip()
+        except (OSError, subprocess.SubprocessError):
+            project = ""
+    if not project:
+        raise RuntimeError("No Google Cloud project: set GOOGLE_CLOUD_PROJECT in .env or run `gcloud config set project <id>`.")
+    return VertexConfig(
+        project=project,
+        location=os.environ.get("VERTEX_LOCATION") or os.environ.get("GOOGLE_CLOUD_LOCATION") or "global",
+        model=os.environ.get("VERTEX_MODEL") or os.environ.get("GEMINI_MODEL") or "gemini-3.8-flash",
+        thinking=os.environ.get("VERTEX_THINKING_LEVEL", "high"),
+        fallback_model=os.environ.get("VERTEX_FALLBACK_MODEL", "gemini-3.7-flash"),
+        fallback_thinking=os.environ.get("VERTEX_FALLBACK_THINKING_LEVEL", "high"),
+        explicit_cache=os.environ.get("VERTEX_EXPLICIT_CACHE", "1") != "0",
+        cache_ttl_s=int(os.environ.get("VERTEX_CACHE_TTL_S", "1200")),
+        max_output_tokens=int(os.environ.get("VERTEX_MAX_OUTPUT_TOKENS", "65536")),
+    )
+
+
+def _transient(exc: Exception) -> bool:
+    """Out of capacity, overloaded, or past its deadline: worth a retry and then the fallback model."""
+    code = getattr(exc, "code", None)
+    if code in (429, 500, 503, 504):
+        return True
+    text = str(exc)
+    return isinstance(exc, TimeoutError) or any(k in text for k in ("UNAVAILABLE", "RESOURCE_EXHAUSTED", "DEADLINE", "timed out", "Timeout"))
+
+
+class Gemini:
+    def __init__(self, cfg: VertexConfig | None = None, client=None):
+        self.cfg = cfg or config()
+        if client is None:
+            from google import genai
+            from google.genai import types
+
+            # The SDK sends this as the SERVER deadline too (X-Server-Timeout): a call that thinks longer is cut off
+            # by Vertex with a 504. High thinking on a 50-region drawing takes 1-4 minutes, so 10 minutes.
+            timeout_ms = int(os.environ.get("VERTEX_TIMEOUT_MS", "600000"))
+            client = genai.Client(vertexai=True, project=self.cfg.project, location=self.cfg.location,
+                                  http_options=types.HttpOptions(timeout=timeout_ms))
+        self.client = client
+        # (model, prefix hash) → cached-content name; None when Vertex refused a cache for that prefix
+        self._prompt_caches: dict[tuple[str, str], str | None] = {}
+
+    # ── the explicit prompt cache ────────────────────────────────────────────────
+
+    def _prefix_cache(self, model: str, prefix_key: str, system: str, parts: list, est_tokens: int, tools=None,
+                      tool_config=None) -> tuple[str | None, str]:
+        """The cached-content name for this run's shared prefix on this model (created on first use)."""
+        from google.genai import errors as genai_errors
+        from google.genai import types
+
+        if not self.cfg.explicit_cache:
+            return None, "off"
+        if est_tokens < MIN_CACHE_TOKENS:
+            return None, f"prefix too short (~{est_tokens} tokens)"
+        k = (model, prefix_key)
+        if k in self._prompt_caches:
+            name = self._prompt_caches[k]
+            return name, "reused" if name else "unavailable"
+        try:
+            extra = {"tools": tools, "tool_config": tool_config} if tools else {}
+            cc = self.client.caches.create(model=model, config=types.CreateCachedContentConfig(
+                display_name=f"dxf-autoparam-{prefix_key[:12]}", system_instruction=system,
+                contents=[types.Content(role="user", parts=parts)], ttl=f"{self.cfg.cache_ttl_s}s", **extra))
+        except genai_errors.APIError as exc:  # a model / region without explicit caching: send the request whole
+            self._prompt_caches[k] = None
+            return None, f"unavailable ({getattr(exc, 'code', '')} {str(exc)[:100]})"
+        self._prompt_caches[k] = cc.name
+        return cc.name, "created"
+
+    def _forget_cache(self, model: str, prefix_key: str) -> None:
+        self._prompt_caches.pop((model, prefix_key), None)
+
+    def close(self) -> list[str]:
+        """Delete this run's prompt caches (they would otherwise expire on their own after the TTL)."""
+        from google.genai import errors as genai_errors
+
+        problems = []
+        for (model, _k), name in list(self._prompt_caches.items()):
+            if not name:
+                continue
+            try:
+                self.client.caches.delete(name=name)
+            except genai_errors.APIError as exc:  # already expired or gone: nothing to clean up
+                problems.append(f"{model}: {getattr(exc, 'code', '')} {str(exc)[:80]}")
+        self._prompt_caches.clear()
+        return problems
+
+    # ── one turn of a tool-using agent ────────────────────────────────────────────
+
+    def step(self, system: str, tools: list, prefix_parts: list, prefix_key: str, history: list, label: str, thinking: str,
+             max_out: int = 16384, stop=None, on_event=None):
+        """One agent turn: the cached prefix (system, tools, pictures, overview) + the conversation so far → the
+        model's next content (thought summaries and function calls). Turns are cached on disk by everything sent, so
+        replaying an identical run is free. Returns (content, usage)."""
+        from google.genai import errors as genai_errors
+        from google.genai import types
+
+        tool_config = types.ToolConfig(function_calling_config=types.FunctionCallingConfig(mode="ANY"))
+        h = hashlib.sha256()
+        for part in (self.cfg.model, thinking, system, prefix_key, json.dumps([t.model_dump(mode="json", exclude_none=True) for t in tools], sort_keys=True)):
+            h.update(part.encode())
+        for c in history:
+            h.update(json.dumps(c.model_dump(mode="json", exclude_none=True), sort_keys=True).encode())
+        key = "agent-" + h.hexdigest()[:24]
+        CACHE.mkdir(parents=True, exist_ok=True)
+        hit = CACHE / f"{key}.json"
+        if hit.exists():
+            data = json.loads(hit.read_text())
+            content = types.Content.model_validate(data["content"])
+            for part in content.parts or []:
+                if getattr(part, "thought", False) and part.text and on_event:
+                    on_event({"kind": "thought", "text": part.text, "cached": True})
+            return content, {**data["usage"], "cached": True}
+        est = len(system) // 4 + sum(len(getattr(p, "text", "") or "") // 4 if getattr(p, "text", None) else IMAGE_TOKENS for p in prefix_parts)
+        base = {"temperature": 0.0, "max_output_tokens": max_out, "automatic_function_calling": types.AutomaticFunctionCallingConfig(disable=True)}
+        plan = [(self.cfg.model, thinking)]
+        if self.cfg.fallback_model and self.cfg.fallback_model != self.cfg.model:
+            plan.append((self.cfg.fallback_model, self.cfg.fallback_thinking))
+        t0, last = time.perf_counter(), None
+        for model, think in plan:
+            for attempt in range(2):
+                if stop and stop():
+                    raise GeminiStopped("stopped by the person")
+                cached, cache_state = self._prefix_cache(model, prefix_key, system, prefix_parts, est, tools, tool_config)
+                kw = {**base, "cached_content": cached} if cached else {**base, "system_instruction": system, "tools": tools, "tool_config": tool_config}
+                contents = history if cached else [types.Content(role="user", parts=prefix_parts), *history]
+                if on_event:
+                    on_event({"kind": "call", "label": label, "model": model, "thinking": think, "prompt_cache": cache_state, "attempt": attempt + 1})
+                try:
+                    resp = self.client.models.generate_content(model=model, contents=contents, config=types.GenerateContentConfig(
+                        **kw, thinking_config=types.ThinkingConfig(thinking_level=think, include_thoughts=True)))
+                except (genai_errors.APIError, TimeoutError, OSError) as exc:
+                    last = exc
+                    if cached and getattr(exc, "code", None) in (400, 403, 404) and "cach" in str(exc).lower():
+                        self._forget_cache(model, prefix_key)
+                        continue
+                    if not _transient(exc):
+                        raise
+                    if on_event:
+                        on_event({"kind": "retry", "label": label, "model": model, "why": f"{getattr(exc, 'code', '')} {str(exc)[:120]}"})
+                    _wait(4 * (attempt + 1), stop)
+                    continue
+                cands = getattr(resp, "candidates", None) or []
+                content = cands[0].content if cands and getattr(cands[0], "content", None) else types.Content(role="model", parts=[])
+                fr = getattr(cands[0], "finish_reason", None) if cands else None
+                for part in content.parts or []:
+                    if getattr(part, "thought", False) and part.text and on_event:
+                        on_event({"kind": "thought", "text": part.text})
+                usage = {"model": model, "thinking": think, "label": label, "seconds": round(time.perf_counter() - t0, 1),
+                         **_tokens(Reply("", [], getattr(resp, "usage_metadata", None), "")), "finish": getattr(fr, "name", str(fr)),
+                         "prompt_cache": cache_state, "cached": False}
+                hit.write_text(json.dumps({"content": content.model_dump(mode="json", exclude_none=True), "usage": usage}))
+                _log({**usage, "key": key})
+                return content, usage
+        raise GeminiUnavailable(f"Vertex AI did not answer ({', '.join(m for m, _ in plan)}): {last}")
+
+    # ── a structured question ─────────────────────────────────────────────────────
+
+    def ask(self, system: str, texts: list[str], images: list[bytes], schema, label: str = "ask",
+            image_keys: list[str] | None = None, shared: int = 0, on_event=None, stop=None) -> tuple[dict, dict]:
+        """Structured answer (validated against `schema`, a pydantic model) and usage. Cached.
+
+        `image_keys` stand in for images whose bytes are not reproducible (a renderer that
+        stamps its output); give the cache a stable key for them, e.g. a hash of the source file.
+        `shared`: how many leading `texts` are the same across this run's calls; with the system prompt and the
+        images they go into the explicit prompt cache, and each call sends only the texts after them.
+        `on_event`: called with {"kind": "call" | "thought" | "retry", …} while the model works.
+        `stop`: a callable; when it returns True the call ends with GeminiStopped at the next streamed message.
+        Usage carries the model's thought summaries (`thoughts`), kept with the answer on disk too.
+        """
+        from google.genai import errors as genai_errors
+        from google.genai import types
+
+        image_ids = [image_keys[k] if image_keys and k < len(image_keys) and image_keys[k] else hashlib.sha256(img).hexdigest()
+                     for k, img in enumerate(images)]
+        h = hashlib.sha256()
+        for part in (self.cfg.model, self.cfg.thinking, system, json.dumps(schema.model_json_schema(), sort_keys=True), *texts):
+            h.update(part.encode())
+        for key_part in image_ids:
+            h.update(key_part.encode())
+        key = h.hexdigest()[:24]
+        CACHE.mkdir(parents=True, exist_ok=True)
+        hit = CACHE / f"{key}.json"
+        if hit.exists():
+            data = json.loads(hit.read_text())
+            if on_event:
+                on_event({"kind": "call", "label": label, "cached": True})
+                for t in data["usage"].get("thoughts", []):
+                    on_event({"kind": "thought", "text": t, "cached": True})
+            return data["answer"], {**data["usage"], "cached": True}
+
+        image_parts = [types.Part.from_bytes(data=img, mime_type="image/png") for img in images]
+        text_parts = [types.Part.from_text(text=t) for t in texts]
+        shared = max(0, min(shared, len(texts) - 1))
+        ph = hashlib.sha256(system.encode())
+        for part in (*image_ids, *texts[:shared]):
+            ph.update(part.encode())
+        prefix_key = ph.hexdigest()[:24]
+        est = (len(system) + sum(len(t) for t in texts[:shared])) // 4 + IMAGE_TOKENS * len(images)
+        base = {"response_mime_type": "application/json", "response_schema": schema, "temperature": 0.0,
+                "automatic_function_calling": types.AutomaticFunctionCallingConfig(disable=True)}
+
+        def gen_config(thinking: str, cached: str | None, max_out: int):
+            # with a cached prefix the system prompt lives in the cache and may not be sent again
+            kw = {**base, "max_output_tokens": max_out}
+            kw.update({"cached_content": cached} if cached else {"system_instruction": system})
+            try:
+                return types.GenerateContentConfig(**kw, thinking_config=types.ThinkingConfig(thinking_level=thinking, include_thoughts=True))
+            except (TypeError, ValueError):  # an SDK without thinking levels (pydantic rejects the field)
+                return types.GenerateContentConfig(**kw)
+
+        # The primary model, then the fallback (e.g. 3.8 Flash → 3.7 Flash @high) when the primary is out of
+        # capacity or past its deadline. Each gets one retry after a short back-off. A prompt cache belongs to one
+        # model, so the fallback gets its own.
+        plan = [(self.cfg.model, self.cfg.thinking)]
+        if self.cfg.fallback_model and self.cfg.fallback_model != self.cfg.model:
+            plan.append((self.cfg.fallback_model, self.cfg.fallback_thinking))
+        t0 = time.perf_counter()
+        last: Exception | None = None
+        answer, used, used_thinking, cache_state, resp = None, None, None, "off", None
+        thoughts_all: list[str] = []
+        max_out = self.cfg.max_output_tokens
+        wasted = {"input_tokens": 0, "output_tokens": 0, "thinking_tokens": 0}
+        for model, thinking in plan:
+            think = thinking
+            for attempt in range(2):
+                cached, cache_state = (self._prefix_cache(model, prefix_key, system, image_parts + text_parts[:shared], est)
+                                       if shared else (None, "off"))
+                contents = text_parts[shared:] if cached else image_parts + text_parts
+                if stop and stop():
+                    raise GeminiStopped("stopped by the person")
+                if on_event:
+                    on_event({"kind": "call", "label": label, "model": model, "thinking": think, "prompt_cache": cache_state, "attempt": attempt + 1})
+                try:
+                    resp = _stream(self.client, model, contents, gen_config(think, cached, max_out), on_event, stop)
+                except GeminiStopped:
+                    # Vertex reports no usage for a cut stream; what it generated until then is billed all the same
+                    _log({"model": model, "thinking": think, "label": label, "stopped": True, "prompt_cache": cache_state, "key": key})
+                    raise
+                except (genai_errors.APIError, TimeoutError, OSError) as exc:
+                    last = exc
+                    msg = str(exc).lower()
+                    if cached and getattr(exc, "code", None) in (400, 403, 404) and "cach" in msg:
+                        self._forget_cache(model, prefix_key)  # expired or refused: recreate (or go uncached) next attempt
+                        continue
+                    if getattr(exc, "code", None) == 400 and ("max_output_tokens" in msg or "maxoutputtokens" in msg) and max_out > 8192:
+                        max_out //= 2  # a model with a smaller output limit
+                        continue
+                    if not _transient(exc):
+                        raise
+                    if on_event:
+                        on_event({"kind": "retry", "label": label, "model": model, "why": f"{getattr(exc, 'code', '')} {str(exc)[:120]}"})
+                    _wait(4 * (attempt + 1), stop)
+                    continue
+                thoughts_all += resp.thoughts
+                answer = _read(resp, schema)
+                if answer is not None:
+                    used, used_thinking = model, think
+                    break
+                # billed but unusable (cut off, blocked, empty): logged, then tried again
+                finish, tok = resp.finish, _tokens(resp)
+                for k in wasted:
+                    wasted[k] += tok[k]
+                _log({"model": model, "thinking": think, "label": label, "error": f"no complete JSON (finish {finish})",
+                      "chars": len(getattr(resp, "text", "") or ""), "prompt_cache": cache_state, **tok, "key": key})
+                last = GeminiUnavailable(f"{model} @{think}: no complete JSON (finish {finish})")
+                if on_event:
+                    on_event({"kind": "retry", "label": label, "model": model, "why": f"reply not complete JSON (finish {finish})"})
+                if finish == "MAX_TOKENS" and think == "high":
+                    think = "medium"  # the thinking ate the output budget: think less, keep the answer
+            if answer is not None:
+                break
+        if answer is None:
+            raise GeminiUnavailable(f"Vertex AI gave no usable answer ({', '.join(m for m, _ in plan)}): {last}")
+        usage = {"model": used, "thinking": used_thinking, "fallback": used != self.cfg.model, "label": label,
+                 "seconds": round(time.perf_counter() - t0, 1), **_tokens(resp), "finish": resp.finish,
+                 "prompt_cache": cache_state, "cached": False, "thoughts": thoughts_all}
+        if any(wasted.values()):
+            usage["wasted"] = wasted  # tokens of attempts that gave no usable answer (billed all the same)
+        hit.write_text(json.dumps({"answer": answer, "usage": usage}))
+        _log({**{k: v for k, v in usage.items() if k != "thoughts"}, "key": key})
+        return answer, usage

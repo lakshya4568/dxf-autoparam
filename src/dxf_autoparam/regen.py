@@ -42,16 +42,7 @@ def regenerate(model: Model, values: dict[str, float] | None = None, check: bool
             raise KeyError(f"no such value: {', '.join(unknown)}")
         vals.update(values)
     datum = {d: f.evaluate(vals) for d, f in model.forms.items()}
-    pts: dict[int, list[tuple[float, float]]] = {}
-    for it in an.drawing.items:
-        if it.role == Role.FIXED:
-            continue
-        new = []
-        for k, (x, y) in enumerate(it.pts):
-            bx = an.slot_datum.get((it.index, k, "x"))
-            by = an.slot_datum.get((it.index, k, "y"))
-            new.append((datum[bx[0]] + bx[1] if bx else x, datum[by[0]] + by[1] if by else y))
-        pts[it.index] = new
+    pts = place(an, datum)
     radius = {i: f.evaluate(vals) for i, f in model.radius.items()}
     texts: dict[int, str] = {}
     u = an.drawing.units_mm
@@ -71,6 +62,29 @@ def regenerate(model: Model, values: dict[str, float] | None = None, check: bool
     if check:
         out.issues = check_invariants(model, out)
     return out
+
+
+def place(an, datum: dict[str, float]) -> dict[int, list[tuple[float, float]]]:
+    """Every entity point from its datums (+ offset); a rigid symbol moves with its insertion point."""
+    pts: dict[int, list[tuple[float, float]]] = {}
+    items = an.drawing.items
+    for it in items:
+        if it.role == Role.FIXED or it.anchor is not None:
+            continue
+        new = []
+        for k, (x, y) in enumerate(it.pts):
+            bx = an.slot_datum.get((it.index, k, "x"))
+            by = an.slot_datum.get((it.index, k, "y"))
+            new.append((datum[bx[0]] + bx[1] if bx else x, datum[by[0]] + by[1] if by else y))
+        pts[it.index] = new
+    for it in items:
+        if it.anchor is None or it.role == Role.FIXED:
+            continue
+        a = items[it.anchor]
+        moved = pts.get(a.index, a.pts)
+        dx, dy = moved[0][0] - a.pts[0][0], moved[0][1] - a.pts[0][1]
+        pts[it.index] = [(x + dx, y + dy) for x, y in it.pts]
+    return pts
 
 
 def _area(poly: list[tuple[float, float]]) -> float:
@@ -134,3 +148,48 @@ def check_invariants(model: Model, r: Regenerated) -> list[str]:
 
 def _name(it: Item) -> str:
     return f"{it.dxftype} {it.handle} ({it.layer})"
+
+
+def regenerate_program(prog, values: dict[str, float] | None = None, check: bool = True) -> Regenerated:
+    """Regenerate from a parametric Program (formulas in mm, levels in m)."""
+    vals = prog.defaults()
+    if values:
+        unknown = [k for k in values if k not in vals]
+        if unknown:
+            raise KeyError(f"no such value: {', '.join(unknown)}")
+        vals.update(values)
+    an = prog.analysis
+    datum = prog.datum_values(vals)
+    pts = place(an, datum)
+    radius = prog.radii(vals)
+    u = an.drawing.units_mm
+    texts: dict[int, str] = {}
+    for idx, links in prog.text_links.items():
+        text = an.drawing.items[idx].text or ""
+        for tok, ref, dec in links:
+            if ref.startswith("datum:"):
+                v = (datum[ref[6:]] * u + an.level_offset_mm) / 1000
+            elif ref.startswith("m:"):
+                v = vals.get(ref[2:], float("nan")) / 1000
+            elif ref.startswith("rel:"):
+                rel = next((r for r in prog.relations if r.name == ref[4:]), None)
+                v = prog.relation_value(rel, vals) if rel is not None else float("nan")
+            else:
+                v = vals.get(ref, float("nan"))
+            if math.isnan(v):  # a value the program no longer has: leave the note as written
+                continue
+            new = f"{v:.{dec}f}" if dec else f"{round(v)}"
+            text = re.sub(rf"(?<![\d.]){re.escape(tok)}(?![\d.])", new, text, count=1)
+        texts[idx] = text
+    out = Regenerated(values=vals, datum=datum, pts=pts, radius=radius, texts=texts)
+    if check:
+        out.issues = _check_program(prog, out)
+    return out
+
+
+def _check_program(prog, r: Regenerated) -> list[str]:
+    class _M:  # check_invariants reads .analysis only, plus positivity of values
+        analysis = prog.analysis
+
+    issues = check_invariants(_M, r)  # type: ignore[arg-type]
+    return [i for i in issues if not any(i.startswith(f"{p.name} must") for p in prog.params.values() if p.kind == "level")]
