@@ -207,7 +207,9 @@ def build_topology(dr: Drawing, max_segments: int = 40000) -> Topology:
         notes.append(f"{len(segs)} segments: regions not traced (limit {max_segments})")
         return Topology([], [], [], [], {}, {}, tol, notes)
     x0, y0, x1, y1 = dr.extent
-    cell = max(max(x1 - x0, y1 - y0, tol) / 120.0, 20 * tol)
+    # cells shrink as the linework grows (a 20k-line sheet in 120 × 120 cells put hundreds of segments in a cell, and
+    # every pair in a cell is tested for a crossing); the result does not depend on the cell, only the work does
+    cell = max(max(x1 - x0, y1 - y0, tol) / max(120.0, 2.0 * math.sqrt(len(segs))), 20 * tol)
 
     nodes: list[Point] = []
     grid: dict[tuple[int, int], list[int]] = defaultdict(list)
@@ -229,11 +231,17 @@ def build_topology(dr: Drawing, max_segments: int = 40000) -> Topology:
     for s, (a, b, _i) in enumerate(segs):
         for c in _cells_of(a, b, cell):
             seg_cells[c].append(s)
+    boxes = [(min(a[0], b[0]) - tol, min(a[1], b[1]) - tol, max(a[0], b[0]) + tol, max(a[1], b[1]) + tol) for a, b, _i in segs]
     tested: set[tuple[int, int]] = set()
     for members in seg_cells.values():
         for i in range(len(members)):
+            s = members[i]
+            bs = boxes[s]
             for j in range(i + 1, len(members)):
-                s, t = members[i], members[j]
+                t = members[j]
+                bt = boxes[t]
+                if bt[0] > bs[2] or bs[0] > bt[2] or bt[1] > bs[3] or bs[1] > bt[3]:
+                    continue  # boxes apart: no crossing (cheaper than remembering the pair)
                 if (s, t) in tested:
                     continue
                 tested.add((s, t))
@@ -350,7 +358,9 @@ def build_topology(dr: Drawing, max_segments: int = 40000) -> Topology:
     piece_parent: dict[int, int] = {}
     for f, ring in outers:
         piece = find(faces[f][0])
-        host = [k for k, r in enumerate(regions) if r.component != piece and point_in_ring(ring[0], r.ring)]
+        px, py = ring[0]
+        host = [k for k, r in enumerate(regions) if r.component != piece and r.bbox[0] <= px <= r.bbox[2] and r.bbox[1] <= py <= r.bbox[3]
+                and point_in_ring(ring[0], r.ring)]
         if host:  # the innermost region around it
             k = min(host, key=lambda k: regions[k].area)
             regions[k].holes.append(ring[::-1])

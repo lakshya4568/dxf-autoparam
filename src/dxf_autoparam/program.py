@@ -21,6 +21,7 @@ import json
 import math
 import re
 from dataclasses import asdict, dataclass, field
+from functools import lru_cache
 
 from .ir import Analysis, GapKind, Model
 
@@ -32,6 +33,7 @@ class ExprError(ValueError):
     pass
 
 
+@lru_cache(maxsize=1 << 17)  # a big sheet re-evaluates ~10k formulas per regeneration; the trees are never mutated
 def parse(expr: str) -> ast.Expression:
     try:
         tree = ast.parse(expr.replace("^", "**"), mode="eval")
@@ -55,8 +57,25 @@ def names_in(expr: str) -> set[str]:
     return {n.id for n in ast.walk(tree) if isinstance(n, ast.Name)} - calls
 
 
+_GLOBALS = {"__builtins__": {}, **FUNCS}
+
+
+@lru_cache(maxsize=1 << 17)
+def _compiled(expr: str):
+    """The checked expression as Python bytecode: parse() admits only numbers, names, + - * / ** and FUNCS, so eval
+    sees nothing else. ~10x faster than walking the tree — regenerating a 12k-line sheet evaluates every formula."""
+    return compile(parse(expr), "<formula>", "eval")
+
+
 def evaluate(expr: str | ast.Expression, scope: dict[str, float]) -> float:
-    tree = parse(expr) if isinstance(expr, str) else expr
+    if isinstance(expr, str):
+        try:
+            return float(eval(_compiled(expr), _GLOBALS, scope))  # parse() admitted arithmetic on names only
+        except NameError as exc:
+            raise ExprError(f"unknown name {exc.name}") from exc
+        except ZeroDivisionError as exc:
+            raise ExprError("division by zero") from exc
+    tree = expr
 
     def ev(n):
         if isinstance(n, ast.Expression):
@@ -191,10 +210,39 @@ class Program:
         if values:
             scope.update(values)
         u = self.analysis.drawing.units_mm
-        trees = {d: parse(self.formulas[d]) for d in self.formulas}
         out_mm: dict[str, float] = {}
-        for d in self.order():
-            out_mm[d] = evaluate(trees[d], {**scope, **out_mm})
+        for d in self.order():  # one scope filled in dependency order (copying it per line was quadratic on big sheets)
+            out_mm[d] = scope[d] = evaluate(self.formulas[d], scope)
+        return {d: v / u for d, v in out_mm.items()}
+
+    def change_plan(self) -> tuple[dict[str, int], dict[str, list[str]], dict[str, float]]:
+        """For many one-value changes in a row (the ±10 % checks): each line's place in the order, the lines that
+        use each name, and every line at the defaults (mm). Built once; valid while the formulas do not change."""
+        order = self.order()
+        users: dict[str, list[str]] = {}
+        for d in order:
+            for n in names_in(self.formulas[d]):
+                users.setdefault(n, []).append(d)
+        u = self.analysis.drawing.units_mm
+        return {d: i for i, d in enumerate(order)}, users, {d: v * u for d, v in self.datum_values().items()}
+
+    def datum_values_changed(self, values: dict[str, float], plan) -> dict[str, float]:
+        """datum_values(values), recomputing only the lines downstream of the values that changed."""
+        pos, users, base_mm = plan
+        scope = self.defaults()
+        changed = [k for k, v in values.items() if scope.get(k) != v]
+        scope.update(values)
+        scope.update(base_mm)
+        todo, seen = list(changed), set()
+        while todo:
+            for d in users.get(todo.pop(), ()):
+                if d not in seen:
+                    seen.add(d)
+                    todo.append(d)
+        out_mm = dict(base_mm)
+        for d in sorted(seen, key=pos.__getitem__):
+            out_mm[d] = scope[d] = evaluate(self.formulas[d], scope)
+        u = self.analysis.drawing.units_mm
         return {d: v / u for d, v in out_mm.items()}
 
     def radii(self, values: dict[str, float] | None = None) -> dict[int, float]:
@@ -315,13 +363,13 @@ def from_model(model: Model) -> Program:
         formulas.setdefault(d, _num(datums[d].value * u))
     prog = Program(analysis=an, params=params, formulas=formulas, origin={d: "geometry" for d in formulas}, text_links=model.text_links)
     # Exactness: each datum reproduces where it was drawn (a residual stays a constant).
-    out_mm: dict[str, float] = {}
+    scope = dict(scope)  # filled in dependency order (one scope, not a copy per line)
     for d in prog.order():
-        v = evaluate(prog.formulas[d], {**scope, **out_mm})
+        v = evaluate(prog.formulas[d], scope)
         c = datums[d].value * u - v
         if abs(c) > 1e-6:
             prog.formulas[d] = _plus(prog.formulas[d], c)
-        out_mm[d] = datums[d].value * u
+        scope[d] = datums[d].value * u
     prog.invalidate()
     # A linear form in drawing units → millimetres: a length term keeps its coefficient
     # (both sides scale by the unit), a level term (metres) gains the unit, the constant too.

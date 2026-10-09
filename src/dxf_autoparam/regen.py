@@ -64,11 +64,12 @@ def regenerate(model: Model, values: dict[str, float] | None = None, check: bool
     return out
 
 
-def place(an, datum: dict[str, float]) -> dict[int, list[tuple[float, float]]]:
-    """Every entity point from its datums (+ offset); a rigid symbol moves with its insertion point."""
+def place(an, datum: dict[str, float], only=None) -> dict[int, list[tuple[float, float]]]:
+    """Every entity point from its datums (+ offset); a rigid symbol moves with its insertion point.
+    `only`: place just these entities (no symbols) — for checks that know what moved."""
     pts: dict[int, list[tuple[float, float]]] = {}
     items = an.drawing.items
-    for it in items:
+    for it in items if only is None else only:
         if it.role == Role.FIXED or it.anchor is not None:
             continue
         new = []
@@ -77,6 +78,8 @@ def place(an, datum: dict[str, float]) -> dict[int, list[tuple[float, float]]]:
             by = an.slot_datum.get((it.index, k, "y"))
             new.append((datum[bx[0]] + bx[1] if bx else x, datum[by[0]] + by[1] if by else y))
         pts[it.index] = new
+    if only is not None:
+        return pts
     for it in items:
         if it.anchor is None or it.role == Role.FIXED:
             continue
@@ -113,14 +116,15 @@ def _self_crossings(poly) -> int:
     return c
 
 
-def check_invariants(model: Model, r: Regenerated) -> list[str]:
+def check_invariants(model: Model, r: Regenerated, items=None) -> list[str]:
+    """`items`: only these entities (the rest are known not to have moved)."""
     an = model.analysis
     tol = an.drawing.tol
     issues: list[str] = []
     for name, v in r.values.items():
         if v <= 0:
             issues.append(f"{name} must stay positive (is {v:g})")
-    for it in an.drawing.items:
+    for it in an.drawing.items if items is None else items:
         if it.role != Role.STRUCTURAL:
             continue
         old = [it.pts[k] for k in it.vertex_pts]
@@ -185,6 +189,34 @@ def regenerate_program(prog, values: dict[str, float] | None = None, check: bool
     if check:
         out.issues = _check_program(prog, out)
     return out
+
+
+def datum_users(an) -> dict[str, set[int]]:
+    """Set-out line → the entities with a point on it."""
+    users: dict[str, set[int]] = {}
+    for (idx, _k, _ax), (d, _off) in an.slot_datum.items():
+        users.setdefault(d, set()).add(idx)
+    return users
+
+
+def check_change(prog, values: dict[str, float], base_datum: dict[str, float], users: dict[str, set[int]], plan=None) -> list[str]:
+    """The issues regenerate_program(prog, values) would report, found on the entities the change MOVES only (an entity
+    whose points all stay where they are cannot collapse, flip or cross itself). Linear in what moves, so checking every
+    value of a 20k-entity sheet stays fast."""
+    vals = prog.defaults()
+    vals.update(values)
+    datum = prog.datum_values_changed(values, plan) if plan is not None else prog.datum_values(values)
+    an = prog.analysis
+    moved = {i for d, v in datum.items() if abs(v - base_datum.get(d, v)) > 1e-12 for i in users.get(d, ())}
+    moved |= set(prog.radius)
+    sub = [an.drawing.items[i] for i in sorted(moved) if an.drawing.items[i].role != Role.FIXED and an.drawing.items[i].anchor is None]
+    r = Regenerated(values=vals, datum=datum, pts=place(an, datum, sub), radius=prog.radii(values), texts={})
+
+    class _M:
+        analysis = an
+
+    issues = check_invariants(_M, r, sub)  # type: ignore[arg-type]
+    return [i for i in issues if not any(i.startswith(f"{p.name} must") for p in prog.params.values() if p.kind == "level")]
 
 
 def _check_program(prog, r: Regenerated) -> list[str]:

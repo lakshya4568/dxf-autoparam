@@ -50,6 +50,7 @@ class Session:
         self.gem = None
         self.instructions = ""  # the person's standing instructions for Gemini
         self.history: list[dict] = []  # what was asked of Gemini, in order
+        self.checking: Program | None = None  # the program whose background regeneration check is running
         self.job: dict = {"running": False, "events": [], "error": None, "kind": None, "started": 0.0, "stop": threading.Event()}
         if path:
             self.open(path)
@@ -69,20 +70,41 @@ class Session:
         self.region = None
         dr, _ = read_dxf(path)
         self.views = detect_views(dr)
-        self.baseline()
+        self.baseline(drawing=dr)  # the drawing just read: a big sheet takes seconds to read again
 
-    def baseline(self, selection: dict | None = None) -> None:
-        dr, _ = read_dxf(self.path)
+    def baseline(self, selection: dict | None = None, drawing=None) -> None:
+        dr = drawing if drawing is not None and not self.region else read_dxf(self.path)[0]
         if self.region:
             restrict(dr, self.region)
         an = analyse(dr)
         self.report = Report()
         self.prog = baseline(an, rep=self.report, selection=selection)
-        check_regeneration(self.prog, self.report)
+        self._check_later(self.prog, self.report)
         self.values = self.prog.defaults()
         self.mode = "geometry"
         self.ai_info = None
         self.selection = selection
+
+    def _check_later(self, prog: Program, rep: Report) -> None:
+        """The ±10 % regeneration check of every value (V5/V8) runs after the drawing is shown: on a big sheet it is
+        hundreds of regenerations, and nothing on screen waits for it. Its findings join the report when it finishes,
+        if the drawing is still the one it checked."""
+        self.checking = prog
+
+        def work() -> None:
+            found = Report()
+            try:
+                check_regeneration(prog, found)
+            except Exception:  # noqa: BLE001 — a background check's boundary: logged, the drawing stays usable
+                traceback.print_exc()
+            with self.lock:
+                if self.prog is prog:
+                    rep.findings.extend(found.findings)
+                    for k, v in found.rejected.items():
+                        rep.rejected[k] = rep.rejected.get(k, 0) + v
+                    self.checking = None
+
+        threading.Thread(target=work, daemon=True, name="regeneration-check").start()
 
     def set_region(self, region) -> None:
         self._drop_gemini()  # other facts, other prompt cache
@@ -198,10 +220,12 @@ class Session:
             params.append({
                 "name": p.name, "label": p.label, "value": p.value, "unit": p.unit, "kind": p.kind, "component": p.component or ("Levels" if p.kind == "level" else ""),
                 "named": named, "source": p.source, "confidence": p.confidence, "occurrences": p.occurrences, "evidence": p.evidence[:4], "note": p.note,
-                "influence": reach.get(p.name, {}).get("entities", []), "parts": reach.get(p.name, {}).get("parts", []),
+                # a big sheet: a size can move thousands of entities × hundreds of sizes (15 MB) — long lists are fetched on hover
+                "influence": ents if len(ents := reach.get(p.name, {}).get("entities", [])) <= 300 else None, "influence_n": len(ents),
+                "parts": (pp := reach.get(p.name, {}).get("parts", []))[:12], "parts_n": len(pp),
                 "relations": reach.get(p.name, {}).get("relations", []), "texts": len(reach.get(p.name, {}).get("texts", [])),
             })
-        params.sort(key=lambda q: (not q["named"], q["component"], -len(q["influence"])))
+        params.sort(key=lambda q: (not q["named"], q["component"], -q["influence_n"]))
         rep = self.report or Report()
         return {
             "file": Path(self.path).name,
@@ -234,7 +258,8 @@ class Session:
                          + [{"name": r.label, "label": "worked out", "expr": r.expr, "enforced": True, "dimensioned": r.dimensioned, "check": r.check}
                             for r in prog.relations if r.name.startswith("R_")][:30],
             "formulas_ai": [{"datum": d, "expr": e} for d, e in prog.formulas.items() if prog.origin.get(d) == "ai"],
-            "validation": {"accepted": rep.accepted, "rejected": rep.rejected, "findings": [f.as_dict() for f in rep.findings][:60]},
+            "validation": {"accepted": rep.accepted, "rejected": rep.rejected, "findings": [f.as_dict() for f in rep.findings][:60],
+                           "checking": self.checking is not None and self.checking is self.prog},
             "ai": {k: v for k, v in (self.ai_info or {}).items() if k in ("usage", "seconds", "tokens_in", "tokens_out")} if self.ai_info else None,
             "reader_notes": an.drawing.notes + an.notes,
             "unsupported": an.drawing.unsupported,
@@ -290,6 +315,15 @@ def make_handler(session: Session):
                         geom, issues, _ = session.geometry(session.values)
                         st.update(geometry=geom, values=session.values, issues=issues, relation_values=session.relation_values(session.values))
                         return self._json(st)
+                if url.path == "/api/influence":
+                    name = parse_qs(url.query).get("name", [""])[0]
+                    with session.lock:
+                        return self._json({"name": name, "entities": affects(session.prog).get(name, {}).get("entities", [])})
+                if url.path == "/api/validation":  # light: the page follows the background check without the drawing
+                    with session.lock:
+                        rep = session.report or Report()
+                        return self._json({"accepted": rep.accepted, "rejected": rep.rejected, "findings": [f.as_dict() for f in rep.findings][:60],
+                                           "checking": session.checking is not None and session.checking is session.prog})
                 if url.path == "/api/ai/progress":
                     since = int(parse_qs(url.query).get("since", ["0"])[0])
                     job = session.job

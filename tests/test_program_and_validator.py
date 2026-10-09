@@ -175,3 +175,21 @@ def test_levels_held_as_site_inputs_stay_put_when_the_structure_changes():
     assert after[bed] == pytest.approx(before[bed])
     lifted = prog.datum_values({"FormationLevel": 106.0})
     assert lifted[formation] * dr.units_mm == pytest.approx(106000)
+
+
+@pytest.mark.parametrize("path", EXAMPLES, ids=lambda p: p.stem)
+def test_the_fast_change_checks_equal_a_full_regeneration(path):
+    """The ±10 % checks recompute only the lines downstream of the changed value and check only the entities that
+    move (big sheets: 12k lines × 600 values). They must report exactly what a full regeneration reports."""
+    from dxf_autoparam.regen import check_change, datum_users
+    from dxf_autoparam.validator import baseline
+
+    dr, _ = read_dxf(str(path))
+    prog = baseline(analyse(dr))
+    plan, users, base = prog.change_plan(), datum_users(prog.analysis), regenerate_program(prog, check=False).datum
+    for p in prog.params.values():
+        for dv in (max(p.value * 0.1, 10.0), -max(p.value * 0.1, 10.0), -2 * p.value):
+            vals = {p.name: p.value + dv}
+            full, fast = prog.datum_values(vals), prog.datum_values_changed(vals, plan)
+            assert full.keys() == fast.keys() and all(math.isclose(full[d], fast[d], abs_tol=1e-9) for d in full), (p.name, dv)
+            assert check_change(prog, vals, base, users, plan) == regenerate_program(prog, vals).issues, (p.name, dv)

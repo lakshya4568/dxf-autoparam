@@ -160,6 +160,17 @@ async function load() {
   if (!fitted) { fit(); fitted = true; }
   render();
   if (S.ai_job && S.ai_job.running && !poller) { job.stopping = S.ai_job.stopping; watch(); }
+  if (S.validation.checking) followCheck();
+}
+let checkTimer = null;
+function followCheck() {  // the ±10 % check runs after the drawing is shown; its findings arrive here
+  if (checkTimer) return;
+  checkTimer = setTimeout(async () => {
+    checkTimer = null;
+    try { S.validation = await api("/api/validation"); } catch (e) { return; }
+    if (tab === "valid") render();
+    if (S.validation.checking) followCheck();
+  }, 2000);
 }
 
 // ── canvas ──────────────────────────────────────────────────────────────────
@@ -291,11 +302,11 @@ function renderParams() {
     const sweep = (p.unit === "m" ? [-0.5, -0.25, 0.25, 0.5, 1] : [-0.2, -0.1, 0.1, 0.2, 0.4]).map((f) => { const v = p.unit === "m" ? p.value + f : Math.round(p.value * (1 + f)); return `<button class="small" data-sw="${p.name}" data-v="${v}">${p.unit === "m" ? (f > 0 ? "+" : "") + f + " m" : fmt(v)}</button>`; }).join("") + `<button class="small" data-sw="${p.name}" data-v="${p.value}">as drawn</button>`;
     return `<div class="row ${exclude.has(p.name) ? "off" : ""}" data-p="${p.name}">
       <input type="checkbox" data-ex="${p.name}" ${exclude.has(p.name) ? "" : "checked"} title="editable input (untick to keep it as drawn)"/>
-      <div class="nm"><b data-open="${p.name}">${esc(p.name)}</b>${p.source === "ai" ? '<span class="chip ai">AI · validated</span>' : ""}${conf(p.confidence)}<div class="sub" title="${esc(p.note || p.label || "")}">${esc(p.label || "")}${p.occurrences > 1 ? " · ×" + p.occurrences : ""} · moves ${p.influence.length} entities${p.parts.length ? " · " + p.parts.length + " parts" : ""}</div></div>
+      <div class="nm"><b data-open="${p.name}">${esc(p.name)}</b>${p.source === "ai" ? '<span class="chip ai">AI · validated</span>' : ""}${conf(p.confidence)}<div class="sub" title="${esc(p.note || p.label || "")}">${esc(p.label || "")}${p.occurrences > 1 ? " · ×" + p.occurrences : ""} · moves ${p.influence_n} entities${p.parts_n ? " · " + p.parts_n + " parts" : ""}</div></div>
       <div class="val"><input type="number" step="${p.unit === "m" ? 0.001 : 10}" value="${fmt(values[p.name] ?? p.value, p.unit)}" data-in="${p.name}" class="${changed ? "changed" : ""}"/> <span class="unit">${p.unit}</span></div>
       ${open.has(p.name) ? `<div class="more">
         ${(p.evidence || []).length ? `<div class="sub">Evidence: ${p.evidence.map((e) => esc(typeof e === "string" ? e : e.detail || JSON.stringify(e))).join(" · ")}</div>` : ""}
-        <div class="sub">Drives: ${p.parts.slice(0, 12).map(esc).join(", ") || "—"}${p.relations.length ? " · relations " + p.relations.map(esc).join(", ") : ""}${p.texts ? " · " + p.texts + " note(s)" : ""}</div>
+        <div class="sub">Drives: ${p.parts.map(esc).join(", ") || "—"}${p.parts_n > p.parts.length ? " … (" + p.parts_n + " parts)" : ""}${p.relations.length ? " · relations " + p.relations.map(esc).join(", ") : ""}${p.texts ? " · " + p.texts + " note(s)" : ""}</div>
         ${Object.keys(imp).length ? `<div class="sub">Measured: ${Object.entries(imp).slice(0, 10).map(([k, v]) => `${esc(k)} ${esc(v)}`).join(" · ")}</div>` : ""}
         <div class="sweep">Preview: ${sweep}</div></div>` : ""}
     </div>`;
@@ -308,7 +319,7 @@ function renderParams() {
   document.querySelectorAll("[data-ex]").forEach((el) => el.addEventListener("change", () => { el.checked ? exclude.delete(el.dataset.ex) : exclude.add(el.dataset.ex); renderParams(); }));
   document.querySelectorAll("[data-open]").forEach((el) => el.addEventListener("click", () => { open.has(el.dataset.open) ? open.delete(el.dataset.open) : open.add(el.dataset.open); renderParams(); }));
   document.querySelectorAll("[data-sw]").forEach((el) => el.addEventListener("click", () => setValue(el.dataset.sw, Number(el.dataset.v))));
-  document.querySelectorAll(".row[data-p]").forEach((el) => { const p = S.parameters.find((q) => q.name === el.dataset.p); if (!p) return; el.addEventListener("mouseenter", () => draw(new Set(p.influence))); el.addEventListener("mouseleave", () => draw()); });
+  document.querySelectorAll(".row[data-p]").forEach((el) => { const p = S.parameters.find((q) => q.name === el.dataset.p); if (!p) return; el.addEventListener("mouseenter", async () => { if (!p.influence) { try { p.influence = (await api("/api/influence?name=" + encodeURIComponent(p.name))).entities; } catch (e) { return; } } if (el.matches(":hover")) draw(new Set(p.influence)); }); el.addEventListener("mouseleave", () => draw()); });
   wireSelection();
 }
 function renderIntent() {
@@ -435,6 +446,7 @@ function render() {
     const v = S.validation;
     const ai = S.ai ? `<div class="note">Gemini: ${S.ai.usage.length} call(s), ${S.ai.tokens_in} tokens in / ${S.ai.tokens_out} out, ${S.ai.seconds} s${S.ai.usage.some((u) => u.cached) ? " (some answers from cache — free)" : ""}${S.ai.usage.some((u) => u.fallback) ? " · fallback model used" : ""}</div>` : "";
     P.innerHTML = head() + `<div class="grp"><span>Validator</span></div><div class="note">accepted ${esc(JSON.stringify(v.accepted))} · rejected ${esc(JSON.stringify(v.rejected))}</div>${ai}`
+      + (v.checking ? `<div class="note">checking that every value can change ±10 % without breaking the drawing… (runs in the background; the drawing is usable)</div>` : "")
       + v.findings.map((f) => `<div class="note f-${f.severity}">${f.severity === "error" ? "✗ rejected" : f.severity === "info" ? "·" : "!"} ${esc(f.code)} ${esc(f.item)}: ${esc(f.message)}</div>`).join("")
       + `<div class="grp"><span>DXF</span></div><button id="aud">Write and re-open the DXF strictly</button> <button id="graph">Dependency graph JSON</button><div id="audr" class="note"></div>`;
     $("#aud").onclick = async () => { $("#audr").textContent = "checking…"; $("#audr").textContent = JSON.stringify(await api("/api/audit", {})); };

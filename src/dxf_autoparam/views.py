@@ -25,48 +25,49 @@ def detect_views(dr: Drawing, margin_frac: float = 0.01) -> list[dict]:
     x0, y0, x1, y1 = dr.extent
     margin = margin_frac * max(x1 - x0, y1 - y0, 1.0)
     boxes = [_bbox(it.pts) for it in items]
-    parent = list(range(len(items)))
 
-    def find(i: int) -> int:
-        while parent[i] != i:
-            parent[i] = parent[parent[i]]
-            i = parent[i]
-        return i
+    def touch(A, B) -> bool:
+        return A[0] - margin <= B[2] and B[0] - margin <= A[2] and A[1] - margin <= B[3] and B[1] - margin <= A[3]
 
-    order = sorted(range(len(items)), key=lambda i: boxes[i][0])
+    # Lines of one structure need not touch (cells inside a box drawn as loose lines): clusters whose extents
+    # overlap are one view. Swept left to right against the open CLUSTERS (few), not the open lines (a sheet-wide
+    # line kept every line of a 20k-line sheet open); the pass below merges what grew into each other.
+    clusters: list[list] = []  # [extent, member count, first entity] — views with as many entities keep drawing order
     active: list[int] = []
-    for i in order:
+    for i in sorted(range(len(items)), key=lambda i: boxes[i][0]):
         bx = boxes[i]
-        active = [j for j in active if boxes[j][2] + margin >= bx[0]]
-        for j in active:
-            b = boxes[j]
-            if b[1] - margin <= bx[3] and bx[1] - margin <= b[3]:
-                parent[find(i)] = find(j)
-        active.append(i)
-    groups: dict[int, list[int]] = {}
-    for i in range(len(items)):
-        groups.setdefault(find(i), []).append(i)
-    # Lines of one structure need not touch (cells inside a box drawn as loose lines):
-    # clusters whose extents overlap are one view.
-    clusters = [
-        [(min(boxes[i][0] for i in m), min(boxes[i][1] for i in m), max(boxes[i][2] for i in m), max(boxes[i][3] for i in m)), m]
-        for m in groups.values()
-    ]
+        active = [c for c in active if clusters[c] is not None and clusters[c][0][2] + margin >= bx[0]]
+        hit = [c for c in active if touch(clusters[c][0], bx)]
+        if not hit:
+            clusters.append([bx, 1, i])
+            active.append(len(clusters) - 1)
+            continue
+        keep, ext, n, first = hit[0], bx, 1, i
+        for c in hit:
+            E = clusters[c][0]
+            ext = (min(ext[0], E[0]), min(ext[1], E[1]), max(ext[2], E[2]), max(ext[3], E[3]))
+            n += clusters[c][1]
+            first = min(first, clusters[c][2])
+            if c != keep:
+                clusters[c] = None
+        clusters[keep] = [ext, n, first]
+    clusters = [c for c in clusters if c is not None]
     merged = True
     while merged:
         merged = False
         for a in range(len(clusters)):
             for b in range(a + 1, len(clusters)):
                 A, B = clusters[a][0], clusters[b][0]
-                if A[0] - margin <= B[2] and B[0] - margin <= A[2] and A[1] - margin <= B[3] and B[1] - margin <= A[3]:
-                    clusters[a] = [(min(A[0], B[0]), min(A[1], B[1]), max(A[2], B[2]), max(A[3], B[3])), clusters[a][1] + clusters[b][1]]
+                if touch(A, B):
+                    clusters[a] = [(min(A[0], B[0]), min(A[1], B[1]), max(A[2], B[2]), max(A[3], B[3])), clusters[a][1] + clusters[b][1],
+                                   min(clusters[a][2], clusters[b][2])]
                     del clusters[b]
                     merged = True
                     break
             if merged:
                 break
-    views = [{"bbox": bb, "entities": len(members)} for bb, members in clusters]
-    views.sort(key=lambda v: -v["entities"])
+    clusters.sort(key=lambda c: (-c[1], c[2]))
+    views = [{"bbox": bb, "entities": n} for bb, n, _first in clusters]
     for n, v in enumerate(views):
         v["id"] = n
     return views

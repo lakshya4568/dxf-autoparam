@@ -48,7 +48,7 @@ from .program import (
     from_model,
     names_in,
 )
-from .regen import regenerate_program
+from .regen import check_change, datum_users, regenerate_program
 from .topology import of as topo_of
 
 PASCAL = re.compile(r"^[A-Z][A-Za-z0-9]*$")
@@ -718,13 +718,14 @@ def check_regeneration(prog: Program, rep: Report, step: float = 0.1) -> None:
     ident = max((math.dist(base.pts[i][k], p) for it in an.drawing.items if (i := it.index) in base.pts for k, p in enumerate(it.pts)), default=0.0)
     if ident * an.drawing.units_mm > _tol_mm(an):
         rep.findings.append(Finding("V5", "error", "drawing", f"the model does not reproduce the drawing (off by {ident * an.drawing.units_mm:.2f} mm)"))
+    users, base_datum, plan = datum_users(an), base.datum, prog.change_plan()
     for p in list(prog.params.values()):
         delta = 1.0 if p.kind == "level" else max(p.value * step, 10.0)
         for dv in (delta, -delta):
-            r = regenerate_program(prog, {p.name: p.value + dv})
-            if r.issues:
-                why = _explain_break(prog, r.issues[0], {p.name: p.value + dv})
-                msg = f"changing {p.name} by {dv:+g} {p.unit}: {r.issues[0]}{why}"
+            issues = check_change(prog, {p.name: p.value + dv}, base_datum, users, plan)
+            if issues:
+                why = _explain_break(prog, issues[0], {p.name: p.value + dv}, plan)
+                msg = f"changing {p.name} by {dv:+g} {p.unit}: {issues[0]}{why}"
                 if dv > 0 and p.source == "ai":
                     rep.bad("regeneration", "V8", p.name, msg + " Set the lines that should follow out from the line that moves.")
                 else:
@@ -732,7 +733,7 @@ def check_regeneration(prog: Program, rep: Report, step: float = 0.1) -> None:
                 break
 
 
-def _explain_break(prog: Program, issue: str, values: dict[str, float]) -> str:
+def _explain_break(prog: Program, issue: str, values: dict[str, float], plan=None) -> str:
     """Which set-out lines of the broken entity moved and which stayed — the lines that should have followed."""
     an = prog.analysis
     m = re.match(r"\S+ (\S+) \(", issue)
@@ -740,7 +741,11 @@ def _explain_break(prog: Program, issue: str, values: dict[str, float]) -> str:
     if it is None:
         return ""
     u = an.drawing.units_mm
-    v0, v1 = prog.datum_values(), prog.datum_values(values)
+    if plan is not None:
+        u0 = an.drawing.units_mm
+        v0, v1 = {d: v / u0 for d, v in plan[2].items()}, prog.datum_values_changed(values, plan)
+    else:
+        v0, v1 = prog.datum_values(), prog.datum_values(values)
     moved, stayed = [], []
     for d in sorted({an.slot_datum[(it.index, k, ax)][0] for k in it.vertex_pts for ax in ("x", "y") if (it.index, k, ax) in an.slot_datum}):
         if d not in v0:
