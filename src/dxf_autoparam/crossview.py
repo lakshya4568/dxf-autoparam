@@ -53,16 +53,23 @@ class SheetError(ValueError):
 # ── projection links ─────────────────────────────────────────────────────────────
 
 
-def _planes(dr: Drawing, items: list[int], q: float) -> tuple[set[int], set[int]]:
-    """The set-out planes of a view: x and y of its structural vertices, on a grid of the coincidence tolerance."""
+def _planes(dr: Drawing, items: list[int], q: float, box: tuple[float, float, float, float]) -> tuple[set[int], set[int]]:
+    """The set-out planes of a view: where its FACES stand — the x of its vertical edges and the y of its horizontal
+    ones that are at least 3 % of the view long. Hatch strokes, text strokes and ticks share coordinates across views
+    by chance; faces drawn in projection share them by design."""
     xs, ys = set(), set()
+    min_v = 0.03 * max(box[3] - box[1], 1e-9)
+    min_h = 0.03 * max(box[2] - box[0], 1e-9)
     for i in items:
         it = dr.items[i]
         if it.role != Role.STRUCTURAL:
             continue
-        for k in it.vertex_pts:
-            xs.add(round(it.pts[k][0] / q))
-            ys.add(round(it.pts[k][1] / q))
+        for a, b in it.segments or ([(0, 1)] if it.dxftype == "LINE" and len(it.pts) == 2 else []):
+            (x0, y0), (x1, y1) = it.pts[a], it.pts[b]
+            if abs(x0 - x1) <= dr.tol and abs(y1 - y0) >= min_v:
+                xs.add(round(x0 / q))
+            elif abs(y0 - y1) <= dr.tol and abs(x1 - x0) >= min_h:
+                ys.add(round(y0 / q))
     return xs, ys
 
 
@@ -76,8 +83,11 @@ def view_links(dr: Drawing, layout: SheetLayout, min_planes: int = 6, min_frac: 
     its plan), or side by side sharing horizontal ones (a section beside an elevation: its levels). Only views at the
     same drawing scale; `strong` when enough planes coincide to be design, not chance."""
     views = layout.views()
-    q = max(dr.tol, 1e-9)
-    planes = {v.id: _planes(dr, v.items, q) for v in views}
+    frame = layout.frame or dr.extent
+    # faces in projection coincide to the drawing's precision: exact in CAD, to a hair in a PDF conversion — a
+    # tolerance relative to the sheet (1/10 000 of it), never finer than the reader's own
+    q = max(dr.tol, 1e-4 * max(frame[2] - frame[0], frame[3] - frame[1]), 1e-9)
+    planes = {v.id: _planes(dr, v.items, q, v.bbox) for v in views}
     out = []
     for i, a in enumerate(views):
         for b in views[i + 1:]:

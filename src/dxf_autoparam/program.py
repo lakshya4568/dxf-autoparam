@@ -179,25 +179,31 @@ class Program:
         """Datums in dependency order; raises on a cycle (naming it)."""
         if self._order is not None:
             return self._order
-        deps = {d: {n for n in names_in(e) if n in self.formulas} for d, e in self.formulas.items()}
+        deps = {d: sorted(n for n in names_in(e) if n in self.formulas) for d, e in self.formulas.items()}
         out: list[str] = []
         state: dict[str, int] = {}
-
-        def visit(d: str, stack: list[str]) -> None:
-            s = state.get(d, 0)
-            if s == 2:
-                return
-            if s == 1:
-                cyc = stack[stack.index(d):] + [d]
-                raise ExprError("cycle: " + " → ".join(cyc))
-            state[d] = 1
-            for x in deps[d]:
-                visit(x, stack + [d])
-            state[d] = 2
-            out.append(d)
-
-        for d in self.formulas:
-            visit(d, [])
+        for root in self.formulas:  # depth first without recursion: a big sheet chains thousands of lines
+            if state.get(root, 0) == 2:
+                continue
+            stack = [(root, iter(deps[root]))]
+            state[root] = 1
+            while stack:
+                d, it = stack[-1]
+                nxt = next(it, None)
+                if nxt is None:
+                    stack.pop()
+                    state[d] = 2
+                    out.append(d)
+                    continue
+                s_ = state.get(nxt, 0)
+                if s_ == 2:
+                    continue
+                if s_ == 1:
+                    path = [x for x, _ in stack]
+                    cyc = path[path.index(nxt):] + [nxt]
+                    raise ExprError("cycle: " + " → ".join(cyc))
+                state[nxt] = 1
+                stack.append((nxt, iter(deps[nxt])))
         self._order = out
         return out
 
