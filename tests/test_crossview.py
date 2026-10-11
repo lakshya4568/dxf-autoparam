@@ -181,3 +181,19 @@ def test_a_real_sheet_section_and_plan_follow_one_barrel_length(tmp_path):
     assert notes == ["BARREL LENGTH = 13000", "BARREL LENGTH = 13000 mm"], notes  # the two reshaped views, written out
     kept = [e.text for b in doc.blocks for e in b.query("MTEXT") if "BARREL LENGTH" in e.text]
     assert "BARREL LENGTH = 15950" in kept  # the untouched view keeps its block, and its own note
+
+
+def test_how_a_value_grows_is_measured_and_can_be_chosen(sheet):
+    uid = sheet.unit_of_view[view(sheet, "ELEVATION")]
+    sheet.share("ClearSpan", [(uid, opening(sheet, uid, 12000, "void"))])
+    g = sheet.growth("ClearSpan")[0]
+    assert g["mode"] in ("end", "start", "centre") and g["why"]
+    for mode in ("start", "end"):
+        got = sheet.anchor("ClearSpan", uid, mode)
+        assert got["mode"] == mode
+        fixed = g["from"] if mode == "start" else g["to"]  # the mode names the line that stays
+        r = sheet.preview({"ClearSpan": 13000})
+        assert r.ok
+        u = sheet.unit(uid)
+        assert abs(sheet.unit(uid).prog.datum_values({"ClearSpan": 13000})[fixed] - u.an.datums[fixed].value) < 1e-9
+    assert sheet.undo()  # the choice is undone like any other edit

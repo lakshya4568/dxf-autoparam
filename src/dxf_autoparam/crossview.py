@@ -538,6 +538,97 @@ class SheetModel:
         self.future.clear()
         return p
 
+    def growth(self, name: str) -> list[dict]:
+        """How each view takes a value growing: which of its two lines moves (end / start), both about a centre line,
+        or the size slides whole — measured, so a person can see it and choose otherwise (`anchor`)."""
+        shared = self._shared_by_name().get(name)
+        pairs = [(b.unit, b.param) for b in shared.bindings] if shared else [tuple(name.split(".", 1))] if "." in name else []
+        if not pairs:
+            raise SheetError(f"no parameter {name}")
+        out = []
+        for uid, local in pairs:
+            u = self.unit(uid)
+            prm = u.prog.params.get(local)
+            if prm is None or not prm.measures:
+                out.append({"unit": uid, "mode": "none", "why": f"{local} is not measured between two lines in {uid}"})
+                continue
+            a, b = prm.measures
+            v0, v1 = u.prog.datum_values(), u.prog.datum_values({local: prm.value + 1.0})
+            if v0[b] < v0[a]:
+                a, b = b, a
+            um = u.sub.units_mm
+            da, db = (v1[a] - v0[a]) * um, (v1[b] - v0[b]) * um
+            # the mode names the line that STAYS (as `anchor` takes it): start — it grows at its end, and so on
+            mode = ("start" if abs(da) < 1e-6 and abs(db - 1) < 1e-6 else "end" if abs(db) < 1e-6 and abs(da + 1) < 1e-6
+                    else "centre" if abs(da + 0.5) < 1e-6 and abs(db - 0.5) < 1e-6 else "slides" if abs(da - db) < 1e-6 else "other")
+            out.append({"unit": uid, "from": a, "to": b, "moves": {a: round(da, 6), b: round(db, 6)}, "mode": mode,
+                        "why": {"start": f"{a} stays, {b} moves", "end": f"{b} stays, {a} moves", "centre": "both lines move about the centre",
+                                "slides": "the size moves whole", "other": "the lines move unevenly"}[mode]})
+        return out
+
+    def anchor(self, name: str, uid: str, mode: str) -> dict:
+        """Choose how a value grows in one unit: `start` — its start line stays and it grows at its end; `end` — the
+        other way; `centre` — about the centre line between them. Written as the person's formula (it outranks what the engine chose);
+        refused, with nothing changed, when the drawing has no centre line there or the sheet does not hold."""
+        if mode not in ("start", "end", "centre"):
+            raise SheetError("anchor is start, end or centre")
+        shared = self._shared_by_name().get(name)
+        local = next((b.param for b in shared.bindings if b.unit == uid), None) if shared else name.split(".", 1)[1] if "." in name else None
+        u = self.unit(uid)
+        prm = u.prog.params.get(local or "")
+        if prm is None or not prm.measures:
+            raise SheetError(f"{name} is not measured between two lines in {uid}")
+        a, b = prm.measures
+        an = u.an
+        if an.datums[b].value < an.datums[a].value:
+            a, b = b, a
+        self._push()
+        before = copy.deepcopy(u.answer)
+        # from the engine's own set-out: an earlier choice for these lines is cleared first
+        ans = copy.deepcopy(u.answer) if u.answer else copy.deepcopy(EMPTY_ANSWER)
+        ans["datum_formulas"] = [f for f in ans.get("datum_formulas", []) if f.get("datum") not in (a, b)]
+        u.answer, u.prog = ans, None
+        u = self.unit(uid)
+        if mode == "start":  # the start line stays (on what it was set out from); the end line follows the value
+            formulas = [{"datum": a, "expr": self._pinned(u, a, local)}, {"datum": b, "expr": f"{a} + {local}"}]
+        elif mode == "end":
+            formulas = [{"datum": b, "expr": self._pinned(u, b, local)}, {"datum": a, "expr": f"{b} - {local}"}]
+        else:
+            mid = (an.datums[a].value + an.datums[b].value) / 2
+            axis = next((d.id for d in an.datums.values() if d.axis == an.datums[a].axis and d.id not in (a, b)
+                         and abs(d.value - mid) <= an.drawing.tol), None)
+            if axis is None:
+                u.answer, u.prog = before, None
+                self.history.pop()
+                self.unit(uid)
+                raise SheetError(f"no centre line between {a} and {b} in {uid}: choose the start or the end")
+            formulas = [{"datum": a, "expr": f"{axis} - 0.5 * {local}"}, {"datum": b, "expr": f"{axis} + 0.5 * {local}"}]
+        ans = copy.deepcopy(ans)
+        ans["datum_formulas"] = ans["datum_formulas"] + formulas
+        u.answer, u.prog = ans, None
+        self.unit(uid)
+        g = next(x for x in self.growth(name) if x["unit"] == uid)
+        r = self.regenerate()
+        if g["mode"] != mode or not r.ok:
+            u.answer, u.prog = before, None
+            self.history.pop()
+            self.unit(uid)
+            why = "; ".join(r.errors[:2]) or f"the engine could not keep it ({g['why']})"
+            raise SheetError(f"{name} cannot grow from its {mode} in {uid}: {why}")
+        return g
+
+    @staticmethod
+    def _pinned(u: Unit, d: str, local: str) -> str:
+        """Line d set out as drawn from a line that does not move with the value (or where it is drawn)."""
+        prog, um = u.prog, u.sub.units_mm
+        v0 = prog.datum_values()
+        v1 = prog.datum_values({local: prog.params[local].value + 1.0})
+        refs = [r for r in sorted(re.findall(r"[a-z]+\d+", prog.formulas.get(d, ""))) if r in v0 and abs(v1[r] - v0[r]) < 1e-12]
+        if refs:
+            off = (v0[d] - v0[refs[0]]) * um
+            return f"{refs[0]} {'+' if off >= 0 else '-'} {abs(off):.6f}".rstrip("0").rstrip(".")
+        return f"{v0[d] * um:.6f}".rstrip("0").rstrip(".")
+
     def unshare(self, name: str) -> None:
         p = self._shared_by_name().get(name)
         if p is None:
