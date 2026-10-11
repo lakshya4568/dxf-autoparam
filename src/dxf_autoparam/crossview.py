@@ -222,7 +222,7 @@ class SheetModel:
         self.units, self.unit_of_view = {}, {}
         for members in groups.values():
             ids = sorted(v.id for v in members)
-            uid = "U" + "+".join(v[1:] for v in ids)  # stable: named by its views
+            uid = "U" + "_".join(v[1:] for v in ids)  # stable: named by its views (URL-safe)
             items = sorted({i for v in members for i in v.items})
             units_mm = members[0].units_mm
             sub, back = view_drawing(self.dr, items)

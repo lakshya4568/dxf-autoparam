@@ -8,13 +8,13 @@
   :root {
     --bg: #1b1f27; --panel: #222833; --panel2: #1f2530; --ink: #e5e8ee; --muted: #9aa4b2; --line: #343c4a; --hover: #2c3442;
     --canvas: #161a21; --struct: #e9edf3; --anno: #8fa3bd; --dim: #6fb6ff; --fixed: #465062; --ref: #f08a7a;
-    --sel: #ffb020; --hov: #22d3ee; --chg: #ff5ab4; --ghost: rgba(233,237,243,.22); --ok: #4ade80; --warn: #fbbf24; --bad: #f87171;
+    --sel: #ffb020; --hov: #22d3ee; --imp: rgba(34,211,238,.55); --chg: #ff5ab4; --ghost: rgba(233,237,243,.22); --ok: #4ade80; --warn: #fbbf24; --bad: #f87171;
     --accent: #3b82f6; --ai: #a78bfa; --chip: #2b3342; --viewbox: rgba(59,130,246,.55); --table: rgba(74,222,128,.5); --notes: rgba(251,191,36,.45);
   }
   :root[data-theme="light"] {
     --bg: #eef1f5; --panel: #ffffff; --panel2: #f6f8fb; --ink: #1d2430; --muted: #5d6878; --line: #dde2ea; --hover: #eef2f8;
     --canvas: #ffffff; --struct: #111827; --anno: #55657d; --dim: #1d6fd6; --fixed: #c3cad6; --ref: #dc2626;
-    --sel: #e07b00; --hov: #0891b2; --chg: #d6247f; --ghost: rgba(17,24,39,.18); --chip: #edf1f7;
+    --sel: #e07b00; --hov: #0891b2; --imp: rgba(8,145,178,.55); --chg: #d6247f; --ghost: rgba(17,24,39,.18); --chip: #edf1f7;
     --viewbox: rgba(37,99,235,.5); --table: rgba(22,163,74,.45); --notes: rgba(202,138,4,.45);
   }
   * { box-sizing: border-box; }
@@ -125,9 +125,11 @@ let byEnt = new Map();              // entity index -> [prim ids]
 let grid = null;                    // spatial index over primitives
 let cam = { x: 0, y: 0, s: 1 };     // world point at the canvas centre, pixels per drawing unit
 let sel = new Set(), hov = -1;      // selected entities; hovered entity
+let impact = new Set();             // what the value in focus moves (measured)
 let focus = null;                   // { kind: "view"|"param"|"entity"|"unit", id }
 let activeView = null;              // a view the canvas dims the others for
 let unitCache = new Map();          // unit id -> /api/sheet/unit
+const loading = new Set();          // units being analysed
 let paramInfo = null;               // /api/sheet/param of the parameter in focus
 let preview = null;                 // { changes, res, prims:Map(entity -> prims) }
 let tab = "sheet";
@@ -258,6 +260,8 @@ function render() {
     stroke(now, colors.chg, 1.6);
     ctx.fillStyle = colors.chg; for (const list of preview.prims.values()) for (const o of list) if (o.k === "t") text1(o);
   }
+  // what the value in focus moves (lighter than a selection; hidden while a preview shows the change itself)
+  if (impact.size && !preview) { const ip = []; for (const i of impact) for (const n of byEnt.get(i) || []) if (P[n].k !== "t") ip.push(P[n]); stroke(ip, css("--imp"), 1.8); }
   // selection and hover on top
   const selP = []; for (const i of sel) for (const n of byEnt.get(i) || []) if (P[n].k !== "t") selP.push(P[n]);
   stroke(selP, colors.sel, 2.4);
@@ -428,6 +432,7 @@ window.addEventListener("keyup", (e) => { if (e.code === "Space") { spaceDown = 
 function escape() {
   if (mode) { mode = null; say("cancelled"); draw(); return; }
   if (preview) { cancelPreview(); return; }
+  if (impact.size) { impact = new Set(); draw(); return; }
   if (sel.size) { sel.clear(); afterSelect(); return; }
   if (activeView) { activeView = null; draw(); renderLeft(); return; }
   focus = null; renderRight();
@@ -499,7 +504,7 @@ function paramList() {
   h += `<div class="sec">${uid ? "Unit " + esc(uid) : "Open a view"} <span class="n">${uid ? esc((S.units.find((u) => u.id === uid) || {}).views.join(" + ")) : ""}</span></div>`;
   if (uid) {
     const u = unitCache.get(uid);
-    if (!u) h += `<div class="note">analysing…</div>`;
+    if (!u) { h += `<div class="note">analysing…</div>`; if (!loading.has(uid)) { loading.add(uid); loadUnit(uid).then(() => { loading.delete(uid); renderLeft(); }); } }
     else {
       h += `<div class="note"><input type="text" id="psearch" placeholder="filter by name or value" style="width:100%"></div>`;
       for (const p of u.params.filter((p) => !p.shared).slice(0, 400)) {
@@ -552,10 +557,10 @@ async function loadUnit(uid) { return guard(async () => { const u = await api(`/
 
 // ── parameters ───────────────────────────────────────────────────────────────
 async function openParam(key) {
-  focus = { kind: "param", id: key }; paramInfo = null; renderLeft(); renderRight();
+  focus = { kind: "param", id: key }; paramInfo = null; impact = new Set(); renderLeft(); renderRight();
   const info = await guard(() => api(`/api/sheet/param?name=${encodeURIComponent(key)}`));
   if (!info || !focus || focus.id !== key) return;
-  paramInfo = info; sel = new Set(info.moves); $("#selc").textContent = `${sel.size} would move`;
+  paramInfo = info; impact = new Set(info.moves); $("#selc").textContent = `${sel.size} selected · ${impact.size} move with ${key}`;
   renderRight(); draw();
 }
 let pvTimer = 0;
