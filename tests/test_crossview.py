@@ -160,12 +160,14 @@ def test_export_writes_every_regenerated_view_into_the_original(tmp_path, sheet)
 @pytest.mark.skipif(not (FIXTURES / "gad_ezdxf_a.dxf").exists(), reason="aagento-bridge fixtures not present")
 def test_a_real_sheet_section_and_plan_follow_one_barrel_length(tmp_path):
     sm = SheetModel.open(str(FIXTURES / "gad_ezdxf_a.dxf"))
-    sec, plan = view(sm, "LONGITUDINAL SECTION(X-X"), view(sm, "PLAN TOP")
+    sec, plan = view(sm, "LONGITUDINAL SECTION(X-X)"), view(sm, "PLAN TOP")
     uid = sm.unit_of_view[sec]
     assert sm.unit_of_view[plan] == uid  # drawn in projection: one unit
     cid = opening(sm, uid, 11740)
     p = sm.share("BarrelLength", [(uid, cid)], evidence=["written in both views"])
     assert p.bindings[0].status == "drives"
+    # which end the barrel grows at is the person's decision: the upstream end stays, the downstream end moves
+    assert sm.anchor("BarrelLength", uid, "start")["mode"] == "start"
     for v in (10000, 13000):
         r = sm.preview({"BarrelLength": v})
         assert r.ok, r.errors[:3]

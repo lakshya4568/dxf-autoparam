@@ -1,0 +1,734 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sheet Workspace</title>
+<style>
+  :root {
+    --bg: #1b1f27; --panel: #222833; --panel2: #1f2530; --ink: #e5e8ee; --muted: #9aa4b2; --line: #343c4a; --hover: #2c3442;
+    --canvas: #161a21; --struct: #e9edf3; --anno: #8fa3bd; --dim: #6fb6ff; --fixed: #465062; --ref: #f08a7a;
+    --sel: #ffb020; --hov: #22d3ee; --chg: #ff5ab4; --ghost: rgba(233,237,243,.22); --ok: #4ade80; --warn: #fbbf24; --bad: #f87171;
+    --accent: #3b82f6; --ai: #a78bfa; --chip: #2b3342; --viewbox: rgba(59,130,246,.55); --table: rgba(74,222,128,.5); --notes: rgba(251,191,36,.45);
+  }
+  :root[data-theme="light"] {
+    --bg: #eef1f5; --panel: #ffffff; --panel2: #f6f8fb; --ink: #1d2430; --muted: #5d6878; --line: #dde2ea; --hover: #eef2f8;
+    --canvas: #ffffff; --struct: #111827; --anno: #55657d; --dim: #1d6fd6; --fixed: #c3cad6; --ref: #dc2626;
+    --sel: #e07b00; --hov: #0891b2; --chg: #d6247f; --ghost: rgba(17,24,39,.18); --chip: #edf1f7;
+    --viewbox: rgba(37,99,235,.5); --table: rgba(22,163,74,.45); --notes: rgba(202,138,4,.45);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 12.5px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+         display: grid; grid-template-rows: 40px 1fr 26px; overflow: hidden; }
+  header { display: flex; align-items: center; gap: 6px; padding: 0 10px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 13px; font-weight: 650; margin: 0 8px 0 0; letter-spacing: .2px; }
+  header .file { color: var(--muted); max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  header .sp { flex: 1; }
+  button, select, input[type=text], input[type=number] { font: inherit; color: var(--ink); background: var(--panel2); border: 1px solid var(--line);
+         border-radius: 5px; padding: 3px 9px; }
+  button { cursor: pointer; } button:hover { background: var(--hover); } button:disabled { opacity: .45; cursor: default; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.icon { padding: 3px 7px; }
+  main { display: grid; grid-template-columns: 300px 1fr 330px; min-height: 0; }
+  main.noright { grid-template-columns: 300px 1fr 0; }
+  aside { background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+  aside.right { border-right: 0; border-left: 1px solid var(--line); }
+  .tabs { display: flex; border-bottom: 1px solid var(--line); }
+  .tabs button { flex: 1; border: 0; border-radius: 0; background: transparent; padding: 8px 4px; color: var(--muted); border-bottom: 2px solid transparent; }
+  .tabs button.on { color: var(--ink); border-bottom-color: var(--accent); }
+  .scroll { overflow: auto; flex: 1; min-height: 0; padding: 6px 0 20px; }
+  .sec { padding: 8px 10px 3px; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .6px; display: flex; align-items: center; gap: 6px; }
+  .sec .n { margin-left: auto; text-transform: none; }
+  .row { display: flex; align-items: center; gap: 6px; padding: 4px 10px; cursor: pointer; border-left: 2px solid transparent; }
+  .row:hover { background: var(--hover); }
+  .row.on { background: var(--hover); border-left-color: var(--accent); }
+  .row .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .sub { color: var(--muted); font-size: 11px; }
+  .chip { display: inline-block; padding: 0 6px; border-radius: 9px; background: var(--chip); color: var(--muted); font-size: 10.5px; line-height: 17px; white-space: nowrap; }
+  .chip.ok { color: var(--ok); } .chip.warn { color: var(--warn); } .chip.bad { color: var(--bad); } .chip.ai { color: var(--ai); } .chip.acc { color: var(--accent); }
+  .k { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+  .val { width: 92px; text-align: right; }
+  .muted { color: var(--muted); }
+  .note { padding: 4px 10px; color: var(--muted); font-size: 11.5px; }
+  .note.bad { color: var(--bad); } .note.warn { color: var(--warn); } .note.ok { color: var(--ok); }
+  .insp { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .insp h3 { margin: 0; font-size: 13px; }
+  .insp .kv { display: grid; grid-template-columns: 96px 1fr; gap: 3px 8px; font-size: 12px; }
+  .insp .kv div:nth-child(odd) { color: var(--muted); }
+  .bar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  input[type=range] { width: 100%; }
+  #stage { position: relative; min-width: 0; min-height: 0; background: var(--canvas); }
+  #cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; touch-action: none; }
+  #tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--line); padding: 3px 7px; border-radius: 5px;
+         font-size: 11.5px; display: none; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
+  #overlay { position: absolute; left: 10px; top: 10px; display: flex; gap: 6px; flex-wrap: wrap; }
+  #overlay .chip { background: var(--panel); border: 1px solid var(--line); line-height: 20px; padding: 0 8px; }
+  #busy { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.35); color: #fff; font-size: 14px; }
+  #empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px; color: var(--muted); }
+  footer { display: flex; align-items: center; gap: 14px; padding: 0 10px; background: var(--panel); border-top: 1px solid var(--line); color: var(--muted); font-size: 11.5px; }
+  footer input { background: transparent; border: 0; color: var(--ink); width: 260px; padding: 0; font: 11.5px ui-monospace, Menlo, monospace; }
+  footer input:focus { outline: none; }
+  footer .msg { margin-left: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+  footer .msg.bad { color: var(--bad); } footer .msg.ok { color: var(--ok); }
+  .preview { border: 1px solid var(--chg); border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .grp { margin: 6px 10px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; }
+  kbd { font: 10.5px ui-monospace, Menlo, monospace; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Sheet Workspace</h1>
+  <span class="file" id="file">no drawing</span>
+  <button id="open">Open DXF</button><input id="pick" type="file" accept=".dxf" hidden />
+  <button class="icon" id="undo" title="Undo (Ctrl/⌘ Z)">↶</button><button class="icon" id="redo" title="Redo (Ctrl/⌘ ⇧ Z)">↷</button>
+  <span class="sp"></span>
+  <select id="filter" title="What a click or a box selects"><option value="all">Select: all</option><option value="structure">Structure only</option><option value="annotation">Annotation only</option></select>
+  <button id="fitall" title="Fit the sheet (F)">Fit</button>
+  <button id="project" title="Download the parametric project (JSON)">Project</button>
+  <button class="primary" id="export" title="Download the edited DXF">Export DXF</button>
+  <button class="icon" id="theme" title="Light / dark">◐</button>
+  <a href="/classic" class="muted" style="margin-left:4px" title="The single-view page with the Gemini panel">classic</a>
+</header>
+<main id="main">
+  <aside>
+    <div class="tabs"><button data-tab="sheet" class="on">Sheet</button><button data-tab="params">Parameters</button><button data-tab="review">Review</button></div>
+    <div class="scroll" id="left"></div>
+  </aside>
+  <div id="stage">
+    <canvas id="cv"></canvas>
+    <div id="overlay"></div>
+    <div id="tip"></div>
+    <div id="empty"><div style="font-size:15px">Open a DXF sheet</div><div>its views, tables and notes are found; then name, link and change sizes across views</div><button class="primary" id="open2">Open DXF</button></div>
+    <div id="busy">Working…</div>
+  </div>
+  <aside class="right"><div class="scroll" id="right"></div></aside>
+</main>
+<footer>
+  <span>Command:</span><input id="cmd" placeholder="F fit · V view · ESC · UNDO · HELP" />
+  <span id="coords">—</span><span id="zoom">—</span><span id="selc">0 selected</span>
+  <span class="msg" id="msg"></span>
+</footer>
+<script>
+"use strict";
+window.__errors = []; window.addEventListener("error", (e) => window.__errors.push(String(e.message)));
+window.addEventListener("unhandledrejection", (e) => window.__errors.push(String(e.reason)));
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const fmt = (v, unit) => v == null ? "" : unit === "m" ? Number(v).toFixed(3) : (Math.round(Number(v) * 10) / 10).toLocaleString("en-US", { maximumFractionDigits: 1 });
+const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+// ── state ────────────────────────────────────────────────────────────────────
+let S = null;                       // the sheet summary from the server
+let P = [];                         // primitives: {i, k, r, l, v, p:Float64Array, c, d, at, t, h, rot}
+let byEnt = new Map();              // entity index -> [prim ids]
+let grid = null;                    // spatial index over primitives
+let cam = { x: 0, y: 0, s: 1 };     // world point at the canvas centre, pixels per drawing unit
+let sel = new Set(), hov = -1;      // selected entities; hovered entity
+let focus = null;                   // { kind: "view"|"param"|"entity"|"unit", id }
+let activeView = null;              // a view the canvas dims the others for
+let unitCache = new Map();          // unit id -> /api/sheet/unit
+let paramInfo = null;               // /api/sheet/param of the parameter in focus
+let preview = null;                 // { changes, res, prims:Map(entity -> prims) }
+let tab = "sheet";
+let mode = null;                    // null | "split"
+let theme = (() => { try { return localStorage.getItem("ws-theme") || "dark"; } catch (e) { return "dark"; } })();
+document.documentElement.dataset.theme = theme;
+
+// ── server ───────────────────────────────────────────────────────────────────
+async function api(path, body, method) {
+  const opt = body === undefined ? { method: method || "GET" } : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+  const r = await fetch(path, opt);
+  const j = await r.json().catch(() => ({ ok: false, error: `HTTP ${r.status}` }));
+  if (!r.ok || j.ok === false) throw new Error(j.error || `HTTP ${r.status}`);
+  return j;
+}
+function busy(on, text) { $("#busy").style.display = on ? "flex" : "none"; $("#busy").textContent = text || "Working…"; }
+function say(text, kind) { const m = $("#msg"); m.textContent = text; m.className = "msg " + (kind || ""); }
+async function guard(fn, text) { try { if (text) busy(true, text); return await fn(); } catch (e) { say(e.message, "bad"); } finally { busy(false); } }
+
+// ── geometry ─────────────────────────────────────────────────────────────────
+function ingest(prims) {
+  const out = [];
+  for (const q of prims) {
+    const o = { i: q.i, k: q.k, r: q.r, l: q.l, v: q.v, c: !!q.c, d: !!q.d };
+    if (q.p) o.p = Float64Array.from(q.p);
+    if (q.k === "t") { o.at = q.at; o.t = q.t; o.h = q.h || 0; o.rot = q.rot || 0; }
+    o.b = bboxOf(o);
+    out.push(o);
+  }
+  return out;
+}
+function bboxOf(o) {
+  if (o.k === "t") { const h = o.h || 1, w = Math.max(1, (o.t || "").split("\n").reduce((m, s) => Math.max(m, s.length), 0)) * 0.62 * h;
+    const r = Math.max(w, h * 1.6 * Math.max(1, (o.t || "").split("\n").length)); return [o.at[0] - r, o.at[1] - r, o.at[0] + r, o.at[1] + r]; }
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (let k = 0; k < o.p.length; k += 2) { const x = o.p[k], y = o.p[k + 1]; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  return [x0, y0, x1, y1];
+}
+function buildIndex() {
+  byEnt = new Map();
+  P.forEach((o, n) => { if (!byEnt.has(o.i)) byEnt.set(o.i, []); byEnt.get(o.i).push(n); });
+  const ext = sheetBox();
+  const W = ext[2] - ext[0] || 1, H = ext[3] - ext[1] || 1, cell = Math.max(W, H) / 220;
+  const nx = Math.ceil(W / cell) + 1, ny = Math.ceil(H / cell) + 1;
+  const cells = new Map(), big = [];
+  P.forEach((o, n) => {
+    const b = o.b; const c0 = Math.floor((b[0] - ext[0]) / cell), c1 = Math.floor((b[2] - ext[0]) / cell);
+    const r0 = Math.floor((b[1] - ext[1]) / cell), r1 = Math.floor((b[3] - ext[1]) / cell);
+    if ((c1 - c0 + 1) * (r1 - r0 + 1) > 400) { big.push(n); return; }
+    for (let r = Math.max(0, r0); r <= Math.min(ny - 1, r1); r++) for (let c = Math.max(0, c0); c <= Math.min(nx - 1, c1); c++) {
+      const key = r * nx + c; let a = cells.get(key); if (!a) { a = []; cells.set(key, a); } a.push(n);
+    }
+  });
+  grid = { ext, cell, nx, ny, cells, big, stamp: new Int32Array(P.length), frame: 1 };
+}
+function sheetBox() {
+  if (S && S.frame) return S.frame;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const o of P) { if (o.r === "fixed") continue; x0 = Math.min(x0, o.b[0]); y0 = Math.min(y0, o.b[1]); x1 = Math.max(x1, o.b[2]); y1 = Math.max(y1, o.b[3]); }
+  return isFinite(x0) ? [x0, y0, x1, y1] : [0, 0, 1, 1];
+}
+function query(x0, y0, x1, y1, list) {   // prim ids whose cells meet the box (each once)
+  const g = grid; if (!g) return [];
+  g.frame++; const out = list || [];
+  const c0 = Math.max(0, Math.floor((x0 - g.ext[0]) / g.cell)), c1 = Math.min(g.nx - 1, Math.floor((x1 - g.ext[0]) / g.cell));
+  const r0 = Math.max(0, Math.floor((y0 - g.ext[1]) / g.cell)), r1 = Math.min(g.ny - 1, Math.floor((y1 - g.ext[1]) / g.cell));
+  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) { const a = g.cells.get(r * g.nx + c); if (!a) continue;
+    for (const n of a) if (g.stamp[n] !== g.frame) { g.stamp[n] = g.frame; out.push(n); } }
+  for (const n of g.big) if (g.stamp[n] !== g.frame) { g.stamp[n] = g.frame; out.push(n); }
+  return out;
+}
+
+// ── camera ───────────────────────────────────────────────────────────────────
+const cv = $("#cv"); const ctx = cv.getContext("2d");
+let dpr = 1, CW = 1, CH = 1;
+let fitted = false;   // the first fit waits until the canvas has a size
+function resize() { dpr = window.devicePixelRatio || 1; const r = cv.getBoundingClientRect(); CW = r.width; CH = r.height;
+  cv.width = Math.round(CW * dpr); cv.height = Math.round(CH * dpr);
+  if (!fitted && P.length && CW > 50 && CH > 50) { fitted = true; fit(sheetBox(), 0.03); } else draw(); }
+new ResizeObserver(resize).observe($("#stage"));
+const toScreen = (x, y) => [(x - cam.x) * cam.s + CW / 2, (cam.y - y) * cam.s + CH / 2];
+const toWorld = (sx, sy) => [(sx - CW / 2) / cam.s + cam.x, cam.y - (sy - CH / 2) / cam.s];
+function fit(box, pad = 0.06) {
+  if (!box) return; const w = box[2] - box[0] || 1, h = box[3] - box[1] || 1;
+  cam.s = Math.min(CW / (w * (1 + 2 * pad)), CH / (h * (1 + 2 * pad))); cam.x = (box[0] + box[2]) / 2; cam.y = (box[1] + box[3]) / 2; draw();
+}
+function viewBox(gid) { const g = S.groups.find((x) => x.id === gid); return g ? g.bbox : null; }
+function entBox(ents) { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const i of ents) for (const n of byEnt.get(i) || []) { const b = P[n].b; x0 = Math.min(x0, b[0]); y0 = Math.min(y0, b[1]); x1 = Math.max(x1, b[2]); y1 = Math.max(y1, b[3]); }
+  return isFinite(x0) ? [x0, y0, x1, y1] : null; }
+
+// ── drawing ──────────────────────────────────────────────────────────────────
+let raf = 0;
+function draw() { if (!raf) raf = requestAnimationFrame(render); }
+let lastFrameMs = 0;
+function render() {
+  raf = 0; const t0 = performance.now();
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = css("--canvas"); ctx.fillRect(0, 0, CW, CH);
+  if (!P.length) return;
+  const [wx0, wy1] = toWorld(0, 0), [wx1, wy0] = toWorld(CW, CH);
+  const ids = query(wx0, wy0, wx1, wy1, []);
+  const furniture = S ? new Set([...S.furniture.frame, ...S.furniture.rules, ...S.furniture.watermark, ...S.furniture.stray]) : new Set();
+  const changed = preview ? preview.ents : null;
+  const colors = { s: css("--struct"), a: css("--anno"), d: css("--dim"), f: css("--fixed"), ref: css("--ref"), sel: css("--sel"), hov: css("--hov"), chg: css("--chg"), ghost: css("--ghost") };
+  const groups = { s: [], a: [], d: [], f: [], ref: [], dimmed: [], fill: [] };
+  const tiny = 1.2 / cam.s;
+  for (const n of ids) {
+    const o = P[n];
+    if (changed && changed.has(o.i)) continue;   // drawn from the preview below
+    if (o.k === "t") continue;
+    const b = o.b; if (b[2] - b[0] < tiny && b[3] - b[1] < tiny && o.k !== "g") continue;  // smaller than a pixel
+    let key = furniture.has(o.i) || o.r === "fixed" ? "f" : o.d ? "d" : o.r === "reference" ? "ref" : o.r === "structural" ? "s" : "a";
+    if (activeView && o.v !== activeView && key !== "f") key = "dimmed";
+    if (o.k === "g") { if (key !== "dimmed") groups.fill.push(o); continue; }
+    groups[key].push(o);
+  }
+  ctx.lineJoin = "round"; ctx.lineCap = "round";
+  // hatch / solid fills, faint
+  if (groups.fill.length) { ctx.fillStyle = theme === "light" ? "rgba(99,102,241,.10)" : "rgba(129,140,248,.12)"; ctx.beginPath(); for (const o of groups.fill) poly(o.p, true); ctx.fill(); }
+  stroke(groups.dimmed, theme === "light" ? "rgba(120,130,150,.35)" : "rgba(150,160,180,.22)", 1);
+  stroke(groups.f, colors.f, 1); stroke(groups.a, colors.a, 1); stroke(groups.d, colors.d, 1); stroke(groups.ref, colors.ref, 1, [6, 4]); stroke(groups.s, colors.s, 1.15);
+  texts(ids, furniture, colors);
+  if (preview) {   // the original faint and dashed, the proposal bright
+    const ghost = []; for (const i of preview.ents) for (const n of byEnt.get(i) || []) if (P[n].k !== "t") ghost.push(P[n]);
+    stroke(ghost, colors.ghost, 1, [4, 3]);
+    const now = []; for (const list of preview.prims.values()) for (const o of list) if (o.k !== "t") now.push(o);
+    stroke(now, colors.chg, 1.6);
+    ctx.fillStyle = colors.chg; for (const list of preview.prims.values()) for (const o of list) if (o.k === "t") text1(o);
+  }
+  // selection and hover on top
+  const selP = []; for (const i of sel) for (const n of byEnt.get(i) || []) if (P[n].k !== "t") selP.push(P[n]);
+  stroke(selP, colors.sel, 2.4);
+  ctx.fillStyle = colors.sel; for (const i of sel) for (const n of byEnt.get(i) || []) if (P[n].k === "t") text1(P[n], true);
+  if (hov >= 0 && !sel.has(hov)) { const hp = (byEnt.get(hov) || []).map((n) => P[n]).filter((o) => o.k !== "t"); stroke(hp, colors.hov, 2.2); }
+  boxes(); band();
+  lastFrameMs = performance.now() - t0;
+}
+function poly(p, closed) {
+  const s = cam.s, ox = CW / 2 - cam.x * s, oy = CH / 2 + cam.y * s;
+  ctx.moveTo(p[0] * s + ox, oy - p[1] * s);
+  for (let k = 2; k < p.length; k += 2) ctx.lineTo(p[k] * s + ox, oy - p[k + 1] * s);
+  if (closed) ctx.closePath();
+}
+function stroke(list, color, w, dash) {
+  if (!list.length) return; ctx.strokeStyle = color; ctx.lineWidth = w; ctx.setLineDash(dash || []);
+  ctx.beginPath(); for (const o of list) poly(o.p, o.c); ctx.stroke(); ctx.setLineDash([]);
+}
+function texts(ids, furniture, colors) {
+  for (const n of ids) { const o = P[n]; if (o.k !== "t") continue;
+    if (preview && preview.ents.has(o.i)) continue;
+    const dim = activeView && o.v !== activeView;
+    ctx.fillStyle = furniture.has(o.i) || o.r === "fixed" ? colors.f : dim ? (theme === "light" ? "rgba(120,130,150,.4)" : "rgba(150,160,180,.3)") : o.d ? colors.d : colors.a;
+    text1(o);
+  }
+}
+function text1(o, bold) {
+  const hpx = (o.h || 2.5 / cam.s * 4) * cam.s;
+  if (hpx < 3.2) return;   // too small to read: not drawn at this zoom
+  const [sx, sy] = toScreen(o.at[0], o.at[1]);
+  ctx.save(); ctx.translate(sx, sy); ctx.rotate(-(o.rot || 0) * Math.PI / 180);
+  ctx.font = `${bold ? "600 " : ""}${Math.min(hpx, 400)}px system-ui, sans-serif`;
+  const lines = String(o.t || "").split("\n");
+  lines.forEach((ln, k) => ctx.fillText(ln, 0, k * hpx * 1.5));
+  ctx.restore();
+}
+function boxes() {
+  if (!S || !$("#ov-views") || !$("#ov-views").checked) return;
+  ctx.font = "11px system-ui, sans-serif";
+  for (const g of S.groups) {
+    const col = g.kind === "view" ? css("--viewbox") : g.kind === "table" ? css("--table") : g.kind === "notes" || g.kind === "title_block" ? css("--notes") : null;
+    if (!col) continue;
+    const [x0, y0] = toScreen(g.bbox[0], g.bbox[3]), [x1, y1] = toScreen(g.bbox[2], g.bbox[1]);
+    if (x1 < 0 || y1 < 0 || x0 > CW || y0 > CH || (x1 - x0) < 6) continue;
+    const on = activeView === g.id || (focus && focus.kind === "view" && focus.id === g.id);
+    ctx.strokeStyle = col; ctx.lineWidth = on ? 2 : 1; ctx.setLineDash(on ? [] : [5, 4]); ctx.strokeRect(x0 - 3, y0 - 3, x1 - x0 + 6, y1 - y0 + 6); ctx.setLineDash([]);
+    const label = `${g.id}${g.name ? " · " + g.name : ""}`;
+    ctx.fillStyle = col; ctx.fillText(label.length > 48 ? label.slice(0, 47) + "…" : label, x0 - 2, y0 - 7);
+  }
+}
+
+// ── picking ──────────────────────────────────────────────────────────────────
+function allowed(o) { const f = $("#filter").value; return f === "all" || (f === "structure" ? (o.r === "structural" || o.r === "reference") && !o.d : o.r === "annotation" || o.d || o.k === "t"); }
+function segDist(px, py, ax, ay, bx, by) { const dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy; let t = L ? ((px - ax) * dx + (py - ay) * dy) / L : 0; t = Math.max(0, Math.min(1, t));
+  const x = ax + t * dx - px, y = ay + t * dy - py; return Math.sqrt(x * x + y * y); }
+function pick(sx, sy) {
+  const [x, y] = toWorld(sx, sy), tol = 6 / cam.s;
+  const ids = query(x - tol, y - tol, x + tol, y + tol, []);
+  let best = -1, bd = Infinity, barea = Infinity;
+  for (const n of ids) { const o = P[n]; if (!allowed(o)) continue; if (activeView && o.v !== activeView && $("#ov-lock").checked) continue;
+    let d;
+    if (o.k === "t") { const b = o.b, c = [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2], r = (b[2] - b[0]) / 4; d = Math.max(0, Math.hypot(x - c[0], y - c[1]) - r); }
+    else if (o.k === "g") { d = inside(o.p, x, y) ? tol * 0.9 : Infinity; }
+    else { d = Infinity; for (let k = 2; k < o.p.length; k += 2) d = Math.min(d, segDist(x, y, o.p[k - 2], o.p[k - 1], o.p[k], o.p[k + 1]));
+      if (o.c && o.p.length > 4) d = Math.min(d, segDist(x, y, o.p[o.p.length - 2], o.p[o.p.length - 1], o.p[0], o.p[1])); }
+    const area = (o.b[2] - o.b[0]) * (o.b[3] - o.b[1]);
+    if (d <= tol && (d < bd - 1e-9 || (Math.abs(d - bd) < 1e-9 && area < barea))) { best = o.i; bd = d; barea = area; }
+  }
+  return best;
+}
+function inside(p, x, y) { let c = false; for (let i = 0, j = p.length - 2; i < p.length; j = i, i += 2) {
+  const xi = p[i], yi = p[i + 1], xj = p[j], yj = p[j + 1]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; }
+function boxSelect(a, b, crossing) {
+  const x0 = Math.min(a[0], b[0]), x1 = Math.max(a[0], b[0]), y0 = Math.min(a[1], b[1]), y1 = Math.max(a[1], b[1]);
+  const got = new Set();
+  for (const n of query(x0, y0, x1, y1, [])) { const o = P[n]; if (!allowed(o)) continue; if (activeView && o.v !== activeView && $("#ov-lock").checked) continue;
+    const bb = o.b; const within = bb[0] >= x0 && bb[2] <= x1 && bb[1] >= y0 && bb[3] <= y1;
+    const meets = bb[2] >= x0 && bb[0] <= x1 && bb[3] >= y0 && bb[1] <= y1;
+    if (crossing ? meets : within) got.add(o.i); }
+  // an entity is in a window only if ALL its primitives are
+  if (!crossing) for (const i of [...got]) for (const n of byEnt.get(i) || []) { const bb = P[n].b; if (!(bb[0] >= x0 && bb[2] <= x1 && bb[1] >= y0 && bb[3] <= y1)) { got.delete(i); break; } }
+  return got;
+}
+
+// ── pointer & keys ───────────────────────────────────────────────────────────
+let drag = null, spaceDown = false;
+cv.addEventListener("contextmenu", (e) => e.preventDefault());
+cv.addEventListener("pointerdown", (e) => {
+  cv.setPointerCapture(e.pointerId);
+  const r = cv.getBoundingClientRect(), sx = e.clientX - r.left, sy = e.clientY - r.top;
+  if (e.button === 1 || (e.button === 0 && spaceDown) || e.button === 2) { drag = { kind: "pan", sx, sy, cx: cam.x, cy: cam.y }; cv.style.cursor = "grabbing"; e.preventDefault(); return; }
+  if (e.button === 0) drag = { kind: "maybe", sx, sy, w0: toWorld(sx, sy), shift: e.shiftKey, sub: e.ctrlKey || e.metaKey };
+});
+cv.addEventListener("pointermove", (e) => {
+  const r = cv.getBoundingClientRect(), sx = e.clientX - r.left, sy = e.clientY - r.top;
+  const [wx, wy] = toWorld(sx, sy);
+  $("#coords").textContent = `${fmt(wx)}, ${fmt(wy)}`;
+  if (drag && drag.kind === "pan") { cam.x = drag.cx - (sx - drag.sx) / cam.s; cam.y = drag.cy + (sy - drag.sy) / cam.s; draw(); return; }
+  if (drag && (drag.kind === "maybe" || drag.kind === "box")) {
+    if (drag.kind === "maybe" && Math.hypot(sx - drag.sx, sy - drag.sy) > 4) drag.kind = "box";
+    if (drag.kind === "box") { drag.ex = sx; drag.ey = sy; draw(); return; }
+  }
+  const h = pick(sx, sy);
+  if (h !== hov) { hov = h; draw(); }
+  tip(h, e.clientX - r.left, e.clientY - r.top);
+});
+cv.addEventListener("pointerup", (e) => {
+  const r = cv.getBoundingClientRect(), sx = e.clientX - r.left, sy = e.clientY - r.top;
+  cv.style.cursor = "crosshair";
+  if (!drag) return;
+  const d = drag; drag = null;
+  if (d.kind === "pan") return;
+  if (d.kind === "box") {
+    const a = d.w0, b = toWorld(sx, sy);
+    if (mode === "split") { mode = null; splitBox(a, b); draw(); return; }
+    const got = boxSelect(a, b, sx < d.sx);   // right to left: crossing; left to right: window
+    if (!d.shift && !d.sub) sel = new Set();
+    for (const i of got) d.sub ? sel.delete(i) : sel.add(i);
+    afterSelect(); return;
+  }
+  const h = pick(sx, sy);
+  if (h < 0) { if (!d.shift && !d.sub) { sel.clear(); focus = null; afterSelect(); } return; }
+  if (d.sub) sel.delete(h); else if (d.shift) (sel.has(h) ? sel.delete(h) : sel.add(h)); else sel = new Set([h]);
+  focus = { kind: "entity", id: h }; afterSelect();
+});
+cv.addEventListener("dblclick", (e) => {
+  const r = cv.getBoundingClientRect(); const h = pick(e.clientX - r.left, e.clientY - r.top);
+  if (h < 0) return; const g = groupOf(h); if (g) openView(g.id, false);
+});
+cv.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  const r = cv.getBoundingClientRect(), sx = e.clientX - r.left, sy = e.clientY - r.top;
+  const [wx, wy] = toWorld(sx, sy);
+  const k = Math.exp(-(e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY) * 0.0016);
+  cam.s = Math.min(Math.max(cam.s * k, 1e-7), 1e7);
+  cam.x = wx - (sx - CW / 2) / cam.s; cam.y = wy + (sy - CH / 2) / cam.s;   // the point under the cursor stays put
+  $("#zoom").textContent = zoomText(); draw();
+}, { passive: false });
+function band() {
+  if (!drag || drag.kind !== "box") return;
+  const crossing = drag.ex < drag.sx;
+  ctx.setLineDash(crossing ? [6, 4] : []); ctx.lineWidth = 1;
+  ctx.strokeStyle = mode === "split" ? css("--chg") : crossing ? css("--ok") : css("--accent");
+  ctx.fillStyle = mode === "split" ? "rgba(255,90,180,.08)" : crossing ? "rgba(74,222,128,.08)" : "rgba(59,130,246,.08)";
+  const x = Math.min(drag.sx, drag.ex), y = Math.min(drag.sy, drag.ey), w = Math.abs(drag.ex - drag.sx), h = Math.abs(drag.ey - drag.sy);
+  ctx.fillRect(x, y, w, h); ctx.strokeRect(x, y, w, h); ctx.setLineDash([]);
+}
+function zoomText() { const b = sheetBox(); return `zoom ${Math.round(cam.s * Math.max(b[2] - b[0], 1) / Math.max(CW, 1) * 100)}%`; }
+function tip(h, x, y) {
+  const t = $("#tip");
+  if (h < 0) { t.style.display = "none"; return; }
+  const o = P[(byEnt.get(h) || [])[0]]; const g = groupOf(h);
+  t.innerHTML = `${esc(o ? (o.k === "t" ? "text" : o.r) : "")} · ${esc(o ? o.l : "")}${g ? ` · <b>${esc(g.id)}</b> ${esc(g.name || g.kind)}` : ""}${o && o.k === "t" ? ` · “${esc(String(o.t).slice(0, 40))}”` : ""}`;
+  t.style.display = "block"; t.style.left = (x + 14) + "px"; t.style.top = (y + 14) + "px";
+}
+window.addEventListener("keydown", (e) => {
+  if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT" || e.target.tagName === "TEXTAREA") { if (e.key === "Escape") e.target.blur(); return; }
+  if (e.code === "Space") { spaceDown = true; cv.style.cursor = "grab"; e.preventDefault(); }
+  const mod = e.ctrlKey || e.metaKey;
+  if (mod && e.key.toLowerCase() === "z") { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
+  if (mod && e.key.toLowerCase() === "y") { e.preventDefault(); redo(); return; }
+  if (e.key === "Escape") { escape(); return; }
+  if (e.key === "f" || e.key === "F") { e.shiftKey && sel.size ? fit(entBox(sel)) : fit(sheetBox()); return; }
+  if (e.key === "v" || e.key === "V") { const g = focus && focus.kind === "view" ? focus.id : activeView; if (g) fit(viewBox(g)); return; }
+  if (e.key === "Enter" && preview) { applyPreview(); return; }
+});
+window.addEventListener("keyup", (e) => { if (e.code === "Space") { spaceDown = false; cv.style.cursor = "crosshair"; } });
+function escape() {
+  if (mode) { mode = null; say("cancelled"); draw(); return; }
+  if (preview) { cancelPreview(); return; }
+  if (sel.size) { sel.clear(); afterSelect(); return; }
+  if (activeView) { activeView = null; draw(); renderLeft(); return; }
+  focus = null; renderRight();
+}
+$("#cmd").addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return; const c = e.target.value.trim(); e.target.value = ""; command(c);
+});
+function command(c) {
+  const [w, ...rest] = c.split(/\s+/); const arg = rest.join(" ");
+  switch ((w || "").toUpperCase()) {
+    case "F": case "Z": case "ZE": case "FIT": fit(sheetBox()); break;
+    case "V": case "VIEW": if (arg) openView(arg.toUpperCase(), true); break;
+    case "UNDO": case "U": undo(); break; case "REDO": redo(); break;
+    case "ESC": escape(); break;
+    case "SEL": if (arg) { const g = S.groups.find((x) => x.id === arg.toUpperCase()); if (g) { sel = new Set(g.items || []); afterSelect(); } } break;
+    case "HELP": case "?": say("F fit · Shift+F fit selection · V fit view · wheel zoom · middle/space/right-drag pan · drag ⇢ window · ⇠ crossing · Shift add · Ctrl/⌘ remove · Esc · Ctrl/⌘ Z undo"); break;
+    default: if (c) say(`unknown command ${c}`, "bad");
+  }
+}
+
+// ── selection → panels ───────────────────────────────────────────────────────
+function groupOf(i) { if (!S) return null; const o = P[(byEnt.get(i) || [])[0]]; return o ? S.groups.find((g) => g.id === o.v) : null; }
+function afterSelect() { $("#selc").textContent = `${sel.size} selected`; draw(); renderRight(); }
+
+// ── sheet tree ───────────────────────────────────────────────────────────────
+function renderLeft() {
+  const L = $("#left");
+  if (!S) { L.innerHTML = `<div class="note">No drawing open.</div>`; return; }
+  if (tab === "sheet") L.innerHTML = sheetTree(); else if (tab === "params") L.innerHTML = paramList(); else L.innerHTML = reviewList();
+  wireLeft();
+}
+function kindColor(g) { return g.kind === "view" ? css("--accent") : g.kind === "table" ? css("--ok") : g.kind === "title_block" ? css("--ai") : css("--warn"); }
+function sheetTree() {
+  const views = S.groups.filter((g) => g.kind === "view"), other = S.groups.filter((g) => g.kind !== "view" && g.kind !== "label");
+  const unitOf = (g) => S.units.find((u) => u.id === g.unit);
+  let h = `<div class="sec">Views <span class="n">${views.length}</span></div>`;
+  h += `<div class="note"><label><input type="checkbox" id="ov-views" ${$("#ov-views") && !$("#ov-views").checked ? "" : "checked"}> view boxes</label> · <label><input type="checkbox" id="ov-lock" ${$("#ov-lock") && $("#ov-lock").checked ? "checked" : ""}> pick only in the open view</label></div>`;
+  for (const g of views) {
+    const u = unitOf(g); const linked = u && u.views.length > 1;
+    h += `<div class="row ${activeView === g.id ? "on" : ""}" data-view="${g.id}" title="${esc((g.evidence || []).join(" · "))}">
+      <span class="k" style="background:${kindColor(g)}"></span><span class="nm"><b>${esc(g.id)}</b> ${esc(g.name || "(no title)")}<br><span class="sub">${esc(g.view_type)}${g.scale ? " · 1:" + g.scale : ""}${g.units_mm ? " · own scale" : ""} · ${g.entities} ent.</span></span>
+      ${linked ? `<span class="chip acc" title="drawn in projection with ${esc(u.views.filter((v) => v !== g.id).join(", "))}: one parametric unit">⇄ ${esc(u.views.filter((v) => v !== g.id).join(","))}</span>` : ""}
+      ${g.questions && g.questions.length ? `<span class="chip warn" title="${esc(g.questions.join("\n"))}">?</span>` : ""}
+      <span class="chip ${g.confidence >= 0.85 ? "ok" : g.confidence >= 0.6 ? "" : "warn"}">${Math.round(g.confidence * 100)}%</span></div>`;
+  }
+  h += `<div class="sec">Tables, notes, title block <span class="n">${other.length}</span></div>`;
+  for (const g of other) h += `<div class="row" data-view="${g.id}"><span class="k" style="background:${kindColor(g)}"></span><span class="nm">${esc(g.id)} ${esc(g.name || g.kind)}</span><span class="chip">${esc(g.kind.replace("_", " "))}</span></div>`;
+  const strong = S.links.filter((l) => l.strong), weak = S.links.filter((l) => !l.strong);
+  h += `<div class="sec">Projection links <span class="n">${S.links.length}</span></div>`;
+  if (!S.links.length) h += `<div class="note">No views share set-out lines: each view is its own unit.</div>`;
+  for (const l of [...strong, ...weak]) {
+    const off = S.unlinked.some((k) => k[0] === l.a && k[1] === l.b);
+    h += `<div class="row" title="${esc(l.why)}"><span class="nm">${esc(l.a)} ⇄ ${esc(l.b)} <span class="sub">${l.planes} ${l.axis === "x" ? "vertical" : "horizontal"} lines · ${Math.round(l.fraction * 100)}%</span></span>
+      <label class="chip"><input type="checkbox" data-link="${l.a},${l.b}" ${l.strong && !off ? "checked" : ""} ${l.strong ? "" : "disabled"}> linked</label></div>`;
+  }
+  const f = S.furniture; h += `<div class="sec">Sheet</div><div class="note">frame ${f.frame.length} · panel rules ${f.rules.length} · outside ${f.stray.length} · watermark ${f.watermark.length} · read in ${S.opened_s}s</div>`;
+  for (const n of S.notes) h += `<div class="note">${esc(n)}</div>`;
+  return h;
+}
+function paramList() {
+  let h = `<div class="sec">Shared across views <span class="n">${S.shared.length}</span></div>`;
+  if (!S.shared.length) h += `<div class="note">Nothing shared yet. Open a view, pick a size and “share” it, or accept a proposal under Review.</div>`;
+  for (const p of S.shared) {
+    const st = p.bindings.map((b) => b.status); const ok = st.every((s) => s === "drives");
+    h += `<div class="row ${focus && focus.kind === "param" && focus.id === p.name ? "on" : ""}" data-param="${esc(p.name)}"><span class="nm"><b>${esc(p.name)}</b><br><span class="sub">${p.bindings.map((b) => esc(b.views.join("+"))).join(" · ")}</span></span>
+      <input class="val" data-val="${esc(p.name)}" value="${fmt(S.values[p.name])}" /><span class="muted">${esc(p.unit)}</span><span class="chip ${ok ? "ok" : "warn"}">${ok ? "drives" : st.join("/")}</span></div>`;
+  }
+  const uid = activeUnit();
+  h += `<div class="sec">${uid ? "Unit " + esc(uid) : "Open a view"} <span class="n">${uid ? esc((S.units.find((u) => u.id === uid) || {}).views.join(" + ")) : ""}</span></div>`;
+  if (uid) {
+    const u = unitCache.get(uid);
+    if (!u) h += `<div class="note">analysing…</div>`;
+    else {
+      h += `<div class="note"><input type="text" id="psearch" placeholder="filter by name or value" style="width:100%"></div>`;
+      for (const p of u.params.filter((p) => !p.shared).slice(0, 400)) {
+        h += `<div class="row ${focus && focus.kind === "param" && focus.id === p.key ? "on" : ""}" data-param="${esc(p.key)}" data-search="${esc((p.name + " " + p.label + " " + Math.round(p.value)).toLowerCase())}">
+          <span class="nm">${p.source === "ai" ? "<b>" + esc(p.name) + "</b>" : esc(p.name)}<br><span class="sub">${esc(p.label && p.label !== p.name ? p.label + " · " : "")}${p.entities} ent. · ${esc(p.views.join(","))}</span></span>
+          <input class="val" data-val="${esc(p.key)}" value="${fmt(p.value, p.unit)}" /><span class="muted">${esc(p.unit)}</span>${p.source === "ai" ? '<span class="chip ai">named</span>' : ""}</div>`;
+      }
+    }
+  }
+  return h;
+}
+function reviewList() {
+  let h = "";
+  const qs = S.groups.filter((g) => g.questions && g.questions.length);
+  h += `<div class="sec">Views to confirm <span class="n">${qs.length}</span></div>`;
+  for (const g of qs) h += `<div class="row" data-view="${g.id}"><span class="nm"><b>${esc(g.id)}</b> ${esc(g.name || "")}<br><span class="sub">${esc(g.questions.join(" · "))}</span></span></div>`;
+  h += `<div class="sec">Sizes two views both state <span class="n" id="propn"></span></div><div id="props"><div class="note"><button id="loadprops">Find shared sizes</button> <span class="muted">(analyses the views)</span></div></div>`;
+  const uid = activeUnit(), u = uid && unitCache.get(uid);
+  if (u) {
+    const f = u.findings.filter((x) => x.severity !== "info");
+    h += `<div class="sec">Checks in ${esc(uid)} <span class="n">${f.length}</span></div>`;
+    for (const x of f.slice(0, 60)) h += `<div class="note ${x.severity === "error" ? "bad" : "warn"}">${esc(x.code)} ${esc(x.item)}: ${esc(x.message)}</div>`;
+  }
+  return h;
+}
+function activeUnit() { const v = activeView || (focus && focus.kind === "view" ? focus.id : null); if (!v) return null; const g = S.groups.find((x) => x.id === v); return g && g.unit; }
+function wireLeft() {
+  document.querySelectorAll("#left [data-view]").forEach((el) => el.addEventListener("click", () => openView(el.dataset.view, true)));
+  document.querySelectorAll("#left [data-param]").forEach((el) => el.addEventListener("click", (e) => { if (e.target.tagName !== "INPUT") openParam(el.dataset.param); }));
+  document.querySelectorAll("#left [data-val]").forEach((el) => {
+    el.addEventListener("keydown", (e) => { if (e.key === "Enter") { const v = parseNum(el.value); if (v != null) startPreview({ [el.dataset.val]: v }, true); } if (e.key === "Escape") { el.blur(); cancelPreview(); } });
+    el.addEventListener("focus", () => el.select());
+  });
+  document.querySelectorAll("#left [data-link]").forEach((el) => el.addEventListener("change", () => { const [a, b] = el.dataset.link.split(","); edit("link", { a, b, linked: el.checked }); }));
+  const ov = $("#ov-views"); if (ov) ov.addEventListener("change", draw);
+  const ps = $("#psearch"); if (ps) ps.addEventListener("input", () => { const q = ps.value.toLowerCase(); document.querySelectorAll("#left [data-search]").forEach((r) => r.style.display = r.dataset.search.includes(q) ? "" : "none"); });
+  const lp = $("#loadprops"); if (lp) lp.addEventListener("click", loadProposals);
+}
+function parseNum(s) { const v = Number(String(s).replace(/[, ]/g, "")); return isFinite(v) ? v : null; }
+
+async function openView(gid, fitIt) {
+  const g = S.groups.find((x) => x.id === gid); if (!g) return;
+  activeView = g.kind === "view" ? gid : null; focus = { kind: "view", id: gid };
+  if (fitIt) fit(g.bbox, 0.1);
+  renderLeft(); renderRight(); draw();
+  if (g.unit && !unitCache.has(g.unit)) { await loadUnit(g.unit); renderLeft(); renderRight(); }
+}
+async function loadUnit(uid) { return guard(async () => { const u = await api(`/api/sheet/unit?id=${encodeURIComponent(uid)}`); unitCache.set(uid, u);
+  const su = S.units.find((x) => x.id === uid); if (su) su.built = true; return u; }); }
+
+// ── parameters ───────────────────────────────────────────────────────────────
+async function openParam(key) {
+  focus = { kind: "param", id: key }; paramInfo = null; renderLeft(); renderRight();
+  const info = await guard(() => api(`/api/sheet/param?name=${encodeURIComponent(key)}`));
+  if (!info || !focus || focus.id !== key) return;
+  paramInfo = info; sel = new Set(info.moves); $("#selc").textContent = `${sel.size} would move`;
+  renderRight(); draw();
+}
+let pvTimer = 0;
+function startPreview(changes, applyIfOk) {
+  clearTimeout(pvTimer);
+  pvTimer = setTimeout(async () => {
+    const res = await guard(() => api("/api/sheet/preview", { changes }));
+    if (!res) return;
+    const prims = new Map(); for (const o of ingest(res.delta)) { if (!prims.has(o.i)) prims.set(o.i, []); prims.get(o.i).push(o); }
+    preview = { changes, res, prims, ents: new Set(prims.keys()) };
+    say(res.ok ? `preview: ${res.changed} entities change in ${Object.keys(res.by_view).filter(Boolean).join(", ") || "—"} · Enter applies, Esc cancels` : `would break: ${res.errors[0]}`, res.ok ? "ok" : "bad");
+    renderRight(); draw();
+    if (applyIfOk && res.ok) applyPreview();
+  }, applyIfOk ? 0 : 140);
+}
+function cancelPreview() { preview = null; say(""); renderRight(); draw(); }
+async function applyPreview() {
+  if (!preview) return; const changes = preview.changes;
+  const res = await guard(() => api("/api/sheet/apply", { changes }), "Applying…");
+  preview = null;
+  if (res) { take(res); say(`applied: ${Object.entries(res.by_view || {}).filter(([k]) => k).map(([k, n]) => `${k} ${n}`).join(", ")}`, "ok"); }
+  draw(); renderLeft(); if (focus && focus.kind === "param") openParam(focus.id);
+}
+function take(res) {   // a committed change: the entities it moved (or moved back), as they now stand
+  if (res.delta) { const fresh = ingest(res.delta); const ents = new Set(fresh.map((o) => o.i));
+    P = P.filter((o) => !ents.has(o.i)).concat(fresh); buildIndex(); }
+  if (res.summary) { S = res.summary; unitCache.clear(); }
+  $("#undo").disabled = !S.can_undo; $("#redo").disabled = !S.can_redo;
+}
+async function undo() { const r = await guard(() => api("/api/sheet/undo", {})); if (r) { take(r); say(r.ok ? "undone" : "nothing to undo"); renderLeft(); renderRight(); draw(); } }
+async function redo() { const r = await guard(() => api("/api/sheet/redo", {})); if (r) { take(r); say(r.ok ? "redone" : "nothing to redo"); renderLeft(); renderRight(); draw(); } }
+async function edit(op, body, done) {
+  const r = await guard(() => api(`/api/sheet/${op}`, body), "Working…");
+  if (r) { take(r); say(`${op}: done`, "ok"); renderLeft(); renderRight(); draw(); if (done) done(r); }
+  else { renderLeft(); }
+}
+
+// ── inspector ────────────────────────────────────────────────────────────────
+function renderRight() {
+  const R = $("#right");
+  if (!S) { R.innerHTML = ""; return; }
+  if (focus && focus.kind === "param") { R.innerHTML = paramInspector(); wireParam(); return; }
+  if (focus && focus.kind === "view") { R.innerHTML = viewInspector(focus.id); wireView(focus.id); return; }
+  if (sel.size) { R.innerHTML = selInspector(); return; }
+  R.innerHTML = `<div class="insp"><h3>${esc(S.file)}</h3><div class="kv"><div>entities</div><div>${S.entities.toLocaleString()}</div><div>views</div><div>${S.groups.filter((g) => g.kind === "view").length}</div>
+    <div>units</div><div>${S.units.length} (${S.units.filter((u) => u.views.length > 1).length} linked)</div><div>shared</div><div>${S.shared.length}</div><div>drawing unit</div><div>${S.units_mm} mm</div></div>
+    <div class="muted">Click a view in the list (or double-click it on the sheet) to open it. Drag ⇢ for a window, ⇠ for a crossing selection. <kbd>F</kbd> fits, <kbd>Esc</kbd> clears.</div></div>`;
+}
+function selInspector() {
+  const ents = [...sel]; const one = ents.length === 1 ? ents[0] : null;
+  const views = new Map(); for (const i of ents) { const g = groupOf(i); if (g) views.set(g.id, (views.get(g.id) || 0) + 1); }
+  let h = `<div class="insp"><h3>${one != null ? "Entity " + one : ents.length + " entities"}</h3>`;
+  if (one != null) { const o = P[(byEnt.get(one) || [])[0]]; const g = groupOf(one);
+    h += `<div class="kv"><div>kind</div><div>${esc(o.k === "t" ? "text" : o.k === "g" ? "fill" : "line")}</div><div>role</div><div>${esc(o.r)}</div><div>layer</div><div>${esc(o.l)}</div>
+      <div>view</div><div>${g ? esc(g.id + " " + (g.name || g.kind)) : "—"}</div>${o.k === "t" ? `<div>text</div><div>${esc(o.t)}</div>` : ""}
+      ${o.p && o.p.length === 4 ? `<div>length</div><div>${fmt(Math.hypot(o.p[2] - o.p[0], o.p[3] - o.p[1]) * S.units_mm)} mm</div>` : ""}</div>`; }
+  h += `<div class="sec" style="padding:0">by view</div>`; for (const [v, n] of views) h += `<div class="bar"><span class="chip acc">${esc(v)}</span> ${n}</div>`;
+  h += `<div class="bar"><button id="fitsel">Fit selection</button></div></div>`;
+  setTimeout(() => { const b = $("#fitsel"); if (b) b.onclick = () => fit(entBox(sel)); }, 0);
+  return h;
+}
+function viewInspector(gid) {
+  const g = S.groups.find((x) => x.id === gid); if (!g) return "";
+  const u = g.unit && S.units.find((x) => x.id === g.unit);
+  let h = `<div class="insp"><h3>${esc(g.id)} · ${esc(g.name || g.kind)}</h3>
+    <div class="kv"><div>kind</div><div><select id="vkind">${["view", "table", "notes", "title_block", "label"].map((k) => `<option ${k === g.kind ? "selected" : ""}>${k}</option>`).join("")}</select></div>
+    <div>type</div><div><select id="vtype">${["plan", "section", "elevation", "detail", "arrangement", "composite", "unknown"].map((k) => `<option ${k === g.view_type ? "selected" : ""}>${k}</option>`).join("")}</select></div>
+    <div>name</div><div><input type="text" id="vname" value="${esc(g.name)}" style="width:100%"></div>
+    <div>scale</div><div>${g.scale ? "1:" + g.scale : "—"}${g.units_mm ? ` · its own unit ${fmt(g.units_mm)} mm` : ""}</div><div>entities</div><div>${g.entities}</div>
+    <div>confidence</div><div>${Math.round(g.confidence * 100)}%</div>${u ? `<div>unit</div><div>${esc(u.id)}${u.views.length > 1 ? " (with " + esc(u.views.filter((v) => v !== g.id).join(", ")) + ")" : ""}</div>` : ""}</div>`;
+  for (const q of g.questions || []) h += `<div class="note warn" style="padding:0">? ${esc(q)}</div>`;
+  for (const e of g.evidence || []) h += `<div class="note" style="padding:0">${esc(e)}</div>`;
+  h += `<div class="bar"><button id="vsave">Save name / type</button><button id="vfit">Fit</button><button id="vsplit" title="Drag a box on the sheet around what is a separate view">Split by box…</button></div>
+    <div class="bar"><input type="text" id="vmerge" placeholder="merge with… e.g. V05,V06" style="flex:1"><button id="vmergebtn">Merge</button></div>`;
+  if (u && u.dropped) h += `<div class="note warn" style="padding:0">${esc(u.dropped)}</div>`;
+  const uc = u && unitCache.get(u.id);
+  if (uc) h += `<div class="muted">${uc.params.length} values in this unit (${uc.params.filter((p) => p.source === "ai").length} named) · ${uc.candidates.length} candidate sizes — see Parameters</div>
+     <div class="grp"><div class="muted" style="margin-bottom:4px">Share a size across views</div><div class="bar"><select id="cand" style="flex:1">${uc.candidates.filter((c) => c.value >= 1).slice(0, 120).map((c) => `<option value="${c.id}">${fmt(c.value)} · ${esc(c.kind)} ${esc(c.axes.join(""))} · ${esc(c.name)}${c.evidence.includes("dimension") ? " · dimensioned" : ""}</option>`).join("")}</select></div>
+     <div class="bar"><input type="text" id="sname" placeholder="PascalCase name, e.g. ClearSpan" style="flex:1"><button id="sharebtn">Name it</button></div>
+     <div class="muted">Named here, it drives this unit's lines; add other views' sizes from the Review tab's proposals.</div></div>`;
+  return h + `</div>`;
+}
+function wireView(gid) {
+  const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
+  on("#vsave", () => edit("view", { id: gid, name: $("#vname").value, view_type: $("#vtype").value, kind: $("#vkind").value }));
+  on("#vfit", () => fit(viewBox(gid), 0.1));
+  on("#vsplit", () => { mode = "split"; say("drag a box around the part that is a view of its own (Esc cancels)"); });
+  on("#vmergebtn", () => { const ids = [gid, ...$("#vmerge").value.split(/[ ,]+/).filter(Boolean).map((s) => s.toUpperCase())]; edit("merge", { ids }); });
+  on("#sharebtn", () => { const g = S.groups.find((x) => x.id === gid); const name = $("#sname").value.trim(); if (!name) return say("give it a PascalCase name", "bad");
+    edit("share", { name, targets: [[g.unit, $("#cand").value]], evidence: ["named by a person"] }, () => openParam(name)); });
+}
+function splitBox(a, b) { const gid = focus && focus.kind === "view" ? focus.id : activeView; if (!gid) return say("open the view to split first", "bad");
+  edit("split", { id: gid, box: [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1])] }); }
+function paramInspector() {
+  const key = focus.id; const shared = S.shared.find((p) => p.name === key);
+  const cur = S.values[key]; const info = paramInfo;
+  let h = `<div class="insp"><h3>${esc(key)}</h3>`;
+  h += `<div class="bar"><input type="text" id="pname" value="${esc(shared ? shared.name : key.split(".").pop())}" style="flex:1"><button id="prename" title="Rename everywhere it is used">Rename</button></div>`;
+  const rng = info && info.range;
+  h += `<div class="preview"><div class="bar"><input type="number" id="pval" value="${cur != null ? Math.round(cur * 1000) / 1000 : ""}" style="width:130px"> <span class="muted">${esc(shared ? shared.unit : "")}</span>
+      <button class="primary" id="papply">Apply</button><button id="pcancel">Cancel</button></div>`;
+  if (rng) h += `<input type="range" id="pslide" min="${rng.min}" max="${rng.max}" step="${(rng.max - rng.min) / 400}" value="${cur}"><div class="muted">valid ${fmt(rng.min)} … ${fmt(rng.max)} <span title="${esc((rng.min_reason || "") + "\n" + (rng.max_reason || ""))}">ⓘ</span></div>`;
+  if (preview && preview.res) { const r = preview.res;
+    h += r.ok ? `<div class="note ok" style="padding:0">${r.changed} entities change · ${Object.entries(r.by_view).filter(([k]) => k).map(([k, n]) => `${esc(k)} ${n}`).join(" · ")}</div>`
+              : `<div class="note bad" style="padding:0">${r.errors.slice(0, 4).map(esc).join("<br>")}</div>`; }
+  h += `</div>`;
+  if (!info) return h + `<div class="muted">measuring what it moves…</div></div>`;
+  const imp = info.impact;
+  h += `<div class="sec" style="padding:0">What it moves (measured)</div><div class="kv"><div>views</div><div>${imp.views.map((v) => `<span class="chip acc">${esc(v)}</span>`).join(" ") || "—"}</div>
+    <div>entities</div><div>${imp.entities}</div><div>stays</div><div class="muted">${imp.stays.length} other view(s) unchanged</div></div>`;
+  for (const [u, parts] of Object.entries(imp.parts || {})) if (parts.length) h += `<div class="muted">${esc(u)} parts: ${parts.map(esc).join(", ")}</div>`;
+  h += `<div class="sec" style="padding:0">How it grows</div>`;
+  for (const g of info.growth) h += `<div class="bar"><span class="chip">${esc(g.unit || "")}</span><span>${esc(g.why)}</span>${g.unit ? `<select data-anchor="${esc(g.unit)}">${["start", "end", "centre"].map((m) => `<option value="${m}" ${g.mode === m ? "selected" : ""}>${m === "start" ? "start stays" : m === "end" ? "end stays" : "about centre"}</option>`).join("")}${["start", "end", "centre"].includes(g.mode) ? "" : `<option selected disabled>${esc(g.mode)}</option>`}</select>` : ""}</div>`;
+  if (shared) { h += `<div class="sec" style="padding:0">Bound in</div>`;
+    for (const b of shared.bindings) h += `<div class="note" style="padding:0"><span class="chip ${b.status === "drives" ? "ok" : "warn"}">${esc(b.status)}</span> ${esc(b.unit)} (${esc(b.views.join("+"))}) ${esc(b.reason || "")}</div>`;
+    for (const e of shared.evidence || []) h += `<div class="note" style="padding:0">· ${esc(e)}</div>`;
+    h += `<div class="bar"><button id="punshare">Stop sharing</button></div>`; }
+  return h + `</div>`;
+}
+function wireParam() {
+  const key = focus.id; const on = (id, ev, fn) => { const el = $(id); if (el) el.addEventListener(ev, fn); };
+  on("#pval", "keydown", (e) => { if (e.key === "Enter") { const v = parseNum(e.target.value); if (v != null) startPreview({ [key]: v }, false); } });
+  on("#pval", "change", (e) => { const v = parseNum(e.target.value); if (v != null) startPreview({ [key]: v }, false); });
+  on("#pslide", "input", (e) => { $("#pval").value = Math.round(Number(e.target.value) * 10) / 10; startPreview({ [key]: Number(e.target.value) }, false); });
+  on("#papply", "click", () => preview ? applyPreview() : (() => { const v = parseNum($("#pval").value); if (v != null) startPreview({ [key]: v }, true); })());
+  on("#pcancel", "click", cancelPreview);
+  on("#prename", "click", () => { const nn = $("#pname").value.trim(); const old = key; edit("rename", { old, new: nn }, () => openParam(S.shared.some((p) => p.name === nn) ? nn : `${old.split(".")[0]}.${nn}`)); });
+  on("#punshare", "click", () => edit("unshare", { name: key }, () => { focus = null; renderRight(); }));
+  document.querySelectorAll("#right [data-anchor]").forEach((el) => el.addEventListener("change", () => edit("anchor", { name: key, unit: el.dataset.anchor, mode: el.value }, () => openParam(key))));
+}
+async function loadProposals() {
+  const res = await guard(() => api("/api/sheet/proposals"), "Comparing the views…"); if (!res) return;
+  $("#propn").textContent = res.proposals.length;
+  $("#props").innerHTML = res.proposals.length ? res.proposals.map((p, k) => `<div class="grp"><b>${fmt(p.value)}</b> mm · ${esc(p.views[0].join("+"))} ↔ ${esc(p.views[1].join("+"))}
+     <div class="muted">${p.evidence.map(esc).join("<br>")}</div><div class="bar"><input type="text" placeholder="PascalCase name" data-pn="${k}" style="flex:1"><button data-pk="${k}">Share</button></div></div>`).join("")
+    : `<div class="note">No size is stated by two separate views.</div>`;
+  document.querySelectorAll("#props [data-pk]").forEach((b) => b.addEventListener("click", () => { const p = res.proposals[+b.dataset.pk]; const name = document.querySelector(`#props [data-pn="${b.dataset.pk}"]`).value.trim();
+    if (!name) return say("give it a PascalCase name", "bad"); edit("share", { name, targets: [p.a, p.b], evidence: p.evidence, source: "proposal" }, () => { tab = "params"; setTab(); openParam(name); }); }));
+}
+
+// ── file, tabs, theme ────────────────────────────────────────────────────────
+async function loadSheet() {
+  const s = await api("/api/sheet"); if (s.empty) { $("#empty").style.display = "flex"; return; }
+  S = s; $("#empty").style.display = "none"; $("#file").textContent = S.file;
+  const g = await guard(async () => { const t0 = performance.now(); const r = await fetch("/api/sheet/geometry"); const j = await r.json(); return { j, ms: performance.now() - t0 }; }, "Loading the sheet…");
+  if (!g) return;
+  P = ingest(g.j.prims); buildIndex();
+  sel = new Set(); hov = -1; focus = null; activeView = null; preview = null; unitCache.clear();
+  $("#undo").disabled = !S.can_undo; $("#redo").disabled = !S.can_redo;
+  renderLeft(); renderRight(); fitted = false; resize();
+  say(`${S.entities.toLocaleString()} entities · ${S.groups.filter((x) => x.kind === "view").length} views · loaded in ${Math.round(g.ms)} ms`, "ok");
+}
+async function openFile(f) {
+  const r = await guard(async () => { const res = await fetch(`/api/sheet/open?name=${encodeURIComponent(f.name)}`, { method: "POST", body: await f.arrayBuffer() });
+    const j = await res.json(); if (!res.ok || j.ok === false) throw new Error(j.error || "could not open"); return j; }, `Reading ${f.name}…`);
+  if (r) await loadSheet();
+}
+function setTab() { document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab)); renderLeft(); }
+document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => { tab = b.dataset.tab; setTab(); }));
+$("#open").onclick = $("#open2").onclick = () => $("#pick").click();
+$("#pick").onchange = (e) => { const f = e.target.files[0]; if (f) openFile(f); e.target.value = ""; };
+$("#undo").onclick = undo; $("#redo").onclick = redo; $("#fitall").onclick = () => fit(sheetBox());
+$("#filter").onchange = () => { hov = -1; draw(); };
+$("#theme").onclick = () => { theme = theme === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = theme; try { localStorage.setItem("ws-theme", theme); } catch (e) { /* private window */ } draw(); };
+async function download(url, fallback) {
+  await guard(async () => { const r = await fetch(url); if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.error || `HTTP ${r.status}`); }
+    const blob = await r.blob(); const a = document.createElement("a"); const cd = r.headers.get("Content-Disposition") || "";
+    a.download = (cd.match(/filename="([^"]+)"/) || [])[1] || fallback; a.href = URL.createObjectURL(blob); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }, "Preparing…");
+}
+$("#export").onclick = () => download("/api/sheet/export", "sheet.dxf");
+$("#project").onclick = () => download("/api/sheet/project", "sheet.autoparam.json");
+window.__ws = { get prims() { return P.length; }, get frameMs() { return lastFrameMs; }, fit, draw, pick, boxSelect, cam, sheet: () => sheetBox(), render: () => { render(); return lastFrameMs; } };
+loadSheet().catch((e) => say(e.message, "bad"));
+</script>
+</body>
+</html>

@@ -481,8 +481,16 @@ def _primary(types: list[str], text: str) -> str:
 
 
 def _clean_title(text: str) -> str:
+    """A title without its scale line; brackets that belong to the name (a section mark) are kept."""
     t = re.sub(r"\s+", " ", text.replace("\n", " ")).strip()
-    t = re.sub(r"\(?\s*" + VOCAB["scale_pattern"] + r"\s*\)?", "", t, flags=re.IGNORECASE).strip(" -:(),")
+    t = re.sub(r"\(\s*" + VOCAB["scale_pattern"] + r"\s*\)", "", t, flags=re.IGNORECASE)
+    t = re.sub(VOCAB["scale_pattern"], "", t, flags=re.IGNORECASE).strip(" -:,")
+    while t.endswith("(") or (t.endswith(")") and t.count(")") > t.count("(")):
+        t = t[:-1].rstrip(" -:,")
+    while t.startswith(")") or (t.startswith("(") and t.count("(") > t.count(")")):
+        t = t[1:].lstrip(" -:,")
+    if t.count("(") > t.count(")"):
+        t += ")"
     return t
 
 
@@ -1100,7 +1108,11 @@ def _titles(dr: Drawing, groups: list[Group], cell: float) -> None:
 
 
 def _absorb_labels(groups: list[Group], gap: float) -> None:
-    """A lone label or a few words next to a view belong to it; empty groups go."""
+    """A lone label, a few words, or a scrap of geometry with no title (a mark, a stub of a level line) next to a view
+    belong to it; empty groups go."""
+    for g in groups:
+        if g.kind == "view" and not g.titles and g.counts.get("geometry", 0) <= 5 and len(g.items) <= 8:
+            g.kind = "label"
     views = [g for g in groups if g.kind == "view"]
     for g in [g for g in groups if g.kind == "label"]:
         cx, cy = (g.bbox[0] + g.bbox[2]) / 2, (g.bbox[1] + g.bbox[3]) / 2
@@ -1109,7 +1121,7 @@ def _absorb_labels(groups: list[Group], gap: float) -> None:
             dx = max(v.bbox[0] - cx, 0, cx - v.bbox[2])
             dy = max(v.bbox[1] - cy, 0, cy - v.bbox[3])
             d = math.hypot(dx, dy)
-            if d <= 2 * gap and (best is None or d < best[0]):
+            if d <= 4 * gap and (best is None or d < best[0]):
                 best = (d, v)
         if best:
             best[1].items = sorted(set(best[1].items) | set(g.items))

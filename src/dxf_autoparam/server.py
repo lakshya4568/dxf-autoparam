@@ -51,6 +51,7 @@ class Session:
         self.instructions = ""  # the person's standing instructions for Gemini
         self.history: list[dict] = []  # what was asked of Gemini, in order
         self.checking: Program | None = None  # the program whose background regeneration check is running
+        self.pending: str | None = None  # a drawing to open when the classic page first asks for it
         self.job: dict = {"running": False, "events": [], "error": None, "kind": None, "started": 0.0, "stop": threading.Event()}
         if path:
             self.open(path)
@@ -277,7 +278,11 @@ class Session:
         return out
 
 
-def make_handler(session: Session):
+def make_handler(session: Session, sheet=None):
+    from .workspace import SheetSession, handle
+
+    sheet = sheet or SheetSession()
+
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args):
             pass
@@ -304,11 +309,16 @@ def make_handler(session: Session):
 
         def do_GET(self):
             url = urlparse(self.path)
+            if handle(self, sheet, "GET", url):  # the sheet workspace (the main page) and /api/sheet/*
+                return
             try:
-                if url.path in ("/", "/index.html"):
+                if url.path == "/classic":  # the single-view page, with its Gemini panel
                     return self._send(200, (STATIC / "index.html").read_bytes(), "text/html; charset=utf-8")
                 if url.path == "/api/state":
                     with session.lock:
+                        if session.prog is None and session.pending:  # opened on first use: the workspace read it already
+                            session.open(session.pending)
+                            session.pending = None
                         if session.prog is None:
                             return self._json({"empty": True})
                         st = session.state()
@@ -359,6 +369,8 @@ def make_handler(session: Session):
 
         def do_POST(self):
             url = urlparse(self.path)
+            if handle(self, sheet, "POST", url):
+                return
             try:
                 if url.path == "/api/upload":
                     name = parse_qs(url.query).get("name", ["upload.dxf"])[0]
@@ -438,12 +450,18 @@ def make_handler(session: Session):
 
 
 def serve(path: str | None, domain: str | None = None, host: str = "127.0.0.1", port: int = 8765, answer: str | None = None) -> None:
-    session = Session(path)
+    from .workspace import SheetSession
+
     if answer and path:
+        session = Session(path)
         session.load_answer(answer)
+    else:
+        session = Session(None)
+        session.pending = path  # the classic page opens it when it is first used
+    sheet = SheetSession(path)
     for candidate in range(port, port + 20):
         try:
-            httpd = ThreadingHTTPServer((host, candidate), make_handler(session))
+            httpd = ThreadingHTTPServer((host, candidate), make_handler(session, sheet))
             break
         except OSError as exc:
             if exc.errno != errno.EADDRINUSE:

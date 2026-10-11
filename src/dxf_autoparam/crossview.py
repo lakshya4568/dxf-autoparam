@@ -433,7 +433,8 @@ class SheetModel:
 
     def _state(self) -> dict:
         return {"values": copy.deepcopy(self.values), "shared": copy.deepcopy(self.shared),
-                "answers": {uid: copy.deepcopy(u.answer) for uid, u in self.units.items()}, "unlinked": set(self.unlinked)}
+                "answers": {uid: copy.deepcopy(u.answer) for uid, u in self.units.items()}, "unlinked": set(self.unlinked),
+                "groups": copy.deepcopy(self.layout.groups)}
 
     def _push(self) -> None:
         self.history.append(self._state())
@@ -441,10 +442,11 @@ class SheetModel:
         del self.history[:-100]
 
     def _restore(self, st: dict) -> None:
-        relink = st["unlinked"] != self.unlinked
+        relayout = st["unlinked"] != self.unlinked or [(g.id, g.kind, g.items) for g in st["groups"]] != [(g.id, g.kind, g.items) for g in self.layout.groups]
         self.values, self.shared, self.unlinked = st["values"], st["shared"], st["unlinked"]
-        if relink:
-            self._group_units(self.units)
+        self.layout.groups = st["groups"]
+        if relayout:
+            self._relayout()
         for uid, ans in st["answers"].items():
             if uid in self.units and self.units[uid].answer != ans:
                 self.units[uid].answer = ans
@@ -590,9 +592,9 @@ class SheetModel:
         u.answer, u.prog = ans, None
         u = self.unit(uid)
         if mode == "start":  # the start line stays (on what it was set out from); the end line follows the value
-            formulas = [{"datum": a, "expr": self._pinned(u, a, local)}, {"datum": b, "expr": f"{a} + {local}"}]
+            formulas = [{"datum": a, "expr": self._pinned(u, a, local, b)}, {"datum": b, "expr": f"{a} + {local}"}]
         elif mode == "end":
-            formulas = [{"datum": b, "expr": self._pinned(u, b, local)}, {"datum": a, "expr": f"{b} - {local}"}]
+            formulas = [{"datum": b, "expr": self._pinned(u, b, local, a)}, {"datum": a, "expr": f"{b} - {local}"}]
         else:
             mid = (an.datums[a].value + an.datums[b].value) / 2
             axis = next((d.id for d in an.datums.values() if d.axis == an.datums[a].axis and d.id not in (a, b)
@@ -618,12 +620,22 @@ class SheetModel:
         return g
 
     @staticmethod
-    def _pinned(u: Unit, d: str, local: str) -> str:
-        """Line d set out as drawn from a line that does not move with the value (or where it is drawn)."""
-        prog, um = u.prog, u.sub.units_mm
+    def _pinned(u: Unit, d: str, local: str, avoid: str) -> str:
+        """Line d set out as drawn from a line that does not move with the value and does not hang on `avoid` (the
+        line about to be set out from d): one its formula names, else the nearest such line on its axis."""
+        from .intent import _depends_on
+
+        prog, um, an = u.prog, u.sub.units_mm, u.an
         v0 = prog.datum_values()
         v1 = prog.datum_values({local: prog.params[local].value + 1.0})
-        refs = [r for r in sorted(re.findall(r"[a-z]+\d+", prog.formulas.get(d, ""))) if r in v0 and abs(v1[r] - v0[r]) < 1e-12]
+
+        def ok(r: str) -> bool:
+            return r in v0 and r not in (d, avoid) and abs(v1[r] - v0[r]) < 1e-12 and avoid not in _depends_on(prog, r)
+
+        refs = [r for r in sorted(re.findall(r"[a-z]+\d+", prog.formulas.get(d, ""))) if ok(r)]
+        if not refs:
+            axis = an.datums[d].axis
+            refs = [r for r in sorted((x.id for x in an.datums.values() if x.axis == axis and x.id in v0), key=lambda r: abs(v0[r] - v0[d]))[:40] if ok(r)][:1]
         if refs:
             off = (v0[d] - v0[refs[0]]) * um
             return f"{refs[0]} {'+' if off >= 0 else '-'} {abs(off):.6f}".rstrip("0").rstrip(".")
@@ -688,6 +700,75 @@ class SheetModel:
         else:
             self.unlinked.add(key)
         self._group_units(self.units)
+
+    # ── the views themselves: a person's corrections ─────────────────────────
+
+    def _relayout(self) -> None:
+        self.layout.item_group = {i: g.id for g in self.layout.groups for i in g.items}
+        self.links = view_links(self.dr, self.layout)
+        self._group_units(self.units)
+
+    def set_view(self, vid: str, name: str | None = None, view_type: str | None = None, kind: str | None = None) -> None:
+        """Rename a view, correct its type, or say what a group really is (a view, a table, notes…)."""
+        g = next((x for x in self.layout.groups if x.id == vid), None)
+        if g is None:
+            raise SheetError(f"no view {vid}")
+        self._push()
+        if name is not None:
+            g.name = name.strip()
+        if view_type is not None:
+            g.view_type = view_type
+        if kind is not None and kind != g.kind:
+            g.kind = kind
+            self._relayout()
+        g.evidence.append("corrected by a person")
+        g.questions = [q for q in g.questions if not q.startswith("no title")] if name else g.questions
+
+    def merge_views(self, ids: list[str]) -> str:
+        """Several groups are one view (a figure the white space split): their entities join the first."""
+        gs = [x for x in self.layout.groups if x.id in ids]
+        if len(gs) < 2:
+            raise SheetError("name two or more views to merge")
+        self._push()
+        keep = gs[0]
+        for g in gs[1:]:
+            keep.items = sorted(set(keep.items) | set(g.items))
+            keep.titles += [t for t in g.titles if t not in keep.titles]
+            if not keep.name and g.name:
+                keep.name = g.name
+        keep.kind = "view"
+        pts = [p for i in keep.items for p in self.dr.items[i].pts]
+        keep.bbox = (min(p[0] for p in pts), min(p[1] for p in pts), max(p[0] for p in pts), max(p[1] for p in pts))
+        keep.evidence.append(f"merged by a person from {', '.join(g.id for g in gs)}")
+        self.layout.groups = [g for g in self.layout.groups if g not in gs[1:]]
+        self._relayout()
+        return keep.id
+
+    def split_view(self, vid: str, box: tuple[float, float, float, float], name: str = "") -> str:
+        """The entities of a view inside a box a person drew become a view of their own."""
+        g = next((x for x in self.layout.groups if x.id == vid), None)
+        if g is None:
+            raise SheetError(f"no view {vid}")
+        x0, y0, x1, y1 = box
+        inside = []
+        for i in g.items:
+            pts = self.dr.items[i].pts
+            cx = sum(p[0] for p in pts) / len(pts)
+            cy = sum(p[1] for p in pts) / len(pts)
+            if x0 <= cx <= x1 and y0 <= cy <= y1:
+                inside.append(i)
+        if not inside or len(inside) == len(g.items):
+            raise SheetError("the box must hold some, but not all, of the view's entities")
+        self._push()
+        g.items = sorted(set(g.items) - set(inside))
+        n = 1
+        while any(x.id == f"V{n:02d}" for x in self.layout.groups):
+            n += 1
+        new = Group(id=f"V{n:02d}", kind="view", items=sorted(inside), bbox=box, name=name, confidence=1.0,
+                    evidence=[f"split from {vid} by a person"])
+        self.layout.groups.append(new)
+        self._relayout()
+        return new.id
 
     # ── proposals ─────────────────────────────────────────────────────────────
 

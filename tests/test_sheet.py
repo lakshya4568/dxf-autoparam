@@ -159,8 +159,8 @@ def test_a_real_sheet_a_keeps_its_section_and_plan_whole():
     dr, _ = read_dxf(str(FIXTURES / "gad_ezdxf_a.dxf"))
     lay = segment(dr)
     names = {g.name: g for g in lay.views()}
-    for n in ("LONGITUDINAL SECTION(X-X", "PLAN TOP", "CROSS SECTION OF R.C.C BOX", "SECTION OF CURTAIN WALL", "SECTION OF DROP WALL"):
+    for n in ("LONGITUDINAL SECTION(X-X)", "PLAN TOP", "CROSS SECTION OF R.C.C BOX", "SECTION OF CURTAIN WALL", "SECTION OF DROP WALL"):
         assert n in names, sorted(names)
-    assert len(names["LONGITUDINAL SECTION(X-X"].items) >= 300 and len(names["PLAN TOP"].items) >= 250
+    assert len(names["LONGITUDINAL SECTION(X-X)"].items) >= 300 and len(names["PLAN TOP"].items) >= 250
     assert names["PLAN TOP"].view_type == "plan" and names["SECTION OF CURTAIN WALL"].scale == 25
     assert {"HYDRAULIC TABLE", "TRACK STRUCTURE"} <= {g.name for g in lay.groups if g.kind == "table"}
