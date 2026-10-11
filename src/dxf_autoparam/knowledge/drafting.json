@@ -1,0 +1,87 @@
+{
+  "source": "Drafting conventions of engineering sheets (general arrangement drawings): the words that title a view, name a table or a block of notes, or belong to the title block, and how a scale is written. Nothing here names a structure type or a structure's values; it only tells a view from a table from a note.",
+  "view_types": {
+    "plan": [
+      "PLAN",
+      "LAYOUT",
+      "TOP VIEW",
+      "SITE PLAN",
+      "KEY PLAN"
+    ],
+    "section": [
+      "SECTION",
+      "SECTIONAL",
+      "C/S",
+      "CROSS SECTION",
+      "CROSS-SECTION",
+      "L-SECTION",
+      "X-SECTION"
+    ],
+    "elevation": [
+      "ELEVATION",
+      "ELEV",
+      "FRONT VIEW",
+      "SIDE VIEW",
+      "END VIEW"
+    ],
+    "detail": [
+      "DETAIL",
+      "DETAILS",
+      "TYP",
+      "TYPICAL",
+      "ENLARGED"
+    ],
+    "arrangement": [
+      "ARRANGEMENT"
+    ]
+  },
+  "table_words": [
+    "TABLE",
+    "PARTICULARS",
+    "SCHEDULE",
+    "STATEMENT",
+    "BREAKUP",
+    "BREAK UP",
+    "LEGEND",
+    "ABSTRACT"
+  ],
+  "notes_words": [
+    "NOTES",
+    "NOTE",
+    "REFERENCES",
+    "MODUS OPERANDI",
+    "SPECIFICATION",
+    "SPECIFICATIONS",
+    "CODES",
+    "CERTIFICATE",
+    "ARRANGEMENTS",
+    "MANUALS"
+  ],
+  "title_block_words": [
+    "DRAWING NO",
+    "DRG NO",
+    "DRG. NO",
+    "DRAWN",
+    "CHECKED",
+    "APPROVED",
+    "DESIGNED",
+    "SIGNATURE",
+    "REVISION",
+    "CONSULTANT",
+    "CONTRACTOR",
+    "CLIENT",
+    "PREPARED",
+    "SUBMITTED",
+    "RECOMMENDED",
+    "GENERAL ARRANGEMENT",
+    "AUTHORITY",
+    "DIVISION",
+    "SHEET NO"
+  ],
+  "scale_pattern": "SCALE\\s*[:\\-.]?\\s*1\\s*[:/]\\s*(\\d+(?:\\.\\d+)?)",
+  "not_to_scale": [
+    "NOT TO SCALE",
+    "N.T.S",
+    "NTS"
+  ]
+}

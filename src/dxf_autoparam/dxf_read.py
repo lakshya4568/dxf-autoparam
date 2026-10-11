@@ -241,14 +241,15 @@ def _poly(pts, bulges, closed) -> dict:
     return {"pts": pts, "vertex_pts": list(range(n)), "segments": segs, "bulges": bulges, "closed": closed}
 
 
-def _visible_layers(doc: EzDoc) -> set[str]:
+def _hidden_layers(doc: EzDoc) -> set[str]:
+    """Layers switched off or frozen. A layer the table does not declare is shown: CAD creates it on the fly."""
     out = set()
     for layer in doc.layers:
         try:
-            if layer.is_on() and not layer.is_frozen():
+            if not layer.is_on() or layer.is_frozen():
                 out.add(layer.dxf.name)
         except DATA_ERRORS:  # unreadable layer flags: shown, rather than silently dropping its entities
-            out.add(layer.dxf.name)
+            continue
     return out
 
 
@@ -297,7 +298,7 @@ def read_dxf(path: str, opts: ReadOptions | None = None) -> tuple[Drawing, EzDoc
         if busiest is not None and len(busiest) > len(layout):
             layout = busiest
             notes.append(f"Model space is empty; read paper space layout '{busiest.name}'.")
-    visible = _visible_layers(doc)
+    hidden_layers = _hidden_layers(doc)
     items: list[Item] = []
     unsupported: Counter[str] = Counter()
     hidden = 0
@@ -389,7 +390,7 @@ def read_dxf(path: str, opts: ReadOptions | None = None) -> tuple[Drawing, EzDoc
             hidden += 1
             continue
         layer_name = e.dxf.get("layer", "0")
-        if layer_name not in visible:
+        if layer_name in hidden_layers:
             hidden += 1
             continue
         if e.dxftype() == "INSERT":

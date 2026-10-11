@@ -124,3 +124,43 @@ def regions_png(scene: list[dict], regions: list, bbox: tuple[float, float, floa
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     return buf.getvalue()
+
+
+def layout_png(dr, layout, width: int = 2200) -> bytes:
+    """The sheet with its logical parts: each view boxed and labelled with its id, name and type; tables, notes and
+    the title block in their own colours; panel rules and the frame grey; stray and watermark entities faded."""
+    from .sheet import item_lines
+
+    area = layout.frame or dr.extent
+    x0, y0, x1, y1 = area
+    w, h = max(x1 - x0, 1e-9), max(y1 - y0, 1e-9)
+    pad = 30
+    scale = (width - 2 * pad) / w
+    height = int(h * scale + 2 * pad)
+    img = Image.new("RGB", (width, height), "white")
+    d = ImageDraw.Draw(img, "RGBA")
+
+    def P(p):
+        return (pad + (p[0] - x0) * scale, height - pad - (p[1] - y0) * scale)
+
+    faded = set(layout.stray) | set(layout.watermark)
+    walls = set(layout.frame_items) | set(layout.rules)
+    for it in dr.items:
+        col = (215, 215, 215) if it.index in faded else (150, 150, 150) if it.index in walls else (60, 60, 60) if it.role.value in ("structural", "reference") else (140, 140, 160)
+        for line in item_lines(it):
+            if len(line) >= 2:
+                d.line([P(q) for q in line], fill=col, width=1)
+    colours = {"view": (37, 99, 235), "table": (22, 163, 74), "notes": (180, 120, 20), "title_block": (124, 58, 237), "label": (220, 38, 38)}
+    try:
+        font = ImageFont.load_default(18)
+    except TypeError:
+        font = ImageFont.load_default()
+    for g in layout.groups:
+        col = colours.get(g.kind, (0, 0, 0))
+        a, b = P((g.bbox[0], g.bbox[3])), P((g.bbox[2], g.bbox[1]))
+        d.rectangle([a, (max(b[0], a[0] + 2), max(b[1], a[1] + 2))], outline=(*col, 255), fill=(*col, 18), width=3 if g.kind == "view" else 2)
+        label = f"{g.id} {g.view_type if g.kind == 'view' else g.kind}" + (f" · {g.name[:40]}" if g.name else "")
+        d.text((a[0] + 4, a[1] + 3), label, fill=(*col, 255), font=font, stroke_width=3, stroke_fill=(255, 255, 255))
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
