@@ -53,6 +53,9 @@ def regenerate(model: Model, values: dict[str, float] | None = None, check: bool
                 v = datum[ref[6:]] * u / 1000
             elif ref.startswith("m:"):
                 v = vals[ref[2:]] * u / 1000
+            elif ref.startswith("len:"):  # the distance between two set-out lines, as drawn now
+                a, b = ref[4:].split(":")
+                v = abs(datum[b] - datum[a]) * u
             else:
                 v = vals[ref] * u
             new = f"{v:.{dec}f}" if dec else f"{round(v)}"
@@ -175,6 +178,9 @@ def regenerate_program(prog, values: dict[str, float] | None = None, check: bool
         for tok, ref, dec in links:
             if ref.startswith("datum:"):
                 v = (datum[ref[6:]] * u + an.level_offset_mm) / 1000
+            elif ref.startswith("len:"):  # the distance between two set-out lines, as drawn now
+                a, b = ref[4:].split(":")
+                v = abs(datum[b] - datum[a]) * u if a in datum and b in datum else float("nan")
             elif ref.startswith("m:"):
                 v = vals.get(ref[2:], float("nan")) / 1000
             elif ref.startswith("rel:"):

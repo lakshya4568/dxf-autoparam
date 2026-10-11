@@ -37,6 +37,9 @@ def _reach(prog: Program) -> dict[str, set[str]]:
 def _text_refs(prog: Program, ref: str, reach: dict[str, set[str]]) -> set[str]:
     if ref.startswith("datum:"):
         return reach.get(ref[6:], set())
+    if ref.startswith("len:"):
+        a, b = ref[4:].split(":")
+        return reach.get(a, set()) | reach.get(b, set())
     if ref.startswith("rel:"):
         r = next((r for r in prog.relations if r.name == ref[4:]), None)
         return {n for n in names_in(r.expr) if n in prog.params} if r else set()

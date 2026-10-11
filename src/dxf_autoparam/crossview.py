@@ -395,8 +395,49 @@ class SheetModel:
             for uid, got in per.items():
                 if abs(got - want) > max(0.5, 1e-4 * abs(want)):
                     errors.append(f"{name}: {uid} measures {got:.1f} mm, not {want:g} — that view did not follow")
+        warnings += self._overlaps(changed, pts)
         reg = Regenerated(values=dict(changes), datum={}, pts=pts, radius=radius, texts=texts, issues=list(errors))
         return SheetRegen(reg=reg, changed=sorted(changed), by_view=by_view, errors=errors, warnings=warnings, measured=measured)
+
+    def _overlaps(self, changed: list[int], pts: dict[int, list]) -> list[str]:
+        """Words a change pushed onto other words of the same view (they did not overlap as drawn): said, for a person
+        to move — the engine never rewrites a note's place or meaning to dodge it."""
+        from dataclasses import replace
+
+        from .sheet import TEXT_TYPES, text_outline
+
+        moved = [i for i in changed if self.dr.items[i].dxftype in TEXT_TYPES and self.dr.items[i].text]
+        if not moved:
+            return []
+
+        def box(i: int, new: bool) -> tuple[float, float, float, float]:
+            it = self.dr.items[i]
+            o = text_outline(replace(it, pts=pts.get(i, it.pts)) if new else it)
+            return min(p[0] for p in o), min(p[1] for p in o), max(p[0] for p in o), max(p[1] for p in o)
+
+        def hit(a, b) -> bool:
+            w = min(a[2], b[2]) - max(a[0], b[0])
+            h = min(a[3], b[3]) - max(a[1], b[1])
+            if w <= 0 or h <= 0:
+                return False
+            smaller = min((a[2] - a[0]) * (a[3] - a[1]), (b[2] - b[0]) * (b[3] - b[1]))
+            return w * h > 0.2 * max(smaller, 1e-12)
+
+        out = []
+        group = self.layout.item_group
+        for i in moved:
+            vid = group.get(i)
+            mine_new, mine_old = box(i, True), box(i, False)
+            for j in self.layout.group(vid).items if vid else []:
+                if j == i or self.dr.items[j].dxftype not in TEXT_TYPES or not self.dr.items[j].text:
+                    continue
+                other_new, other_old = box(j, True), box(j, False)
+                if hit(mine_new, other_new) and not hit(mine_old, other_old):
+                    a, b = self.dr.items[i].text.split("\n")[0][:30], self.dr.items[j].text.split("\n")[0][:30]
+                    out.append(f"{vid}: the note '{a}' now overlaps '{b}' — move one of them")
+            if len(out) >= 20:
+                break
+        return out
 
     def preview(self, changes: dict[str, float]) -> SheetRegen:
         return self.regenerate(changes)

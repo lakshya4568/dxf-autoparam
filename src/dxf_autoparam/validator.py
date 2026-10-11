@@ -19,6 +19,7 @@ a valid model — at worst the geometric baseline itself.
 
 from __future__ import annotations
 
+import itertools
 import math
 import re
 from dataclasses import dataclass, field
@@ -648,6 +649,7 @@ def relink_texts(prog: Program) -> None:
     """
     an = prog.analysis
     dr = an.drawing
+    u = dr.units_mm
     by_mm: dict[int, list[str]] = {}
     where: dict[str, tuple[float, float]] = {}
     for p in prog.params.values():
@@ -664,6 +666,7 @@ def relink_texts(prog: Program) -> None:
             pass
     links: dict[int, list[tuple[str, str, int]]] = {}
     level_links = {i: [k for k in ls if k[1].startswith("datum:")] for i, ls in prog.text_links.items()}
+    rules = _straight_runs(dr)
     for it in dr.items:
         if it.dxftype not in ("TEXT", "MTEXT", "ATTRIB") or not it.text:
             continue
@@ -703,9 +706,76 @@ def relink_texts(prog: Program) -> None:
                 cands = by_mm.get(round(v * 1000), [])
                 if len(cands) == 1:
                     found.append((tok, "m:" + cands[0], dec))
+        for m in NUM.finditer(it.text):  # a size nobody named: the distance it is written between, as drawn now
+            tok = m.group()
+            around = it.text[max(0, m.start() - 1): m.end() + 1]
+            if tok in taken or "." in tok or ":" in around or "/" in around or "SCALE" in it.text.upper() or float(tok) < 5:
+                continue
+            ref = _measured_between(an, it, float(tok), u, rules)
+            if ref:
+                found.append((tok, ref, 0))
+                taken.add(tok)
         if found:
             links[it.index] = found
     prog.text_links = links
+
+
+def _straight_runs(dr) -> dict[str, list[tuple[float, float, float]]]:
+    """Every straight horizontal and vertical run on the drawing (structure and annotation): x — (y, x0, x1) of the
+    horizontal ones, y — (x, y0, y1) of the vertical ones. A dimension line is one of them."""
+    out: dict[str, list[tuple[float, float, float]]] = {"x": [], "y": []}
+    for it in dr.items:
+        if it.dxftype not in ("LINE", "LWPOLYLINE", "POLYLINE") or len(it.pts) < 2:
+            continue
+        pts = it.pts
+        for p, q in itertools.pairwise(pts):
+            if abs(p[1] - q[1]) <= dr.tol and abs(p[0] - q[0]) > dr.tol:
+                out["x"].append((p[1], min(p[0], q[0]), max(p[0], q[0])))
+            elif abs(p[0] - q[0]) <= dr.tol and abs(p[1] - q[1]) > dr.tol:
+                out["y"].append((p[0], min(p[1], q[1]), max(p[1], q[1])))
+    return out
+
+
+def _measured_between(an: Analysis, it, v_mm: float, u: float, rules: dict | None = None) -> str | None:
+    """The one pair of set-out lines a number is written between, whose distance is that number. Best evidence: a
+    DIMENSION LINE — a straight run whose ends sit on the two lines — with the number just beside it (an exploded
+    dimension). Else: the number between the two lines along their axis, near where their gap was seen. Reading the
+    same way counts (a vertical text measures a height). None when no pair, or two pairs equally near, fit."""
+    from .sheet import text_outline
+
+    o = text_outline(it)
+    cx, cy = sum(p[0] for p in o) / 4, sum(p[1] for p in o) / 4
+    h = it.text_height or 1.0
+    rot = (it.extra.get("rotation", 0.0) or 0.0) % 180
+    want = "y" if 45 < rot < 135 else "x"
+    tol = max(0.5, 5e-4 * v_mm)
+    tol_d = max(an.drawing.tol * 4, 0.5 / max(u, 1e-9))
+    scored = []
+    for g in an.gaps.values():
+        if g.axis not in ("x", "y") or abs(g.value * u - v_mm) > tol or g.a not in an.datums or g.b not in an.datums:
+            continue
+        a, b = sorted((an.datums[g.a].value, an.datums[g.b].value))
+        along, across = (cx, cy) if g.axis == "x" else (cy, cx)
+        if not (a - 0.5 * h <= along <= b + 0.5 * h):
+            continue
+        dim_line = min((abs(across - c) for c, s0, s1 in (rules or {}).get(g.axis, ())
+                        if abs(s0 - a) <= tol_d and abs(s1 - b) <= tol_d), default=None)
+        if dim_line is not None and dim_line <= 3 * h:
+            off = dim_line - 100 * h  # a dimension line beside the number outranks any face
+        else:
+            seen = g.sample[1] if g.axis == "x" and g.sample else g.sample[0] if g.sample else across
+            off = abs(across - seen)
+            if off > 12 * h:
+                continue
+        scored.append((off + 0.05 * abs(along - (a + b) / 2) + (0 if g.axis == want else 4 * h), f"len:{g.a}:{g.b}", {g.a, g.b}))
+    if not scored:
+        return None
+    scored.sort(key=lambda s: s[0])
+    best = scored[0]
+    rival = next((s for s in scored[1:] if s[2] != best[2]), None)
+    if rival is not None and rival[0] < (1.25 * best[0] if best[0] > 0 else best[0]) + 0.5 * h:
+        return None  # two different pairs of lines fit about as well: the number is left as written
+    return best[1]
 
 
 

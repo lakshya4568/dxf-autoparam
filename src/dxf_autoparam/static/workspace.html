@@ -670,7 +670,8 @@ function paramInspector() {
   if (rng) h += `<input type="range" id="pslide" min="${rng.min}" max="${rng.max}" step="${(rng.max - rng.min) / 400}" value="${cur}"><div class="muted">valid ${fmt(rng.min)} … ${fmt(rng.max)} <span title="${esc((rng.min_reason || "") + "\n" + (rng.max_reason || ""))}">ⓘ</span></div>`;
   if (preview && preview.res) { const r = preview.res;
     h += r.ok ? `<div class="note ok" style="padding:0">${r.changed} entities change · ${Object.entries(r.by_view).filter(([k]) => k).map(([k, n]) => `${esc(k)} ${n}`).join(" · ")}</div>`
-              : `<div class="note bad" style="padding:0">${r.errors.slice(0, 4).map(esc).join("<br>")}</div>`; }
+              : `<div class="note bad" style="padding:0">${r.errors.slice(0, 4).map(esc).join("<br>")}</div>`;
+    if (r.warnings && r.warnings.length) h += `<div class="note warn" style="padding:0">${r.warnings.slice(0, 5).map(esc).join("<br>")}</div>`; }
   h += `</div>`;
   if (!info) return h + `<div class="muted">measuring what it moves…</div></div>`;
   const imp = info.impact;

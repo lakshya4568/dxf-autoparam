@@ -9,6 +9,7 @@ reshape (ellipses, splines, dimension blocks) carried along with their anchor.
 from __future__ import annotations
 
 import math
+import re
 
 from .ir import Item
 
@@ -73,25 +74,33 @@ def primitives(it: Item, pts: list[tuple[float, float]], radius: float | None, t
         p1, p2, dl = pts[1], pts[2], pts[0]
         moved_rigidly = all(abs((pts[i][0] - it.pts[i][0]) - (pts[0][0] - it.pts[0][0])) < 1e-6 and
                             abs((pts[i][1] - it.pts[i][1]) - (pts[0][1] - it.pts[0][1])) < 1e-6 for i in range(3))
-        if moved_rigidly and it.display:
+        kind = it.extra.get("dimtype")
+        ang = math.radians(it.extra.get("angle", 0.0))
+        if kind == 0:
+            u = (math.cos(ang), math.sin(ang))
+            proj = lambda p: (p[0] - dl[0]) * u[0] + (p[1] - dl[1]) * u[1]
+            a = (dl[0] + proj(p1) * u[0], dl[1] + proj(p1) * u[1])
+            b = (dl[0] + proj(p2) * u[0], dl[1] + proj(p2) * u[1])
+        else:
+            a, b = p1, p2
+        value = math.dist(a, b) * units_mm
+        label = it.text if it.text and "<>" not in it.text and any(ch.isdigit() for ch in it.text) else f"{value:.0f}"
+        old_mm = (it.extra.get("measurement") or 0.0) * units_mm
+        if label == it.text and old_mm > 0:  # a written number that was the measured one follows the measurement
+            for tok in re.findall(r"\d+(?:\.\d+)?", label):
+                if abs(float(tok) - old_mm) <= max(0.5, 5e-4 * old_mm):
+                    label = re.sub(rf"(?<![\d.]){re.escape(tok)}(?![\d.])", f"{value:.0f}", label, count=1)
+                    break
+        if moved_rigidly and it.display:  # unchanged in shape: its own drawn block, and its number at its own place
             dx, dy = pts[0][0] - it.pts[0][0], pts[0][1] - it.pts[0][1]
             for poly in it.display:
                 out.append({"k": "p", "pts": [(x + dx, y + dy) for x, y in poly], "dim": True})
+            at = (pts[3][0], pts[3][1]) if len(pts) > 3 and any(pts[3]) else ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
         else:
-            kind = it.extra.get("dimtype")
-            ang = math.radians(it.extra.get("angle", 0.0))
-            if kind == 0:
-                u = (math.cos(ang), math.sin(ang))
-                proj = lambda p: (p[0] - dl[0]) * u[0] + (p[1] - dl[1]) * u[1]
-                a = (dl[0] + proj(p1) * u[0], dl[1] + proj(p1) * u[1])
-                b = (dl[0] + proj(p2) * u[0], dl[1] + proj(p2) * u[1])
-            else:
-                a, b = p1, p2
             for seg in ((p1, a), (p2, b), (a, b)):
                 out.append({"k": "p", "pts": list(seg), "dim": True})
-            value = math.dist(a, b) * units_mm
-            label = it.text if it.text and "<>" not in it.text and any(ch.isdigit() for ch in it.text) else f"{value:.0f}"
-            out.append({"k": "t", "at": ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2), "text": label, "h": None, "rot": math.degrees(math.atan2(b[1] - a[1], b[0] - a[0])), "dim": True})
+            at = ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
+        out.append({"k": "t", "at": at, "text": label, "h": None, "rot": math.degrees(math.atan2(b[1] - a[1], b[0] - a[0])), "dim": True})
     elif it.display:  # ellipse, spline: carried with their anchor
         dx, dy = pts[0][0] - it.pts[0][0], pts[0][1] - it.pts[0][1]
         for poly in it.display:

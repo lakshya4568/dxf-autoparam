@@ -30,7 +30,6 @@ from .ir import GapKind
 from .program import from_model
 from .regen import regenerate_program
 from .validator import apply
-from .views import detect_views
 
 KINDS = {GapKind.SOLID, GapKind.VOID, GapKind.OPEN, GapKind.CHAIN, GapKind.PITCH, GapKind.DIM}
 NAMES = ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel", "India", "Juliet", "Kilo", "Lima", "Mike", "November"]
@@ -87,11 +86,14 @@ def check_view(path: str, region=None, k: int = 12, out_dir: str | None = None) 
 
 
 def views_of(path: str, max_entities: int = 600) -> list:
+    """The views worth checking on a sheet: its biggest drawings (tables, notes and the title block are not views)."""
+    from .sheet import segment
+
     dr, _ = read_dxf(path)
-    vs = [v for v in detect_views(dr) if 15 <= v["entities"] <= max_entities]
+    vs = [g for g in segment(dr).views() if 15 <= len(g.items) <= max_entities]
     if len(dr.items) <= max_entities and len(vs) <= 1:
         return [None]
-    return [tuple(v["bbox"]) for v in sorted(vs, key=lambda v: -v["entities"])[:3]]
+    return [tuple(g.bbox) for g in sorted(vs, key=lambda g: -len(g.items))[:3]]
 
 
 def check_all(paths: list[str], out_dir: str, k: int = 12) -> list[dict]:

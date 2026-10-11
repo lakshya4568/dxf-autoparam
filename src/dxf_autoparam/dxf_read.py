@@ -421,13 +421,19 @@ def read_dxf(path: str, opts: ReadOptions | None = None) -> tuple[Drawing, EzDoc
 
 def _fix_frames(items: list[Item], notes: list[str]) -> None:
     """The sheet border — an outline or line spanning (nearly) the whole drawing in both directions
-    or along one full side — is FIXED: it never moves, and it does not join the views it surrounds."""
+    or along one full side — is FIXED: it never moves, and it does not join the views it surrounds.
+    A border holds the sheet: nothing (no dimension, no note) lies outside it. A drawing's own outline with
+    its dimensions drawn outside it is the drawing, not a border."""
     pts = [p for it in items if it.role in (Role.STRUCTURAL, Role.REFERENCE) for p in it.pts]
     if not pts:
         return
     x0, x1 = min(p[0] for p in pts), max(p[0] for p in pts)
     y0, y1 = min(p[1] for p in pts), max(p[1] for p in pts)
     W, H = max(x1 - x0, 1e-9), max(y1 - y0, 1e-9)
+    every = [p for it in items if it.pts for p in it.pts]
+    outside = sum(1 for p in every if p[0] < x0 - 0.01 * W or p[0] > x1 + 0.01 * W or p[1] < y0 - 0.01 * H or p[1] > y1 + 0.01 * H)
+    if outside > 0.02 * len(every):
+        return
     fixed = 0
     for it in items:
         if it.role != Role.STRUCTURAL or len(it.pts) < 2:

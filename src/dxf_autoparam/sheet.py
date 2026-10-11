@@ -814,7 +814,11 @@ def segment(dr: Drawing, grid: int = 800, trace: list | None = None) -> SheetLay
         if labs.size:
             members[int(piece_of_atom[int(np.bincount(labs).argmax())])].append(idx)
 
-    # ANNOTATION joins the view of what it marks, within reach (three tight gaps, or a few text heights for words)
+    # ANNOTATION joins the view of what it marks, within reach: three tight gaps, or — dimensions are placed a few text
+    # heights off what they measure — eight of the sheet's text heights, whichever is more (four of its own for a word)
+    hs_all = [it.text_height for it in items if it.dxftype in TEXT_TYPES and it.text_height and it.index not in skip]
+    med_h = statistics.median(hs_all) if hs_all else 0.0
+    annot_reach = max(3 * g0, int(8 * med_h / cell))
     loose: list[int] = []
     for it in items:
         if it.index in skip or it.index in geom_cells or not it.pts or it.anchor is not None:
@@ -823,7 +827,7 @@ def segment(dr: Drawing, grid: int = 800, trace: list | None = None) -> SheetLay
         if it.dxftype in TEXT_TYPES:
             b = text_outline(it)
             pts = pts + b + [((b[k][0] + b[(k + 1) % 4][0]) / 2, (b[k][1] + b[(k + 1) % 4][1]) / 2) for k in range(4)]
-        limit = 3 * g0
+        limit = annot_reach
         if it.dxftype in TEXT_TYPES and it.text_height:
             limit = max(limit, int(4 * it.text_height / cell))
         best = None
@@ -915,7 +919,7 @@ def segment(dr: Drawing, grid: int = 800, trace: list | None = None) -> SheetLay
 
     groups = [_describe(dr, mem, kind) for mem, kind in groups_raw if mem]
     _titles(dr, groups, cell)
-    _absorb_labels(groups, g0 * cell)
+    _absorb_labels(groups, max(g0 * cell, 2 * med_h))
     _title_block(dr, groups)
     _name_ids(groups)
     item_group = {i: gr.id for gr in groups for i in gr.items}
@@ -1110,9 +1114,9 @@ def _titles(dr: Drawing, groups: list[Group], cell: float) -> None:
 def _absorb_labels(groups: list[Group], gap: float) -> None:
     """A lone label, a few words, or a scrap of geometry with no title (a mark, a stub of a level line) next to a view
     belong to it; empty groups go."""
-    for g in groups:
-        if g.kind == "view" and not g.titles and g.counts.get("geometry", 0) <= 5 and len(g.items) <= 8:
-            g.kind = "label"
+    scraps = [g for g in groups if g.kind == "view" and not g.titles and g.counts.get("geometry", 0) <= 5 and len(g.items) <= 8]
+    for g in scraps:
+        g.kind = "label"
     views = [g for g in groups if g.kind == "view"]
     for g in [g for g in groups if g.kind == "label"]:
         cx, cy = (g.bbox[0] + g.bbox[2]) / 2, (g.bbox[1] + g.bbox[3]) / 2
@@ -1126,6 +1130,9 @@ def _absorb_labels(groups: list[Group], gap: float) -> None:
         if best:
             best[1].items = sorted(set(best[1].items) | set(g.items))
             g.items = []
+    for g in scraps:  # a small drawing with no view near it to join is a view of its own
+        if g.items:
+            g.kind = "view"
     groups[:] = [g for g in groups if g.items]
 
 

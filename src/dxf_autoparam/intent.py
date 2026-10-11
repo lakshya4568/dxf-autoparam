@@ -857,6 +857,9 @@ def drive_dimensions(prog: Program, dims: dict[str, list[tuple[str, str, str | N
                 continue
             v0 = {**{d.id: d.value for d in an.datums.values()}, **prog.datum_values()}
             if _drives(prog, name, a, b, v0):
+                # it drives already (the set-out did it): the lines it moves are taken, as if this rule had set them
+                v1 = prog.datum_values({name: P + 1.0})
+                protected.update(d for d in (a, b) if d in v1 and abs(v1[d] - v0[d]) > 1e-12)
                 continue
             if v0[b] < v0[a]:
                 a, b = b, a
