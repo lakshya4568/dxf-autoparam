@@ -151,7 +151,9 @@ def check_invariants(model: Model, r: Regenerated, items=None) -> list[str]:
 
 
 def _name(it: Item) -> str:
-    return f"{it.dxftype} {it.handle} ({it.layer})"
+    """How an issue names an entity: its source path — the handle, or handle/k… inside a block reference, where every
+    entity shares the block's handle — so the entity can be found again."""
+    return f"{it.dxftype} {it.src or it.handle} ({it.layer})"
 
 
 def regenerate_program(prog, values: dict[str, float] | None = None, check: bool = True) -> Regenerated:

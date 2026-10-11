@@ -613,60 +613,196 @@ def heal_growth_breaks(prog: Program, names: list[str], protected: set[str], par
     for name in names:
         if name not in prog.params:
             continue
-        for _round in range(3):  # a heal can uncover the next break of the same value
-            step = {name: prog.params[name].value + delta_of(prog, name)}
-            r = regenerate_program(prog, step)
-            if not r.issues:
-                break
-            m = re.match(r"\S+ (\S+) \(", r.issues[0])
-            it = next((i for i in an.drawing.items if m and i.handle == m.group(1)), None)
-            if it is None:
-                break
-            v0, v1 = prog.datum_values(), prog.datum_values(step)
-            still = _still(prog, parts, step) if parts else set()
-            allowed = _allowed(parts or {}, (may_move or {}).get(name, set()))
-            ds = {an.slot_datum[(it.index, k, ax)][0] for k in it.vertex_pts for ax in AXES if (it.index, k, ax) in an.slot_datum}
-            healed = False
-            for axis in AXES:
-                line = [d for d in ds if d in v0 and an.datums[d].axis == axis]
-                moved = [d for d in line if abs(v1[d] - v0[d]) * u > 0.01]
-                stayed = [d for d in line if d not in moved]
-                if not moved or not stayed:
+        for sign in (+1, -1):  # growing (the drawn direction of change), then shrinking
+            tried: set[str] = set()
+            for _round in range(24):  # one broken entity per round; a heal can uncover the next
+                step = {name: prog.params[name].value + sign * delta_of(prog, name)}
+                if step[name] <= 0:
+                    break
+                r = regenerate_program(prog, step)
+                if not r.issues:
+                    break
+                before = set(r.issues)
+                target = next((i for i in r.issues if i not in tried), None)
+                if target is None:
+                    break
+                tried.add(target)
+                m = re.match(r"\S+ (\S+) \(", target)
+                it = next((i for i in an.drawing.items if m and (i.src or i.handle) == m.group(1)), None)
+                if it is None:
                     continue
-                for d in stayed:
-                    anchor = min(moved, key=lambda a, d=d: abs(v0[a] - v0[d]))
-                    chain, x = [], d
-                    while x and x not in chain and len(chain) < 8:
-                        chain.append(x)
-                        x = _same_axis_parent(prog, x)
-                    for cand in chain:
-                        if cand in protected or cand == anchor or cand not in prog.formulas or anchor in _depends_on(prog, cand):
-                            continue
-                        old = prog.formulas[cand]
-                        off = (v0[cand] - v0[anchor]) * u
-                        prog.formulas[cand] = f"{anchor} {'+' if off >= 0 else '-'} {abs(off):.6f}".rstrip("0").rstrip(".")
-                        prog.invalidate()
-                        try:
-                            ok = not regenerate_program(prog, step).issues and not regenerate_program(prog).issues
-                            if ok and parts:  # parts that stood still and nobody said move with this value stay still
-                                ok = not ((still - _still(prog, parts, step)) - allowed)
-                        except ExprError:
-                            ok = False
-                        if ok:
-                            prog.origin[cand] = "kept"
-                            done.append(f"{name}: {entity_label(it)} stayed valid by setting {cand} out from {anchor} "
-                                         f"({off:+.0f} mm as drawn) instead of {old}")
-                            healed = True
+                v0, v1 = prog.datum_values(), prog.datum_values(step)
+                still = _still(prog, parts, step) if parts else set()
+                allowed = _allowed(parts or {}, (may_move or {}).get(name, set()))
+                ds = {an.slot_datum[(it.index, k, ax)][0] for k in it.vertex_pts for ax in AXES if (it.index, k, ax) in an.slot_datum}
+                healed = False
+                for axis in AXES:
+                    line = [d for d in ds if d in v0 and an.datums[d].axis == axis]
+                    moved = [d for d in line if abs(v1[d] - v0[d]) * u > 0.01]
+                    stayed = [d for d in line if d not in moved]
+                    if not moved or not stayed:
+                        continue
+                    for d in stayed:
+                        anchor = min(moved, key=lambda a, d=d: abs(v0[a] - v0[d]))
+                        chain, x = [], d
+                        while x and x not in chain and len(chain) < 8:
+                            chain.append(x)
+                            x = _same_axis_parent(prog, x)
+                        for cand in chain:
+                            if cand in protected or cand == anchor or cand not in prog.formulas or anchor in _depends_on(prog, cand):
+                                continue
+                            old = prog.formulas[cand]
+                            off = (v0[cand] - v0[anchor]) * u
+                            prog.formulas[cand] = f"{anchor} {'+' if off >= 0 else '-'} {abs(off):.6f}".rstrip("0").rstrip(".")
+                            prog.invalidate()
+                            try:
+                                # better, not perfect: this entity is mended and nothing that held breaks instead
+                                after = set(regenerate_program(prog, step).issues)
+                                ok = target not in after and after < before and not regenerate_program(prog).issues
+                                if ok and parts:  # parts that stood still and nobody said move with this value stay still
+                                    ok = not ((still - _still(prog, parts, step)) - allowed)
+                            except ExprError:
+                                ok = False
+                            if ok:
+                                prog.origin[cand] = "kept"
+                                done.append(f"{name}: {entity_label(it)} stayed valid by setting {cand} out from {anchor} "
+                                             f"({off:+.0f} mm as drawn) instead of {old}")
+                                healed = True
+                                break
+                            prog.formulas[cand] = old
+                            prog.invalidate()
+                        if healed:
                             break
-                        prog.formulas[cand] = old
-                        prog.invalidate()
                     if healed:
                         break
+                if not healed:
+                    healed = _heal_feature(prog, it, step, before, target, protected, v0, v1)
+                    if healed:
+                        done.append(f"{name}: {entity_label(it)} and the small feature it belongs to move as one piece with the line that moves")
+                if not healed:
+                    msg = _heal_dragged(prog, name, it, ds, step, before, target, protected, v0, v1)
+                    if msg:
+                        healed = True
+                        done.append(f"{name}: {entity_label(it)} stayed valid: {msg}")
                 if healed:
-                    break
-            if not healed:
-                break
+                    tried.discard(target)
     return done
+
+
+def _heal_dragged(prog: Program, name: str, it, ds: set[str], step: dict, before: set[str], target: str, protected: set[str],
+                  v0: dict, v1: dict) -> str:
+    """The other way round: a line DRAGGED by the value only because the spanning tree happened to set it out from the
+    far end (a wall's step hung on the other end of the barrel). It is set out from the nearest line of the entity that
+    stood still instead, keeping its drawn offset. Lines the value sets itself, and firm lines, are never re-anchored;
+    of the ways that mend the entity, the one that moves the fewest entities is taken (change only what must change)."""
+    an = prog.analysis
+    u = an.drawing.units_mm
+    direct = {d for d, e in prog.formulas.items() if name in names_in(e)}
+    base = regenerate_program(prog)
+    best = None
+    for axis in AXES:
+        line = [d for d in ds if d in v0 and an.datums[d].axis == axis]
+        moved = [d for d in line if abs(v1[d] - v0[d]) * u > 0.01]
+        stayed = [d for d in line if d not in moved]
+        for d in moved:
+            if d in protected or d in direct or d not in prog.formulas:
+                continue
+            for anchor in sorted(stayed, key=lambda a, d=d: abs(v0[a] - v0[d])):
+                if d in _depends_on(prog, anchor):
+                    continue
+                old = prog.formulas[d]
+                off = (v0[d] - v0[anchor]) * u
+                prog.formulas[d] = f"{anchor} {'+' if off >= 0 else '-'} {abs(off):.6f}".rstrip("0").rstrip(".")
+                prog.invalidate()
+                try:
+                    r = regenerate_program(prog, step)
+                    after = set(r.issues)
+                    ok = target not in after and after < before and not regenerate_program(prog).issues
+                    moves = sum(1 for i, pts in r.pts.items() if any(abs(a[0] - b[0]) + abs(a[1] - b[1]) > 1e-9
+                                                                   for a, b in zip(pts, base.pts.get(i, pts), strict=False)))
+                except ExprError:
+                    ok, moves = False, 0
+                prog.formulas[d] = old
+                prog.invalidate()
+                if ok and (best is None or moves < best[0]):
+                    best = (moves, d, anchor, off, old)
+                break
+    if best is None:
+        return ""
+    _moves, d, anchor, off, old = best
+    prog.formulas[d] = f"{anchor} {'+' if off >= 0 else '-'} {abs(off):.6f}".rstrip("0").rstrip(".")
+    prog.origin[d] = "kept"
+    prog.invalidate()
+    return f"{d} was dragged by {name} through {old}; it is set out from {anchor} ({off:+.0f} mm as drawn) instead"
+
+
+def _heal_feature(prog: Program, it, step: dict, before: set[str], target: str, protected: set[str], v0: dict, v1: dict) -> bool:
+    """A small feature drawn as loose lines (a symbol, an arrow, a little detail) whose lines hang on two independent
+    chains is torn apart when one chain moves. It is moved as ONE piece instead: every line of the feature that stood
+    still is set out from the nearest line of it that moves, keeping its drawn offset. Only lines used by the feature
+    alone are touched; the feature must be small against its drawing; the result must be better and break nothing."""
+    an = prog.analysis
+    u = an.drawing.units_mm
+    x0, y0, x1, y1 = an.drawing.extent
+    small = 0.05 * max(x1 - x0, y1 - y0)
+    users: dict[str, set[int]] = {}
+    for (idx, _k, _ax), (d, _o) in an.slot_datum.items():
+        users.setdefault(d, set()).add(idx)
+    # the feature: what is DRAWN connected to the entity (endpoints that touch), not everything on its lines
+    tol = an.drawing.tol
+    at: dict[tuple[int, int], set[int]] = {}
+    for item in an.drawing.items:
+        if item.role.value == "structural":
+            for k in item.vertex_pts:
+                at.setdefault((round(item.pts[k][0] / tol), round(item.pts[k][1] / tol)), set()).add(item.index)
+    feature, frontier = {it.index}, [it.index]
+    while frontier and len(feature) <= 40:
+        i = frontier.pop()
+        for k in an.drawing.items[i].vertex_pts:
+            px, py = round(an.drawing.items[i].pts[k][0] / tol), round(an.drawing.items[i].pts[k][1] / tol)
+            for dx in (-1, 0, 1):
+                for dy in (-1, 0, 1):
+                    for j in at.get((px + dx, py + dy), ()):
+                        if j not in feature:
+                            feature.add(j)
+                            frontier.append(j)
+    if len(feature) > 40:
+        return False
+    pts = [p for i in feature for p in an.drawing.items[i].pts]
+    if max(max(p[0] for p in pts) - min(p[0] for p in pts), max(p[1] for p in pts) - min(p[1] for p in pts)) > small:
+        return False
+    olds = {}
+    for axis in AXES:
+        ds = {an.slot_datum[(i, k, ax)][0] for i in feature for k in range(len(an.drawing.items[i].pts)) for ax in (axis,)
+              if (i, k, ax) in an.slot_datum}
+        ds = {d for d in ds if d in v0 and an.datums[d].axis == axis}
+        moved = [d for d in ds if abs(v1[d] - v0[d]) * u > 0.01]
+        stayed = [d for d in ds if d not in moved and d not in protected and d in prog.formulas and users.get(d, set()) <= feature]
+        if not moved or not stayed:
+            continue
+        for d in stayed:
+            anchor = min(moved, key=lambda a, d=d: abs(v0[a] - v0[d]))
+            if anchor in _depends_on(prog, d):
+                continue
+            off = (v0[d] - v0[anchor]) * u
+            olds[d] = prog.formulas[d]
+            prog.formulas[d] = f"{anchor} {'+' if off >= 0 else '-'} {abs(off):.6f}".rstrip("0").rstrip(".")
+    if not olds:
+        return False
+    prog.invalidate()
+    try:
+        after = set(regenerate_program(prog, step).issues)
+        ok = target not in after and after < before and not regenerate_program(prog).issues
+    except ExprError:
+        ok = False
+    if ok:
+        for d in olds:
+            prog.origin[d] = "kept"
+        return True
+    for d, f in olds.items():
+        prog.formulas[d] = f
+    prog.invalidate()
+    return False
 
 
 def _allowed(parts: dict[str, Part], claimed: set[str]) -> set[str]:

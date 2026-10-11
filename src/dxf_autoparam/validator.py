@@ -737,7 +737,7 @@ def _explain_break(prog: Program, issue: str, values: dict[str, float], plan=Non
     """Which set-out lines of the broken entity moved and which stayed — the lines that should have followed."""
     an = prog.analysis
     m = re.match(r"\S+ (\S+) \(", issue)
-    it = next((i for i in an.drawing.items if m and i.handle == m.group(1)), None)
+    it = next((i for i in an.drawing.items if m and (i.src or i.handle) == m.group(1)), None)
     if it is None:
         return ""
     u = an.drawing.units_mm
