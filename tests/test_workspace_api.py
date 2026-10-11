@@ -102,3 +102,25 @@ def test_a_malformed_request_is_answered_not_crashed(server):
     assert st == 400 and not json.loads(body)["ok"]
     st, body, _ = call(base, "/api/sheet/nonsense", {})
     assert st == 409 and "no such edit" in json.loads(body)["error"]
+
+
+def test_a_gemini_stage_runs_in_the_background_and_its_result_is_applied(tmp_path):
+    import time
+
+    from test_sheet_ai import FakeGemini
+
+    sheet = SheetSession(str(built_sheet(tmp_path / "sheet.dxf")))
+    el = next(g for g in sheet.sm.layout.views() if g.name == "ELEVATION").id
+    sheet.gem = FakeGemini({"structure": "test", "views": [{"id": el, "kind": "view", "name": "MAIN ELEVATION", "view_type": "elevation",
+                                                             "confidence": 0.9}], "merges": [], "relations": [], "questions": []})
+    assert sheet.start_ai("views", {})["ok"]
+    for _ in range(100):
+        p = sheet.progress(0)
+        if not p["running"]:
+            break
+        time.sleep(0.05)
+    assert not p["running"] and p["result"]["applied"] == [f"{el}: name → MAIN ELEVATION"]
+    assert any(e["kind"] == "done" for e in p["events"])
+    assert next(g for g in sheet.summary()["groups"] if g["id"] == el)["name"] == "MAIN ELEVATION"
+    with pytest.raises(Exception, match="no Gemini stage"):
+        sheet.start_ai("everything", {})

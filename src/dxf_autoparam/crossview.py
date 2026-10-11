@@ -193,6 +193,9 @@ class SheetModel:
         self.values: dict[str, dict[str, float]] = {}  # unit → parameter → value (only what differs from its defaults)
         self.history: list[dict] = []
         self.future: list[dict] = []
+        self.accepted: set[tuple[str, str]] = set()  # projection links a person (or the AI, checked) took although weak
+        self.relations: list[dict] = []  # views that show the same structure / a detail of another (semantic, not set-out)
+        self.questions: list[str] = []  # what the AI or the engine asks a person to settle
         self._group_units()
 
     @classmethod
@@ -213,7 +216,8 @@ class SheetModel:
             return x
 
         for lk in self.links:
-            if lk["strong"] and (lk["a"], lk["b"]) not in self.unlinked:
+            key = (lk["a"], lk["b"])
+            if (lk["strong"] or key in getattr(self, "accepted", set())) and key not in self.unlinked:
                 parent[find(lk["b"])] = find(lk["a"])
         groups: dict[str, list[Group]] = {}
         for v in views:
@@ -434,7 +438,7 @@ class SheetModel:
     def _state(self) -> dict:
         return {"values": copy.deepcopy(self.values), "shared": copy.deepcopy(self.shared),
                 "answers": {uid: copy.deepcopy(u.answer) for uid, u in self.units.items()}, "unlinked": set(self.unlinked),
-                "groups": copy.deepcopy(self.layout.groups)}
+                "groups": copy.deepcopy(self.layout.groups), "accepted": set(self.accepted), "relations": copy.deepcopy(self.relations)}
 
     def _push(self) -> None:
         self.history.append(self._state())
@@ -442,8 +446,10 @@ class SheetModel:
         del self.history[:-100]
 
     def _restore(self, st: dict) -> None:
-        relayout = st["unlinked"] != self.unlinked or [(g.id, g.kind, g.items) for g in st["groups"]] != [(g.id, g.kind, g.items) for g in self.layout.groups]
+        relayout = (st["unlinked"] != self.unlinked or st.get("accepted", set()) != self.accepted
+                    or [(g.id, g.kind, g.items) for g in st["groups"]] != [(g.id, g.kind, g.items) for g in self.layout.groups])
         self.values, self.shared, self.unlinked = st["values"], st["shared"], st["unlinked"]
+        self.accepted, self.relations = st.get("accepted", set()), st.get("relations", [])
         self.layout.groups = st["groups"]
         if relayout:
             self._relayout()
@@ -493,6 +499,17 @@ class SheetModel:
             uid = t[0]
             u = self.unit(uid)
             an, um = u.an, u.sub.units_mm
+            if len(t) == 2 and t[1] not in an.clusters and t[1] in u.prog.params:  # the unit's own value, by its name
+                prm = u.prog.params[t[1]]
+                cid = next((c.id for c in an.clusters.values() if c.name == t[1]), None)
+                if cid is None and not prm.measures:
+                    raise SheetError(f"{t[1]} in {uid} is not measured between two lines")
+                if u.answer and t[1] != name and any(p.get("name") == t[1] for p in u.answer.get("parameters", [])):
+                    u.answer = rename_in_answer(u.answer, t[1], name)  # its own name gives way to the shared one
+                    u.prog = None
+                    u = self.unit(uid)
+                    cid = cid if cid in u.an.clusters else None
+                t = (uid, cid) if cid else (uid, *prm.measures)
             if len(t) == 2:
                 cid = t[1]
                 c = an.clusters.get(cid)
@@ -690,6 +707,24 @@ class SheetModel:
         for uid, _ in targets:
             self.unit(uid)
 
+    def accept_link(self, a: str, b: str) -> None:
+        """Take a projection link the geometry shows but too weakly to take alone (a person, or the AI, confirmed it)."""
+        lk = next((x for x in self.links if {x["a"], x["b"]} == {a, b}), None)
+        if lk is None:
+            raise SheetError(f"{a} and {b} share no set-out lines: they cannot be drawn in projection")
+        self._push()
+        key = (lk["a"], lk["b"])
+        self.accepted.add(key)
+        self.unlinked.discard(key)
+        self._group_units(self.units)
+
+    def set_answer(self, uid: str, answer: dict) -> None:
+        """A unit's parametrization replaced (the AI agent's, or a person's), undoable."""
+        u = self.unit(uid)
+        self._push()
+        u.answer, u.prog = answer, None
+        self.unit(uid)
+
     def link(self, a: str, b: str, linked: bool) -> None:
         """Take or refuse a projection link between two views (their units are re-formed; a unit whose views changed
         loses its parametrization, said in the result)."""
@@ -886,7 +921,8 @@ class SheetModel:
         return {"format": "dxf-autoparam/sheet-1", "dxf": self.path, "fingerprint": self.fingerprint(),
                 "unlinked": sorted(list(k) for k in self.unlinked),
                 "answers": {uid: u.answer for uid, u in self.units.items() if u.answer},
-                "shared": [asdict(p) for p in self.shared.values()], "values": self.values}
+                "shared": [asdict(p) for p in self.shared.values()], "values": self.values,
+                "accepted": sorted(list(k) for k in self.accepted), "relations": self.relations, "questions": self.questions}
 
     def save(self, path: str) -> None:
         Path(path).write_text(json.dumps(self.to_dict(), indent=1, default=list))
@@ -896,6 +932,10 @@ class SheetModel:
         d = json.loads(Path(project).read_text())
         dr, _ = read_dxf(dxf or d["dxf"])
         sm = cls(dr, unlinked={tuple(k) for k in d.get("unlinked", [])})
+        if d.get("accepted"):
+            sm.accepted = {tuple(k) for k in d["accepted"]}
+            sm._group_units(sm.units)
+        sm.relations, sm.questions = d.get("relations", []), d.get("questions", [])
         if sm.fingerprint() != d.get("fingerprint"):
             raise SheetError("the DXF has changed since this project was saved: its views and values may not match")
         for uid, ans in d.get("answers", {}).items():

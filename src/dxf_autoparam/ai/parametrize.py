@@ -9,6 +9,7 @@ drawing still regenerates exactly.
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import time
 from pathlib import Path
@@ -39,7 +40,16 @@ def _restore(an, snap) -> None:
         an.clusters[cid].name, an.clusters[cid].accepted = name, acc
 
 
-def prepare(path: str, view: int | None = None, region=None):
+def prepare(path: str, view: int | None = None, region=None, drawing=None):
+    """The drawing analysed afresh (apply() renames and splits candidates, so each validation starts clean). `drawing`:
+    one view (or unit) of a sheet already read — a copy is analysed; `region` then frames its pictures."""
+    if drawing is not None:
+        dr = copy.deepcopy(drawing)
+        an = analyse(dr)
+        snap = _snapshot(an)
+        base = from_model(build(an, Decisions()))
+        _restore(an, snap)
+        return an, base, region if region is not None else dr.extent, snap
     dr, _ = read_dxf(path)
     if view is not None and region is None:
         views = detect_views(dr)

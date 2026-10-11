@@ -43,12 +43,19 @@ class SheetSession:
         self.sm: SheetModel | None = None
         self.shown: set[int] = set()  # entities the page draws changed (the committed state)
         self.opened = 0.0
+        self.gem = None  # one Gemini client per sheet: its prompt cache serves the follow-ups
+        self.job: dict = {"running": False, "events": [], "error": None, "kind": None, "started": 0.0, "stop": threading.Event(), "result": None}
         if path:
             self.open(path)
 
     # ── state ─────────────────────────────────────────────────────────────────
 
     def open(self, path: str) -> dict:
+        if self.job["running"]:
+            raise SheetError("Gemini is working on this sheet: stop it first")
+        if self.gem is not None:
+            self.gem.close()
+            self.gem = None
         t = time.perf_counter()
         self.sm = SheetModel.open(path)
         self.shown = set()
@@ -78,6 +85,8 @@ class SheetSession:
                                       "datums": b.datums, "views": sm.units[b.unit].views if b.unit in sm.units else []} for b in p.bindings]}
                        for p in sm.shared.values()],
             "values": sm.current(), "can_undo": bool(sm.history), "can_redo": bool(sm.future),
+            "relations": sm.relations, "questions": sm.questions, "accepted": sorted(list(k) for k in sm.accepted),
+            "ai_running": self.job["running"],
         }
 
     def _prims(self, entities, sr: SheetRegen | None) -> list[dict]:
@@ -177,6 +186,77 @@ class SheetSession:
             raise SheetError(f"no such edit: {op}")
         return {"ok": True, "result": result, **self._commit_delta(), "summary": self.summary()}
 
+    # ── Gemini, in the background ─────────────────────────────────────────────
+
+    def start_ai(self, kind: str, body: dict) -> dict:
+        """views — name, type, merge and relate the views; unit — the agent parametrizes one unit; shared — name the sizes
+        separate views share. Progress (thought summaries, calls, what was applied or refused) streams into the job."""
+        from .ai.vertex import Gemini, GeminiStopped, GeminiUnavailable
+
+        sm = self._sm()
+        if self.job["running"]:
+            raise SheetError("Gemini is already working on this sheet")
+        if kind not in ("views", "unit", "shared"):
+            raise SheetError(f"no Gemini stage {kind}")
+        uid = body.get("unit")
+        if kind == "unit" and uid not in sm.units:
+            raise SheetError(f"no unit {uid}")
+        job = {"running": True, "events": [], "error": None, "kind": kind, "started": time.time(), "stop": threading.Event(), "result": None}
+        self.job = job
+
+        def push(e: dict) -> None:
+            if len(job["events"]) < 4000:
+                job["events"].append({**e, "t": round(time.time() - job["started"], 1)})
+
+        def work() -> None:
+            from .ai import sheet_ai
+
+            try:
+                if self.gem is None:
+                    self.gem = Gemini()
+                if kind == "views":
+                    ans, usage = sheet_ai.understand_views(sm, self.gem, on_event=push, stop=job["stop"].is_set)
+                    with self.lock:
+                        res = sheet_ai.apply_views(sm, ans)
+                elif kind == "shared":
+                    ans, usage = sheet_ai.name_shared(sm, self.gem, units=body.get("units"), on_event=push, stop=job["stop"].is_set)
+                    with self.lock:
+                        res = sheet_ai.apply_shared(sm, ans)
+                else:
+                    usage = {}
+                    res = sheet_ai.parametrize_unit(sm, uid, self.gem, instructions=body.get("instructions", ""), on_event=push,
+                                                    stop=job["stop"].is_set, log=lambda *a: push({"kind": "log", "text": " ".join(map(str, a))}))
+                job["result"] = {**res, "usage": {k: usage.get(k) for k in ("model", "thinking", "input_tokens", "output_tokens",
+                                                                                "thinking_tokens", "cached", "seconds") if usage}}
+                push({"kind": "done", "text": f"{kind}: {len(res.get('applied', []))} applied, {len(res.get('refused', []))} refused"
+                      if kind != "unit" else f"unit {uid}: {res['named']} named values"})
+            except GeminiStopped:
+                push({"kind": "stopped", "text": "Stopped. Nothing from this run was applied (tokens generated before the stop are billed)."})
+            except GeminiUnavailable as exc:
+                job["error"] = str(exc)
+                push({"kind": "error", "text": job["error"]})
+            except Exception as exc:  # noqa: BLE001 — the job's boundary: logged with its traceback, said in the page
+                import traceback
+
+                traceback.print_exc()
+                job["error"] = f"{type(exc).__name__}: {exc}"
+                push({"kind": "error", "text": job["error"]})
+            finally:
+                job["running"] = False
+
+        threading.Thread(target=work, daemon=True, name=f"sheet-gemini-{kind}").start()
+        return {"ok": True, "kind": kind}
+
+    def progress(self, since: int) -> dict:
+        job = self.job
+        return {"running": job["running"], "kind": job["kind"], "error": job["error"], "stopping": job["stop"].is_set(),
+                "events": job["events"][since:], "next": len(job["events"]), "result": job["result"] if not job["running"] else None}
+
+    def stop_ai(self) -> dict:
+        if self.job["running"]:
+            self.job["stop"].set()
+        return {"ok": True, "stopping": self.job["running"]}
+
     def unit(self, uid: str) -> dict:
         sm = self._sm()
         u = sm.unit(uid)
@@ -245,6 +325,8 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
                 if path == "/api/sheet/proposals":
                     units = [u for u in q.get("units", [""])[0].split(",") if u] or None
                     return handler._json({"proposals": sheet._sm().shared_proposals(units)}) or True
+                if path == "/api/sheet/ai/progress":
+                    return handler._json(sheet.progress(int(q.get("since", ["0"])[0]))) or True
                 if path == "/api/sheet/export":
                     out = Path(tempfile.mkdtemp()) / (Path(sheet._sm().path).stem + "_parametric.dxf")
                     rep = sheet._sm().export(str(out))
@@ -270,6 +352,10 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
                     return handler._json(sheet.apply(body.get("changes", {}))) or True
                 if path in ("/api/sheet/undo", "/api/sheet/redo"):
                     return handler._json(sheet.history(path.rsplit("/", 1)[1])) or True
+                if path == "/api/sheet/ai/stop":
+                    return handler._json(sheet.stop_ai()) or True
+                if path.startswith("/api/sheet/ai/"):
+                    return handler._json(sheet.start_ai(path.rsplit("/", 1)[1], body)) or True
                 if path == "/api/sheet/project":
                     tmp = Path(tempfile.mkdtemp()) / "project.json"
                     tmp.write_text(json.dumps(body))

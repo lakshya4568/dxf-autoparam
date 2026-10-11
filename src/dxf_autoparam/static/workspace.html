@@ -73,6 +73,10 @@
   footer .msg.bad { color: var(--bad); } footer .msg.ok { color: var(--ok); }
   .preview { border: 1px solid var(--chg); border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
   .grp { margin: 6px 10px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; }
+  textarea { font: inherit; color: var(--ink); background: var(--panel2); border: 1px solid var(--line); border-radius: 5px; padding: 5px 8px; resize: vertical; }
+  button.stop { background: var(--bad); border-color: var(--bad); color: #fff; }
+  .ev { padding: 3px 10px; font-size: 11.5px; border-left: 2px solid transparent; }
+  .ev.thought { color: var(--muted); font-style: italic; } .ev.call { color: var(--ai); } .ev.done { color: var(--ok); } .ev.error { color: var(--bad); } .ev.stopped { color: var(--warn); }
   kbd { font: 10.5px ui-monospace, Menlo, monospace; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; }
 </style>
 </head>
@@ -92,7 +96,7 @@
 </header>
 <main id="main">
   <aside>
-    <div class="tabs"><button data-tab="sheet" class="on">Sheet</button><button data-tab="params">Parameters</button><button data-tab="review">Review</button></div>
+    <div class="tabs"><button data-tab="sheet" class="on">Sheet</button><button data-tab="params">Parameters</button><button data-tab="review">Review</button><button data-tab="ai">Gemini</button></div>
     <div class="scroll" id="left"></div>
   </aside>
   <div id="stage">
@@ -461,7 +465,7 @@ function afterSelect() { $("#selc").textContent = `${sel.size} selected`; draw()
 function renderLeft() {
   const L = $("#left");
   if (!S) { L.innerHTML = `<div class="note">No drawing open.</div>`; return; }
-  if (tab === "sheet") L.innerHTML = sheetTree(); else if (tab === "params") L.innerHTML = paramList(); else L.innerHTML = reviewList();
+  if (tab === "sheet") L.innerHTML = sheetTree(); else if (tab === "params") L.innerHTML = paramList(); else if (tab === "ai") L.innerHTML = geminiPanel(); else L.innerHTML = reviewList();
   wireLeft();
 }
 function kindColor(g) { return g.kind === "view" ? css("--accent") : g.kind === "table" ? css("--ok") : g.kind === "title_block" ? css("--ai") : css("--warn"); }
@@ -542,6 +546,7 @@ function wireLeft() {
   const ov = $("#ov-views"); if (ov) ov.addEventListener("change", draw);
   const ps = $("#psearch"); if (ps) ps.addEventListener("input", () => { const q = ps.value.toLowerCase(); document.querySelectorAll("#left [data-search]").forEach((r) => r.style.display = r.dataset.search.includes(q) ? "" : "none"); });
   const lp = $("#loadprops"); if (lp) lp.addEventListener("click", loadProposals);
+  if (tab === "ai") wireGemini();
 }
 function parseNum(s) { const v = Number(String(s).replace(/[, ]/g, "")); return isFinite(v) ? v : null; }
 
@@ -701,6 +706,52 @@ async function loadProposals() {
     if (!name) return say("give it a PascalCase name", "bad"); edit("share", { name, targets: [p.a, p.b], evidence: p.evidence, source: "proposal" }, () => { tab = "params"; setTab(); openParam(name); }); }));
 }
 
+// ── Gemini ───────────────────────────────────────────────────────────────────
+let ai = { running: false, events: [], next: 0, result: null, error: null, kind: null }, aiDraft = "", aiPoll = 0;
+function geminiPanel() {
+  const uid = activeUnit(); const u = uid && S.units.find((x) => x.id === uid);
+  let h = `<div class="sec">Gemini on this sheet</div>
+    <div class="note">Every run is billed. The engine checks all it proposes: ids, values, lines; what does not hold is refused and said, what holds can be undone.</div>
+    <div class="note"><textarea id="ai-instr" rows="3" style="width:100%" placeholder="Your instructions, e.g. the left half is the existing structure: keep it as drawn">${esc(aiDraft)}</textarea></div>
+    <div class="note"><b>1</b> Name, type and relate the views</div><div class="bar" style="padding:0 10px 6px"><button id="ai-views" ${ai.running ? "disabled" : ""}>Understand the views</button></div>
+    <div class="note"><b>2</b> Parametrize one unit (the agent, small checked edits)</div><div class="bar" style="padding:0 10px 6px"><button id="ai-unit" ${ai.running || !u ? "disabled" : ""}>${u ? "Parametrize " + esc(u.views.join(" + ")) : "open a view first"}</button></div>
+    <div class="note"><b>3</b> Name the sizes separate views share</div><div class="bar" style="padding:0 10px 6px"><button id="ai-shared" ${ai.running ? "disabled" : ""}>Link sizes across views</button></div>
+    ${ai.running ? `<div class="bar" style="padding:0 10px"><button class="stop" id="ai-stop">■ Stop Gemini</button><span class="muted">${esc(ai.kind || "")} running…</span></div>` : ""}`;
+  if (ai.result) {
+    const r = ai.result;
+    h += `<div class="sec">Result</div>`;
+    for (const a of r.applied || []) h += `<div class="note ok">✓ ${esc(a)}</div>`;
+    for (const a of r.refused || []) h += `<div class="note bad">✗ ${esc(a)}</div>`;
+    for (const q of r.questions || []) h += `<div class="note warn">? ${esc(q)}</div>`;
+    if (r.named != null) h += `<div class="note ok">✓ ${r.named} named values in ${esc(r.unit)}${r.rejected && Object.keys(r.rejected).length ? " · refused: " + esc(JSON.stringify(r.rejected)) : ""}</div>`;
+    if (r.usage && r.usage.model) h += `<div class="note">${esc(r.usage.model)} @${esc(r.usage.thinking)} · in ${r.usage.input_tokens || 0} · out ${(r.usage.output_tokens || 0) + (r.usage.thinking_tokens || 0)} tokens${r.usage.cached ? " · from cache (free)" : ""}</div>`;
+  }
+  if (ai.error) h += `<div class="note bad">${esc(ai.error)}</div>`;
+  h += `<div class="sec">Progress <span class="n">${ai.events.length}</span></div>`;
+  for (const e of ai.events.slice(-120)) h += `<div class="ev ${esc(e.kind)}">${e.t != null ? `<span class="muted">${e.t}s</span> ` : ""}${e.kind === "call" ? `${esc(e.label || "")} · ${esc(e.model || "")} @${esc(e.thinking || "")}${e.prompt_cache ? " · cache " + esc(e.prompt_cache) : ""}` : esc(e.text || e.kind)}</div>`;
+  return h;
+}
+function wireGemini() {
+  const t = $("#ai-instr"); if (t) t.addEventListener("input", () => { aiDraft = t.value; });
+  const go = (kind, body) => guard(async () => { await api(`/api/sheet/ai/${kind}`, body); ai = { running: true, events: [], next: 0, result: null, error: null, kind }; renderLeft(); pollAI(); });
+  const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
+  on("#ai-views", () => go("views", {}));
+  on("#ai-unit", () => go("unit", { unit: activeUnit(), instructions: aiDraft }));
+  on("#ai-shared", () => go("shared", {}));
+  on("#ai-stop", () => guard(() => api("/api/sheet/ai/stop", {})));
+}
+function pollAI() {
+  clearTimeout(aiPoll);
+  aiPoll = setTimeout(async () => {
+    let r; try { r = await api(`/api/sheet/ai/progress?since=${ai.next}`); } catch (e) { say(e.message, "bad"); return; }
+    ai.events.push(...r.events); ai.next = r.next; ai.running = r.running; ai.error = r.error; ai.kind = r.kind;
+    if (!r.running) { ai.result = r.result; S = await api("/api/sheet"); unitCache.clear(); renderRight(); draw();
+      say(r.error ? "Gemini: " + r.error : "Gemini finished — review what it applied (undo takes it back)", r.error ? "bad" : "ok"); }
+    if (tab === "ai") renderLeft();
+    if (r.running) pollAI();
+  }, 800);
+}
+
 // ── file, tabs, theme ────────────────────────────────────────────────────────
 async function loadSheet() {
   const s = await api("/api/sheet"); if (s.empty) { $("#empty").style.display = "flex"; return; }
@@ -710,6 +761,7 @@ async function loadSheet() {
   P = ingest(g.j.prims); buildIndex();
   sel = new Set(); hov = -1; focus = null; activeView = null; preview = null; unitCache.clear();
   $("#undo").disabled = !S.can_undo; $("#redo").disabled = !S.can_redo;
+  if (S.ai_running) { ai = { running: true, events: [], next: 0, result: null, error: null, kind: null }; pollAI(); }
   renderLeft(); renderRight(); fitted = false; resize();
   say(`${S.entities.toLocaleString()} entities · ${S.groups.filter((x) => x.kind === "view").length} views · loaded in ${Math.round(g.ms)} ms`, "ok");
 }

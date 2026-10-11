@@ -154,8 +154,9 @@ def _r(v: float) -> float:
 
 
 class Workbench:
-    def __init__(self, path: str, region=None, hold_existing: bool = False, start: dict | None = None, selection: dict | None = None):
-        self.path, self.region, self.hold, self.selection = path, region, hold_existing, selection
+    def __init__(self, path: str, region=None, hold_existing: bool = False, start: dict | None = None, selection: dict | None = None,
+                 drawing=None):
+        self.path, self.region, self.hold, self.selection, self.drawing = path, region, hold_existing, selection, drawing
         self.answer = copy.deepcopy(start) if start else {
             "structure_type": "", "family": "other", "views": [], "summary": "", "components": [], "line_roles": [], "levels": [],
             "parameters": [], "datum_formulas": [], "relations": [], "behaviours": [], "constraints": [], "questions": []}
@@ -167,7 +168,7 @@ class Workbench:
     def validate(self, final: bool = False) -> None:
         """While the agent builds, every value stays editable (the AI's own "keep as drawn" recommendations are applied
         at the end, with the person's selection), so what it defines is what it can use."""
-        an, _base, _region, _snap = prepare(self.path, None, self.region)
+        an, _base, _region, _snap = prepare(self.path, None, self.region, drawing=self.drawing)
         selection = self.selection if (final or self.selection is not None) else {"hold": [], "exclude": [], "drop": []}
         self.prog, self.rep = apply(an, self.answer, hold_existing=self.hold, selection=selection)
         self.an = self.prog.analysis
@@ -540,15 +541,16 @@ def _short(a: dict) -> str:
 
 def agent_parametrize(path: str, region=None, instructions: str = "", start: dict | None = None, request: str = "",
                       hold_existing: bool = False, selection: dict | None = None, gem: Gemini | None = None, on_event=None,
-                      stop=None, log=print, max_steps: int | None = None, max_output_tokens: int | None = None):
-    """Run the agent. `start`: an answer to continue from (a revision); `request`: what the person asks of it."""
+                      stop=None, log=print, max_steps: int | None = None, max_output_tokens: int | None = None, drawing=None):
+    """Run the agent. `start`: an answer to continue from (a revision); `request`: what the person asks of it.
+    `drawing`: one view or unit of a sheet (already read and cut out) instead of the file's own region."""
     from google.genai import types
 
     t0 = time.perf_counter()
     emit = on_event or (lambda e: None)
     max_steps = max_steps or int(os.environ.get("VERTEX_AGENT_MAX_STEPS", "30"))
     budget = max_output_tokens or int(os.environ.get("VERTEX_AGENT_MAX_OUTPUT_TOKENS", "150000"))
-    an, base, region, _snap = prepare(path, None, region)
+    an, base, region, _snap = prepare(path, None, region, drawing=drawing)
     images = images_for(an, base, region)
     ov = overview(an, base)
     src = hashlib.sha256(Path(an.drawing.path).read_bytes()).hexdigest()
@@ -556,7 +558,7 @@ def agent_parametrize(path: str, region=None, instructions: str = "", start: dic
     ov_text = "OVERVIEW:\n" + json.dumps(ov, separators=(",", ":"))
     prefix_parts = [types.Part.from_bytes(data=img, mime_type="image/png") for img in images] + [types.Part.from_text(text=ov_text)]
     prefix_key = hashlib.sha256(("agent|" + AGENT_SYSTEM + "|".join(image_keys) + ov_text).encode()).hexdigest()[:24]
-    bench = Workbench(path, region, hold_existing, start, selection)
+    bench = Workbench(path, region, hold_existing, start, selection, drawing=drawing)
     task = ("Parametrize this drawing with the tools, following the playbook." if not request else
             "You parametrized this drawing before; the current state is loaded in the tools (inspect_regions shows the parts, "
             "find_values the named values). The person asks for a change — make it with small edits, keep everything else.\n"
