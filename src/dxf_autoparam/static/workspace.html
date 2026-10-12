@@ -45,6 +45,7 @@
   .row.on { background: var(--hover); border-left-color: var(--accent); }
   .row .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .row .sub { color: var(--muted); font-size: 11px; }
+  .row .nm.wrap { white-space: normal; } .row .nm.wrap .sub { display: block; line-height: 1.25; }
   .chip { display: inline-block; padding: 0 6px; border-radius: 9px; background: var(--chip); color: var(--muted); font-size: 10.5px; line-height: 17px; white-space: nowrap; }
   .chip.ok { color: var(--ok); } .chip.warn { color: var(--warn); } .chip.bad { color: var(--bad); } .chip.ai { color: var(--ai); } .chip.acc { color: var(--accent); }
   .k { width: 8px; height: 8px; border-radius: 2px; flex: none; }
@@ -76,6 +77,41 @@
   textarea { font: inherit; color: var(--ink); background: var(--panel2); border: 1px solid var(--line); border-radius: 5px; padding: 5px 8px; resize: vertical; }
   button.stop { background: var(--bad); border-color: var(--bad); color: #fff; }
   .ev { padding: 3px 10px; font-size: 11.5px; border-left: 2px solid transparent; }
+  details.fold > summary { cursor: pointer; list-style: none; padding: 8px 10px 4px; color: var(--muted); font-size: 11px; text-transform: uppercase;
+         letter-spacing: .6px; display: flex; align-items: center; gap: 6px; user-select: none; }
+  details.fold > summary::-webkit-details-marker, details.step > summary::-webkit-details-marker, details.think > summary::-webkit-details-marker { display: none; }
+  details.fold > summary::before, details.step > summary::before, details.think > summary::before { content: "▸"; font-size: 9px; transition: transform .12s; }
+  details[open] > summary::before { transform: rotate(90deg); }
+  details.fold > summary .n { margin-left: auto; text-transform: none; }
+  details.fold > summary:hover { color: var(--ink); }
+  .hint { margin: 8px 10px; padding: 8px 10px; border-radius: 6px; background: var(--panel2); color: var(--muted); font-size: 11.5px; }
+  .hint b { color: var(--ink); }
+  .stage3 { display: grid; grid-template-columns: 18px 1fr auto; gap: 2px 8px; align-items: center; padding: 6px 10px; }
+  .stage3 .num { width: 18px; height: 18px; border-radius: 9px; background: var(--chip); color: var(--muted); font-size: 10.5px; display: grid; place-items: center; }
+  .stage3 .what { font-weight: 600; } .stage3 .why { grid-column: 2 / 4; color: var(--muted); font-size: 11px; margin-top: -2px; }
+  .status { margin: 8px 10px; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; }
+  .status.run { border-color: var(--ai); } .status.fail { border-color: var(--bad); } .status.done { border-color: var(--ok); }
+  .status .top { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+  .status .dot { width: 8px; height: 8px; border-radius: 4px; background: var(--ai); animation: pulse 1.2s infinite; }
+  @keyframes pulse { 50% { opacity: .25; } }
+  details.step { margin: 4px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel2); }
+  details.step > summary { cursor: pointer; list-style: none; padding: 5px 8px; display: flex; align-items: center; gap: 6px; font-size: 12px; }
+  details.step > summary .lbl { font-weight: 600; } details.step > summary .t { margin-left: auto; color: var(--muted); font-size: 11px; }
+  details.step > summary .marks { font-size: 11px; letter-spacing: 1px; }
+  details.step.live { border-color: var(--ai); }
+  .sbody { padding: 0 8px 7px 20px; display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; }
+  .sbody .meta { color: var(--muted); font-size: 10.5px; }
+  details.think > summary { cursor: pointer; list-style: none; color: var(--ai); font-size: 11px; display: flex; gap: 5px; align-items: center; }
+  details.think .txt { color: var(--muted); font-style: italic; padding: 3px 0 2px 12px; border-left: 2px solid var(--line); margin-top: 3px; white-space: normal; }
+  .tool { display: flex; gap: 6px; align-items: baseline; } .tool .m { width: 12px; flex: none; } .tool.ok .m { color: var(--ok); } .tool.no .m { color: var(--bad); }
+  .tool code { font: 10.5px ui-monospace, Menlo, monospace; color: var(--muted); overflow-wrap: anywhere; }
+  .tool .why { color: var(--bad); font-size: 11px; }
+  #menu { position: absolute; right: 10px; top: 38px; z-index: 20; display: none; flex-direction: column; gap: 2px; min-width: 210px; padding: 6px;
+          background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.3); }
+  #menu.on { display: flex; }
+  #menu button, #menu a { text-align: left; border: 0; background: transparent; padding: 6px 8px; border-radius: 5px; color: var(--ink); text-decoration: none; font-size: 12.5px; }
+  #menu button:hover, #menu a:hover { background: var(--hover); }
+  #menu label { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 8px; }
   .ev.thought { color: var(--muted); font-style: italic; } .ev.call { color: var(--ai); } .ev.done { color: var(--ok); } .ev.error { color: var(--bad); } .ev.stopped { color: var(--warn); }
   kbd { font: 10.5px ui-monospace, Menlo, monospace; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; }
 </style>
@@ -87,17 +123,21 @@
   <button id="open">Open DXF</button><input id="pick" type="file" accept=".dxf" hidden />
   <button class="icon" id="undo" title="Undo (Ctrl/⌘ Z)">↶</button><button class="icon" id="redo" title="Redo (Ctrl/⌘ ⇧ Z)">↷</button>
   <span class="sp"></span>
-  <select id="filter" title="What a click or a box selects"><option value="all">Select: all</option><option value="structure">Structure only</option><option value="annotation">Annotation only</option></select>
-  <button id="fitall" title="Fit the sheet (F)">Fit</button>
-  <button class="icon" id="rotccw" title="Rotate the view 90° counter-clockwise (Shift R)">⟲</button><span class="muted" id="rotlbl" style="min-width:2.4em;text-align:center">0°</span><button class="icon" id="rotcw" title="Rotate the view 90° clockwise (R)">⟳</button>
-  <button id="project" title="Download the parametric project (JSON)">Project</button>
+  <button id="fitall" title="Fit the whole sheet (F)">Fit</button>
+  <button class="icon" id="rotcw" title="Turn the view 90° clockwise (R) — the drawing itself is not changed">↻ <span id="rotlbl">0°</span></button>
   <button class="primary" id="export" title="Download the edited DXF">Export DXF</button>
-  <button class="icon" id="theme" title="Light / dark">◐</button>
-  <a href="/classic" class="muted" style="margin-left:4px" title="The single-view page with the Gemini panel">classic</a>
+  <button class="icon" id="more" title="More">⋯</button>
+  <div id="menu">
+    <label>Clicks select <select id="filter"><option value="all">everything</option><option value="structure">structure only</option><option value="annotation">annotation only</option></select></label>
+    <button id="rotccw">↺ Turn the view counter-clockwise <span class="muted">⇧R</span></button>
+    <button id="project">Download the parametric project (.json)</button>
+    <button id="theme">Light / dark theme</button>
+    <a href="/classic">Old single-view page</a>
+  </div>
 </header>
 <main id="main">
   <aside>
-    <div class="tabs"><button data-tab="sheet" class="on">Sheet</button><button data-tab="params">Parameters</button><button data-tab="review">Review</button><button data-tab="ai">Gemini</button></div>
+    <div class="tabs"><button data-tab="sheet" class="on" title="The views found on the sheet">Views</button><button data-tab="params" title="The sizes you can change">Sizes</button><button data-tab="ai" title="Let Gemini name and link the sizes">Gemini</button></div>
     <div class="scroll" id="left"></div>
   </aside>
   <div id="stage">
@@ -604,76 +644,85 @@ function groupOf(i) { if (!S) return null; const o = P[(byEnt.get(i) || [])[0]];
 function afterSelect() { $("#selc").textContent = `${sel.size} selected`; draw(); renderRight(); }
 
 // ── sheet tree ───────────────────────────────────────────────────────────────
+// Folded sections keep the state the person gave them across re-renders (the panels are rebuilt on every change)
+const openFolds = new Set(), closedFolds = new Set();
+function fold(key, title, body, n, dflt) {
+  const open = openFolds.has(key) || (dflt && !closedFolds.has(key));
+  return `<details class="fold" data-fold="${esc(key)}" ${open ? "open" : ""}><summary>${title}${n != null ? `<span class="n">${n}</span>` : ""}</summary>${body}</details>`;
+}
+function wireFolds(root) {
+  root.querySelectorAll("details[data-fold]").forEach((d) => d.addEventListener("toggle", () => {
+    const k = d.dataset.fold; if (d.open) { openFolds.add(k); closedFolds.delete(k); } else { openFolds.delete(k); closedFolds.add(k); } }));
+}
 function renderLeft() {
   const L = $("#left");
   if (!S) { L.innerHTML = `<div class="note">No drawing open.</div>`; return; }
-  if (tab === "sheet") L.innerHTML = sheetTree(); else if (tab === "params") L.innerHTML = paramList(); else if (tab === "ai") L.innerHTML = geminiPanel(); else L.innerHTML = reviewList();
-  wireLeft();
+  const top = L.scrollTop, atEnd = top + L.clientHeight >= L.scrollHeight - 40;
+  L.innerHTML = tab === "params" ? paramList() : tab === "ai" ? geminiPanel() : sheetTree();
+  wireLeft(); wireFolds(L);
+  L.scrollTop = tab === "ai" && ai.running && atEnd ? L.scrollHeight : top;   // a running log follows unless scrolled up
 }
 function kindColor(g) { return g.kind === "view" ? css("--accent") : g.kind === "table" ? css("--ok") : g.kind === "title_block" ? css("--ai") : css("--warn"); }
 function sheetTree() {
   const views = S.groups.filter((g) => g.kind === "view"), other = S.groups.filter((g) => g.kind !== "view" && g.kind !== "label");
   const unitOf = (g) => S.units.find((u) => u.id === g.unit);
-  let h = `<div class="sec">Views <span class="n">${views.length}</span></div>`;
-  h += `<div class="note"><label><input type="checkbox" id="ov-views" ${$("#ov-views") && !$("#ov-views").checked ? "" : "checked"}> view boxes</label> · <label><input type="checkbox" id="ov-lock" ${$("#ov-lock") && $("#ov-lock").checked ? "checked" : ""}> pick only in the open view</label> · <label title="On the page only: lift labels off lines through them and stagger labels that collide; the DXF is not changed"><input type="checkbox" id="ov-tidy" ${tidyOn ? "checked" : ""}> tidy labels</label></div>`;
+  let h = "";
+  const qs = S.groups.filter((g) => g.questions && g.questions.length);
+  if (qs.length) {
+    h += `<div class="sec">Please check <span class="n">${qs.length}</span></div>`;
+    for (const g of qs) h += `<div class="row" data-view="${g.id}"><span class="nm"><b>${esc(g.name || g.id)}</b><br><span class="sub" style="color:var(--warn)">${esc(g.questions[0])}</span></span></div>`;
+  }
+  h += `<div class="sec">Views on the sheet <span class="n">${views.length}</span></div>`;
   for (const g of views) {
     const u = unitOf(g); const linked = u && u.views.length > 1;
-    h += `<div class="row ${activeView === g.id ? "on" : ""}" data-view="${g.id}" title="${esc((g.evidence || []).join(" · "))}">
-      <span class="k" style="background:${kindColor(g)}"></span><span class="nm"><b>${esc(g.id)}</b> ${esc(g.name || "(no title)")}<br><span class="sub">${esc(g.view_type)}${g.scale ? " · 1:" + g.scale : ""}${g.units_mm ? " · own scale" : ""} · ${g.entities} ent.</span></span>
-      ${linked ? `<span class="chip acc" title="drawn in projection with ${esc(u.views.filter((v) => v !== g.id).join(", "))}: one parametric unit">⇄ ${esc(u.views.filter((v) => v !== g.id).join(","))}</span>` : ""}
-      ${g.questions && g.questions.length ? `<span class="chip warn" title="${esc(g.questions.join("\n"))}">?</span>` : ""}
-      <span class="chip ${g.confidence >= 0.85 ? "ok" : g.confidence >= 0.6 ? "" : "warn"}">${Math.round(g.confidence * 100)}%</span></div>`;
+    h += `<div class="row ${activeView === g.id ? "on" : ""}" data-view="${g.id}" title="${esc(g.id)} · ${Math.round(g.confidence * 100)}% sure it is one view">
+      <span class="k" style="background:${kindColor(g)}"></span><span class="nm">${esc(g.name || "(no title)")}<br><span class="sub">${esc(g.view_type)}${g.scale ? " · 1:" + g.scale : ""} · ${esc(g.id)}</span></span>
+      ${linked ? `<span class="chip acc" title="drawn in line with ${esc(u.views.filter((v) => v !== g.id).join(", "))}: a change moves both">⇄ ${esc(u.views.filter((v) => v !== g.id).join(","))}</span>` : ""}
+      ${g.confidence < 0.85 ? `<span class="chip warn" title="not sure this is one view">?</span>` : ""}</div>`;
   }
-  h += `<div class="sec">Tables, notes, title block <span class="n">${other.length}</span></div>`;
-  for (const g of other) h += `<div class="row" data-view="${g.id}"><span class="k" style="background:${kindColor(g)}"></span><span class="nm">${esc(g.id)} ${esc(g.name || g.kind)}</span><span class="chip">${esc(g.kind.replace("_", " "))}</span></div>`;
-  const strong = S.links.filter((l) => l.strong), weak = S.links.filter((l) => !l.strong);
-  h += `<div class="sec">Projection links <span class="n">${S.links.length}</span></div>`;
-  if (!S.links.length) h += `<div class="note">No views share set-out lines: each view is its own unit.</div>`;
-  for (const l of [...strong, ...weak]) {
-    const off = S.unlinked.some((k) => k[0] === l.a && k[1] === l.b);
-    h += `<div class="row" title="${esc(l.why)}"><span class="nm">${esc(l.a)} ⇄ ${esc(l.b)} <span class="sub">${l.planes} ${l.axis === "x" ? "vertical" : "horizontal"} lines · ${Math.round(l.fraction * 100)}%</span></span>
-      <label class="chip"><input type="checkbox" data-link="${l.a},${l.b}" ${l.strong && !off ? "checked" : ""} ${l.strong ? "" : "disabled"}> linked</label></div>`;
+  let o = ""; for (const g of other) o += `<div class="row" data-view="${g.id}"><span class="k" style="background:${kindColor(g)}"></span><span class="nm">${esc(g.name || g.kind)}</span><span class="chip">${esc(g.kind.replace("_", " "))}</span></div>`;
+  h += fold("tables", "Tables, notes, title block", o || `<div class="note">none</div>`, other.length);
+  if (S.links.length) {
+    let l = `<div class="note">Views whose lines run straight across into each other are one model: a size changed in one moves the other.</div>`;
+    for (const k of [...S.links].sort((a, b) => b.strong - a.strong)) {
+      const off = S.unlinked.some((x) => x[0] === k.a && x[1] === k.b);
+      l += `<div class="row" title="${esc(k.why)}"><span class="nm">${esc(k.a)} ⇄ ${esc(k.b)} <span class="sub">${k.planes} shared ${k.axis === "x" ? "vertical" : "horizontal"} lines</span></span>
+        <label class="chip"><input type="checkbox" data-link="${k.a},${k.b}" ${k.strong && !off ? "checked" : ""} ${k.strong ? "" : "disabled"}> together</label></div>`;
+    }
+    h += fold("links", "Views drawn in line", l, S.links.length);
   }
-  const f = S.furniture; h += `<div class="sec">Sheet</div><div class="note">frame ${f.frame.length} · panel rules ${f.rules.length} · outside ${f.stray.length} · watermark ${f.watermark.length} · read in ${S.opened_s}s</div>`;
-  for (const n of S.notes) h += `<div class="note">${esc(n)}</div>`;
+  h += fold("display", "Display", `<div class="note"><label><input type="checkbox" id="ov-views" ${$("#ov-views") && !$("#ov-views").checked ? "" : "checked"}> outline the views</label></div>
+    <div class="note"><label><input type="checkbox" id="ov-lock" ${$("#ov-lock") && $("#ov-lock").checked ? "checked" : ""}> clicks pick only in the open view</label></div>
+    <div class="note"><label title="On the page only: labels lifted off lines through them and colliding labels set apart; the DXF is not changed"><input type="checkbox" id="ov-tidy" ${tidyOn ? "checked" : ""}> tidy overlapping labels</label></div>`);
+  const f = S.furniture;
+  h += fold("details", "Sheet details", `<div class="note">${S.entities.toLocaleString()} entities · read in ${S.opened_s}s · border ${f.frame.length} · panel rules ${f.rules.length} · watermark ${f.watermark.length} · outside the border ${f.stray.length}</div>`
+    + S.notes.map((n) => `<div class="note">${esc(n)}</div>`).join(""));
   return h;
 }
 function paramList() {
-  let h = `<div class="sec">Shared across views <span class="n">${S.shared.length}</span></div>`;
-  if (!S.shared.length) h += `<div class="note">Nothing shared yet. Open a view, pick a size and “share” it, or accept a proposal under Review.</div>`;
+  let h = `<div class="sec">Shared by several views <span class="n">${S.shared.length}</span></div>`;
+  if (!S.shared.length) h += `<div class="note">None yet. Use “Find sizes two views both state” below, or Gemini step 3.</div>`;
   for (const p of S.shared) {
     const st = p.bindings.map((b) => b.status); const ok = st.every((s) => s === "drives");
     h += `<div class="row ${focus && focus.kind === "param" && focus.id === p.name ? "on" : ""}" data-param="${esc(p.name)}"><span class="nm"><b>${esc(p.name)}</b><br><span class="sub">${p.bindings.map((b) => esc(b.views.join("+"))).join(" · ")}</span></span>
-      <input class="val" data-val="${esc(p.name)}" value="${fmt(S.values[p.name])}" /><span class="muted">${esc(p.unit)}</span><span class="chip ${ok ? "ok" : "warn"}">${ok ? "drives" : st.join("/")}</span></div>`;
+      <input class="val" data-val="${esc(p.name)}" value="${fmt(S.values[p.name])}" /><span class="muted">${esc(p.unit)}</span>${ok ? "" : `<span class="chip warn" title="${esc(st.join(", "))}">!</span>`}</div>`;
   }
+  h += fold("props", "Find sizes two views both state", `<div id="props"><div class="note"><button id="loadprops">Compare the views</button></div></div>`, null);
   const uid = activeUnit();
-  h += `<div class="sec">${uid ? "Unit " + esc(uid) : "Open a view"} <span class="n">${uid ? esc((S.units.find((u) => u.id === uid) || {}).views.join(" + ")) : ""}</span></div>`;
-  if (uid) {
-    const u = unitCache.get(uid);
-    if (!u) { h += `<div class="note">analysing…</div>`; if (!loading.has(uid)) { loading.add(uid); loadUnit(uid).then(() => { loading.delete(uid); renderLeft(); }); } }
-    else {
-      h += `<div class="note"><input type="text" id="psearch" placeholder="filter by name or value" style="width:100%"></div>`;
-      for (const p of u.params.filter((p) => !p.shared).slice(0, 400)) {
-        h += `<div class="row ${focus && focus.kind === "param" && focus.id === p.key ? "on" : ""}" data-param="${esc(p.key)}" data-search="${esc((p.name + " " + p.label + " " + Math.round(p.value)).toLowerCase())}">
-          <span class="nm">${p.source === "ai" ? "<b>" + esc(p.name) + "</b>" : esc(p.name)}<br><span class="sub">${esc(p.label && p.label !== p.name ? p.label + " · " : "")}${p.entities} ent. · ${esc(p.views.join(","))}</span></span>
-          <input class="val" data-val="${esc(p.key)}" value="${fmt(p.value, p.unit)}" /><span class="muted">${esc(p.unit)}</span>${p.source === "ai" ? '<span class="chip ai">named</span>' : ""}</div>`;
-      }
-    }
+  const su = uid && S.units.find((u) => u.id === uid);
+  h += `<div class="sec">${su ? "Sizes in " + esc(su.views.map((v) => (S.groups.find((g) => g.id === v) || {}).name || v).join(" + ")) : "Sizes"}</div>`;
+  if (!uid) return h + `<div class="hint">Open a view (click it in <b>Views</b> or double-click it on the sheet) to see its sizes. Type a new value and press <b>Enter</b> to preview it; click a size to see what it moves.</div>`;
+  const u = unitCache.get(uid);
+  if (!u) { if (!loading.has(uid)) { loading.add(uid); loadUnit(uid).then(() => { loading.delete(uid); renderLeft(); }); } return h + `<div class="note">reading the view…</div>`; }
+  h += `<div class="note"><input type="text" id="psearch" placeholder="filter by name, meaning or value" style="width:100%"></div>`;
+  const ps = u.params.filter((p) => !p.shared).sort((a, b) => (b.source === "ai") - (a.source === "ai"));
+  for (const p of ps.slice(0, 400)) {
+    h += `<div class="row ${focus && focus.kind === "param" && focus.id === p.key ? "on" : ""}" data-param="${esc(p.key)}" data-search="${esc((p.name + " " + p.label + " " + Math.round(p.value)).toLowerCase())}" title="${esc(p.label)}">
+      <span class="nm wrap">${p.source === "ai" ? "<b>" + esc(p.name) + "</b>" : esc(p.name)}<span class="sub">${esc(p.label && p.label !== p.name ? p.label : "")}</span></span>
+      <input class="val" data-val="${esc(p.key)}" value="${fmt(p.value, p.unit)}" /><span class="muted">${esc(p.unit)}</span></div>`;
   }
-  return h;
-}
-function reviewList() {
-  let h = "";
-  const qs = S.groups.filter((g) => g.questions && g.questions.length);
-  h += `<div class="sec">Views to confirm <span class="n">${qs.length}</span></div>`;
-  for (const g of qs) h += `<div class="row" data-view="${g.id}"><span class="nm"><b>${esc(g.id)}</b> ${esc(g.name || "")}<br><span class="sub">${esc(g.questions.join(" · "))}</span></span></div>`;
-  h += `<div class="sec">Sizes two views both state <span class="n" id="propn"></span></div><div id="props"><div class="note"><button id="loadprops">Find shared sizes</button> <span class="muted">(analyses the views)</span></div></div>`;
-  const uid = activeUnit(), u = uid && unitCache.get(uid);
-  if (u) {
-    const f = u.findings.filter((x) => x.severity !== "info");
-    h += `<div class="sec">Checks in ${esc(uid)} <span class="n">${f.length}</span></div>`;
-    for (const x of f.slice(0, 60)) h += `<div class="note ${x.severity === "error" ? "bad" : "warn"}">${esc(x.code)} ${esc(x.item)}: ${esc(x.message)}</div>`;
-  }
+  const f = u.findings.filter((x) => x.severity !== "info");
+  if (f.length) h += fold("checks", "Engine checks on this view", f.slice(0, 60).map((x) => `<div class="note ${x.severity === "error" ? "bad" : "warn"}">${esc(x.item)}: ${esc(x.message)}</div>`).join(""), f.length);
   return h;
 }
 function activeUnit() { const v = activeView || (focus && focus.kind === "view" ? focus.id : null); if (!v) return null; const g = S.groups.find((x) => x.id === v); return g && g.unit; }
@@ -757,12 +806,16 @@ async function edit(op, body, done) {
 function renderRight() {
   const R = $("#right");
   if (!S) { R.innerHTML = ""; return; }
-  if (focus && focus.kind === "param") { R.innerHTML = paramInspector(); wireParam(); return; }
-  if (focus && focus.kind === "view") { R.innerHTML = viewInspector(focus.id); wireView(focus.id); return; }
+  if (focus && focus.kind === "param") { R.innerHTML = paramInspector(); wireParam(); wireFolds(R); return; }
+  if (focus && focus.kind === "view") { R.innerHTML = viewInspector(focus.id); wireView(focus.id); wireFolds(R); return; }
   if (sel.size) { R.innerHTML = selInspector(); return; }
-  R.innerHTML = `<div class="insp"><h3>${esc(S.file)}</h3><div class="kv"><div>entities</div><div>${S.entities.toLocaleString()}</div><div>views</div><div>${S.groups.filter((g) => g.kind === "view").length}</div>
-    <div>units</div><div>${S.units.length} (${S.units.filter((u) => u.views.length > 1).length} linked)</div><div>shared</div><div>${S.shared.length}</div><div>drawing unit</div><div>${S.units_mm} mm</div></div>
-    <div class="muted">Click a view in the list (or double-click it on the sheet) to open it. Drag ⇢ for a window, ⇠ for a crossing selection. <kbd>F</kbd> fits, <kbd>Esc</kbd> clears.</div></div>`;
+  const nv = S.groups.filter((g) => g.kind === "view").length;
+  R.innerHTML = `<div class="insp"><h3>${esc(S.file)}</h3><div class="muted">${nv} views · ${S.shared.length} sizes shared across views</div>
+    <div class="hint"><b>1 · Open a view</b> — click it in <b>Views</b>, or double-click it on the sheet.</div>
+    <div class="hint"><b>2 · Change a size</b> — in <b>Sizes</b>, type a value and press Enter: the change is previewed in pink in every view it moves; Enter again applies it, Esc cancels.</div>
+    <div class="hint"><b>3 · Export DXF</b> — the edited drawing, dimensions and notes updated.</div>
+    ${fold("keys", "Mouse and keys", `<div class="note">wheel zoom · middle / right / space-drag pan · drag → window select, drag ← crossing select · Shift adds, Ctrl/⌘ removes · <kbd>F</kbd> fit · <kbd>R</kbd> turn view · <kbd>Esc</kbd> clear · <kbd>Ctrl/⌘ Z</kbd> undo</div>`)}</div>`;
+  wireFolds(R);
 }
 function selInspector() {
   const ents = [...sel]; const one = ents.length === 1 ? ents[0] : null;
@@ -780,28 +833,29 @@ function selInspector() {
 function viewInspector(gid) {
   const g = S.groups.find((x) => x.id === gid); if (!g) return "";
   const u = g.unit && S.units.find((x) => x.id === g.unit);
-  let h = `<div class="insp"><h3>${esc(g.id)} · ${esc(g.name || g.kind)}</h3>
-    <div class="kv"><div>kind</div><div><select id="vkind">${["view", "table", "notes", "title_block", "label"].map((k) => `<option ${k === g.kind ? "selected" : ""}>${k}</option>`).join("")}</select></div>
-    <div>type</div><div><select id="vtype">${["plan", "section", "elevation", "detail", "arrangement", "composite", "unknown"].map((k) => `<option ${k === g.view_type ? "selected" : ""}>${k}</option>`).join("")}</select></div>
-    <div>name</div><div><input type="text" id="vname" value="${esc(g.name)}" style="width:100%"></div>
-    <div>scale</div><div>${g.scale ? "1:" + g.scale : "—"}${g.units_mm ? ` · its own unit ${fmt(g.units_mm)} mm` : ""}</div><div>entities</div><div>${g.entities}</div>
-    <div>confidence</div><div>${Math.round(g.confidence * 100)}%</div>${u ? `<div>unit</div><div>${esc(u.id)}${u.views.length > 1 ? " (with " + esc(u.views.filter((v) => v !== g.id).join(", ")) + ")" : ""}</div>` : ""}</div>`;
-  for (const q of g.questions || []) h += `<div class="note warn" style="padding:0">? ${esc(q)}</div>`;
-  for (const e of g.evidence || []) h += `<div class="note" style="padding:0">${esc(e)}</div>`;
-  h += `<div class="bar"><button id="vsave">Save name / type</button><button id="vfit">Fit</button><button id="vsplit" title="Drag a box on the sheet around what is a separate view">Split by box…</button></div>
-    <div class="bar"><input type="text" id="vmerge" placeholder="merge with… e.g. V05,V06" style="flex:1"><button id="vmergebtn">Merge</button></div>`;
+  const others = u ? u.views.filter((v) => v !== g.id) : [];
+  let h = `<div class="insp"><h3>${esc(g.name || g.kind)}</h3>
+    <div class="muted">${esc(g.id)} · ${esc(g.kind === "view" ? g.view_type : g.kind.replace("_", " "))}${g.scale ? " · 1:" + g.scale : ""} · ${g.entities} entities${others.length ? ` · moves together with ${esc(others.join(", "))}` : ""}</div>`;
+  for (const q of g.questions || []) h += `<div class="note warn" style="padding:0">${esc(q)}</div>`;
   if (u && u.dropped) h += `<div class="note warn" style="padding:0">${esc(u.dropped)}</div>`;
+  h += `<div class="bar"><button id="vfit">Fit</button>${u ? `<button class="primary" id="vsizes">Its sizes →</button>` : ""}</div>`;
+  h += fold("vedit", "Edit this view", `<div class="kv" style="padding:4px 10px"><div>name</div><div><input type="text" id="vname" value="${esc(g.name)}" style="width:100%"></div>
+    <div>type</div><div><select id="vtype">${["plan", "section", "elevation", "detail", "arrangement", "composite", "unknown"].map((k) => `<option ${k === g.view_type ? "selected" : ""}>${k}</option>`).join("")}</select></div>
+    <div>it is a</div><div><select id="vkind">${["view", "table", "notes", "title_block", "label"].map((k) => `<option ${k === g.kind ? "selected" : ""}>${k.replace("_", " ")}</option>`).join("")}</select></div></div>
+    <div class="bar" style="padding:2px 10px"><button id="vsave">Save</button><button id="vsplit" title="Drag a box on the sheet around the part that is a separate view">Split off by a box…</button></div>
+    <div class="bar" style="padding:4px 10px"><input type="text" id="vmerge" placeholder="merge with… e.g. V05, V06" style="flex:1"><button id="vmergebtn">Merge</button></div>`);
+  if ((g.evidence || []).length) h += fold("vwhy", "Why this was found as a view", g.evidence.map((e) => `<div class="note">${esc(e)}</div>`).join("") + `<div class="note">${Math.round(g.confidence * 100)}% sure</div>`);
   const uc = u && unitCache.get(u.id);
-  if (uc) h += `<div class="muted">${uc.params.length} values in this unit (${uc.params.filter((p) => p.source === "ai").length} named) · ${uc.candidates.length} candidate sizes — see Parameters</div>
-     <div class="grp"><div class="muted" style="margin-bottom:4px">Share a size across views</div><div class="bar"><select id="cand" style="flex:1">${uc.candidates.filter((c) => c.value >= 1).slice(0, 120).map((c) => `<option value="${c.id}">${fmt(c.value)} · ${esc(c.kind)} ${esc(c.axes.join(""))} · ${esc(c.name)}${c.evidence.includes("dimension") ? " · dimensioned" : ""}</option>`).join("")}</select></div>
-     <div class="bar"><input type="text" id="sname" placeholder="PascalCase name, e.g. ClearSpan" style="flex:1"><button id="sharebtn">Name it</button></div>
-     <div class="muted">Named here, it drives this unit's lines; add other views' sizes from the Review tab's proposals.</div></div>`;
+  if (uc) h += fold("vnamesize", "Name a size here (advanced)", `<div class="note">Pick a size measured in this view and give it a name: it then drives its lines, and other views' sizes can be linked to it.</div>
+     <div class="bar" style="padding:2px 10px"><select id="cand" style="flex:1;min-width:0">${uc.candidates.filter((c) => c.value >= 1).slice(0, 120).map((c) => `<option value="${c.id}">${fmt(c.value)} mm · ${c.axes.join("") === "x" ? "horizontal" : c.axes.join("") === "y" ? "vertical" : esc(c.axes.join(""))} ${esc(c.kind)}${c.evidence.includes("dimension") ? " · dimensioned" : ""}</option>`).join("")}</select></div>
+     <div class="bar" style="padding:4px 10px"><input type="text" id="sname" placeholder="a name, e.g. ClearSpan" style="flex:1"><button id="sharebtn">Name it</button></div>`);
   return h + `</div>`;
 }
 function wireView(gid) {
   const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
   on("#vsave", () => edit("view", { id: gid, name: $("#vname").value, view_type: $("#vtype").value, kind: $("#vkind").value }));
   on("#vfit", () => fit(viewBox(gid), 0.1));
+  on("#vsizes", () => { tab = "params"; setTab(); });
   on("#vsplit", () => { mode = "split"; say("drag a box around the part that is a view of its own (Esc cancels)"); });
   on("#vmergebtn", () => { const ids = [gid, ...$("#vmerge").value.split(/[ ,]+/).filter(Boolean).map((s) => s.toUpperCase())]; edit("merge", { ids }); });
   on("#sharebtn", () => { const g = S.groups.find((x) => x.id === gid); const name = $("#sname").value.trim(); if (!name) return say("give it a PascalCase name", "bad");
@@ -827,7 +881,8 @@ function paramInspector() {
   const imp = info.impact;
   h += `<div class="sec" style="padding:0">What it moves (measured)</div><div class="kv"><div>views</div><div>${imp.views.map((v) => `<span class="chip acc">${esc(v)}</span>`).join(" ") || "—"}</div>
     <div>entities</div><div>${imp.entities}</div><div>stays</div><div class="muted">${imp.stays.length} other view(s) unchanged</div></div>`;
-  for (const [u, parts] of Object.entries(imp.parts || {})) if (parts.length) h += `<div class="muted">${esc(u)} parts: ${parts.map(esc).join(", ")}</div>`;
+  const parts = Object.entries(imp.parts || {}).filter(([, ps]) => ps.length);
+  if (parts.length) h += fold("pparts", "Parts it moves", parts.map(([u, ps]) => `<div class="note">${esc(u)}: ${ps.map(esc).join(", ")}</div>`).join(""), parts.reduce((n, [, ps]) => n + ps.length, 0));
   h += `<div class="sec" style="padding:0">How it grows</div>`;
   for (const g of info.growth) h += `<div class="bar"><span class="chip">${esc(g.unit || "")}</span><span>${esc(g.why)}</span>${g.unit ? `<select data-anchor="${esc(g.unit)}">${["start", "end", "centre"].map((m) => `<option value="${m}" ${g.mode === m ? "selected" : ""}>${m === "start" ? "start stays" : m === "end" ? "end stays" : "about centre"}</option>`).join("")}${["start", "end", "centre"].includes(g.mode) ? "" : `<option selected disabled>${esc(g.mode)}</option>`}</select>` : ""}</div>`;
   if (shared) { h += `<div class="sec" style="padding:0">Bound in</div>`;
@@ -852,7 +907,7 @@ function wireParam() {
 }
 async function loadProposals() {
   const res = await guard(() => api("/api/sheet/proposals"), "Comparing the views…"); if (!res) return;
-  $("#propn").textContent = res.proposals.length;
+  const pn = $("#propn"); if (pn) pn.textContent = res.proposals.length;
   $("#props").innerHTML = res.proposals.length ? res.proposals.map((p, k) => `<div class="grp"><b>${fmt(p.value)}</b> mm · ${esc(p.views[0].join("+"))} ↔ ${esc(p.views[1].join("+"))}
      <div class="muted">${p.evidence.map(esc).join("<br>")}</div><div class="bar"><input type="text" placeholder="PascalCase name" data-pn="${k}" style="flex:1"><button data-pk="${k}">Share</button></div></div>`).join("")
     : `<div class="note">No size is stated by two separate views.</div>`;
@@ -862,32 +917,90 @@ async function loadProposals() {
 
 // ── Gemini ───────────────────────────────────────────────────────────────────
 let ai = { running: false, events: [], next: 0, result: null, error: null, kind: null }, aiDraft = "", aiPoll = 0;
+const md = (t) => esc(t).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\n+/g, "<br>");
+const dur = (s) => s == null ? "" : s < 60 ? `${s.toFixed(s < 10 ? 1 : 0)} s` : `${Math.floor(s / 60)} min ${String(Math.round(s % 60)).padStart(2, "0")} s`;
+function aiSteps(evs) {   // the event stream as steps: one per model call (its retries folded in), with what it thought and did
+  const steps = []; let cur = null;
+  const start = (e) => { cur = { label: e.label || "call", model: e.model, thinking: e.thinking, cache: e.prompt_cache, cached: e.cached, t0: e.t, t1: e.t, thoughts: [], tools: [], notes: [] }; steps.push(cur); };
+  for (const e of evs) {
+    if (e.kind === "call") { if (cur && cur.label === e.label) { if (e.model && e.model !== cur.model) cur.notes.push({ c: "warn", t: `switched to ${e.model}` }); cur.model = e.model || cur.model; cur.cache = e.prompt_cache || cur.cache; } else start(e); continue; }
+    if (!cur) start({ label: "start", t: e.t });
+    if (e.kind === "thought") cur.thoughts.push(e.text);
+    else if (e.kind === "tool") cur.tools.push(e);
+    else if (e.kind === "retry") cur.notes.push({ c: "warn", t: `retrying — ${e.why}` });
+    else if (e.kind === "status") cur.status = e;
+    else if (e.kind === "round") cur.notes.push({ c: e.rejected ? "warn" : "ok", t: `checked by the engine: ${e.accepted} accepted, ${e.rejected} refused` });
+    else cur.notes.push({ c: e.kind === "stopped" ? "warn" : "", t: e.text || e.kind });
+    cur.t1 = e.t;
+  }
+  return steps;
+}
+const TOOL_WORDS = { define_parts: "named parts", define_parameters: "named sizes", set_formulas: "wrote formulas", set_relations: "related sizes", finish: "finished",
+  inspect_region: "looked at a region", inspect_line: "looked at a line", search: "searched", measure: "measured", view: "looked at the picture" };
+function stepHtml(st, k, last, now) {
+  const live = last && ai.running, key = `step-${k}`;
+  const open = openFolds.has(key) || (live && !closedFolds.has(key));
+  const marks = st.tools.map((t) => `<span style="color:var(--${t.ok ? "ok" : "bad"})">${t.ok ? "✓" : "✗"}</span>`).join("");
+  const took = (last ? (ai.running ? now : st.t1) : st.next) - st.t0;
+  let b = `<div class="meta">${esc(st.model || "")}${st.thinking ? " @" + esc(st.thinking) : ""}${st.cache ? " · prompt cache " + esc(st.cache) : ""}${st.cached ? " · answer from cache (free)" : ""}</div>`;
+  if (st.thoughts.length) { const txt = st.thoughts.join("\n\n"); const words = txt.split(/\s+/).length;
+    b += `<details class="think" data-fold="${key}-t" ${openFolds.has(key + "-t") ? "open" : ""}><summary>Thinking · ${words} words</summary><div class="txt">${md(txt)}</div></details>`; }
+  for (const t of st.tools) b += `<div class="tool ${t.ok ? "ok" : "no"}"><span class="m">${t.ok ? "✓" : "✗"}</span><span><b>${esc(TOOL_WORDS[t.name] || t.name)}</b> <code>${esc(t.args || "")}</code>${t.why ? `<div class="why">${esc(t.why)}</div>` : ""}</span></div>`;
+  for (const n of st.notes) b += `<div class="note ${n.c}" style="padding:0">${esc(n.t)}</div>`;
+  if (st.status) b += `<div class="meta">so far: ${st.status.parts} parts · ${st.status.parameters} named sizes · ${st.status.open_problems} open problems${st.status.steps_left != null ? ` · ${st.status.steps_left} steps left` : ""}</div>`;
+  if (live && !st.thoughts.length && !st.tools.length) b += `<div class="meta">waiting for Gemini…</div>`;
+  return `<details class="step ${live ? "live" : ""}" data-fold="${key}" ${open ? "open" : ""}><summary><span class="lbl">${esc(st.label)}</span><span class="marks">${marks}</span>${st.thoughts.length ? `<span class="chip ai">thinking</span>` : ""}<span class="t">${dur(took)}</span></summary><div class="sbody">${b}</div></details>`;
+}
+function plainError(e) {
+  if (/timed out|no reply|Stalled|DEADLINE|504/i.test(e)) return "Vertex stopped answering (its shared capacity was busy) and the retries did not get through. Nothing is lost: what was checked and applied stays — run it again.";
+  if (/429|RESOURCE_EXHAUSTED|capacity/i.test(e)) return "Vertex is out of capacity for this model right now. Try again in a few minutes.";
+  if (/credential|auth|permission|403/i.test(e)) return "Vertex refused the credentials. Run `gcloud auth application-default login`.";
+  return null;
+}
 function geminiPanel() {
   const uid = activeUnit(); const u = uid && S.units.find((x) => x.id === uid);
-  let h = `<div class="sec">Gemini on this sheet</div>
-    <div class="note">Every run is billed. The engine checks all it proposes: ids, values, lines; what does not hold is refused and said, what holds can be undone.</div>
-    <div class="note"><textarea id="ai-instr" rows="3" style="width:100%" placeholder="Your instructions, e.g. the left half is the existing structure: keep it as drawn">${esc(aiDraft)}</textarea></div>
-    <div class="note"><b>1</b> Name, type and relate the views</div><div class="bar" style="padding:0 10px 6px"><button id="ai-views" ${ai.running ? "disabled" : ""}>Understand the views</button></div>
-    <div class="note"><b>2</b> Parametrize one unit (the agent, small checked edits)</div><div class="bar" style="padding:0 10px 6px"><button id="ai-unit" ${ai.running || !u ? "disabled" : ""}>${u ? "Parametrize " + esc(u.views.join(" + ")) : "open a view first"}</button></div>
-    <div class="note"><b>3</b> Name the sizes separate views share</div><div class="bar" style="padding:0 10px 6px"><button id="ai-shared" ${ai.running ? "disabled" : ""}>Link sizes across views</button></div>
-    ${ai.running ? `<div class="bar" style="padding:0 10px"><button class="stop" id="ai-stop">■ Stop Gemini</button><span class="muted">${esc(ai.kind || "")} running…</span></div>` : ""}`;
-  if (ai.result) {
-    const r = ai.result;
-    h += `<div class="sec">Result</div>`;
-    for (const a of r.applied || []) h += `<div class="note ok">✓ ${esc(a)}</div>`;
-    for (const a of r.refused || []) h += `<div class="note bad">✗ ${esc(a)}</div>`;
-    for (const q of r.questions || []) h += `<div class="note warn">? ${esc(q)}</div>`;
-    if (r.named != null) h += `<div class="note ok">✓ ${r.named} named values in ${esc(r.unit)}${r.rejected && Object.keys(r.rejected).length ? " · refused: " + esc(JSON.stringify(r.rejected)) : ""}</div>`;
-    if (r.usage && r.usage.model) h += `<div class="note">${esc(r.usage.model)} @${esc(r.usage.thinking)} · in ${r.usage.input_tokens || 0} · out ${(r.usage.output_tokens || 0) + (r.usage.thinking_tokens || 0)} tokens${r.usage.cached ? " · from cache (free)" : ""}</div>`;
+  const uname = u ? u.views.map((v) => (S.groups.find((g) => g.id === v) || {}).name || v).join(" + ") : "";
+  const evs = ai.events, steps = aiSteps(evs), now = evs.length ? evs[evs.length - 1].t : 0;
+  const KIND = { views: "Understanding the views", unit: "Parametrizing " + (ai.unitName || ""), shared: "Linking sizes across views" };
+  let h = "";
+  if (ai.running) {
+    const st = [...steps].reverse().find((x) => x.status);
+    h += `<div class="status run"><div class="top"><span class="dot"></span>${esc(KIND[ai.kind] || "Gemini is working")}<span class="muted" style="margin-left:auto;font-weight:400">${dur(now)}</span></div>
+      <div class="muted">step ${steps.filter((x) => /^step/.test(x.label)).length || steps.length}${st && st.status.steps_left != null ? ` · ${st.status.steps_left} left` : ""} · every edit is checked by the engine before it is kept</div>
+      <div class="bar"><button class="stop" id="ai-stop">■ Stop</button></div></div>`;
+  } else if (ai.error) {
+    const pe = plainError(ai.error);
+    h += `<div class="status fail"><div class="top" style="color:var(--bad)">Gemini stopped</div>${pe ? `<div>${esc(pe)}</div>` : ""}<div class="muted" style="font-size:11px">${esc(ai.error)}</div></div>`;
+  } else if (ai.result) {
+    const r = ai.result; let b = "";
+    for (const a of r.applied || []) b += `<div class="note ok" style="padding:0">✓ ${esc(a)}</div>`;
+    for (const a of r.refused || []) b += `<div class="note bad" style="padding:0">✗ ${esc(a)}</div>`;
+    for (const q of r.questions || []) b += `<div class="note warn" style="padding:0">? ${esc(q)}</div>`;
+    if (r.named != null) b += `<div class="note ok" style="padding:0">✓ ${r.named} sizes named in ${esc(r.unit)}${r.rejected && Object.keys(r.rejected).length ? ` · ${Object.keys(r.rejected).length} refused` : ""}</div>`;
+    if (r.usage && r.usage.model) b += `<div class="muted" style="font-size:11px">${esc(r.usage.model)} @${esc(r.usage.thinking)} · ${(r.usage.input_tokens || 0).toLocaleString()} in · ${((r.usage.output_tokens || 0) + (r.usage.thinking_tokens || 0)).toLocaleString()} out${r.usage.cached ? " · from cache (free)" : ""}</div>`;
+    h += `<div class="status done"><div class="top" style="color:var(--ok)">Done — review it on the sheet <span class="muted" style="margin-left:auto;font-weight:400">undo takes it back</span></div>${b}</div>`;
   }
-  if (ai.error) h += `<div class="note bad">${esc(ai.error)}</div>`;
-  h += `<div class="sec">Progress <span class="n">${ai.events.length}</span></div>`;
-  for (const e of ai.events.slice(-120)) h += `<div class="ev ${esc(e.kind)}">${e.t != null ? `<span class="muted">${e.t}s</span> ` : ""}${e.kind === "call" ? `${esc(e.label || "")} · ${esc(e.model || "")} @${esc(e.thinking || "")}${e.prompt_cache ? " · cache " + esc(e.prompt_cache) : ""}` : esc(e.text || e.kind)}</div>`;
+  const off = ai.running ? "disabled" : "";
+  h += `<div class="sec">What Gemini can do</div>
+    <div class="stage3"><span class="num">1</span><span class="what">Understand the views</span><button id="ai-views" ${off}>Run</button><span class="why">names, types, and which views show the same part</span></div>
+    <div class="stage3"><span class="num">2</span><span class="what">Parametrize ${u ? esc(uname) : "a view"}</span><button id="ai-unit" ${off || !u ? "disabled" : ""}>Run</button><span class="why">${u ? "names its sizes and writes their formulas, in small checked edits" : "open a view first"}</span></div>
+    <div class="stage3"><span class="num">3</span><span class="what">Link sizes across views</span><button id="ai-shared" ${off}>Run</button><span class="why">one name for a size two views both state</span></div>`;
+  h += fold("ai-instr", "Instructions for Gemini (optional)", `<div class="note"><textarea id="ai-instr" rows="3" style="width:100%" placeholder="e.g. the left half is the existing structure: keep it as drawn">${esc(aiDraft)}</textarea></div>`, aiDraft ? "✎" : null);
+  h += `<div class="note" style="font-size:11px">Each run is billed. Nothing Gemini proposes is kept unless the engine checks it; all of it can be undone.</div>`;
+  if (steps.length) {
+    h += `<div class="sec">Run log <span class="n">${steps.length} step${steps.length > 1 ? "s" : ""}</span></div>`;
+    steps.forEach((st, k) => { st.next = k + 1 < steps.length ? steps[k + 1].t0 : st.t1; });
+    h += steps.map((st, k) => stepHtml(st, k, k === steps.length - 1, now)).join("");
+  }
   return h;
 }
 function wireGemini() {
   const t = $("#ai-instr"); if (t) t.addEventListener("input", () => { aiDraft = t.value; });
-  const go = (kind, body) => guard(async () => { await api(`/api/sheet/ai/${kind}`, body); ai = { running: true, events: [], next: 0, result: null, error: null, kind }; renderLeft(); pollAI(); });
+  const go = (kind, body) => guard(async () => { await api(`/api/sheet/ai/${kind}`, body);
+    const su = S.units.find((x) => x.id === body.unit);
+    ai = { running: true, events: [], next: 0, result: null, error: null, kind, unitName: su ? su.views.map((v) => (S.groups.find((g) => g.id === v) || {}).name || v).join(" + ") : "" };
+    for (const k of [...openFolds, ...closedFolds]) if (k.startsWith("step-")) { openFolds.delete(k); closedFolds.delete(k); }
+    renderLeft(); pollAI(); });
   const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
   on("#ai-views", () => go("views", {}));
   on("#ai-unit", () => go("unit", { unit: activeUnit(), instructions: aiDraft }));
@@ -901,7 +1014,7 @@ function pollAI() {
     ai.events.push(...r.events); ai.next = r.next; ai.running = r.running; ai.error = r.error; ai.kind = r.kind;
     if (!r.running) { ai.result = r.result; S = await api("/api/sheet"); unitCache.clear(); renderRight(); draw();
       say(r.error ? "Gemini: " + r.error : "Gemini finished — review what it applied (undo takes it back)", r.error ? "bad" : "ok"); }
-    if (tab === "ai") renderLeft();
+    if (tab === "ai" && (r.events.length || !r.running)) renderLeft();   // rebuilt only on news: folds and scroll stay put
     if (r.running) pollAI();
   }, 800);
 }
@@ -938,7 +1051,9 @@ async function download(url, fallback) {
 }
 $("#export").onclick = () => download("/api/sheet/export", "sheet.dxf");
 $("#project").onclick = () => download("/api/sheet/project", "sheet.autoparam.json");
-$("#rotcw").addEventListener("click", () => rotateView(-1)); $("#rotccw").addEventListener("click", () => rotateView(1));
+$("#rotcw").addEventListener("click", (e) => rotateView(e.shiftKey ? 1 : -1)); $("#rotccw").addEventListener("click", () => rotateView(1));
+$("#more").addEventListener("click", (e) => { e.stopPropagation(); $("#menu").classList.toggle("on"); });
+document.addEventListener("click", (e) => { if (!$("#menu").contains(e.target)) $("#menu").classList.remove("on"); });
 window.__ws = { tidyAll, get labels() { return P.filter((o) => o.k === "t" && o.off).length; }, rotateView, toScreen, toWorld,  get prims() { return P.length; }, get frameMs() { return lastFrameMs; }, fit, draw, pick, boxSelect, cam, sheet: () => sheetBox(), render: () => { render(); return lastFrameMs; } };
 loadSheet().catch((e) => say(e.message, "bad"));
 </script>

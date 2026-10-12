@@ -3,13 +3,14 @@ is one shared parameter, every change is checked on the regenerated sheet and co
 
 from __future__ import annotations
 
+import copy
 from pathlib import Path
 
 import ezdxf
 import pytest
 from test_sheet import FIXTURES, built_sheet, rect, text
 
-from dxf_autoparam.crossview import SheetError, SheetModel
+from dxf_autoparam.crossview import EMPTY_ANSWER, SheetError, SheetModel
 
 
 @pytest.fixture
@@ -199,3 +200,79 @@ def test_how_a_value_grows_is_measured_and_can_be_chosen(sheet):
         u = sheet.unit(uid)
         assert abs(sheet.unit(uid).prog.datum_values({"ClearSpan": 13000})[fixed] - u.an.datums[fixed].value) < 1e-9
     assert sheet.undo()  # the choice is undone like any other edit
+
+
+def mini_gad(path) -> str:
+    """A very small GAD: a one-cell box in section, its plan drawn in line below it (the same four wall faces), and a
+    separate wall detail that states the wall again. The wall dimensions are taken along the slab beneath the walls,
+    so the inner face's dimension point lies on that face's line but on no drawn vertex."""
+    doc = ezdxf.new("R2010", setup=True)
+    doc.header["$INSUNITS"] = 4
+    doc.dimstyles.new("GAD50", dxfattribs={"dimtxt": 2.5, "dimscale": 50, "dimgap": 0.6, "dimtad": 1})
+    msp = doc.modelspace()
+
+    def box(x0, y0, x1, y1):
+        msp.add_lwpolyline([(x0, y0), (x1, y0), (x1, y1), (x0, y1)], close=True)
+
+    def dim(p1, p2, base, angle=0):
+        msp.add_linear_dim(base=base, p1=p1, p2=p2, angle=angle, dimstyle="GAD50", dxfattribs={"layer": "DIM"}).render()
+
+    def title(s, x, y):
+        msp.add_text(s, height=175, dxfattribs={"layer": "TEXT", "insert": (x, y), "halign": 1, "align_point": (x, y)})
+
+    box(0, 0, 3000, 2600)
+    box(300, 300, 2700, 2300)
+    dim((300, 1300), (2700, 1300), (0, 1300))
+    dim((0, 0), (300, 0), (0, -350))
+    dim((2700, 0), (3000, 0), (0, -350))
+    dim((3000, 0), (3000, 2600), (3500, 0), 90)
+    title("CROSS SECTION A-A", 1500, -900)
+    box(0, -6400, 3000, -2400)
+    for x in (300, 2700):
+        msp.add_line((x, -6400), (x, -2400), dxfattribs={"layer": "HIDDEN"})
+    dim((0, -6400), (0, -2400), (-500, 0), 90)
+    dim((0, -6400), (3000, -6400), (0, -6800))
+    title("PLAN", 1500, -7400)
+    box(7000, -3000, 7300, -800)
+    msp.add_line((6700, -3000), (7600, -3000))
+    dim((7000, -800), (7300, -800), (0, -500))
+    title("DETAIL OF SIDE WALL", 7150, -3600)
+    doc.saveas(path)
+    return str(path)
+
+
+def dim_labels(sm, sr) -> list[str]:
+    from dxf_autoparam.display import primitives
+
+    return [next(p["text"] for p in primitives(it, sr.reg.pts.get(it.index, it.pts), None, None, sm.dr.units_mm) if p["k"] == "t")
+            for it in sm.dr.items if it.dxftype == "DIMENSION"]
+
+
+def test_a_size_a_unit_already_named_is_linked_across_views_as_is(tmp_path):
+    """Parametrized first, linked after (the Gemini stages in order): the shared name is the very size the unit already
+    calls by that name — it is bound, not refused as a namesake; a namesake of another size is still refused."""
+    sm = SheetModel.open(mini_gad(tmp_path / "mini.dxf"))
+    uid = next(k for k, u in sm.units.items() if len(u.views) == 2)
+    other = next(k for k in sm.units if k != uid)
+    answer = {**copy.deepcopy(EMPTY_ANSWER), "parameters": [
+        {"name": "OuterWall", "label": "Outer wall", "component": "", "kind": "length", "candidate": "c0", "value": 300.0},
+        {"name": "ClearSpan", "label": "Clear span", "component": "", "kind": "length", "candidate": "c3", "value": 2400.0}]}
+    sm.set_answer(uid, answer)
+    assert sm.unit(uid).prog.params["OuterWall"].value == pytest.approx(300)
+    with pytest.raises(SheetError, match="already names something else"):
+        sm.share("ClearSpan", [(uid, "c0"), (other, "c0")])   # the wall is not the clear span
+    p = sm.share("OuterWall", [(uid, "c0"), (other, "c0")])
+    assert [b.status for b in p.bindings] == ["drives", "drives"]
+    sr = sm.preview({"OuterWall": 400.0})
+    assert sr.ok and set(sr.by_view) >= {"V01", "V02", "V03"}
+
+
+def test_a_dimension_point_off_any_vertex_follows_the_line_it_lies_on(tmp_path):
+    """The wall dimension is taken along the slab: its inner point (300, 0) lies on the inner face's line but on no
+    drawn vertex. It follows that face, so the dimension reads the new wall, not 300 carried along with the corner."""
+    sm = SheetModel.open(mini_gad(tmp_path / "mini.dxf"))
+    uid = next(k for k, u in sm.units.items() if len(u.views) == 2)
+    wall = next(n for n, p in sm.unit(uid).prog.params.items() if round(p.value) == 300 and p.measures and sm.unit(uid).an.datums[p.measures[0]].axis == "x")
+    sr = sm.preview({f"{uid}.{wall}": 400.0})
+    assert sr.ok, sr.errors
+    assert dim_labels(sm, sr).count("400") >= 2   # both wall dimensions under the section

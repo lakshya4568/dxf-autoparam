@@ -995,12 +995,36 @@ def _attach_free_points(dr: Drawing, slot_datum, datums: dict[str, Datum]) -> No
                 return best[1]
         return best[1] if best else None
 
+    # The two points a dimension MEASURES sit on the lines it measures, though not always on a drawn vertex (a wall
+    # dimensioned along the slab beneath it): each axis follows the set-out line the point lies on, when one does.
+    on_line: dict[str, list[tuple[float, str]]] = {"x": [], "y": []}
+    for d, dt in datums.items():
+        if dt.axis in on_line:
+            on_line[dt.axis].append((dt.value, d))
+    vertex_at: dict[str, list[tuple[float, float]]] = defaultdict(list)
+    for v in (v for cellv in grid.values() for v in cellv):
+        vertex_at[v[2]].append((v[0], v[1]))
+        vertex_at[v[3]].append((v[0], v[1]))
+
+    def line_through(axis: str, c: float, x: float, y: float) -> str | None:
+        ds = [d for val, d in on_line[axis] if abs(val - c) <= dr.tol and vertex_at.get(d)]
+        if len(ds) > 1:  # two lines at one place (two parts): the one drawn nearest
+            ds.sort(key=lambda d: min((px - x) ** 2 + (py - y) ** 2 for px, py in vertex_at[d]))
+        return ds[0] if ds else None
+
     for it in dr.items:
         if it.role == Role.FIXED or it.anchor is not None:  # symbol content rides on its insertion point
             continue
         for k, (x, y) in enumerate(it.pts):
             if (it.index, k, "x") in slot_datum and (it.index, k, "y") in slot_datum:
                 continue
+            if it.dxftype == "DIMENSION" and k in (1, 2):
+                for axis, c in (("x", x), ("y", y)):
+                    d = line_through(axis, c, x, y)
+                    if d and (it.index, k, axis) not in slot_datum:
+                        slot_datum[(it.index, k, axis)] = (d, c - datums[d].value)
+                if (it.index, k, "x") in slot_datum and (it.index, k, "y") in slot_datum:
+                    continue
             v = nearest(x, y)
             if v is None:
                 continue

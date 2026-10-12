@@ -581,12 +581,17 @@ class SheetModel:
                     raise SheetError(f"{uid}: {a} and {d} are not two lines on one axis")
                 value = abs(an.datums[d].value - an.datums[a].value) * um
                 entry, b = {"from_datum": a, "to_datum": d}, Binding(unit=uid, param=name, datums=(a, d))
+            adopt = False
             if name in u.prog.params or any(r.name == name for r in u.prog.relations):
-                raise SheetError(f"{name} already names something else in {uid}: rename it there first")
+                if not self._same_size(u, name, entry):
+                    raise SheetError(f"{name} already names something else in {uid}: rename it there first")
+                adopt = True  # the unit already calls THIS size by that name (parametrized first, linked after): it is bound as is
             measured.append((uid, value))
             answer = copy.deepcopy(u.answer) if u.answer else copy.deepcopy(EMPTY_ANSWER)
             # the candidate may already carry a name in this unit: the shared name takes its place everywhere
             for p in answer.get("parameters", []):
+                if adopt:
+                    break
                 if entry.get("candidate") and p.get("candidate") == entry["candidate"]:
                     answer = rename_in_answer(answer, p["name"], name)
                     break
@@ -615,6 +620,18 @@ class SheetModel:
         self.history.append(before)
         self.future.clear()
         return p
+
+    @staticmethod
+    def _same_size(u: Unit, name: str, entry: dict) -> bool:
+        """Whether the unit's own `name` measures the very lines a share target names (the same size, not a namesake)."""
+        prm = u.prog.params.get(name)
+        if prm is None or not prm.measures:
+            return False
+        pair = set(prm.measures)
+        if entry.get("candidate"):
+            c = u.an.clusters.get(entry["candidate"])
+            return bool(c) and any({u.an.gaps[g].a, u.an.gaps[g].b} == pair for g in c.gaps if g in u.an.gaps)
+        return {entry.get("from_datum"), entry.get("to_datum")} == pair
 
     def growth(self, name: str) -> list[dict]:
         """How each view takes a value growing: which of its two lines moves (end / start), both about a centre line,
