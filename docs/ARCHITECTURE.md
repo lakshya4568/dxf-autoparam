@@ -261,3 +261,14 @@ flowchart TD
 | What the new geometry is | Engine: formulas |
 | Is the result valid | Engine: invariants, behaviours, constraints, audit |
 | Stop / hold / drop / revise | You, in the UI |
+
+---
+
+## Part 6 — A whole sheet
+
+A GAD sheet holds many views of one structure. `sheet.py` finds them (frame, panel rules, pieces of geometry merged by
+containment, satellites and titles; tables, notes, title block), `crossview.py` analyses views drawn in projection as
+ONE unit (a face they share is one set-out line) and binds sizes separate views state into a shared parameter, checks
+every change on the regenerated sheet and commits it only when everything holds. `workspace.py` + `static/workspace.html`
+are the canvas workspace; `ai/sheet_ai.py` runs Gemini in checked stages. The full design, the measurements and what
+remains: `docs/MULTIVIEW.md`.

@@ -38,7 +38,9 @@ library once, to generate test drawings with known ground truth.
 
 ```bash
 uv sync
-uv run dxf-autoparam serve                                    # app → http://127.0.0.1:8765 ; Open DXF → ✨ Parametrize with Gemini
+uv run dxf-autoparam serve [sheet.dxf]                        # the sheet workspace → http://127.0.0.1:8765 (views, linked
+                                                              # views, shared sizes, preview / apply / undo, Gemini stages, export)
+                                                              # the single-view page with its Gemini panel: /classic
 uv run dxf-autoparam serve my.dxf --answer gemini-answer.json # re-open a saved, validated Gemini answer — no AI call
 uv run python tools/serve_replay.py my.dxf gemini-answer.json # the app with Gemini REPLAYED (marked [replay]) — UI checks, no cost
 uv run dxf-autoparam ai my.dxf --view 0 --json program.json --set ClearSpan=4000 -o my_4000.dxf
@@ -57,6 +59,7 @@ How it works, results, limitations and the plan for aagento-bridge: **[docs/AUTO
 | Folder | |
 |---|---|
 | `src/dxf_autoparam/` | the generic engine (`analyse`, `build`, `regen`, `dxf_read`, `dxf_write`, `views`, `pipeline`), `topology` (regions), `cadjson`, `intent` (behaviours, constraints, selection), `graph`, `learn`, `validator`, `ai/`, CLI, demo server |
+| `sheet.py`, `crossview.py`, `workspace.py`, `ai/sheet_ai.py`, `static/workspace.html` | a whole sheet: views found and named, views drawn in projection analysed as one unit, sizes shared across views, the canvas workspace and its API, Gemini in stages — see `docs/MULTIVIEW.md` |
 | `src/dxf_autoparam/domains/` | optional semantic packs (`bridge.py`: site levels, names) — the only domain vocabulary |
 | `examples/` | drawings to try (box sections, RCC box half-section GAD, girder deck, deck slab, pier, retaining wall, well, a 3-cell box drawn as loose lines) |
 | `fixtures/library/` | 17 kernel families as DXF + their single-parameter ground-truth variants |
