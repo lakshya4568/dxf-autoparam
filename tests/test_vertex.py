@@ -174,3 +174,27 @@ def test_stop_ends_the_call_at_the_next_streamed_message_and_closes_the_stream(g
     with pytest.raises(GeminiStopped):  # stopped before it even starts: no call at all
         g.ask("system", [BIG, BIG, "q9"], [b"png"], Answer, shared=2, stop=lambda: True)
     assert len(fake.calls) == 1
+
+
+def test_a_stalled_call_is_cut_and_retried_not_waited_on_for_ten_minutes():
+    """A shared pool that stops answering: the watchdog ends the attempt at its deadline (a retryable error), the
+    person's Stop ends it at once, and a network read timeout counts as retryable (it used to end the whole run)."""
+    import threading
+    import time
+
+    import httpx
+
+    from dxf_autoparam.ai import vertex as V
+
+    t = time.monotonic()
+    with pytest.raises(V.Stalled) as exc:
+        V._pumped(lambda put: time.sleep(5), lambda x: None, 0.5, None, "hang")
+    assert time.monotonic() - t < 2 and V._transient(exc.value)
+    flag = threading.Event()
+    threading.Timer(0.3, flag.set).start()
+    with pytest.raises(V.GeminiStopped):
+        V._pumped(lambda put: time.sleep(5), lambda x: None, 60, flag.is_set, "stop")
+    got: list = []
+    V._pumped(lambda put: [put(i) for i in range(3)], got.append, 5, None, "ok")
+    assert got == [0, 1, 2]
+    assert V._transient(httpx.ReadTimeout("The read operation timed out"))

@@ -7,6 +7,9 @@
         the primary is out of capacity or past its deadline (429 / 503 / 504)
     VERTEX_EXPLICIT_CACHE (default on; "0" turns it off), VERTEX_CACHE_TTL_S (default 1200)
     VERTEX_TIMEOUT_MS (default 600000) — also the server's deadline: shorter makes long thinking end in a 504
+    VERTEX_STEP_TIMEOUT_MS (default 240000) — one agent step's deadline (steps answer in seconds to a minute; a
+        call that hangs past it — a stalled shared pool — is retried, then the fallback model takes over)
+    VERTEX_IDLE_S (default 180) — a streamed answer that sends nothing for this long is cut and retried
     credentials: Application Default Credentials (`gcloud auth application-default login`)
 
 Nothing is hardcoded. Two caches, for two different things:
@@ -23,10 +26,14 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import queue
 import subprocess
+import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
+
+import httpx
 
 CACHE = Path(".cache") / "ai"
 # Below this many prefix tokens Vertex refuses an explicit cache (the same floor aagento-bridge's sidecar uses
@@ -77,21 +84,66 @@ class Reply:
     finish: str
 
 
-def _stream(client, model: str, contents, config, on_event, stop=None) -> Reply:
-    """Stream one answer. Thought summaries are passed on as they arrive (the person watches the model work).
-    `stop()` is checked at every streamed message; when it says stop, the stream is closed (Vertex stops generating)."""
-    text, thoughts, um, finish = [], [], None, "UNKNOWN"
-    stream = client.models.generate_content_stream(model=model, contents=contents, config=config)
+class Stalled(TimeoutError):
+    """Vertex sent nothing for too long (a stalled shared pool): the attempt is abandoned and retried."""
+
+
+def _pumped(produce, on_item, idle_s: float, stop, what: str) -> None:
+    """Run a blocking producer on a worker thread and hand its items over here, so a stall or the person's Stop is
+    noticed within a fraction of a second instead of after the HTTP read timeout (10 minutes). `produce(put)` calls
+    put(item) per item. Raises Stalled after `idle_s` with no item, GeminiStopped on stop, or the producer's error."""
+    q: queue.Queue = queue.Queue()
+    abandoned = threading.Event()
+
+    def run():
+        try:
+            produce(lambda item: abandoned.is_set() or q.put(("item", item)))
+            q.put(("end", None))
+        except Exception as exc:  # noqa: BLE001 — not swallowed: re-raised in the caller's thread
+            q.put(("err", exc))
+
+    threading.Thread(target=run, daemon=True, name=f"vertex-{what}").start()
+    last = time.monotonic()
     try:
-        for chunk in stream:
+        while True:
             if stop and stop():
                 raise GeminiStopped("stopped by the person")
-            um, finish = _take(chunk, text, thoughts, on_event, um, finish)
+            try:
+                kind, val = q.get(timeout=0.2)
+            except queue.Empty:
+                if time.monotonic() - last > idle_s:
+                    raise Stalled(f"{what}: no reply from Vertex for {idle_s:.0f} s") from None
+                continue
+            last = time.monotonic()
+            if kind == "end":
+                return
+            if kind == "err":
+                raise val
+            on_item(val)
     finally:
-        close = getattr(stream, "close", None)
-        if close:
-            close()
-    return Reply("".join(text), thoughts, um, finish)
+        abandoned.set()  # a stalled thread ends on its own HTTP timeout; nothing it sends later is used
+
+
+def _stream(client, model: str, contents, config, on_event, stop=None) -> Reply:
+    """Stream one answer. Thought summaries are passed on as they arrive (the person watches the model work).
+    The person's Stop and a stall (nothing streamed for VERTEX_IDLE_S) end it at once."""
+    text, thoughts, state = [], [], {"um": None, "finish": "UNKNOWN"}
+
+    def produce(put):
+        stream = client.models.generate_content_stream(model=model, contents=contents, config=config)
+        try:
+            for chunk in stream:
+                put(chunk)
+        finally:
+            close = getattr(stream, "close", None)
+            if close:
+                close()
+
+    def take(chunk):
+        state["um"], state["finish"] = _take(chunk, text, thoughts, on_event, state["um"], state["finish"])
+
+    _pumped(produce, take, float(os.environ.get("VERTEX_IDLE_S", "180")), stop, model)
+    return Reply("".join(text), thoughts, state["um"], state["finish"])
 
 
 def _take(chunk, text: list[str], thoughts: list[str], on_event, um, finish):
@@ -172,6 +224,8 @@ def _transient(exc: Exception) -> bool:
     """Out of capacity, overloaded, or past its deadline: worth a retry and then the fallback model."""
     code = getattr(exc, "code", None)
     if code in (429, 500, 503, 504):
+        return True
+    if isinstance(exc, (Stalled, httpx.TimeoutException, httpx.NetworkError, httpx.RemoteProtocolError)):
         return True
     text = str(exc)
     return isinstance(exc, TimeoutError) or any(k in text for k in ("UNAVAILABLE", "RESOURCE_EXHAUSTED", "DEADLINE", "timed out", "Timeout"))
@@ -270,6 +324,8 @@ class Gemini:
         if self.cfg.fallback_model and self.cfg.fallback_model != self.cfg.model:
             plan.append((self.cfg.fallback_model, self.cfg.fallback_thinking))
         t0, last = time.perf_counter(), None
+        # Vertex ends the call itself at this deadline (sent as its server timeout); the worker thread backs it up
+        step_ms = int(os.environ.get("VERTEX_STEP_TIMEOUT_MS", "240000"))
         for model, think in plan:
             for attempt in range(2):
                 if stop and stop():
@@ -280,9 +336,13 @@ class Gemini:
                 if on_event:
                     on_event({"kind": "call", "label": label, "model": model, "thinking": think, "prompt_cache": cache_state, "attempt": attempt + 1})
                 try:
-                    resp = self.client.models.generate_content(model=model, contents=contents, config=types.GenerateContentConfig(
-                        **kw, thinking_config=types.ThinkingConfig(thinking_level=think, include_thoughts=True)))
-                except (genai_errors.APIError, TimeoutError, OSError) as exc:
+                    cfg = types.GenerateContentConfig(**kw, thinking_config=types.ThinkingConfig(thinking_level=think, include_thoughts=True),
+                                                      http_options=types.HttpOptions(timeout=step_ms))
+                    got: list = []
+                    _pumped(lambda put, c=contents, g=cfg, m=model: put(self.client.models.generate_content(model=m, contents=c, config=g)),
+                            got.append, step_ms / 1000 + 15, stop, f"{model} {label}")
+                    resp = got[0]
+                except (genai_errors.APIError, TimeoutError, OSError, httpx.TransportError) as exc:
                     last = exc
                     if cached and getattr(exc, "code", None) in (400, 403, 404) and "cach" in str(exc).lower():
                         self._forget_cache(model, prefix_key)
@@ -390,7 +450,7 @@ class Gemini:
                     # Vertex reports no usage for a cut stream; what it generated until then is billed all the same
                     _log({"model": model, "thinking": think, "label": label, "stopped": True, "prompt_cache": cache_state, "key": key})
                     raise
-                except (genai_errors.APIError, TimeoutError, OSError) as exc:
+                except (genai_errors.APIError, TimeoutError, OSError, httpx.TransportError) as exc:
                     last = exc
                     msg = str(exc).lower()
                     if cached and getattr(exc, "code", None) in (400, 403, 404) and "cach" in msg:
