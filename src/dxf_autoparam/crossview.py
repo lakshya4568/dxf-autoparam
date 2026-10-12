@@ -379,10 +379,18 @@ class SheetModel:
                     changed.append(s)
                     v = self.layout.item_group.get(s, "")
                     by_view[v] = by_view.get(v, 0) + 1
+            moved = set(changed)
             for k, rad in r.radius.items():
                 radius[u.back[k]] = rad
+                if abs(rad - (self.dr.items[u.back[k]].radius or 0.0)) > 1e-9 and u.back[k] not in moved:
+                    changed.append(u.back[k]); moved.add(u.back[k])
             for k, t in r.texts.items():
                 texts[u.back[k]] = t
+                if t != self.dr.items[u.back[k]].text and u.back[k] not in moved:   # a note whose number changed in place
+                    s = u.back[k]
+                    changed.append(s); moved.add(s)
+                    v = self.layout.item_group.get(s, "")
+                    by_view[v] = by_view.get(v, 0) + 1
             # every shared size this unit drives must measure the shared value on its own lines
             um = u.sub.units_mm
             for p in self.shared.values():

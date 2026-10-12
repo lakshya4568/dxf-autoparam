@@ -121,6 +121,9 @@ class SheetSession:
             q["t"] = p.get("text", "")
             q["h"] = p.get("h")
             q["rot"] = p.get("rot") or 0.0
+            for k in ("ha", "va", "wf", "ls"):
+                if p.get(k) and p[k] not in ("l", "b"):
+                    q[k] = p[k]
         if p.get("pattern"):
             q["pat"] = p["pattern"]
         return q

@@ -4,6 +4,7 @@ the new measurement; a text a change pushes onto another is reported, never sile
 
 from __future__ import annotations
 
+import itertools
 from pathlib import Path
 
 import ezdxf
@@ -120,3 +121,67 @@ def test_a_note_pushed_onto_another_is_reported_for_review(tmp_path):
     cell = next(it.index for it in sm.dr.items if it.text == "CELL")
     assert sm._overlaps([cell], {cell: [(3050, 1520)]}) == [f"{sm.layout.item_group[cell]}: the note 'CELL' now overlaps 'WALL' — move one of them"]
     assert sm._overlaps([cell], {cell: [(2200, 2200)]}) == []
+
+
+def splay(path: Path) -> Path:
+    """A wall on a footing whose toe is set by a 1:1 splay: the horizontal 1350 under the base is not a size of its
+    own — it is as long as the splay's height. Exploded dimensions: a line, the number centred ON it (MTEXT, middle)."""
+    doc = ezdxf.new("R2010", setup=True)
+    doc.header["$INSUNITS"] = 4
+    msp = doc.modelspace()
+    pts = [(0, 0), (3500, 0), (3500, 3000), (1350, 3000), (1350, 1350), (0, 0)]
+    for a, b in itertools.pairwise(pts):
+        msp.add_line(a, b)
+    msp.add_line((1350, 1350), (3500, 1350))
+    for x0, x1, s in [(0, 1350, "1350"), (1350, 3500, "2150")]:
+        msp.add_line((x0, -300), (x1, -300), dxfattribs={"layer": "DIM"})
+        for x in (x0, x1):
+            msp.add_line((x, 0), (x, -350), dxfattribs={"layer": "DIM"})
+        msp.add_mtext(s, dxfattribs={"layer": "DIM", "insert": ((x0 + x1) / 2, -300), "char_height": 150, "attachment_point": 5})
+    for y0, y1, s in [(0, 1350, "1350"), (1350, 3000, "1650")]:
+        msp.add_line((3800, y0), (3800, y1), dxfattribs={"layer": "DIM"})
+        for y in (y0, y1):
+            msp.add_line((3500, y), (3850, y), dxfattribs={"layer": "DIM"})
+        msp.add_mtext(s, dxfattribs={"layer": "DIM", "insert": (3800, (y0 + y1) / 2), "char_height": 150, "attachment_point": 5, "rotation": 90})
+    doc.saveas(path)
+    return path
+
+
+def test_a_distance_another_size_sets_shows_its_new_length(tmp_path):
+    """Raising the wall pushes the splay's toe out: the horizontal number under it follows the drawn distance, even
+    though no size of its own changed, and even though a vertical size of the same value exists."""
+    sm = SheetModel.open(str(splay(tmp_path / "splay.dxf")))
+    u = sm.unit("U01")
+    height = next(n for n, p in u.prog.params.items() if round(p.value) == 1350)
+    sr = sm.preview({f"U01.{height}": 1730.0})
+    assert sr.ok, sr.errors
+    shown = sorted(sr.reg.texts.get(it.index, it.text) for it in sm.dr.items if it.dxftype == "MTEXT")
+    assert shown == ["1650", "1730", "1730", "2150"]
+    under = next(it.index for it in sm.dr.items if it.dxftype == "MTEXT" and it.text == "1350" and abs(it.pts[0][1] + 300) < 1)
+    assert under in sr.changed   # a number that changed in place, without moving, counts as changed
+
+
+def test_texts_are_shown_by_their_cad_anchor_and_dimension_numbers_by_their_style_height(tmp_path):
+    from dxf_autoparam.display import primitives
+
+    doc = ezdxf.new("R2010", setup=True)
+    doc.header["$INSUNITS"] = 4
+    msp = doc.modelspace()
+    msp.add_mtext("MID", dxfattribs={"insert": (100, 100), "char_height": 50, "attachment_point": 5})
+    msp.add_mtext("TOP RIGHT", dxfattribs={"insert": (100, 300), "char_height": 50, "attachment_point": 3})
+    msp.add_text("C", height=40, dxfattribs={"halign": 1, "valign": 0, "insert": (0, 0), "align_point": (500, 500)})
+    doc.dimstyles.new("BIG", dxfattribs={"dimtxt": 2.5, "dimscale": 100, "dimgap": 0.625, "dimtad": 1})
+    msp.add_linear_dim(base=(0, -600), p1=(0, 0), p2=(4000, 0), dimstyle="BIG").render()
+    doc.saveas(tmp_path / "t.dxf")
+    sm = SheetModel.open(str(tmp_path / "t.dxf"))
+    got = {}
+    for it in sm.dr.items:
+        for p in primitives(it, it.pts, None, None, sm.dr.units_mm):
+            if p["k"] == "t":
+                got[p["text"]] = p
+    assert (got["MID"]["ha"], got["MID"]["va"], got["MID"]["at"]) == ("c", "m", (100.0, 100.0))
+    assert (got["TOP RIGHT"]["ha"], got["TOP RIGHT"]["va"]) == ("r", "t")
+    assert (got["C"]["ha"], got["C"]["at"]) == ("c", (500.0, 500.0))   # a centred TEXT hangs from its align point
+    dim = got["4000"]
+    assert dim["h"] == pytest.approx(250.0) and dim["ha"] == "c"   # 2.5 × 100: it zooms with the drawing
+    assert dim["at"][1] > -600   # above its dimension line, as drawn

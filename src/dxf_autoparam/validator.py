@@ -684,7 +684,15 @@ def relink_texts(prog: Program) -> None:
             if dec == 0 and v >= 5:
                 cands = by_mm.get(round(v), [])
                 ref = None
-                if len(cands) == 1:
+                # Best evidence first: the dimension line it is written on. The note states THAT distance — through
+                # the size that sets it when one does, else as the lines stand (a size of the same value elsewhere,
+                # or across, is not it).
+                on_line = _measured_between(an, it, v, u, rules)
+                if on_line:
+                    pair = set(on_line.split(":")[1:])
+                    same = [n for n in cands if prog.params[n].measures and set(prog.params[n].measures) == pair]
+                    ref = same[0] if same else on_line
+                elif len(cands) == 1:
                     ref = cands[0]
                 elif cands:
                     def dist(n, x=x, y=y):
@@ -699,6 +707,11 @@ def relink_texts(prog: Program) -> None:
                         ref = best
                 elif len(rels.get(round(v), [])) == 1:
                     ref = "rel:" + rels[round(v)][0]
+                if ref and not ref.startswith("rel:") and not _drives(prog, ref):
+                    # A size measured here but set by other lines (a splay, a sum): the note states the DISTANCE,
+                    # so it follows the distance as regenerated, not the size's own (unchanging) value.
+                    a, b = prog.params[ref].measures
+                    ref = f"len:{a}:{b}"
                 if ref:
                     found.append((tok, ref, 0))
                     taken.add(tok)
@@ -718,6 +731,14 @@ def relink_texts(prog: Program) -> None:
         if found:
             links[it.index] = found
     prog.text_links = links
+
+
+def _drives(prog: Program, name: str) -> bool:
+    """Whether a named size sets the lines it measures (one of them is written from it)."""
+    p = prog.params.get(name)
+    if not p or not p.measures:
+        return True
+    return any(name in names_in(prog.formulas.get(d, "")) for d in p.measures)
 
 
 def _straight_runs(dr) -> dict[str, list[tuple[float, float, float]]]:

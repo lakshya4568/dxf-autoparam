@@ -160,7 +160,7 @@ function ingest(prims) {
   for (const q of prims) {
     const o = { i: q.i, k: q.k, r: q.r, l: q.l, v: q.v, c: !!q.c, d: !!q.d };
     if (q.p) o.p = Float64Array.from(q.p);
-    if (q.k === "t") { o.at = q.at; o.t = q.t; o.h = q.h || 0; o.rot = q.rot || 0; }
+    if (q.k === "t") { o.at = q.at; o.t = q.t; o.h = q.h || 0; o.rot = q.rot || 0; o.ha = q.ha; o.va = q.va; o.wf = q.wf; o.ls = q.ls; }
     o.b = bboxOf(o);
     out.push(o);
   }
@@ -302,18 +302,144 @@ function texts(ids, furniture, colors) {
     text1(o);
   }
 }
+// ── label tidy (display only: the DXF keeps every text where it was written) ─────────────────────────────────────────
+// A label is boxed as CAD sets it (its anchor, alignment, height, width). Then, on the page only: a label a straight
+// line runs through is lifted clear of it, and labels that collide are staggered off their row, each by a gap of a
+// quarter of the text height, so every number stays readable at any zoom.
+let tidyOn = true;
+const widthCache = new Map();
+function textWidth(t) {   // width of a string per unit of capital height, in the canvas font
+  let w = widthCache.get(t); if (w != null) return w;
+  ctx.save(); ctx.font = "100px Arial, Helvetica, sans-serif"; w = ctx.measureText(t).width / 100 / CAP; ctx.restore();
+  widthCache.set(t, w); return w;
+}
+function localBox(o) {   // [x0, x1, y0, y1] along / across the text's reading direction, from its anchor (y up)
+  const h = o.h || 0, lines = String(o.t || "").split("\n"), n = lines.length, lh = h * (5 / 3) * (o.ls || 1);
+  const w = Math.max(...lines.map(textWidth)) * h * (o.wf || 1);
+  const va = o.va || "b", ha = o.ha || "l", H = h + (n - 1) * lh;
+  const first = va === "t" ? h : va === "m" ? h - H / 2 : va === "bt" ? -(n - 1) * lh - h * 0.25 : -(n - 1) * lh;   // screen-down
+  const x0 = ha === "c" ? -w / 2 : ha === "r" ? -w : 0;
+  return [x0, x0 + w, -(first + (n - 1) * lh), -(first - h)];
+}
+function textFrame(o) {   // reading direction u and up direction v, for a text set square to the sheet; null otherwise
+  const a = (((o.rot || 0) % 360) + 360) % 360, q = Math.round(a / 90) % 4;
+  if (Math.abs(a - Math.round(a / 90) * 90) > 1) return null;
+  return [[[1, 0], [0, 1]], [[0, 1], [-1, 0]], [[-1, 0], [0, -1]], [[0, -1], [1, 0]]][q];
+}
+function worldBox(o, lb, f, off) {
+  const [u, v] = f, ax = o.at[0] + off[0], ay = o.at[1] + off[1];
+  const xs = [], ys = [];
+  for (const x of [lb[0], lb[1]]) for (const y of [lb[2], lb[3]]) { xs.push(ax + u[0] * x + v[0] * y); ys.push(ay + u[1] * x + v[1] * y); }
+  return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+}
+function tidyLabels(texts, linesNear) {
+  const L = [];
+  for (const o of texts) {
+    o.off = null;
+    if (!tidyOn || !o.h || !o.t || o.r === "fixed") continue;
+    const g = S && S.groups.find((x) => x.id === o.v); if (g && (g.kind === "table" || g.kind === "title_block")) continue;
+    const f = textFrame(o); if (!f) continue;
+    L.push({ o, f, lb: localBox(o), off: [0, 0] });
+  }
+  // 1. a straight line through the middle of a label (collinear pieces count together: a chain's dimension line):
+  // the label sits just clear of it, on the side it leans to
+  for (const t of L) clearLines(t, linesNear, 0);
+  // 2. labels that collide: placed one by one, the biggest first (a long note stays, a number gives way); each takes
+  // its own place if free, else the nearest free place across its row (to the side with room first), never on a line
+  const box = (t) => worldBox(t.o, t.lb, t.f, t.off);
+  const area = (t) => { const b = box(t); return (b[2] - b[0]) * (b[3] - b[1]); };
+  const placed = [];
+  const free = (b, g) => !placed.some((q) => !(b[0] >= q[2] + g || q[0] >= b[2] + g || b[1] >= q[3] + g || q[1] >= b[3] + g));
+  for (const t of L.slice().sort((a, b) => area(b) - area(a) || box(a)[0] - box(b)[0])) {
+    const h = t.o.h, g = h * 0.25, horiz = Math.abs(t.f[0][0]) > 0.5, base = t.off.slice();
+    let b = box(t);
+    if (!free(b, g)) {
+      const pref = freeSide(b, horiz, h, linesNear, horiz ? t.f[1][1] : t.f[1][0]);
+      let found = false;
+      for (let k = 1; k <= 12 && !found; k++) for (const sgn of [pref, -pref]) {
+        const d = sgn * k * 0.25 * h;
+        t.off = horiz ? [base[0], base[1] + d] : [base[0] + d, base[1]];
+        const nb = box(t);
+        if (free(nb, g) && !crossing(t, linesNear)) { b = nb; found = true; break; }
+      }
+      if (!found) { t.off = base; b = box(t); }   // nowhere free near: left where it was written
+    }
+    placed.push(b);
+  }
+  for (const t of L) if (t.off[0] || t.off[1]) t.o.off = t.off;
+}
+function crossing(t, linesNear) {   // the across-position of a straight run through a label's middle, or null
+  const { o, f, lb } = t, h = o.h, b = worldBox(o, lb, f, t.off);
+  const horiz = Math.abs(f[0][0]) > 0.5, along = horiz ? [b[0], b[2]] : [b[1], b[3]], across = horiz ? [b[1], b[3]] : [b[0], b[2]];
+  const cover = new Map();
+  for (const [x0, y0, x1, y1] of linesNear(b)) {
+    if (horiz ? Math.abs(y1 - y0) > 1e-6 * h : Math.abs(x1 - x0) > 1e-6 * h) continue;   // parallel runs only
+    const c = horiz ? y0 : x0;
+    if (c <= across[0] + 0.2 * h || c >= across[1] - 0.2 * h) continue;   // only grazes it
+    const s0 = Math.min(horiz ? x0 : y0, horiz ? x1 : y1), s1 = Math.max(horiz ? x0 : y0, horiz ? x1 : y1);
+    const ov = Math.min(s1, along[1]) - Math.max(s0, along[0]); if (ov <= 0) continue;
+    const key = Math.round(c / (0.05 * h)); cover.set(key, { c, n: (cover.get(key)?.n || 0) + ov });
+  }
+  let best = null; for (const v of cover.values()) if (v.n >= 0.4 * (along[1] - along[0]) && (!best || v.n > best.n)) best = v;
+  return best ? { c: best.c, horiz, across } : null;
+}
+function clearLines(t, linesNear, dir) {   // move a label off any line through it (toward dir, or the side it leans); false if it cannot
+  for (let k = 0; k < 3; k++) {
+    const hit = crossing(t, linesNear); if (!hit) return true;
+    const { c, horiz, across } = hit, gap = t.o.h * 0.25;
+    const up = dir ? dir > 0 : (across[0] + across[1]) / 2 >= c;
+    const need = up ? c + gap - across[0] : c - gap - across[1];
+    if (Math.abs((horiz ? t.off[1] : t.off[0]) + need) > t.o.h * 3) return false;
+    if (horiz) t.off = [t.off[0], t.off[1] + need]; else t.off = [t.off[0] + need, t.off[1]];
+  }
+  return !crossing(t, linesNear);
+}
+function freeSide(b, horiz, h, linesNear, dflt) {   // +1 / −1: the side of a label with more room before a parallel line
+  const r = 3 * h, q = horiz ? [b[0], b[1] - r, b[2], b[3] + r] : [b[0] - r, b[1], b[2] + r, b[3]];
+  let up = r, down = r;
+  for (const [x0, y0, x1, y1] of linesNear(q)) {
+    if (horiz ? Math.abs(y1 - y0) > 1e-6 * h : Math.abs(x1 - x0) > 1e-6 * h) continue;
+    const s0 = Math.min(horiz ? x0 : y0, horiz ? x1 : y1), s1 = Math.max(horiz ? x0 : y0, horiz ? x1 : y1);
+    if (s1 < (horiz ? b[0] : b[1]) || s0 > (horiz ? b[2] : b[3])) continue;
+    const c = horiz ? y0 : x0, lo = horiz ? b[1] : b[0], hi = horiz ? b[3] : b[2];
+    if (c >= hi) up = Math.min(up, c - hi); else if (c <= lo) down = Math.min(down, lo - c); else { up = Math.min(up, 0); down = Math.min(down, 0); }
+  }
+  return Math.abs(up - down) < 0.1 * h ? dflt : up > down ? 1 : -1;
+}
+function linesFromIndex(skip) {   // straight segments near a box, from the indexed drawing (minus entities being previewed)
+  return (b) => {
+    const out = []; const ids = query(b[0], b[1], b[2], b[3], []);
+    for (const n of ids) { const o = P[n]; if (o.k === "t" || o.k === "g" || !o.p || (skip && skip.has(o.i))) continue;
+      for (let k = 0; k + 3 < o.p.length; k += 2) out.push([o.p[k], o.p[k + 1], o.p[k + 2], o.p[k + 3]]); }
+    return out;
+  };
+}
+function tidyAll() { tidyLabels(P.filter((o) => o.k === "t"), linesFromIndex(null)); }
+
+// A text as CAD sets it: its height is the capital height in drawing units (so it zooms with the drawing), hung from
+// its anchor the way its alignment says (left / centre / right × baseline / bottom / middle / top), lines 5/3 of the
+// height apart for MTEXT, stretched by its width factor.
+const CAP = 0.7;   // capital height of the canvas font, as a share of its em size
 function text1(o, bold) {
   const hpx = (o.h || 2.5 / cam.s * 4) * cam.s;
   if (hpx < 3.2) return;   // too small to read: not drawn at this zoom
-  const [sx, sy] = toScreen(o.at[0], o.at[1]);
+  const [sx, sy] = o.off ? toScreen(o.at[0] + o.off[0], o.at[1] + o.off[1]) : toScreen(o.at[0], o.at[1]);
+  const lines = String(o.t || "").split("\n"), n = lines.length, lh = hpx * (5 / 3) * (o.ls || 1);
+  const va = o.va || "b", ha = o.ha || "l";
+  const H = hpx + (n - 1) * lh;   // capital top of the first line to the baseline of the last
+  const first = va === "t" ? hpx : va === "m" ? hpx - H / 2 : va === "bt" ? -(n - 1) * lh - hpx * 0.25 : -(n - 1) * lh;
   // On a turned view a text can come out upside down; it is drawn turned half round over the same place so it reads
   // left to right (display only, the entity keeps its angle).
   const ang = ((((o.rot || 0) + cam.r * 90) % 360) + 360) % 360, flip = ang > 90.5 && ang < 269.5;
   ctx.save(); ctx.translate(sx, sy); ctx.rotate(-(ang + (flip ? 180 : 0)) * Math.PI / 180);
-  ctx.font = `${bold ? "600 " : ""}${Math.min(hpx, 400)}px system-ui, sans-serif`;
-  if (flip) { ctx.textAlign = "right"; ctx.textBaseline = "top"; }
-  const lines = String(o.t || "").split("\n");
-  lines.forEach((ln, k) => ctx.fillText(ln, 0, (flip ? -k : k) * hpx * 1.5));
+  if (o.wf) ctx.scale(o.wf, 1);
+  ctx.font = `${bold ? "600 " : ""}${Math.min(hpx / CAP, 600)}px Arial, Helvetica, sans-serif`;
+  ctx.textBaseline = "alphabetic";
+  ctx.textAlign = ha === "c" ? "center" : (ha === "r") !== flip ? "right" : "left";
+  for (let k = 0; k < n; k++) {
+    const y = flip ? -(first + (n - 1 - k) * lh) + hpx : first + k * lh;   // flipped: the same footprint, first line on top
+    ctx.fillText(lines[k], 0, y);
+  }
   ctx.restore();
 }
 function boxes() {
@@ -489,7 +615,7 @@ function sheetTree() {
   const views = S.groups.filter((g) => g.kind === "view"), other = S.groups.filter((g) => g.kind !== "view" && g.kind !== "label");
   const unitOf = (g) => S.units.find((u) => u.id === g.unit);
   let h = `<div class="sec">Views <span class="n">${views.length}</span></div>`;
-  h += `<div class="note"><label><input type="checkbox" id="ov-views" ${$("#ov-views") && !$("#ov-views").checked ? "" : "checked"}> view boxes</label> · <label><input type="checkbox" id="ov-lock" ${$("#ov-lock") && $("#ov-lock").checked ? "checked" : ""}> pick only in the open view</label></div>`;
+  h += `<div class="note"><label><input type="checkbox" id="ov-views" ${$("#ov-views") && !$("#ov-views").checked ? "" : "checked"}> view boxes</label> · <label><input type="checkbox" id="ov-lock" ${$("#ov-lock") && $("#ov-lock").checked ? "checked" : ""}> pick only in the open view</label> · <label title="On the page only: lift labels off lines through them and stagger labels that collide; the DXF is not changed"><input type="checkbox" id="ov-tidy" ${tidyOn ? "checked" : ""}> tidy labels</label></div>`;
   for (const g of views) {
     const u = unitOf(g); const linked = u && u.views.length > 1;
     h += `<div class="row ${activeView === g.id ? "on" : ""}" data-view="${g.id}" title="${esc((g.evidence || []).join(" · "))}">
@@ -560,6 +686,7 @@ function wireLeft() {
   });
   document.querySelectorAll("#left [data-link]").forEach((el) => el.addEventListener("change", () => { const [a, b] = el.dataset.link.split(","); edit("link", { a, b, linked: el.checked }); }));
   const ov = $("#ov-views"); if (ov) ov.addEventListener("change", draw);
+  const ot = $("#ov-tidy"); if (ot) ot.addEventListener("change", () => { tidyOn = ot.checked; tidyAll(); draw(); });
   const ps = $("#psearch"); if (ps) ps.addEventListener("input", () => { const q = ps.value.toLowerCase(); document.querySelectorAll("#left [data-search]").forEach((r) => r.style.display = r.dataset.search.includes(q) ? "" : "none"); });
   const lp = $("#loadprops"); if (lp) lp.addEventListener("click", loadProposals);
   if (tab === "ai") wireGemini();
@@ -592,6 +719,13 @@ function startPreview(changes, applyIfOk) {
     if (!res) return;
     const prims = new Map(); for (const o of ingest(res.delta)) { if (!prims.has(o.i)) prims.set(o.i, []); prims.get(o.i).push(o); }
     preview = { changes, res, prims, ents: new Set(prims.keys()) };
+    {   // the preview's labels are tidied among the unchanged ones and the preview's own lines
+      const ents = preview.ents, pt = [], pl = [];
+      for (const list of prims.values()) for (const o of list) { if (o.k === "t") pt.push(o); else if (o.p) for (let k = 0; k + 3 < o.p.length; k += 2) pl.push([o.p[k], o.p[k + 1], o.p[k + 2], o.p[k + 3]]); }
+      const base = linesFromIndex(ents);
+      const keep = P.filter((o) => o.k === "t" && !ents.has(o.i)).map((o) => ({ ...o }));   // copies: the sheet's own stay as they are
+      tidyLabels(keep.concat(pt), (b) => base(b).concat(pl.filter((s) => Math.max(s[0], s[2]) >= b[0] && Math.min(s[0], s[2]) <= b[2] && Math.max(s[1], s[3]) >= b[1] && Math.min(s[1], s[3]) <= b[3])));
+    }
     say(res.ok ? `preview: ${res.changed} entities change in ${Object.keys(res.by_view).filter(Boolean).join(", ") || "—"} · Enter applies, Esc cancels` : `would break: ${res.errors[0]}`, res.ok ? "ok" : "bad");
     renderRight(); draw();
     if (applyIfOk && res.ok) applyPreview();
@@ -607,7 +741,7 @@ async function applyPreview() {
 }
 function take(res) {   // a committed change: the entities it moved (or moved back), as they now stand
   if (res.delta) { const fresh = ingest(res.delta); const ents = new Set(fresh.map((o) => o.i));
-    P = P.filter((o) => !ents.has(o.i)).concat(fresh); buildIndex(); }
+    P = P.filter((o) => !ents.has(o.i)).concat(fresh); buildIndex(); tidyAll(); }
   if (res.summary) { S = res.summary; unitCache.clear(); }
   $("#undo").disabled = !S.can_undo; $("#redo").disabled = !S.can_redo;
 }
@@ -706,7 +840,10 @@ function wireParam() {
   const key = focus.id; const on = (id, ev, fn) => { const el = $(id); if (el) el.addEventListener(ev, fn); };
   on("#pval", "keydown", (e) => { if (e.key === "Enter") { const v = parseNum(e.target.value); if (v != null) startPreview({ [key]: v }, false); } });
   on("#pval", "change", (e) => { const v = parseNum(e.target.value); if (v != null) startPreview({ [key]: v }, false); });
-  on("#pslide", "input", (e) => { $("#pval").value = Math.round(Number(e.target.value) * 10) / 10; startPreview({ [key]: Number(e.target.value) }, false); });
+  on("#pslide", "input", (e) => {   // the slider lands on whole, round sizes (a draftsman's value), never 1723.391
+    const r = Number(e.target.max) - Number(e.target.min), step = r > 2000 ? 10 : r > 200 ? 5 : r > 20 ? 1 : 0.1;
+    const v = Math.min(Math.max(Math.round(Number(e.target.value) / step) * step, Number(e.target.min)), Number(e.target.max));
+    $("#pval").value = +v.toFixed(3); startPreview({ [key]: v }, false); });
   on("#papply", "click", () => preview ? applyPreview() : (() => { const v = parseNum($("#pval").value); if (v != null) startPreview({ [key]: v }, true); })());
   on("#pcancel", "click", cancelPreview);
   on("#prename", "click", () => { const nn = $("#pname").value.trim(); const old = key; edit("rename", { old, new: nn }, () => openParam(S.shared.some((p) => p.name === nn) ? nn : `${old.split(".")[0]}.${nn}`)); });
@@ -775,7 +912,7 @@ async function loadSheet() {
   S = s; $("#empty").style.display = "none"; $("#file").textContent = S.file;
   const g = await guard(async () => { const t0 = performance.now(); const r = await fetch("/api/sheet/geometry"); const j = await r.json(); return { j, ms: performance.now() - t0 }; }, "Loading the sheet…");
   if (!g) return;
-  P = ingest(g.j.prims); buildIndex();
+  P = ingest(g.j.prims); buildIndex(); tidyAll();
   sel = new Set(); hov = -1; focus = null; activeView = null; preview = null; unitCache.clear();
   $("#undo").disabled = !S.can_undo; $("#redo").disabled = !S.can_redo;
   if (S.ai_running) { ai = { running: true, events: [], next: 0, result: null, error: null, kind: null }; pollAI(); }
@@ -802,7 +939,7 @@ async function download(url, fallback) {
 $("#export").onclick = () => download("/api/sheet/export", "sheet.dxf");
 $("#project").onclick = () => download("/api/sheet/project", "sheet.autoparam.json");
 $("#rotcw").addEventListener("click", () => rotateView(-1)); $("#rotccw").addEventListener("click", () => rotateView(1));
-window.__ws = { rotateView, toScreen, toWorld,  get prims() { return P.length; }, get frameMs() { return lastFrameMs; }, fit, draw, pick, boxSelect, cam, sheet: () => sheetBox(), render: () => { render(); return lastFrameMs; } };
+window.__ws = { tidyAll, get labels() { return P.filter((o) => o.k === "t" && o.off).length; }, rotateView, toScreen, toWorld,  get prims() { return P.length; }, get frameMs() { return lastFrameMs; }, fit, draw, pick, boxSelect, cam, sheet: () => sheetBox(), render: () => { render(); return lastFrameMs; } };
 loadSheet().catch((e) => say(e.message, "bad"));
 </script>
 </body>

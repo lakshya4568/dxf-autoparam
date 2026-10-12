@@ -119,6 +119,17 @@ def plain_text(e) -> str:
     return str(e.dxf.get("text", ""))
 
 
+def _dim_text(e) -> dict:
+    """A dimension's text height and its gap from the dimension line, in drawing units (style × overall scale)."""
+    try:
+        ov = e.override()
+        k = float(ov.get("dimscale", 1.0) or 1.0)
+        return {"dimtxt": float(ov.get("dimtxt", 2.5) or 2.5) * k, "dimgap": abs(float(ov.get("dimgap", 0.625) or 0.625)) * k,
+                "dimtad": int(ov.get("dimtad", 0) or 0)}
+    except (*DATA_ERRORS, AttributeError):
+        return {}
+
+
 def _flatten(e, tol: float) -> list[list[tuple[float, float]]]:
     try:
         p = ezpath.make_path(e)
@@ -171,10 +182,12 @@ def entity_points(e, tol: float = 1.0) -> dict | None:
         if e.dxf.hasattr("align_point") and (e.dxf.get("halign", 0) or e.dxf.get("valign", 0)):
             pts.append(_xy(e.dxf.align_point))
         return {"pts": pts, "vertex_pts": [], "segments": [], "text": plain_text(e), "text_height": float(e.dxf.get("height", 1.0)),
-                "extra": {"rotation": float(e.dxf.get("rotation", 0.0)), "raw": e.dxf.get("text", "")}}
+                "extra": {"rotation": float(e.dxf.get("rotation", 0.0)), "raw": e.dxf.get("text", ""),
+                          "halign": int(e.dxf.get("halign", 0)), "valign": int(e.dxf.get("valign", 0)), "wf": float(e.dxf.get("width", 1.0) or 1.0)}}
     if t == "MTEXT":
         return {"pts": [_xy(e.dxf.insert)], "vertex_pts": [], "segments": [], "text": plain_text(e), "text_height": float(e.dxf.get("char_height", 1.0)),
-                "extra": {"rotation": float(e.get_rotation() if hasattr(e, "get_rotation") else e.dxf.get("rotation", 0.0)), "raw": e.text}}
+                "extra": {"rotation": float(e.get_rotation() if hasattr(e, "get_rotation") else e.dxf.get("rotation", 0.0)), "raw": e.text,
+                          "attach": int(e.dxf.get("attachment_point", 1) or 1), "spacing": float(e.dxf.get("line_spacing_factor", 1.0) or 1.0)}}
     if t == "DIMENSION":
         pts = [_xy(e.dxf.get("defpoint", (0, 0))), _xy(e.dxf.get("defpoint2", (0, 0))), _xy(e.dxf.get("defpoint3", (0, 0))), _xy(e.dxf.get("text_midpoint", (0, 0)))]
         try:
@@ -188,7 +201,7 @@ def entity_points(e, tol: float = 1.0) -> dict | None:
         except DATA_ERRORS:  # no block to draw it from: it is redrawn from its points instead
             disp = []
         return {"pts": pts, "vertex_pts": [], "segments": [], "text": e.dxf.get("text", ""), "display": disp,
-                "extra": {"dimtype": int(e.dxf.dimtype) & 7, "angle": float(e.dxf.get("angle", 0.0)), "measurement": measurement}}
+                "extra": {"dimtype": int(e.dxf.dimtype) & 7, "angle": float(e.dxf.get("angle", 0.0)), "measurement": measurement, **_dim_text(e)}}
     if t == "LEADER":
         return {"pts": [_xy(v) for v in e.vertices], "vertex_pts": [], "segments": []}
     if t == "HATCH":
