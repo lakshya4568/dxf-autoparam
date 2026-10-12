@@ -40,9 +40,17 @@ def _restore(an, snap) -> None:
         an.clusters[cid].name, an.clusters[cid].accepted = name, acc
 
 
-def prepare(path: str, view: int | None = None, region=None, drawing=None):
+def prepare(path: str, view: int | None = None, region=None, drawing=None, analysis=None):
     """The drawing analysed afresh (apply() renames and splits candidates, so each validation starts clean). `drawing`:
-    one view (or unit) of a sheet already read — a copy is analysed; `region` then frames its pictures."""
+    one view (or unit) of a sheet already read — a copy is analysed; `region` then frames its pictures. `analysis`: an
+    analysis to start from instead (a sheet unit's own, so every candidate, occurrence and line id is the sheet's) —
+    a copy is used, the original is never touched."""
+    if analysis is not None:
+        an = copy.deepcopy(analysis)
+        snap = _snapshot(an)
+        base = from_model(build(an, Decisions()))
+        _restore(an, snap)
+        return an, base, region if region is not None else an.drawing.extent, snap
     if drawing is not None:
         dr = copy.deepcopy(drawing)
         an = analyse(dr)
@@ -63,10 +71,9 @@ def prepare(path: str, view: int | None = None, region=None, drawing=None):
     return an, base, region, snap
 
 
-def images_for(an, base: Program, region) -> list[bytes]:
-    dr = an.drawing
-    pts = {it.index: it.pts for it in dr.items}
-    sc = scene(an, pts, {}, {})
+def image_labels(an, base: Program) -> dict[str, tuple[str, float]]:
+    """The set-out lines labelled on the picture (by the same ids the tools use): the lines the baseline's sizes span,
+    the stated levels and the construction axes — at most 90, so the picture stays legible."""
     wanted: list[str] = []
     for p in base.params.values():
         if p.measures:
@@ -77,6 +84,14 @@ def images_for(an, base: Program, region) -> list[bytes]:
         if d in an.datums and d not in seen and len(labels) < 90:
             seen.add(d)
             labels[d] = (an.datums[d].axis, an.datums[d].value)
+    return labels
+
+
+def images_for(an, base: Program, region) -> list[bytes]:
+    dr = an.drawing
+    pts = {it.index: it.pts for it in dr.items}
+    sc = scene(an, pts, {}, {})
+    labels = image_labels(an, base)
     x0, y0, x1, y1 = dr.extent
     pad = 0.08 * max(x1 - x0, y1 - y0, 1.0)
     bbox = (x0 - pad, y0 - pad, x1 + pad, y1 + pad)

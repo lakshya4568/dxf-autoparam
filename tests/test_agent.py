@@ -65,7 +65,7 @@ def test_the_agent_edits_step_by_step_and_each_edit_is_checked_at_once():
                                      {"name": "CellLeft", "type": "cell", "level": "subcomponent", "parent": "Box", "regions": [cell_l]},
                                      {"name": "CellRight", "type": "cell", "level": "subcomponent", "parent": "Box", "regions": [cell_r]},
                                      {"name": "PccCourse", "type": "courses", "regions": [pcc]}]),
-         call("define_parameters", items=[{"name": "ClearSpan", "part": "Box", "candidate": span},
+         call("define_parameters", items=[{"name": "ClearSpan", "part": "Box", "candidate": span, "occurrences": ["all"]},  # both cells: one input
                                           {"name": "Wrong", "part": "Box", "from_line": x_line, "to_line": y_line}])],  # mixed axes: rejected
         [call("remove", parameters=["Wrong"]), call("what_moves", parameter="ClearSpan"),
          call("state_behaviours", items=[{"parameter": "ClearSpan", "target": "Box", "behaviour": "grows", "axis": "x"}])],

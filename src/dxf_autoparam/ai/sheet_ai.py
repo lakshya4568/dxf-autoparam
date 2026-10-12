@@ -14,6 +14,7 @@ goes through the model's undoable edits.
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 from typing import Literal
@@ -230,11 +231,21 @@ def apply_shared(sm: SheetModel, answer: dict) -> dict:
     return {"applied": done, "refused": refused, "questions": answer.get("questions", [])}
 
 
-def parametrize_unit(sm: SheetModel, uid: str, gem, instructions: str = "", on_event=None, stop=None, log=print, **kw) -> dict:
-    """Stage UNITS: the tool-using agent on one unit's own drawing; its answer becomes the unit's (undoable)."""
-    from .agent import agent_parametrize
+def parametrize_unit(sm: SheetModel, uid: str, gem, instructions: str = "", on_event=None, stop=None, log=print, lock=None, **kw) -> dict:
+    """Stage UNITS: the tool-using agent on one unit's own drawing — on the unit's OWN analysis (the sheet's candidate,
+    occurrence and line ids), seeing the sheet through a read-only scope (shared sizes, views, revision). Its answer
+    becomes the unit's only through SheetModel.commit_answer: refused, with nothing changed, if the sheet changed while
+    it worked or the whole sheet would no longer hold (a shared size that stops driving, a view that stops following)."""
+    from contextlib import nullcontext
 
-    u = sm.unit(uid)
+    from .agent import agent_parametrize
+    from .context import SheetScope
+
+    with lock or nullcontext():  # the start state is read whole: a person's edit cannot land half-way through it
+        u = sm.unit(uid)
+        scope = SheetScope(sm, uid)
+        analysis = sm.pristine_analysis(uid)
+        start = copy.deepcopy(u.answer)
     x0 = min(sm.layout.group(v).bbox[0] for v in u.views)
     y0 = min(sm.layout.group(v).bbox[1] for v in u.views)
     x1 = max(sm.layout.group(v).bbox[2] for v in u.views)
@@ -243,8 +254,11 @@ def parametrize_unit(sm: SheetModel, uid: str, gem, instructions: str = "", on_e
     note = f"This drawing is {'the views ' if len(u.views) > 1 else 'view '}{views} of a larger sheet" + (
         " — drawn in projection: their common lines are one set-out line." if len(u.views) > 1 else ".")
     prog, rep, info = agent_parametrize(sm.path, region=(x0, y0, x1, y1), instructions=(note + "\n" + instructions).strip(),
-                                        start=u.answer, gem=gem, on_event=on_event, stop=stop, log=log, drawing=u.sub, **kw)
-    sm.set_answer(uid, info["answer"])
+                                        start=start, gem=gem, on_event=on_event, stop=stop, log=log, drawing=u.sub,
+                                        analysis=analysis, scope=scope, **kw)
+    with lock or nullcontext():
+        commit = sm.commit_answer(uid, info["answer"], expected_revision=scope.revision)
     return {"unit": uid, "params": len(prog.params), "named": sum(1 for p in prog.params.values() if p.source == "ai"),
-            "rejected": rep.rejected, "tokens_in": info.get("tokens_in"), "tokens_out": info.get("tokens_out")}
+            "rejected": rep.rejected, "tokens_in": info.get("tokens_in"), "tokens_out": info.get("tokens_out"),
+            "revision": commit["revision"], "values_dropped": commit["values_dropped"]}
 

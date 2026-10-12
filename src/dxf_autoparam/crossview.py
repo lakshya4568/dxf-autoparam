@@ -34,6 +34,7 @@ from .display import primitives
 from .dxf_read import read_dxf
 from .dxf_write import audit, write_dxf
 from .graph import affects
+from .intent import _drives
 from .ir import Analysis, Drawing, Role
 from .program import ExprError, Program
 from .regen import Regenerated, regenerate_program
@@ -206,6 +207,9 @@ class SheetModel:
         self.accepted: set[tuple[str, str]] = set()  # projection links a person (or the AI, checked) took although weak
         self.relations: list[dict] = []  # views that show the same structure / a detail of another (semantic, not set-out)
         self.questions: list[str] = []  # what the AI or the engine asks a person to settle
+        # Bumped by every change of state (an edit, undo, redo): work started on one revision (a Gemini run, an open
+        # panel) is refused when it would land on another — it was decided on a sheet that no longer exists.
+        self.revision = 0
         self._group_units()
 
     @classmethod
@@ -503,6 +507,7 @@ class SheetModel:
         self.history.append(self._state())
         self.future.clear()
         del self.history[:-100]
+        self.revision += 1
 
     def _restore(self, st: dict) -> None:
         relayout = (st["unlinked"] != self.unlinked or st.get("accepted", set()) != self.accepted
@@ -522,6 +527,7 @@ class SheetModel:
             return False
         self.future.append(self._state())
         self._restore(self.history.pop())
+        self.revision += 1
         return True
 
     def redo(self) -> bool:
@@ -529,6 +535,7 @@ class SheetModel:
             return False
         self.history.append(self._state())
         self._restore(self.future.pop())
+        self.revision += 1
         return True
 
     # ── shared parameters ────────────────────────────────────────────────────
@@ -619,6 +626,7 @@ class SheetModel:
             raise SheetError(f"{name} drives none of its views: " + "; ".join(f"{b.unit}: {b.reason}" for b in refused))
         self.history.append(before)
         self.future.clear()
+        self.revision += 1
         return p
 
     @staticmethod
@@ -800,6 +808,74 @@ class SheetModel:
         self._push()
         u.answer, u.prog = answer, None
         self.unit(uid)
+
+    def pristine_analysis(self, uid: str):
+        """A copy of the unit's analysis as found — the same candidate, occurrence and line ids the sheet uses (layout
+        distances between linked views already dropped) — for work that applies answers to it on its own (the agent)."""
+        u = self.unit(uid)
+        an = copy.deepcopy(u.an)
+        for cid, (name, acc, gaps) in u.snap.items():
+            if cid in an.clusters:
+                c = an.clusters[cid]
+                c.name, c.accepted, c.gaps = name, acc, [g for g in gaps if g in an.gaps]
+        for gid, cl in u.gap_clusters.items():
+            if gid in an.gaps:
+                an.gaps[gid].cluster = cl
+        an.cache.clear()
+        return an
+
+    def commit_answer(self, uid: str, answer: dict, expected_revision: int | None = None) -> dict:
+        """Replace a unit's parametrization only if the WHOLE sheet still holds; otherwise nothing changes.
+
+        Refused (SheetError, the state untouched) when: the sheet changed since the work began (`expected_revision`);
+        the unit no longer regenerates; or a size it shares with other views stops driving here (that view would stop
+        following). Committed values the new answer no longer has are reported (they fall back to the drawing)."""
+        if expected_revision is not None and expected_revision != self.revision:
+            raise SheetError(f"stale: the sheet changed while this was being worked out (revision {expected_revision} → {self.revision}); "
+                             "nothing was applied — run it again on the current sheet")
+        u = self.unit(uid)
+        before_status = {(p.name, b.unit): b.status for p in self.shared.values() for b in p.bindings if b.unit == uid}
+        state = self._state()
+        rev = self.revision
+        self._push()
+        u.answer, u.prog = answer, None
+        try:
+            self.unit(uid)
+        except (KeyError, ExprError, ArithmeticError) as exc:
+            self._restore(state)
+            self.history.pop()
+            self.revision = rev
+            raise SheetError(f"{uid}: the answer does not build: {exc}") from exc
+        problems = []
+        for p in self.shared.values():
+            for b in p.bindings:
+                if b.unit == uid and before_status.get((p.name, uid)) == "drives" and b.status != "drives":
+                    problems.append(f"{p.name} is shared with {', '.join(x.unit for x in p.bindings if x.unit != uid)} but would no longer "
+                                    f"drive {uid} ({b.status}: {b.reason or 'not a value of the new answer'}) — that view would stop following")
+        for p in self.shared.values():  # measured, not only named: the shared size still moves its own lines here
+            for b in p.bindings:
+                if b.unit != uid or b.status != "drives":
+                    continue
+                prm = u.prog.params.get(b.param)
+                if prm is not None and prm.measures and not _drives(u.prog, b.param, *prm.measures,
+                                                                    {**{d.id: d.value for d in u.an.datums.values()}, **u.prog.datum_values()}):
+                    problems.append(f"{p.name} no longer moves its lines in {uid} ({prm.measures[0]}–{prm.measures[1]}): the views sharing it would not follow")
+        others = {x.unit for p in self.shared.values() if any(b.unit == uid for b in p.bindings) for x in p.bindings}
+        r = self.regenerate(units={uid} | others)
+        problems += r.errors
+        if problems:
+            self._restore(state)
+            self.history.pop()
+            self.revision = rev
+            for q in self.shared.values():  # the bindings' statuses as they were
+                for b in q.bindings:
+                    if b.unit == uid and (q.name, uid) in before_status:
+                        b.status = before_status[(q.name, uid)]
+            self.units[uid].prog = None
+            self.unit(uid)
+            raise SheetError("refused, nothing changed: " + "; ".join(problems[:4]))
+        lost = sorted(n for n in self.values.get(uid, {}) if n not in u.prog.params)
+        return {"unit": uid, "revision": self.revision, "values_dropped": lost}
 
     def link(self, a: str, b: str, linked: bool) -> None:
         """Take or refuse a projection link between two views (their units are re-formed; a unit whose views changed

@@ -228,14 +228,15 @@ class SheetSession:
                 else:
                     usage = {}
                     res = sheet_ai.parametrize_unit(sm, uid, self.gem, instructions=body.get("instructions", ""), on_event=push,
-                                                    stop=job["stop"].is_set, log=lambda *a: push({"kind": "log", "text": " ".join(map(str, a))}))
+                                                    stop=job["stop"].is_set, log=lambda *a: push({"kind": "log", "text": " ".join(map(str, a))}),
+                                                    lock=self.lock)
                 job["result"] = {**res, "usage": {k: usage.get(k) for k in ("model", "thinking", "input_tokens", "output_tokens",
                                                                                 "thinking_tokens", "cached", "seconds") if usage}}
                 push({"kind": "done", "text": f"{kind}: {len(res.get('applied', []))} applied, {len(res.get('refused', []))} refused"
                       if kind != "unit" else f"unit {uid}: {res['named']} named values"})
             except GeminiStopped:
                 push({"kind": "stopped", "text": "Stopped. Nothing from this run was applied (tokens generated before the stop are billed)."})
-            except GeminiUnavailable as exc:
+            except (GeminiUnavailable, SheetError) as exc:  # a refused commit says why, and that nothing changed
                 job["error"] = str(exc)
                 push({"kind": "error", "text": job["error"]})
             except Exception as exc:  # noqa: BLE001 — the job's boundary: logged with its traceback, said in the page

@@ -146,7 +146,11 @@ def apply(an: Analysis, answer: dict, base_decisions: Decisions | None = None, h
     existing_only = existing_d - proposed_d
 
     # ── parameters naming a candidate (V1, V2, V3) ─────────────────────────────────
+    # A candidate is every equal size of one kind; a parameter may name only some of its OCCURRENCES (gap ids): those
+    # drive with it, the rest stay their own sizes — equal sizes are not one design input unless someone says so.
     loose: list[dict] = []
+    claimed: dict[str, str] = {}  # occurrence → the parameter that drives it
+    subset_pairs: dict[str, list[tuple[str, str, str | None]]] = {}
     for p in answer.get("parameters", []):
         name = p.get("name", "")
         if not PASCAL.match(name) or GENERIC.match(name):
@@ -165,6 +169,33 @@ def apply(an: Analysis, answer: dict, base_decisions: Decisions | None = None, h
             if abs(measured - float(p.get("value", 0))) > max(tol, 1e-3 * measured):
                 rep.bad("parameter", "V2", name, f"{name} = {p.get('value')} but candidate {cid} measures {measured:.1f} mm")
                 continue
+            occ = p.get("occurrences")
+            occ = None if occ in (None, "all") else list(dict.fromkeys(occ))
+            if occ is not None:
+                bad = [g for g in occ if g not in c.gaps]
+                if not occ or bad:
+                    rep.bad("parameter", "V1", name, f"{name}: {', '.join(bad) or 'no occurrence'} not an occurrence of {cid} "
+                            f"(its occurrences: {', '.join(c.gaps[:12])})")
+                    continue
+                if any(an.gaps[g].axis not in ("x", "y") for g in occ):
+                    rep.bad("parameter", "V1", name, f"{name}: {cid} is a {c.kind.value} size; only sizes between set-out lines bind by occurrence")
+                    continue
+            mine = occ if occ is not None else list(c.gaps)
+            clash = sorted({claimed[g] for g in mine if g in claimed})
+            if clash:
+                rep.bad("parameter", "V12", name, f"{name}: occurrence(s) {', '.join(g for g in mine if g in claimed)} of {cid} already "
+                        f"driven by {', '.join(clash)} — one occurrence, one input")
+                continue
+            if occ is not None and set(occ) != set(c.gaps):
+                g0 = an.gaps[occ[0]]
+                for g in occ:
+                    claimed[g] = name
+                subset_pairs[name] = [(an.gaps[g].a, an.gaps[g].b, an.gaps[g].sym_axis) for g in occ]
+                loose.append({**p, "candidate": None, "from_datum": g0.a, "to_datum": g0.b,
+                              "evidence": list(p.get("evidence", []))[:5] + [f"occurrence(s) {', '.join(occ)} of {cid}"]})
+                continue
+            for g in mine:
+                claimed[g] = name
             # A proposed member's value does not drag an existing structure that merely has the same size:
             # occurrences lying wholly on an existing structure are split off (they stay as drawn).
             if existing_only and not comp_existing.get(p.get("component"), False):
@@ -296,7 +327,9 @@ def apply(an: Analysis, answer: dict, base_decisions: Decisions | None = None, h
         name, cid = p.get("name"), p.get("candidate")
         if name not in prog.params or prog.params[name].kind == "level":
             continue
-        if cid and cid in an.clusters:
+        if name in subset_pairs:
+            dims[name] = subset_pairs[name]
+        elif cid and cid in an.clusters:
             dims[name] = [(an.gaps[g].a, an.gaps[g].b, an.gaps[g].sym_axis) for g in an.clusters[cid].gaps if an.gaps[g].axis in ("x", "y")]
         elif prog.params[name].measures:
             dims[name] = [(*prog.params[name].measures, None)]
