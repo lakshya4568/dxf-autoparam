@@ -89,6 +89,7 @@
   <span class="sp"></span>
   <select id="filter" title="What a click or a box selects"><option value="all">Select: all</option><option value="structure">Structure only</option><option value="annotation">Annotation only</option></select>
   <button id="fitall" title="Fit the sheet (F)">Fit</button>
+  <button class="icon" id="rotccw" title="Rotate the view 90° counter-clockwise (Shift R)">⟲</button><span class="muted" id="rotlbl" style="min-width:2.4em;text-align:center">0°</span><button class="icon" id="rotcw" title="Rotate the view 90° clockwise (R)">⟳</button>
   <button id="project" title="Download the parametric project (JSON)">Project</button>
   <button class="primary" id="export" title="Download the edited DXF">Export DXF</button>
   <button class="icon" id="theme" title="Light / dark">◐</button>
@@ -127,7 +128,7 @@ let S = null;                       // the sheet summary from the server
 let P = [];                         // primitives: {i, k, r, l, v, p:Float64Array, c, d, at, t, h, rot}
 let byEnt = new Map();              // entity index -> [prim ids]
 let grid = null;                    // spatial index over primitives
-let cam = { x: 0, y: 0, s: 1 };     // world point at the canvas centre, pixels per drawing unit
+let cam = { x: 0, y: 0, s: 1, r: 0 };     // world point at the canvas centre, pixels per drawing unit, view rotation (quarter turns)
 let sel = new Set(), hov = -1;      // selected entities; hovered entity
 let impact = new Set();             // what the value in focus moves (measured)
 let focus = null;                   // { kind: "view"|"param"|"entity"|"unit", id }
@@ -214,10 +215,17 @@ function resize() { dpr = window.devicePixelRatio || 1; const r = cv.getBounding
   cv.width = Math.round(CW * dpr); cv.height = Math.round(CH * dpr);
   if (!fitted && P.length && CW > 50 && CH > 50) { fitted = true; fit(sheetBox(), 0.03); } else draw(); }
 new ResizeObserver(resize).observe($("#stage"));
-const toScreen = (x, y) => [(x - cam.x) * cam.s + CW / 2, (cam.y - y) * cam.s + CH / 2];
-const toWorld = (sx, sy) => [(sx - CW / 2) / cam.s + cam.x, cam.y - (sy - CH / 2) / cam.s];
+// The view turns in quarter turns only, so a screen rectangle stays an axis-aligned box in the drawing (window and
+// crossing selection stay exact). The drawing itself is never changed: rotation is the camera's.
+const rot = () => { const a = (((cam.r % 4) + 4) % 4) * Math.PI / 2; return [Math.round(Math.cos(a)), Math.round(Math.sin(a))]; };
+const toScreen = (x, y) => { const [c, n] = rot(), dx = x - cam.x, dy = y - cam.y;
+  return [(dx * c - dy * n) * cam.s + CW / 2, CH / 2 - (dx * n + dy * c) * cam.s]; };
+const toWorld = (sx, sy) => { const [c, n] = rot(), rx = (sx - CW / 2) / cam.s, ry = (CH / 2 - sy) / cam.s;
+  return [cam.x + rx * c + ry * n, cam.y - rx * n + ry * c]; };
+function rotateView(q) { cam.r = (((cam.r + q) % 4) + 4) % 4; $("#rotlbl").textContent = cam.r * 90 + "°"; say(`view rotated to ${cam.r * 90}°`); draw(); }
 function fit(box, pad = 0.06) {
-  if (!box) return; const w = box[2] - box[0] || 1, h = box[3] - box[1] || 1;
+  if (!box) return; let w = box[2] - box[0] || 1, h = box[3] - box[1] || 1;
+  if (cam.r % 2) [w, h] = [h, w];
   cam.s = Math.min(CW / (w * (1 + 2 * pad)), CH / (h * (1 + 2 * pad))); cam.x = (box[0] + box[2]) / 2; cam.y = (box[1] + box[3]) / 2; draw();
 }
 function viewBox(gid) { const g = S.groups.find((x) => x.id === gid); return g ? g.bbox : null; }
@@ -234,7 +242,8 @@ function render() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.fillStyle = css("--canvas"); ctx.fillRect(0, 0, CW, CH);
   if (!P.length) return;
-  const [wx0, wy1] = toWorld(0, 0), [wx1, wy0] = toWorld(CW, CH);
+  const [ax, ay] = toWorld(0, 0), [bx, by] = toWorld(CW, CH);
+  const wx0 = Math.min(ax, bx), wx1 = Math.max(ax, bx), wy0 = Math.min(ay, by), wy1 = Math.max(ay, by);
   const ids = query(wx0, wy0, wx1, wy1, []);
   const furniture = S ? new Set([...S.furniture.frame, ...S.furniture.rules, ...S.furniture.watermark, ...S.furniture.stray]) : new Set();
   const changed = preview ? preview.ents : null;
@@ -275,9 +284,10 @@ function render() {
   lastFrameMs = performance.now() - t0;
 }
 function poly(p, closed) {
-  const s = cam.s, ox = CW / 2 - cam.x * s, oy = CH / 2 + cam.y * s;
-  ctx.moveTo(p[0] * s + ox, oy - p[1] * s);
-  for (let k = 2; k < p.length; k += 2) ctx.lineTo(p[k] * s + ox, oy - p[k + 1] * s);
+  const s = cam.s, [c, n] = rot(), cx = CW / 2, cy = CH / 2, x0 = cam.x, y0 = cam.y;
+  const a = c * s, b = n * s;   // screen x = cx + a·dx − b·dy, screen y = cy − (b·dx + a·dy)
+  ctx.moveTo(cx + a * (p[0] - x0) - b * (p[1] - y0), cy - b * (p[0] - x0) - a * (p[1] - y0));
+  for (let k = 2; k < p.length; k += 2) { const dx = p[k] - x0, dy = p[k + 1] - y0; ctx.lineTo(cx + a * dx - b * dy, cy - b * dx - a * dy); }
   if (closed) ctx.closePath();
 }
 function stroke(list, color, w, dash) {
@@ -296,10 +306,14 @@ function text1(o, bold) {
   const hpx = (o.h || 2.5 / cam.s * 4) * cam.s;
   if (hpx < 3.2) return;   // too small to read: not drawn at this zoom
   const [sx, sy] = toScreen(o.at[0], o.at[1]);
-  ctx.save(); ctx.translate(sx, sy); ctx.rotate(-(o.rot || 0) * Math.PI / 180);
+  // On a turned view a text can come out upside down; it is drawn turned half round over the same place so it reads
+  // left to right (display only, the entity keeps its angle).
+  const ang = ((((o.rot || 0) + cam.r * 90) % 360) + 360) % 360, flip = ang > 90.5 && ang < 269.5;
+  ctx.save(); ctx.translate(sx, sy); ctx.rotate(-(ang + (flip ? 180 : 0)) * Math.PI / 180);
   ctx.font = `${bold ? "600 " : ""}${Math.min(hpx, 400)}px system-ui, sans-serif`;
+  if (flip) { ctx.textAlign = "right"; ctx.textBaseline = "top"; }
   const lines = String(o.t || "").split("\n");
-  lines.forEach((ln, k) => ctx.fillText(ln, 0, k * hpx * 1.5));
+  lines.forEach((ln, k) => ctx.fillText(ln, 0, (flip ? -k : k) * hpx * 1.5));
   ctx.restore();
 }
 function boxes() {
@@ -356,14 +370,14 @@ cv.addEventListener("contextmenu", (e) => e.preventDefault());
 cv.addEventListener("pointerdown", (e) => {
   cv.setPointerCapture(e.pointerId);
   const r = cv.getBoundingClientRect(), sx = e.clientX - r.left, sy = e.clientY - r.top;
-  if (e.button === 1 || (e.button === 0 && spaceDown) || e.button === 2) { drag = { kind: "pan", sx, sy, cx: cam.x, cy: cam.y }; cv.style.cursor = "grabbing"; e.preventDefault(); return; }
+  if (e.button === 1 || (e.button === 0 && spaceDown) || e.button === 2) { drag = { kind: "pan", w: toWorld(sx, sy) }; cv.style.cursor = "grabbing"; e.preventDefault(); return; }
   if (e.button === 0) drag = { kind: "maybe", sx, sy, w0: toWorld(sx, sy), shift: e.shiftKey, sub: e.ctrlKey || e.metaKey };
 });
 cv.addEventListener("pointermove", (e) => {
   const r = cv.getBoundingClientRect(), sx = e.clientX - r.left, sy = e.clientY - r.top;
   const [wx, wy] = toWorld(sx, sy);
   $("#coords").textContent = `${fmt(wx)}, ${fmt(wy)}`;
-  if (drag && drag.kind === "pan") { cam.x = drag.cx - (sx - drag.sx) / cam.s; cam.y = drag.cy + (sy - drag.sy) / cam.s; draw(); return; }
+  if (drag && drag.kind === "pan") { cam.x += drag.w[0] - wx; cam.y += drag.w[1] - wy; draw(); return; }   // the grabbed point follows the cursor
   if (drag && (drag.kind === "maybe" || drag.kind === "box")) {
     if (drag.kind === "maybe" && Math.hypot(sx - drag.sx, sy - drag.sy) > 4) drag.kind = "box";
     if (drag.kind === "box") { drag.ex = sx; drag.ey = sy; draw(); return; }
@@ -401,7 +415,7 @@ cv.addEventListener("wheel", (e) => {
   const [wx, wy] = toWorld(sx, sy);
   const k = Math.exp(-(e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY) * 0.0016);
   cam.s = Math.min(Math.max(cam.s * k, 1e-7), 1e7);
-  cam.x = wx - (sx - CW / 2) / cam.s; cam.y = wy + (sy - CH / 2) / cam.s;   // the point under the cursor stays put
+  const [nx, ny] = toWorld(sx, sy); cam.x += wx - nx; cam.y += wy - ny;   // the point under the cursor stays put
   $("#zoom").textContent = zoomText(); draw();
 }, { passive: false });
 function band() {
@@ -429,6 +443,7 @@ window.addEventListener("keydown", (e) => {
   if (mod && e.key.toLowerCase() === "y") { e.preventDefault(); redo(); return; }
   if (e.key === "Escape") { escape(); return; }
   if (e.key === "f" || e.key === "F") { e.shiftKey && sel.size ? fit(entBox(sel)) : fit(sheetBox()); return; }
+  if (e.key === "r" || e.key === "R") { rotateView(e.shiftKey ? 1 : -1); return; }   // R clockwise, Shift R counter-clockwise
   if (e.key === "v" || e.key === "V") { const g = focus && focus.kind === "view" ? focus.id : activeView; if (g) fit(viewBox(g)); return; }
   if (e.key === "Enter" && preview) { applyPreview(); return; }
 });
@@ -451,8 +466,9 @@ function command(c) {
     case "V": case "VIEW": if (arg) openView(arg.toUpperCase(), true); break;
     case "UNDO": case "U": undo(); break; case "REDO": redo(); break;
     case "ESC": escape(); break;
+    case "ROT": case "ROTATE": { const d = parseFloat(arg); if (!isNaN(d) && d % 90 === 0) rotateView(d / 90); else say("ROT takes a multiple of 90, e.g. ROT 90 (counter-clockwise) or ROT -90", "bad"); break; }
     case "SEL": if (arg) { const g = S.groups.find((x) => x.id === arg.toUpperCase()); if (g) { sel = new Set(g.items || []); afterSelect(); } } break;
-    case "HELP": case "?": say("F fit · Shift+F fit selection · V fit view · wheel zoom · middle/space/right-drag pan · drag ⇢ window · ⇠ crossing · Shift add · Ctrl/⌘ remove · Esc · Ctrl/⌘ Z undo"); break;
+    case "HELP": case "?": say("F fit · Shift+F fit selection · V fit view · R / Shift+R rotate view 90° · ROT 90 · wheel zoom · middle/space/right-drag pan · drag ⇢ window · ⇠ crossing · Shift add · Ctrl/⌘ remove · Esc · Ctrl/⌘ Z undo"); break;
     default: if (c) say(`unknown command ${c}`, "bad");
   }
 }
@@ -785,7 +801,8 @@ async function download(url, fallback) {
 }
 $("#export").onclick = () => download("/api/sheet/export", "sheet.dxf");
 $("#project").onclick = () => download("/api/sheet/project", "sheet.autoparam.json");
-window.__ws = { get prims() { return P.length; }, get frameMs() { return lastFrameMs; }, fit, draw, pick, boxSelect, cam, sheet: () => sheetBox(), render: () => { render(); return lastFrameMs; } };
+$("#rotcw").addEventListener("click", () => rotateView(-1)); $("#rotccw").addEventListener("click", () => rotateView(1));
+window.__ws = { rotateView, toScreen, toWorld,  get prims() { return P.length; }, get frameMs() { return lastFrameMs; }, fit, draw, pick, boxSelect, cam, sheet: () => sheetBox(), render: () => { render(); return lastFrameMs; } };
 loadSheet().catch((e) => say(e.message, "bad"));
 </script>
 </body>
