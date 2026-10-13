@@ -332,3 +332,47 @@ replays it on every test run):
 Remaining limits: one view at a time; parts are labelled from regions (a part drawn only with open lines needs
 `entities`); behaviour checks measure bounding boxes (a part that changes shape inside the same box reads as fixed);
 constraint enforcement covers linear constraints only.
+
+## 12. Instruction-guided, assembly-aware plans (`plan.py`, `assembly.py`)
+
+**What was wrong.** A size drove its two lines; which side stayed was decided per size, and everything else hung
+where the spanning tree had put it. So an anchor choice (`SheetModel.anchor`, "the start stays") rewrote two lines and
+left the middle wall of a two-cell box to absorb the change (300 → 800 mm at ClearSpan 3000 → 2500) — and it was
+accepted, because validation proved only that no outline inverted. On a box drawn as separate members the default
+set-out grew the two cells from opposite sides and the middle wall inverted at +10 %.
+
+**What a change is now.** A PLAN, built from the person's words and the drawing, stored with the answer (saved,
+undone and redone with it), compiled into the existing program and measured before it is committed:
+
+| | |
+|---|---|
+| driver | a named value, the exact occurrences it drives, the value asked for |
+| anchor | one policy for the assembly on that axis — `centered` (about a line; a drawn centre line first), `start_fixed`, `end_fixed`, `as_set_out` — with its evidence (the instruction, an earlier plan, the only policy that keeps a fixed line where it is) or a question listing each alternative's predicted effect per part |
+| directives | `keep_value` (the size stays, it may move) · `keep_fixed` (stays where drawn for this edit; stays parametric) · `no_parameter` · `exclude` (held as built, no value of its own) · `preserve` thickness / symmetry / level / connection · `annotations_only` · `follow` · `translate` · `resize` · `review` (unclear: a person decides) |
+| tied parts | parts drawn on the assembly's lines, touching it, or only hung on it by the set-out: each needs an accepted behaviour, or the plan asks |
+| questions | ambiguous words ("don't touch", "preserve the foundation"), unread text, an undecided anchor, the AI's own inferences |
+
+**Compiled** (inside `validator.apply`): `exclude` → held; `keep_fixed` → its lines that would follow the value are
+pinned where drawn; the anchor → `assembly.stack`, which re-sets the assembly's lines on that axis out from the anchor
+in closed form — each occurrence pushes what lies beyond it, lines inside an opening stay with their side (a long
+occurrence takes its change in its widest free run, never through a short member), every other size keeps its drawn
+value, the drawing's own chain formulas and named sizes are reused, and a line a person, a slope, a level or existing
+work owns is never rewritten (the policy is refused instead).
+
+**Measured** (`verify_plan`, V16): the value up, down, at the asked value and back; on the regenerated ENTITIES, not
+bounding boxes — the driver's occurrences, the anchor line, every assembly line as predicted, fixed parts point by
+point, kept values, thickness, symmetry, contacts torn, members running into each other, unrelated parts, dimensions,
+notes, every other named value still driving. A failure blocks the commit (`commit_answer`), and slider edits on a
+unit with an accepted plan are checked against it.
+
+**Who decides what.** The built-in reader is generic English resolved against THIS drawing's names and the knowledge
+pack's aliases; what it cannot resolve is asked, never guessed. The agent (`inspect_assembly`, `propose_plan`) reads
+semantics; a directive it claims from the instruction must quote the person's words, otherwise it is a proposal the
+person accepts. The engine resolves, predicts and measures; a person settles the rest.
+
+**Measured on generated drawings with known intent** (`dxf-autoparam plan-bench`, no model): 54/54 cases (boxes of
+1–4 cells drawn as separate members, two views in projection, foundation, wing walls, an unrelated detail; the
+generator draws the intended result) — but these phrasings are self-authored. On phrasings written without looking at
+the reader: 2/10 and 3/10 before tuning, a third set after tuning 6/12 — and in every set 0 misreadings became an
+applicable plan (each became a question). Remaining: the reader's phrasing coverage; one anchor policy per axis and
+assembly; dimension lines stay where drawn (their points follow).

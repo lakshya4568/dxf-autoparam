@@ -53,6 +53,7 @@
   .muted { color: var(--muted); }
   .note { padding: 4px 10px; color: var(--muted); font-size: 11.5px; }
   .note.bad { color: var(--bad); } .note.warn { color: var(--warn); } .note.ok { color: var(--ok); }
+  .note.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10.5px; white-space: pre-wrap; word-break: break-word; }
   .insp { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
   .insp h3 { margin: 0; font-size: 13px; }
   .insp .kv { display: grid; grid-template-columns: 96px 1fr; gap: 3px 8px; font-size: 12px; }
@@ -714,6 +715,7 @@ function paramList() {
   if (!uid) return h + `<div class="hint">Open a view (click it in <b>Views</b> or double-click it on the sheet) to see its sizes. Type a new value and press <b>Enter</b> to preview it; click a size to see what it moves.</div>`;
   const u = unitCache.get(uid);
   if (!u) { if (!loading.has(uid)) { loading.add(uid); loadUnit(uid).then(() => { loading.delete(uid); renderLeft(); }); } return h + `<div class="note">reading the view…</div>`; }
+  h += fold("plan", "Plan a change", planPanel(uid, u), (u.plans || []).length || null, !!planState || !(u.plans || []).length);
   h += `<div class="note"><input type="text" id="psearch" placeholder="filter by name, meaning or value" style="width:100%"></div>`;
   const ps = u.params.filter((p) => !p.shared).sort((a, b) => (b.source === "ai") - (a.source === "ai"));
   for (const p of ps.slice(0, 400)) {
@@ -724,6 +726,97 @@ function paramList() {
   const f = u.findings.filter((x) => x.severity !== "info");
   if (f.length) h += fold("checks", "Engine checks on this view", f.slice(0, 60).map((x) => `<div class="note ${x.severity === "error" ? "bad" : "warn"}">${esc(x.item)}: ${esc(x.message)}</div>`).join(""), f.length);
   return h;
+}
+
+// ── plans: an instruction read into what moves, what stays and why — decided, then applied and measured ─────────
+let planDraft = "", planState = null;   // planState: {uid, plan, decisions, edits, checks}
+const PLAN_MODES = ["resize", "translate", "follow", "keep_fixed", "keep_value", "no_parameter", "exclude", "preserve", "annotations_only"];
+function planPanel(uid, u) {
+  let h = `<div class="note">Say what to change and what must stay; the engine reads it into a plan you can check before anything moves.</div>
+    <div class="note"><textarea id="plan-instr" rows="3" style="width:100%" placeholder="e.g. Reduce the clear span to 2500. Keep the foundation fixed. Maintain wall thicknesses.">${esc(planDraft)}</textarea></div>
+    <div class="bar"><button id="plan-read">Read</button>${planState && planState.uid === uid && planState.plan.status === "ready" ? `<button class="primary" id="plan-apply">Apply plan</button>` : ""}</div>`;
+  if (planState && planState.uid === uid) h += planCard(planState);
+  for (const q of u.plans || []) {
+    const st = q.status === "accepted" ? (q.failed && q.failed.length ? `<span class="chip bad">${q.failed.length} check(s) fail</span>` : `<span class="chip ok">measured ✓ ${q.checks ? q.checks.passed : ""}</span>`) : `<span class="chip warn">${esc(q.status)}</span>`;
+    const by = {}; for (const x of q.directives) { const m = x.split(": ").pop(); by[m] = (by[m] || 0) + 1; }
+    h += `<div class="row" title="${esc(q.instruction + "\n" + q.directives.join("\n"))}"><span class="nm wrap"><b>${esc(q.driver || q.id)}</b>${q.requested != null ? " → " + fmt(q.requested) : ""} <span class="sub">${esc((q.anchor && q.anchor.policy) || "")}${q.anchor && q.anchor.centre ? " about " + esc(q.anchor.centre) : ""} · ${esc(Object.entries(by).map(([m, n]) => n + " " + m.replace("_", " ")).join(" · "))}</span></span>${st}</div>`;
+    for (const x of q.failed || []) h += `<div class="note bad">${esc(x)}</div>`;
+  }
+  return h;
+}
+function planCard(st) {
+  const P = st.plan, chip = { ready: "ok", accepted: "ok", needs_decision: "warn", conflict: "bad", draft: "" }[P.status] || "";
+  let h = `<div class="sec">Plan <span class="chip ${chip}">${esc(P.status.replace("_", " "))}</span></div>`;
+  const d = P.driver;
+  if (d) h += `<div class="row"><span class="nm"><b>${esc(d.parameter)}</b> ${fmt(d.value)} ${esc(d.unit)}<br><span class="sub">${(d.pairs || []).length} occurrence(s)</span></span>
+      → <input class="val" id="plan-value" value="${d.requested_value != null ? fmt(d.requested_value) : ""}" placeholder="new value"></div>`;
+  for (const c of P.conflicts || []) h += `<div class="note bad">${esc(c)}</div>`;
+  // what only the person can answer comes first
+  for (const q of P.questions || []) {
+    h += `<div class="note warn">${esc(q.about === "anchor" ? "Which side stays when " + (d ? d.parameter : "it") + " changes?" : q.text)}</div>`;
+    if ((q.options || []).length) h += `<div class="bar"><select data-q="${esc(q.about)}"><option value="">choose…</option>${q.options.map((x) => `<option ${st.decisions[q.about] === x ? "selected" : ""}>${esc(x)}</option>`).join("")}</select>${q.recommended ? `<span class="muted">suggested: ${esc(q.recommended)}</span>` : ""}</div>`;
+    if (q.why) h += `<div class="note muted">${esc(q.why)}</div>`;
+  }
+  const a = P.anchor;
+  if (a && (a.alternatives || []).length) {
+    let o = "";
+    for (const alt of a.alternatives) {
+      const key = alt.policy + (alt.centre ? " about " + alt.centre : ""), on = a.policy === alt.policy && (!alt.centre || a.centre === alt.centre);
+      const eff = Object.entries(alt.parts || {});
+      o += `<label class="row" style="align-items:flex-start;${alt.available ? "" : "opacity:.5"}"><input type="radio" name="plan-anchor" data-anchor="${esc(key)}" ${on ? "checked" : ""} ${alt.available ? "" : "disabled"}>
+        <span class="nm wrap"><b>${esc(key)}</b> <span class="sub">${esc(alt.why)}</span>
+        ${eff.length ? `<details><summary class="sub">${eff.length} part(s) move</summary>${eff.map(([k, v]) => `<span class="sub">${esc(k)}: ${esc(v)}</span>`).join("")}</details>` : ""}</span></label>`;
+    }
+    h += fold("plan-anchor", a.status === "accepted" ? `Anchor: ${esc(a.policy)}${a.centre ? " about " + esc(a.centre) : ""}` : "Anchor: the alternatives", o, null, false);
+  }
+  if ((P.directives || []).length) {
+    let o = "";
+    for (const x of P.directives) {
+      const ed = st.edits[x.target];
+      o += `<div class="row" title="${esc((x.clause || "") + (x.relation ? " · " + x.relation : ""))}"><span class="nm wrap"><b>${esc(x.target)}</b> <span class="sub">${esc(x.kind)}${x.relation ? " · " + esc(x.relation) : ""}</span></span>
+        ${x.kind === "part" || x.kind === "parameter" ? `<select data-dir="${esc(x.target)}">${PLAN_MODES.map((m) => `<option ${(ed || x.mode) === m ? "selected" : ""}>${m}</option>`).join("")}</select>` : `<span class="chip">${esc(x.mode)}</span>`}
+        <span class="chip ${x.status === "accepted" ? "ok" : x.status === "rejected" ? "bad" : "warn"}">${esc(x.status)}</span></div>`;
+    }
+    h += fold("plan-dirs", "What each part does", o, P.directives.length, false);
+  }
+  const aff = P.affected || {};
+  h += fold("plan-dep", "What follows", (P.dependency || []).map((x) => `<div class="note mono">${esc(x)}</div>`).join("")
+    + (Object.keys(aff.attached || {}).length ? `<div class="note">Tied to it: ${esc(Object.entries(aff.attached).map(([k, v]) => k + " (" + v + ")").join("; "))}</div>` : ""), null);
+  if (st.checks) {
+    const c = st.checks;
+    h += fold("plan-checks", `Measured: ${c.summary ? c.summary.passed + " passed, " + c.summary.failed + " failed" : ""}`, (c.checks || []).map((x) => `<div class="note ${x.status === "fail" ? "bad" : ""}">${x.status === "fail" ? "✗" : "✓"} ${esc(x.check)} ${esc(x.target)} — ${esc(x.measured)}${x.status === "fail" && x.cause ? " · " + esc(x.cause) : ""}</div>`).join("")
+      + (c.outcomes || []).map((o) => `<div class="note mono">${fmt(o.value)}: ${esc(Object.entries(o.parts || {}).slice(0, 8).map(([k, v]) => k + " " + v).join("; "))}</div>`).join(""), null, !c.ok);
+  }
+  return h;
+}
+function planRequest() {
+  const st = planState, req = { unit: st.uid, instruction: planDraft, decisions: st.decisions };
+  const dirs = Object.entries(st.edits).map(([target, mode]) => ({ target, mode, source: "person" }));
+  if (dirs.length) req.directives = dirs;
+  const v = $("#plan-value"); if (v && v.value.trim() !== "") { const n = parseNum(v.value); if (n != null) req.requested_value = n; }
+  return req;
+}
+async function planRead(keep) {
+  const uid = activeUnit(); if (!uid) return;
+  if (!keep || !planState || planState.uid !== uid) planState = { uid, plan: null, decisions: {}, edits: {}, checks: null };
+  const r = await guard(() => api("/api/sheet/plan", planRequest()), "Reading the instruction…");
+  if (r) { planState.plan = r.plan; planState.revision = r.revision; openFolds.add("plan"); renderLeft(); }
+}
+async function planApply() {
+  const st = planState; if (!st) return;
+  const r = await guard(() => api("/api/sheet/plan/apply", { ...planRequest(), revision: st.revision }), "Applying and measuring…");
+  if (r) { take(r); st.plan = r.result.plan; st.checks = r.result.checks; unitCache.delete(st.uid); await loadUnit(st.uid);
+    say(r.result.checks && r.result.checks.ok ? "plan applied and measured ✓" : "plan applied", "ok"); renderLeft(); renderRight(); draw(); }
+  else { await planRead(true); }
+}
+function wirePlan() {
+  const t = $("#plan-instr"); if (t) t.addEventListener("input", () => { planDraft = t.value; });
+  const rd = $("#plan-read"); if (rd) rd.onclick = () => planRead(false);
+  const ap = $("#plan-apply"); if (ap) ap.onclick = planApply;
+  document.querySelectorAll("#left [data-anchor]").forEach((el) => el.addEventListener("change", () => { planState.decisions.anchor = el.dataset.anchor; planRead(true); }));
+  document.querySelectorAll("#left [data-dir]").forEach((el) => el.addEventListener("change", () => { planState.edits[el.dataset.dir] = el.value; planRead(true); }));
+  document.querySelectorAll("#left [data-q]").forEach((el) => el.addEventListener("change", () => { if (el.value) { planState.decisions[el.dataset.q] = el.value; planRead(true); } }));
+  const pv = $("#plan-value"); if (pv) pv.addEventListener("keydown", (e) => { if (e.key === "Enter") planRead(true); });
 }
 function activeUnit() { const v = activeView || (focus && focus.kind === "view" ? focus.id : null); if (!v) return null; const g = S.groups.find((x) => x.id === v); return g && g.unit; }
 function wireLeft() {
@@ -738,6 +831,7 @@ function wireLeft() {
   const ot = $("#ov-tidy"); if (ot) ot.addEventListener("change", () => { tidyOn = ot.checked; tidyAll(); draw(); });
   const ps = $("#psearch"); if (ps) ps.addEventListener("input", () => { const q = ps.value.toLowerCase(); document.querySelectorAll("#left [data-search]").forEach((r) => r.style.display = r.dataset.search.includes(q) ? "" : "none"); });
   const lp = $("#loadprops"); if (lp) lp.addEventListener("click", loadProposals);
+  if (tab === "params") wirePlan();
   if (tab === "ai") wireGemini();
 }
 function parseNum(s) { const v = Number(String(s).replace(/[, ]/g, "")); return isFinite(v) ? v : null; }

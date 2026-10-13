@@ -279,12 +279,39 @@ class SheetSession:
                            "parts": r.get("parts", [])[:12]})
         params.sort(key=lambda q: (not q["shared"], q["source"] != "ai", -q["entities"]))
         rep = u.report
-        return {"id": uid, "views": u.views, "params": params, "relations": [{"name": r.name, "label": r.label, "expr": r.expr} for r in u.prog.relations][:40],
+        checked = {r["id"]: r for r in u.prog.intent.get("plans", [])}
+        plans = [{"id": p.get("id"), "status": p.get("status"), "instruction": p.get("instruction", ""),
+                  "driver": (p.get("driver") or {}).get("parameter"), "requested": (p.get("driver") or {}).get("requested_value"),
+                  "anchor": {k: (p.get("anchor") or {}).get(k) for k in ("policy", "centre", "source")},
+                  "directives": [f"{d['target']}: {d['mode']}" for d in p.get("directives", []) if d.get("status") == "accepted"][:20],
+                  "questions": [q["text"] for q in p.get("questions", [])][:6],
+                  "checks": (checked.get(p.get("id")) or {}).get("summary"),
+                  "failed": [f"{c['check']} {c['target']}: {c['measured']}" for c in (checked.get(p.get("id")) or {}).get("checks", []) if c["status"] == "fail"][:6]}
+                 for p in (u.answer or {}).get("plans", [])]
+        return {"id": uid, "views": u.views, "params": params, "plans": plans, "relations": [{"name": r.name, "label": r.label, "expr": r.expr} for r in u.prog.relations][:40],
                 "components": [{"name": c.name, "type": c.type, "regions": c.regions} for c in u.prog.components],
                 "findings": [f.as_dict() for f in (rep.findings if rep else [])][:80], "dropped": u.dropped,
                 "candidates": sorted(({"id": c.id, "value": round(c.value * u.sub.units_mm, 1), "kind": c.kind.value, "axes": sorted(c.axes),
                                        "status": c.status.value, "name": c.name, "evidence": [e.kind for e in c.evidence]}
                                       for c in u.an.clusters.values()), key=lambda c: -c["value"])[:200]}
+
+    PLAN_KEYS = ("instruction", "decisions", "directives", "anchor", "requested_value", "id", "driver", "provisional_anchor")
+
+    def plan(self, body: dict) -> dict:
+        """An instruction read into a plan for one unit — resolved, predicted, with the questions only a person answers.
+        Nothing changes on the sheet."""
+        sm = self._sm()
+        plan = sm.plan(body.get("unit", ""), {k: body[k] for k in self.PLAN_KEYS if k in body})
+        return {"ok": True, "plan": plan, "revision": sm.revision}
+
+    def apply_plan(self, body: dict) -> dict:
+        """The plan made binding with the person's decisions and the value it asks for applied — one undoable step, or
+        refused with the reasons and nothing changed."""
+        sm = self._sm()
+        res = sm.apply_plan(body.get("unit", ""), {k: body[k] for k in self.PLAN_KEYS if k in body},
+                            expected_revision=body.get("revision"), discard_values=bool(body.get("discard_values")))
+        return {"ok": True, "result": {"checks": res["checks"], "applied": res["applied"], "plan": res["plan"], "values_dropped": res["values_dropped"]},
+                **self._commit_delta(), "summary": self.summary()}
 
     def param(self, name: str) -> dict:
         sm = self._sm()
@@ -358,6 +385,10 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
                     return handler._json(sheet.history(path.rsplit("/", 1)[1])) or True
                 if path == "/api/sheet/ai/stop":
                     return handler._json(sheet.stop_ai()) or True
+                if path == "/api/sheet/plan":
+                    return handler._json(sheet.plan(body)) or True
+                if path == "/api/sheet/plan/apply":
+                    return handler._json(sheet.apply_plan(body)) or True
                 if path.startswith("/api/sheet/ai/"):
                     return handler._json(sheet.start_ai(path.rsplit("/", 1)[1], body)) or True
                 if path == "/api/sheet/project":

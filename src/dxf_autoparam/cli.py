@@ -79,6 +79,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--domain", choices=["bridge"], default=None)
     p.add_argument("--port", type=int, default=8765)
     p.add_argument("--answer", default=None, help="open with a saved Gemini answer (validated again, no AI call)")
+    p.add_argument("--project", default=None, help="open the workspace with a saved parametric project (.autoparam.json)")
+    p = sub.add_parser("plan-bench", help="free, no AI: instruction-guided assembly edits on generated drawings with known intent, scored")
+    p.add_argument("--out", default="plan_bench.json")
     a = ap.parse_args(argv)
 
     if a.cmd == "check":
@@ -134,7 +137,21 @@ def main(argv: list[str] | None = None) -> int:
     if a.cmd == "serve":
         from .server import serve
 
-        serve(a.dxf, a.domain, port=a.port, answer=a.answer)
+        serve(a.dxf, a.domain, port=a.port, answer=a.answer, project=a.project)
+        return 0
+    if a.cmd == "plan-bench":
+        from .plan_bench import run as plan_run
+
+        res = plan_run(a.out)
+        for r in res["cases"]:
+            bad = [k for k, ok in r["scores"].items() if not ok]
+            print(f"{r['id']:<5} {r['category']:<12} {r.get('plan_status', ''):<15} {'ok' if not bad else 'FAILED: ' + ', '.join(bad)}")
+        print()
+        for c, v in res["by_category"].items():
+            print(f"{c:<40} {v['passed']:>3}/{v['of']:<3} {v['rate'] * 100:5.1f}%")
+        for k, v in res["by_kind"].items():
+            print(f"{k:<12} cases {v['cases']}, fully right {v['cases_fully_right']}, checks {v['checks_passed']}/{v['of']}")
+        print(f"→ {a.out}")
         return 0
     if a.cmd == "ai":
         from .ai.parametrize import ai_parametrize

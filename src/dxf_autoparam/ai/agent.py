@@ -29,6 +29,7 @@ from ..cadjson import entity_id, entity_index
 from ..graph import affects
 from ..intent import _boxes, _geometry, classify, delta_of, resolve_parts
 from ..ir import GapKind, Role
+from ..plan import MAX_REPAIRS, MODES, accept, build_plan, read_instruction, vocabulary, with_plan
 from ..program import ExprError, names_in
 from ..regen import regenerate_program
 from ..topology import DatumIndex, of
@@ -74,6 +75,18 @@ PLAYBOOK — small steps, each checked at once:
   6. Verify with what_moves(parameter): the parts that should grow grow, the rest stay. Fix with set_formulas.
   7. state_behaviours and add_constraints for the intent that must hold (fixed levels, symmetry, connections).
   8. finish. Any rejection comes back at once with its reason: fix that one item, never redo the rest.
+
+WHEN THE PERSON ASKS FOR A CHANGE (a value to change; things to keep fixed, to follow, to leave alone): after the parts
+and the value are defined, inspect_assembly(value) shows the parts it belongs to, what touches or hangs on it, and what
+each anchor (centered / start_fixed / end_fixed / as_set_out) would do to every part. Then propose_plan: the value, the
+value asked for, the anchor, and a directive per part / size / level the person spoke of — each with the person's own
+words it comes from (clause). The meanings of "do not change" are different: keep_value (the size stays; it may move),
+keep_fixed (stays where it is), no_parameter (no value of its own), exclude (outside the edit), annotations_only,
+preserve (thickness / symmetry / level / connection), follow / translate / resize. What the person did NOT say is not
+yours to decide: a directive without their words is a proposal they accept or not; an ambiguous word ("don't touch")
+stays a question. The engine compiles an accepted plan into the set-out and measures it (grow, shrink, restore): a
+failed check comes back with expected / measured / cause; re-propose at most {MAX_REPAIRS} times, then ask_person.
+set_formulas / add_constraints / state_behaviours wait until the plan exists.
 
 EVERY VERDICT is ok, or rejected with a `failure`: {{code, binding, refs, expected, measured, cause, repair}}. repair
 "agent" = yours to fix (another occurrence, the other end, a formula); repair "person" = a decision that is not yours
@@ -131,6 +144,9 @@ TOOL_SPECS = [
      _schema({"labels": LIST}, ["labels"])),
     ("what_moves", ("Change a parameter (default +10 %) and report what each part does (grows / shrinks / moves / fixed, per axis) and "
      "whether the drawing stays valid."), _schema({"parameter": S, "change_mm": N}, ["parameter"])),
+    ("inspect_assembly", ("The assembly a value belongs to: its core parts, the parts tied to it (drawn on its lines, set out from "
+     "them, touching it) with the evidence, each anchor policy with what it would do to every part, and how the person's "
+     "instruction was read (driver, directives, what is unresolved)."), _schema({"parameter": S}, ["parameter"])),
     ("knowledge", "This project's concepts / families / formulas matching the words (several queries at once).",
      _schema({"queries": LIST}, ["queries"])),
     ("set_structure", "What the drawing is.", _schema({"structure_type": S, "family": S, "views": LIST, "summary": S}, ["structure_type", "family"])),
@@ -161,12 +177,22 @@ TOOL_SPECS = [
      _batch({"parameter": S, "target": S, "behaviour": _enum("grows", "shrinks", "moves", "fixed", "keeps_thickness", "keeps_level",
                                                              "stays_centred", "stays_symmetric", "stays_connected", "keeps_slope"),
              "axis": _enum("x", "y", "both", "any")}, ["parameter", "target", "behaviour"])),
+    ("propose_plan", ("The plan for the change the person asked for: the value (parameter) and the value asked for, the anchor, "
+     "and directives (target = a part, a value, a level or a line; mode; relation for preserve; interface for follow; clause = "
+     "the person's words it comes from, empty for your own inference). The engine resolves every reference, predicts, asks "
+     "what only the person can decide, and — when nothing is open — compiles it and measures it."),
+     _schema({"parameter": S, "requested_value": N, "anchor": _schema({"policy": _enum("centered", "start_fixed", "end_fixed", "as_set_out"),
+                                                                       "centre": S, "clause": S}, ["policy"]),
+              "directives": {"type": "array", "items": _schema({"target": S, "mode": _enum(*MODES), "relation": _enum("thickness", "symmetry", "level", "connection"),
+                                                                "interface": LIST, "clause": S, "why": S}, ["target", "mode"])}},
+             ["parameter"])),
     ("ask_person", "A genuine ambiguity for the person to decide.", _schema({"question": S}, ["question"])),
     ("finish", "Done: the engine runs every check. If problems remain they are listed; call finish again to stop anyway.",
      _schema({"summary": S}, ["summary"])),
 ]
 READ_TOOLS = {"inspect_regions", "inspect_lines", "find_values", "what_moves", "knowledge", "inspect_candidates", "inspect_dimensions",
-              "resolve_labels"}
+              "resolve_labels", "inspect_assembly"}
+BEHAVIOUR_EDITS = ("set_formula", "add_constraint", "state_behaviour", "set_relation")  # wait for the plan when a change was asked
 # a batch tool applies the single edit to each of its items; each item gets its own verdict
 BATCH = {"define_parts": "define_part", "define_parameters": "define_parameter", "set_formulas": "set_formula", "set_levels": "set_level",
          "add_constraints": "add_constraint", "state_behaviours": "state_behaviour"}
@@ -190,9 +216,11 @@ class Workbench:
     are the sheet's). `scope`: the sheet the unit belongs to (context.SheetScope): shared sizes, views, the revision."""
 
     def __init__(self, path: str, region=None, hold_existing: bool = False, start: dict | None = None, selection: dict | None = None,
-                 drawing=None, analysis=None, scope=None):
+                 drawing=None, analysis=None, scope=None, instructions: str = ""):
         self.path, self.region, self.hold, self.selection, self.drawing = path, region, hold_existing, selection, drawing
         self.analysis, self.scope = analysis, scope
+        self.instructions = instructions or ""
+        self.plan_attempts: dict[str, int] = {}
         self.prechecked: dict[str, dict] = {}  # verdicts decided before validation (a reference that cannot be bound)
         self.answer = copy.deepcopy(start) if start else {
             "structure_type": "", "family": "other", "views": [], "summary": "", "components": [], "line_roles": [], "levels": [],
@@ -201,6 +229,10 @@ class Workbench:
             self.answer.setdefault(k, [])
         self.finish_calls = 0
         self.validate()
+        # the person's instruction, read by the engine first (driver, directives, what it cannot resolve): the agent
+        # starts from it, and a change it asks for must be planned before behaviour is written
+        self.reading = read_instruction(self.instructions, vocabulary(self.prog), self.prog) if self.instructions.strip() else None
+        self.plan_required = bool(self.reading and (self.reading["driver"] or any(c["mode"] not in (None, "driver") for c in self.reading["clauses"])))
 
     def validate(self, final: bool = False) -> None:
         """While the agent builds, every value stays editable (the AI's own "keep as drawn" recommendations are applied
@@ -523,6 +555,38 @@ class Workbench:
 
     # ── writing ───────────────────────────────────────────────────────────────
 
+    def _sheet(self) -> dict | None:
+        if not self.scope:
+            return None
+        sm, uid = self.scope.sm, self.scope.uid
+        return {**sm._plan_sheet(uid), "revision": self.scope.revision}
+
+    def inspect_assembly(self, parameter: str) -> dict:
+        if parameter not in self.prog.params:
+            return {"error": f"no value {parameter}: define it first (define_parameters)"}
+        plan = build_plan(self.prog, self.answer, {"driver": {"parameter": parameter}}, sheet=self._sheet())
+        anc = plan.get("anchor") or {}
+        return {"parameter": parameter, "occurrences": (plan.get("driver") or {}).get("pairs"),
+                "core_parts": plan["affected"].get("core", []), "tied_to_it": plan["affected"].get("attached", {}),
+                "anchors": [{"policy": a["policy"], "centre": a.get("centre"), "possible": a["available"], "why": a["why"][:160],
+                             "parts": dict(list(a["parts"].items())[:14]), "evidence": a.get("evidence", "")} for a in anc.get("alternatives", [])],
+                "dimensions_reading_it": plan["affected"].get("dimensions_on_driver", []), "notes_stating_it": plan["affected"].get("notes", []),
+                "views": plan["affected"].get("views", []),
+                "instruction_read_as": self.reading_summary()}
+
+    def reading_summary(self) -> dict | None:
+        r = self.reading
+        if not r:
+            return None
+        drv = r["driver"]
+        return {"driver": drv and {"phrase": drv["phrase"], "names": drv["resolved"]["names"], "how": drv["resolved"]["how"],
+                                   "value_asked": drv["requested"]},
+                "anchor": r["anchor"], "clauses": [{"clause": c["text"], "mode": c["mode"],
+                                                    "targets": [f"{t['kind']} {', '.join(t['names'])}" for t in c["targets"]],
+                                                    "unresolved": c["unresolved"], "ambiguous": [a["phrase"] for a in c["ambiguous"]]}
+                                                   for c in r["clauses"]],
+                "plan_required": self.plan_required}
+
     def _upsert(self, key: str, field: str, value, row: dict) -> None:
         rows = self.answer[key]
         for i, r in enumerate(rows):
@@ -534,6 +598,18 @@ class Workbench:
     def write(self, name: str, a: dict) -> tuple[str, str]:
         """Apply one edit; returns (the item the validator will name in its findings, a note)."""
         A = self.answer
+        if name in BEHAVIOUR_EDITS:
+            item = (a.get("line") if name == "set_formula" else a.get("description") if name == "add_constraint"
+                    else f"{a.get('parameter')}→{a.get('target')}" if name == "state_behaviour" else a.get("name", name))
+            self.prechecked.pop(item, None)
+            if self.plan_required and not A.get("plans"):
+                self.prechecked[item] = _failure(
+                    "PLAN_FIRST", item, [], "a plan for the change the person asked for", "no plan yet",
+                    "the person asked for a change: what moves and what stays is decided in a plan before behaviour is written",
+                    "agent", "define the value, inspect_assembly(value), then propose_plan with the person's words")
+                return item, ""
+        if name == "propose_plan":
+            return self._propose(a)
         if name == "set_structure":
             A.update({k: a.get(k, A.get(k)) for k in ("structure_type", "family", "views", "summary")})
             return "structure", ""
@@ -622,6 +698,62 @@ class Workbench:
             A["questions"].append(a["question"])
             return "question", ""
         raise KeyError(name)
+
+    def _propose(self, a: dict) -> tuple[str, str]:
+        name = a.get("parameter", "")
+        pid = f"P_{name}"
+        item = f"plan:{pid}"
+        self.prechecked.pop(item, None)
+        n = self.plan_attempts[name] = self.plan_attempts.get(name, 0) + 1
+        if n > MAX_REPAIRS:
+            self.prechecked[item] = _failure("REPAIRS", item, [name], f"at most {MAX_REPAIRS} plans for one value", f"attempt {n}",
+                                             "the plan keeps failing its checks: what remains is a decision", "person",
+                                             "ask_person with the last failure, or finish")
+            return item, ""
+        said = self.instructions
+        anchor = a.get("anchor") or {}
+        if anchor.get("policy"):
+            clause = (anchor.get("clause") or "").strip()
+            grounded = bool(clause) and re.sub(r"\s+", " ", clause.lower()) in re.sub(r"\s+", " ", said.lower())
+            anchor = {"policy": anchor["policy"], "centre": anchor.get("centre"), "source": "instruction" if grounded else "ai"}
+        dirs = [{**d, "source": "instruction" if (d.get("clause") or "").strip() else "ai"} for d in (a.get("directives") or [])]
+        req = {"id": pid, "instruction": said, "driver": {"parameter": name}, "requested_value": a.get("requested_value"),
+               "directives": dirs, "anchor": anchor or None}
+        try:
+            plan = build_plan(self.prog, self.answer, req, sheet=self._sheet())
+        except (KeyError, ValueError, ExprError) as exc:
+            self.prechecked[item] = _failure("PLAN", item, [name], "a plan the engine can resolve", "refused", str(exc)[:200], "agent",
+                                             "use ids and names from the overview")
+            return item, ""
+        stored = accept(plan, by="the person's instruction") if plan["status"] == "ready" else plan
+        self.answer = with_plan(self.answer, stored)
+        return item, f"plan {plan['status']}" + (f": {len(plan['questions'])} question(s) for the person" if plan["questions"] else "")
+
+    def _plan_verdict(self, item: str) -> dict:
+        pid = item.split(":", 1)[1]
+        plan = next((p for p in self.answer.get("plans", []) if p.get("id") == pid), None)
+        if plan is None:
+            return {"ok": False, "rejected": ["no such plan"]}
+        brief = {"anchor": {k: (plan.get("anchor") or {}).get(k) for k in ("policy", "centre", "status", "source")},
+                 "directives": [f"{d['target']}: {d['mode']} ({d['status']}, {d['source']})" for d in plan.get("directives", [])][:20]}
+        if plan.get("status") != "accepted":
+            return {"ok": True, "plan": plan.get("status"), **brief, "questions": [q["text"][:240] for q in plan.get("questions", [])][:6],
+                    "conflicts": plan.get("conflicts", [])[:4],
+                    "note": "waits for the person: put these questions to them (ask_person), or finish — they answer in the workspace"}
+        res = next((r for r in self.prog.intent.get("plans", []) if r.get("id") == pid), None) or {}
+        fails = [c for c in res.get("checks", []) if c["status"] == "fail"] + [
+            {"check": "compile", "target": pid, "expected": "the plan compiles", "measured": m, "cause": m, "action": "re-propose"}
+            for m in (res.get("compiled") or {}).get("problems") or []]
+        if fails:
+            f = fails[0]
+            person = f["check"] in ("fixed", "keep_fixed", "unrelated") or "kept fixed" in str(f.get("cause", ""))
+            return {"ok": False, "rejected": [f"{c['check']} {c['target']}: expected {c['expected']}, measured {c['measured']}"[:220] for c in fails[:4]],
+                    "failure": _failure("PLAN", pid, [f["target"]], f["expected"], f["measured"], f.get("cause") or "", "person" if person else "agent",
+                                        f.get("action") or ""), **brief}
+        out = (res.get("outcomes") or [{}])[-1]
+        return {"ok": True, "plan": "accepted and measured", **brief, "checks": res.get("summary"),
+                "outcome": {"value": out.get("value"), "parts": dict(list((out.get("parts") or {}).items())[:12]),
+                            "dimensions": out.get("dimensions_changed", [])[:6], "notes": out.get("notes_changed", [])[:4]}}
 
     def _locate(self, a: dict) -> tuple[dict, dict | None]:
         """WHERE a size is, made exact before anything is written: a dimension becomes the one occurrence it is tied to
@@ -772,6 +904,8 @@ class Workbench:
         return failed
 
     def verdict(self, item: str, kind: str = "") -> dict:
+        if item.startswith("plan:") and item not in self.prechecked:
+            return self._plan_verdict(item)
         if item in self.prechecked:
             f = self.prechecked[item]
             if item == "removed":
@@ -798,6 +932,9 @@ class Workbench:
         out = {"parts": len(self.answer["components"]), "regions_without_part": len(I.get("uncovered_regions", [])),
                "parameters": len(named), "open_problems": len(errs),
                "first_problems": [f"{e['code']} {e['item']}: {e['message']}"[:180] for e in errs[:3]]}
+        if self.plan_required or self.answer.get("plans"):
+            out["plans"] = [f"{p.get('id')}: {p.get('status')}" + (f", {len(p.get('questions', []))} question(s) for the person" if p.get("questions") else "")
+                            for p in self.answer.get("plans", [])] or ["none yet: the person asked for a change — propose_plan"]
         if self.scope:
             here = self.scope.shared_here()
             values = {q.name: q.value for q in self.scope.sm.shared.values()}
@@ -973,7 +1110,7 @@ def _short(a: dict) -> str:
 def agent_parametrize(path: str, region=None, instructions: str = "", start: dict | None = None, request: str = "",
                       hold_existing: bool = False, selection: dict | None = None, gem: Gemini | None = None, on_event=None,
                       stop=None, log=print, max_steps: int | None = None, max_output_tokens: int | None = None, drawing=None,
-                      analysis=None, scope=None):
+                      analysis=None, scope=None, note: str = ""):
     """Run the agent. `start`: an answer to continue from (a revision); `request`: what the person asks of it.
     `drawing`: one view or unit of a sheet (already read and cut out) instead of the file's own region.
     `analysis` + `scope`: a sheet unit — work on the unit's own analysis (the sheet's ids) and see the sheet (context.SheetScope)."""
@@ -985,10 +1122,17 @@ def agent_parametrize(path: str, region=None, instructions: str = "", start: dic
     budget = max_output_tokens or int(os.environ.get("VERTEX_AGENT_MAX_OUTPUT_TOKENS", "150000"))
     an, base, region, _snap = prepare(path, None, region, drawing=drawing, analysis=analysis)
     images = images_for(an, base, region)
-    bench = Workbench(path, region, hold_existing, start, selection, drawing=drawing, analysis=analysis, scope=scope)
+    bench = Workbench(path, region, hold_existing, start, selection, drawing=drawing, analysis=analysis, scope=scope,
+                      instructions="\n".join(x for x in (instructions.strip(), request.strip()) if x))
     labels = image_labels(an, base)
     context = (unit_context(scope.sm, scope.uid, bench.an, bench.prog, labels, bench.rep) if scope
                else drawing_context(bench.an, bench.prog, labels, bench.answer, bench.rep))
+    if bench.reading:  # the engine's own first reading of the person's words: ids, modes, and what it could not resolve
+        context["person_request_read_as"] = bench.reading_summary()
+    if bench.answer.get("plans"):
+        context["plans"] = [{"id": p.get("id"), "status": p.get("status"), "driver": (p.get("driver") or {}).get("parameter"),
+                             "anchor": (p.get("anchor") or {}).get("policy"), "questions": [q["text"][:160] for q in p.get("questions", [])][:4]}
+                            for p in bench.answer["plans"]]
     ov = overview(an, base, context)
     src = hashlib.sha256(Path(an.drawing.path).read_bytes()).hexdigest()
     image_keys = [f"faithful:{src}:{region}", hashlib.sha256(images[1]).hexdigest(), hashlib.sha256(images[2]).hexdigest()]
@@ -999,6 +1143,8 @@ def agent_parametrize(path: str, region=None, instructions: str = "", start: dic
             "You parametrized this drawing before; the current state is loaded in the tools (inspect_regions shows the parts, "
             "find_values the named values). The person asks for a change — make it with small edits, keep everything else.\n"
             f"THE PERSON ASKS: {request.strip()}")
+    if note.strip():  # where this drawing sits (a unit of a sheet): context, not the person's words
+        task += f"\n\n{note.strip()}"
     if instructions.strip():
         task += f"\n\nTHE PERSON'S INSTRUCTIONS:\n{instructions.strip()}"
     if start:
@@ -1044,7 +1190,8 @@ def agent_parametrize(path: str, region=None, instructions: str = "", start: dic
                         bench.validate()
                         bench.finish_calls += 1
                         st = bench.status()
-                        if (st["open_problems"] or any("NOT " in x for x in st.get("shared_here", []))) and bench.finish_calls < 2:
+                        if (st["open_problems"] or any("NOT " in x for x in st.get("shared_here", []))
+                                or (bench.plan_required and not bench.answer.get("plans"))) and bench.finish_calls < 2:
                             res = {"done": False, **st, "hint": "fix these, or call finish again to stop with what is valid"}
                         else:
                             res, done = {"done": True, **st}, True
@@ -1106,6 +1253,8 @@ def agent_parametrize(path: str, region=None, instructions: str = "", start: dic
     bench.validate(final=True)
     info = {"answer": bench.answer, "path": path, "usage": usages, "seconds": round(time.perf_counter() - t0, 1),
             "region": region, "steps": steps, "agent": True, "context": context, "baseline_error_mm": bench.baseline_error_mm(),
+            "plans": [{"id": p.get("id"), "status": p.get("status"), "questions": [q["text"] for q in p.get("questions", [])]}
+                      for p in bench.answer.get("plans", [])],
             "tokens_in": sum(u.get("input_tokens", 0) for u in usages if not u.get("cached")),
             "tokens_out": sum(u.get("output_tokens", 0) + u.get("thinking_tokens", 0) for u in usages if not u.get("cached")),
             "tokens_cached": sum(u.get("vertex_cached_tokens", 0) for u in usages if not u.get("cached"))}

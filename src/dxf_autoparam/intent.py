@@ -507,7 +507,7 @@ def check_constraints(prog: Program, answer: dict, parts: dict[str, Part], rep) 
     rows = []
     levels = {n for n, p in prog.params.items() if p.kind == "level"}
     # lines the AI, a slope, a held part or a site level set out are not rewritten to satisfy another claim
-    pinned = {d for d, o in prog.origin.items() if o in ("ai", "dimension", "existing", "held", "slope", "kept")} \
+    pinned = {d for d, o in prog.origin.items() if o in ("ai", "dimension", "existing", "held", "slope", "kept", "plan")} \
         | {d for d, e in prog.formulas.items() if names_in(e) & levels}
     for c in answer.get("constraints", []):
         t = c.get("type")

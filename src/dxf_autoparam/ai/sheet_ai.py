@@ -253,12 +253,22 @@ def parametrize_unit(sm: SheetModel, uid: str, gem, instructions: str = "", on_e
     views = "; ".join(f"{v}: {sm.layout.group(v).name or sm.layout.group(v).view_type}" for v in u.views)
     note = f"This drawing is {'the views ' if len(u.views) > 1 else 'view '}{views} of a larger sheet" + (
         " — drawn in projection: their common lines are one set-out line." if len(u.views) > 1 else ".")
-    prog, rep, info = agent_parametrize(sm.path, region=(x0, y0, x1, y1), instructions=(note + "\n" + instructions).strip(),
+    prog, rep, info = agent_parametrize(sm.path, region=(x0, y0, x1, y1), instructions=instructions.strip(), note=note,
                                         start=start, gem=gem, on_event=on_event, stop=stop, log=log, drawing=u.sub,
                                         analysis=analysis, scope=scope, **kw)
     with lock or nullcontext():
         commit = sm.commit_answer(uid, info["answer"], expected_revision=scope.revision)
+        # the value an accepted plan asks for is set the way a person sets it: the whole sheet must hold at it, or it is not set
+        applied, refused = [], []
+        for plan in (p for p in (info["answer"].get("plans") or []) if p.get("status") == "accepted"):
+            want = (plan.get("driver") or {}).get("requested_value")
+            if want is None:
+                continue
+            key = sm._key(uid, plan["driver"]["parameter"])
+            r = sm.apply({key: float(want)})
+            (applied if r.ok else refused).append({"name": key, "value": want, **({} if r.ok else {"why": r.errors[:3]})})
     return {"unit": uid, "params": len(prog.params), "named": sum(1 for p in prog.params.values() if p.source == "ai"),
             "rejected": rep.rejected, "tokens_in": info.get("tokens_in"), "tokens_out": info.get("tokens_out"),
-            "revision": commit["revision"], "values_dropped": commit["values_dropped"]}
+            "revision": commit["revision"], "values_dropped": commit["values_dropped"], "plans": info.get("plans", []),
+            "values_applied": applied, "values_refused": refused}
 

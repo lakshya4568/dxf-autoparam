@@ -449,7 +449,9 @@ def make_handler(session: Session, sheet=None):
     return Handler
 
 
-def serve(path: str | None, domain: str | None = None, host: str = "127.0.0.1", port: int = 8765, answer: str | None = None) -> None:
+def serve(path: str | None, domain: str | None = None, host: str = "127.0.0.1", port: int = 8765, answer: str | None = None,
+          project: str | None = None) -> None:
+    from .crossview import SheetModel
     from .workspace import SheetSession
 
     if answer and path:
@@ -459,6 +461,8 @@ def serve(path: str | None, domain: str | None = None, host: str = "127.0.0.1", 
         session = Session(None)
         session.pending = path  # the classic page opens it when it is first used
     sheet = SheetSession(path)
+    if project and path:  # a saved parametric project (parts, sizes, plans) opened with its drawing
+        sheet.sm = SheetModel.load(project, dxf=path)
     for candidate in range(port, port + 20):
         try:
             httpd = ThreadingHTTPServer((host, candidate), make_handler(session, sheet))

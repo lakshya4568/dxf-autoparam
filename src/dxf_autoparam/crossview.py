@@ -30,12 +30,14 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from .analyse import analyse
+from .cadjson import entity_id
 from .display import primitives
 from .dxf_read import read_dxf
 from .dxf_write import audit, write_dxf
 from .graph import affects
 from .intent import _drives
 from .ir import Analysis, Drawing, Role
+from .plan import accept, build_plan, clashes, pairs_of, plan_errors_at, with_plan
 from .program import ExprError, Program
 from .regen import Regenerated, regenerate_program
 from .sheet import Group, SheetLayout, segment, view_drawing
@@ -375,6 +377,13 @@ class SheetModel:
                 errors.append(f"{uid}: cannot regenerate: {exc}")
                 continue
             errors += [f"{uid}: {i}" for i in r.issues]
+            plans = [p for p in (u.answer or {}).get("plans", []) if p.get("status") == "accepted"]
+            if plans:  # what a person accepted for this unit holds at the values asked for, not only at the ones tested
+                errors += [f"{uid}: {e}" for e in plan_errors_at(u.prog, plans, vals)]
+                moved_k = {k for k, p in r.pts.items() if any(abs(a[0] - b[0]) > 1e-9 or abs(a[1] - b[1]) > 1e-9
+                                                              for a, b in zip(p, u.sub.items[k].pts, strict=False))}
+                errors += [f"{uid}: {entity_id(u.sub.items[i])} now crosses {entity_id(u.sub.items[j])} — members run into each other"
+                           for i, j in clashes(u.prog, r.pts, moved_k)[:5]]
             for k, p in r.pts.items():
                 s = u.back[k]
                 pts[s] = p
@@ -670,77 +679,105 @@ class SheetModel:
         return out
 
     def anchor(self, name: str, uid: str, mode: str) -> dict:
-        """Choose how a value grows in one unit: `start` — its start line stays and it grows at its end; `end` — the
-        other way; `centre` — about the centre line between them. Written as the person's formula (it outranks what the engine chose);
-        refused, with nothing changed, when the drawing has no centre line there or the sheet does not hold."""
-        if mode not in ("start", "end", "centre"):
+        """Choose how a value grows in one unit: `start` — its start line stays and everything beyond grows away from it;
+        `end` — the other way; `centre` — the assembly stays about the centre line. Written as an accepted plan for the
+        WHOLE assembly the value belongs to (every other size keeps its drawn value: walls, haunches, slabs), committed
+        only if it measures right on the sheet; otherwise refused with the reason and nothing changes."""
+        policy = {"start": "start_fixed", "end": "end_fixed", "centre": "centered"}.get(mode)
+        if policy is None:
             raise SheetError("anchor is start, end or centre")
         shared = self._shared_by_name().get(name)
         local = next((b.param for b in shared.bindings if b.unit == uid), None) if shared else name.split(".", 1)[1] if "." in name else None
         u = self.unit(uid)
         prm = u.prog.params.get(local or "")
-        if prm is None or not prm.measures:
+        if prm is None or not prm.measures and not pairs_of(u.prog, u.answer, local):
             raise SheetError(f"{name} is not measured between two lines in {uid}")
-        a, b = prm.measures
-        an = u.an
-        if an.datums[b].value < an.datums[a].value:
-            a, b = b, a
-        self._push()
-        before = copy.deepcopy(u.answer)
-        # from the engine's own set-out: an earlier choice for these lines is cleared first
+        pairs = pairs_of(u.prog, u.answer, local)
+        lines = {x for p in pairs for x in p}
         ans = copy.deepcopy(u.answer) if u.answer else copy.deepcopy(EMPTY_ANSWER)
-        ans["datum_formulas"] = [f for f in ans.get("datum_formulas", []) if f.get("datum") not in (a, b)]
-        u.answer, u.prog = ans, None
-        u = self.unit(uid)
-        if mode == "start":  # the start line stays (on what it was set out from); the end line follows the value
-            formulas = [{"datum": a, "expr": self._pinned(u, a, local, b)}, {"datum": b, "expr": f"{a} + {local}"}]
-        elif mode == "end":
-            formulas = [{"datum": b, "expr": self._pinned(u, b, local, a)}, {"datum": a, "expr": f"{b} - {local}"}]
-        else:
-            mid = (an.datums[a].value + an.datums[b].value) / 2
-            axis = next((d.id for d in an.datums.values() if d.axis == an.datums[a].axis and d.id not in (a, b)
-                         and abs(d.value - mid) <= an.drawing.tol), None)
-            if axis is None:
-                u.answer, u.prog = before, None
-                self.history.pop()
-                self.unit(uid)
-                raise SheetError(f"no centre line between {a} and {b} in {uid}: choose the start or the end")
-            formulas = [{"datum": a, "expr": f"{axis} - 0.5 * {local}"}, {"datum": b, "expr": f"{axis} + 0.5 * {local}"}]
-        ans = copy.deepcopy(ans)
-        ans["datum_formulas"] = ans["datum_formulas"] + formulas
-        u.answer, u.prog = ans, None
-        self.unit(uid)
+        # an earlier choice written as formulas on these lines (by the old pair-only anchor) is cleared first
+        ans["datum_formulas"] = [f for f in ans.get("datum_formulas", []) if f.get("datum") not in lines]
+        if ans != (u.answer or {}):
+            self.commit_answer(uid, ans)
+            u = self.unit(uid)
+        plan = build_plan(u.prog, u.answer or ans, {"id": f"A_{local}", "driver": {"parameter": local, "pairs": pairs},
+                                                     "anchor": {"policy": policy, "source": "person"}}, sheet=self._plan_sheet(uid))
+        # this is a choice about one value: questions about attached parts are answered by what the set-out does now
+        if plan["status"] == "needs_decision" and all(q["about"].startswith("attached:") for q in plan["questions"]):
+            decisions = {q["about"]: "follow" for q in plan["questions"]}
+            plan = build_plan(u.prog, u.answer or ans, {"id": f"A_{local}", "driver": {"parameter": local, "pairs": pairs},
+                                                         "anchor": {"policy": policy, "source": "person"}, "decisions": decisions},
+                              sheet=self._plan_sheet(uid))
+        if plan["status"] != "ready":
+            raise SheetError(f"{name} cannot grow from its {mode} in {uid}: " + "; ".join(plan["conflicts"][:2] + [q["text"] for q in plan["questions"]][:1]))
+        self.commit_answer(uid, with_plan(u.answer or ans, accept(plan)))
         g = next(x for x in self.growth(name) if x["unit"] == uid)
-        r = self.regenerate()
-        if g["mode"] != mode or not r.ok:
-            u.answer, u.prog = before, None
-            self.history.pop()
-            self.unit(uid)
-            why = "; ".join(r.errors[:2]) or f"the engine could not keep it ({g['why']})"
-            raise SheetError(f"{name} cannot grow from its {mode} in {uid}: {why}")
-        return g
+        return {**g, "plan": plan["id"], "anchor_line": (plan.get("anchor") or {}).get("line")}
 
-    @staticmethod
-    def _pinned(u: Unit, d: str, local: str, avoid: str) -> str:
-        """Line d set out as drawn from a line that does not move with the value and does not hang on `avoid` (the
-        line about to be set out from d): one its formula names, else the nearest such line on its axis."""
-        from .intent import _depends_on
+    def _plan_sheet(self, uid: str) -> dict:
+        """What a plan needs to know of the sheet: its revision, the unit, which views entities are on, shared names."""
+        u = self.units[uid]
+        group = self.layout.item_group
 
-        prog, um, an = u.prog, u.sub.units_mm, u.an
-        v0 = prog.datum_values()
-        v1 = prog.datum_values({local: prog.params[local].value + 1.0})
+        def views_of(items):
+            return sorted({group.get(u.back[i]) for i in items if 0 <= i < len(u.back)} - {None})
 
-        def ok(r: str) -> bool:
-            return r in v0 and r not in (d, avoid) and abs(v1[r] - v0[r]) < 1e-12 and avoid not in _depends_on(prog, r)
+        shared = {b.param: p.name for p in self.shared.values() for b in p.bindings if b.unit == uid}
 
-        refs = [r for r in sorted(re.findall(r"[a-z]+\d+", prog.formulas.get(d, ""))) if ok(r)]
-        if not refs:
-            axis = an.datums[d].axis
-            refs = [r for r in sorted((x.id for x in an.datums.values() if x.axis == axis and x.id in v0), key=lambda r: abs(v0[r] - v0[d]))[:40] if ok(r)][:1]
-        if refs:
-            off = (v0[d] - v0[refs[0]]) * um
-            return f"{refs[0]} {'+' if off >= 0 else '-'} {abs(off):.6f}".rstrip("0").rstrip(".")
-        return f"{v0[d] * um:.6f}".rstrip("0").rstrip(".")
+        def other_units(local):
+            p = self._shared_by_name().get(shared.get(local, ""))
+            return sorted({b.unit for b in p.bindings if b.unit != uid}) if p else []
+
+        return {"revision": self.revision, "unit": uid, "views_of": views_of, "shared": shared, "other_units": other_units}
+
+    def plan(self, uid: str, request: dict) -> dict:
+        """A plan for an instruction (or a structured request) on one unit — read, resolved, predicted; nothing changes."""
+        u = self.unit(uid)
+        return build_plan(u.prog, u.answer or copy.deepcopy(EMPTY_ANSWER), request, sheet=self._plan_sheet(uid))
+
+    def apply_plan(self, uid: str, request: dict, expected_revision: int | None = None, discard_values: bool = False) -> dict:
+        """Make a plan binding and the value asked for real — or nothing. The plan is built again from the request and
+        the person's decisions (never taken on trust from the page), accepted only when nothing is open, committed only
+        if every promise measures right on the whole sheet, and the value it asks for is applied in the same step (one
+        undo takes both back). Refused: SheetError with the reasons, the sheet as it was."""
+        if expected_revision is not None and expected_revision != self.revision:
+            raise SheetError(f"stale: the sheet changed since this plan was made (revision {expected_revision} → {self.revision}); plan again")
+        u = self.unit(uid)
+        plan = build_plan(u.prog, u.answer or copy.deepcopy(EMPTY_ANSWER), request, sheet=self._plan_sheet(uid))
+        if plan["status"] != "ready":
+            raise SheetError(f"plan {plan['id']} is {plan['status']}: " + "; ".join(plan["conflicts"][:3] + [q["text"] for q in plan["questions"]][:3]))
+        state, rev, depth = self._state(), self.revision, len(self.history)
+        res = self.commit_answer(uid, with_plan(u.answer or copy.deepcopy(EMPTY_ANSWER), accept(plan)), discard_values=discard_values)
+        want = (plan.get("driver") or {}).get("requested_value")
+        applied = None
+        if want is not None:
+            key = self._key(uid, plan["driver"]["parameter"])
+            r = self.regenerate({key: float(want)})
+            if not r.ok:
+                self._restore(state)
+                del self.history[depth:]
+                self.revision = rev
+                self.units[uid].prog = None
+                self.unit(uid)
+                raise SheetError(f"refused, nothing changed: {plan['driver']['parameter']} = {want:g} does not hold: " + "; ".join(r.errors[:3]))
+            shared = self._shared_by_name().get(key)
+            if shared:
+                for b in shared.bindings:
+                    if b.status == "drives":
+                        self.values.setdefault(b.unit, {})[b.param] = float(want)
+            else:
+                self.values.setdefault(uid, {})[plan["driver"]["parameter"]] = float(want)
+            applied = {"name": key, "value": float(want), "changed": len(r.changed), "by_view": r.by_view}
+        checks = next((x for x in self.unit(uid).prog.intent.get("plans", []) if x["id"] == plan["id"]), None)
+        return {**res, "plan": plan, "checks": checks, "applied": applied}
+
+    def _key(self, uid: str, local: str) -> str:
+        """The name a person changes a unit's value by: its shared name, else unit.local."""
+        for p in self.shared.values():
+            for b in p.bindings:
+                if b.unit == uid and b.param == local:
+                    return p.name
+        return f"{uid}.{local}"
 
     def unshare(self, name: str) -> None:
         p = self._shared_by_name().get(name)
@@ -824,12 +861,13 @@ class SheetModel:
         an.cache.clear()
         return an
 
-    def commit_answer(self, uid: str, answer: dict, expected_revision: int | None = None) -> dict:
+    def commit_answer(self, uid: str, answer: dict, expected_revision: int | None = None, discard_values: bool = False) -> dict:
         """Replace a unit's parametrization only if the WHOLE sheet still holds; otherwise nothing changes.
 
         Refused (SheetError, the state untouched) when: the sheet changed since the work began (`expected_revision`);
-        the unit no longer regenerates; or a size it shares with other views stops driving here (that view would stop
-        following). Committed values the new answer no longer has are reported (they fall back to the drawing)."""
+        the unit no longer regenerates; a size it shares with other views stops driving here (that view would stop
+        following); an accepted plan's promise does not measure right (V16); or a value a person set would be lost
+        (unless `discard_values`: the person said so) — a person's edit is never dropped silently."""
         if expected_revision is not None and expected_revision != self.revision:
             raise SheetError(f"stale: the sheet changed while this was being worked out (revision {expected_revision} → {self.revision}); "
                              "nothing was applied — run it again on the current sheet")
@@ -860,6 +898,11 @@ class SheetModel:
                 if prm is not None and prm.measures and not _drives(u.prog, b.param, *prm.measures,
                                                                     {**{d.id: d.value for d in u.an.datums.values()}, **u.prog.datum_values()}):
                     problems.append(f"{p.name} no longer moves its lines in {uid} ({prm.measures[0]}–{prm.measures[1]}): the views sharing it would not follow")
+        problems += [f"{e['item']}: {e['message']}" for e in (u.report.errors() if u.report else []) if e["code"] == "V16"]
+        lost = sorted(n for n in self.values.get(uid, {}) if n not in u.prog.params)
+        if lost and not discard_values:
+            problems.append(f"the value(s) you set for {', '.join(lost)} would be lost (the new parametrization has no such value): "
+                            "keep them, or confirm discarding them")
         others = {x.unit for p in self.shared.values() if any(b.unit == uid for b in p.bindings) for x in p.bindings}
         r = self.regenerate(units={uid} | others)
         problems += r.errors
@@ -874,7 +917,8 @@ class SheetModel:
             self.units[uid].prog = None
             self.unit(uid)
             raise SheetError("refused, nothing changed: " + "; ".join(problems[:4]))
-        lost = sorted(n for n in self.values.get(uid, {}) if n not in u.prog.params)
+        if lost:  # the person confirmed: the values fall back to the drawing
+            self.values[uid] = {k: v for k, v in self.values[uid].items() if k not in lost}
         return {"unit": uid, "revision": self.revision, "values_dropped": lost}
 
     def link(self, a: str, b: str, linked: bool) -> None:

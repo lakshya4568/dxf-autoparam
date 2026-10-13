@@ -39,6 +39,7 @@ from .intent import (
     resolve_parts,
 )
 from .ir import Analysis
+from .plan import compile_plans, prepare_plans, verify_plan
 from .program import (
     Component,
     ExprError,
@@ -91,7 +92,7 @@ class Report:
 REVIEW_BELOW = 0.75  # an AI claim below this confidence is put in front of a person
 # Who sets a line, strongest first: a site level, the person's / AI's formula, a named dimension, a constraint, a held or
 # existing part. A later rule (a slope, a heal, the generic set-out) never takes a line one of these set.
-FIRM = ("ai", "dimension", "constraint", "held", "existing", "kept")
+FIRM = ("ai", "dimension", "constraint", "held", "existing", "kept", "plan")
 
 
 def _tol_mm(an: Analysis) -> float:
@@ -396,11 +397,16 @@ def apply(an: Analysis, answer: dict, base_decisions: Decisions | None = None, h
     if parts and loose:
         rep.warn("V14", "regions", f"{len(loose)} region(s) belong to no part: {', '.join(loose[:12])}")
 
+    # ── accepted plans, first half: what they hold, what they add, what the anchor must not move ──
+    pre_plans = prepare_plans(prog, answer, parts) if answer.get("plans") else None
+
     # ── what a person chose to keep as drawn ───────────────────────────────────────
     if selection is None:
         selection = {"hold": [p.name for p in parts.values() if not p.parametrize],
                      "exclude": [q.get("name") for q in answer.get("parameters", []) if q.get("recommended") is False]}
     hold = set(selection.get("hold", [])) & set(parts)
+    if pre_plans:  # what a plan excludes is held as built (a part it keeps fixed is pinned for its edit instead)
+        hold |= pre_plans["hold"] & set(parts)
     if hold_existing:
         hold |= {p.name for p in parts.values() if p.existing}
     held_all = set(hold)
@@ -416,6 +422,8 @@ def apply(an: Analysis, answer: dict, base_decisions: Decisions | None = None, h
 
     # ── the engine's own rules, whatever was proposed ─────────────────────────────
     enforce_slopes(prog, rep)
+    # ── accepted plans, second half: the anchor written into the assembly's set-out ──
+    compiled = compile_plans(prog, answer, rep, pre_plans) if pre_plans else None
     _retire_undriven(prog, rep, dims, cannot, "the stated slope sets that line from the height")
     relink_texts(prog)
     for p in prog.params.values():
@@ -427,7 +435,7 @@ def apply(an: Analysis, answer: dict, base_decisions: Decisions | None = None, h
     if len(roles) < len(answer.get("line_roles", [])):
         rep.warn("V1", "line_roles", f"{len(answer.get('line_roles', [])) - len(roles)} line role(s) name unknown datums")
     dropped = set(selection.get("drop", []))
-    kept = [c for c in answer.get("constraints", []) if (c.get("description") or "") not in dropped]
+    kept = [c for c in answer.get("constraints", []) if (c.get("description") or "") not in dropped] + (pre_plans["constraints"] if pre_plans else [])
     constraint_rows = check_constraints(prog, {**answer, "constraints": kept}, parts, rep)
     # a named value that breaks the drawing when it grows: the engine re-anchors the line that did not follow
     levels = {n for n, q in prog.params.items() if q.kind == "level"}
@@ -469,6 +477,22 @@ def apply(an: Analysis, answer: dict, base_decisions: Decisions | None = None, h
 
     # ── every value regenerates a valid drawing (V8) ──────────────────────────────
     check_regeneration(prog, rep)
+    # ── accepted plans, measured: every promise checked on the regenerated geometry (V16) ──
+    if compiled:
+        rows = []
+        for plan in (p for p in answer.get("plans", []) if p.get("status") == "accepted"):
+            res = verify_plan(prog, plan, parts, compiled, answer=answer)
+            row = next((r for r in compiled["rows"] if r["id"] == plan.get("id")), {})
+            res["compiled"] = {k: row.get(k) for k in ("ok", "problems", "stack")}
+            rows.append(res)
+            for c in res["checks"]:
+                if c["status"] == "fail":
+                    rep.bad("plan", "V16", f"{plan.get('id')}:{c['check']}:{c['target']}",
+                            f"plan {plan.get('id')}: {c['check']} {c['target']} — expected {c['expected']}, measured {c['measured']}"
+                            + (f" at {c.get('failed_at'):g}" if c.get("failed_at") is not None else "") + f". Cause: {c.get('cause')}. {c.get('action')}")
+        prog.intent["plans"] = rows
+    prog.intent["plans_pending"] = [{"id": p.get("id"), "status": p.get("status"), "questions": [q["text"] for q in p.get("questions", [])][:4]}
+                                    for p in answer.get("plans", []) if p.get("status") != "accepted"]
     return prog, rep
 
 

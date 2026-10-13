@@ -124,3 +124,36 @@ def test_a_gemini_stage_runs_in_the_background_and_its_result_is_applied(tmp_pat
     assert next(g for g in sheet.summary()["groups"] if g["id"] == el)["name"] == "MAIN ELEVATION"
     with pytest.raises(Exception, match="no Gemini stage"):
         sheet.start_ai("everything", {})
+
+
+def test_a_plan_is_read_decided_applied_measured_and_undone_over_http(server, tmp_path):
+    """The page's plan panel, as HTTP: an instruction is read into a plan (nothing changes), the person's two answers
+    make it ready, applying it commits the value and returns what moved, the unit shows the measured plan, undo takes
+    plan and value back together, and a contradictory instruction is refused with the reason."""
+    from dxf_autoparam.crossview import SheetModel
+    from dxf_autoparam.plan_bench import Box, box_answer, box_gad
+
+    base, _ = server
+    g = box_gad(tmp_path / "box.dxf", Box())
+    local = SheetModel.open(g["path"])
+    uid = next(k for k, u in local.units.items() if len(u.views) == 2)
+    local.commit_answer(uid, box_answer(local, uid, g["box"], g["handles"]))
+    call(base, "/api/sheet/open?name=box.dxf", raw=(tmp_path / "box.dxf").read_bytes())
+    assert j(call(base, "/api/sheet/project", local.to_dict()))["ok"]
+    said = ("Reduce the clear span to 2500. Maintain wall and slab thicknesses. Preserve the foundation. "
+            "Update connected geometry and every affected view. Keep unrelated details unchanged.")
+    plan = j(call(base, "/api/sheet/plan", {"unit": uid, "instruction": said}))["plan"]
+    assert plan["status"] == "needs_decision" and {q["about"] for q in plan["questions"]} >= {"anchor"}
+    review = next(q["about"] for q in plan["questions"] if q["about"].startswith("D"))  # "preserve the foundation": which meaning
+    st, body, _ = call(base, "/api/sheet/plan/apply", {"unit": uid, "instruction": said})
+    assert st == 409 and b"needs_decision" in body  # nothing is applied while a question is open
+    res = j(call(base, "/api/sheet/plan/apply", {"unit": uid, "instruction": said, "decisions": {review: "keep_fixed", "anchor": "centered"}}))
+    assert res["result"]["checks"]["ok"] and res["result"]["applied"]["value"] == 2500
+    assert res["delta"] and set(res["result"]["applied"]["by_view"]) == {"V01", "V02"}
+    unit = j(call(base, f"/api/sheet/unit?id={uid}"))
+    assert unit["plans"][0]["status"] == "accepted" and unit["plans"][0]["checks"]["failed"] == 0
+    assert j(call(base, "/api/sheet/undo", {}))["ok"]
+    assert j(call(base, f"/api/sheet/unit?id={uid}"))["plans"] == []
+    st, body, _ = call(base, "/api/sheet/plan/apply", {"unit": uid, "instruction": "Reduce the clear span to 2500, centred. "
+                                                                                     "Keep the foundation fixed. The foundation follows the box."})
+    assert st == 409 and b"cannot both hold" in body
