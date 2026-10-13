@@ -41,7 +41,7 @@ DIRS = [{"target": "Foundation", "mode": "keep_fixed", "clause": "keep the exist
         {"target": "BottomSlab", "mode": "keep_value", "clause": "preserve the wall and slab thicknesses"}]
 
 
-def make_script(sheet: SheetSession, uid: str, g: dict):
+def make_script(sheet: SheetSession, uid: str, g: dict, delay: float = 0.0):
     sm = sheet.sm
     ans = box_answer(sm, uid, g["box"], g["handles"])
     build = [call(n, why="name the parts and the sizes the drawing shows" if n == "define_parts" else "bind each size to the lines it spans", **a) for n, a in answer_as_calls(ans)]
@@ -66,19 +66,20 @@ def make_script(sheet: SheetSession, uid: str, g: dict):
         [call("inspect_assembly", why="which parts the clear span belongs to and what each anchor would do", parameter="ClearSpan")],
         [call("propose_plan", why="the plan, with the person's words behind each directive", parameter="ClearSpan", requested_value=2500, directives=DIRS)],
         [call("finish", summary="the plan waits for the person's choice of anchor")],
-        [call("finish", summary="applied with the person's answers")]], thoughts=thoughts)
+        [call("finish", summary="applied with the person's answers")]], thoughts=thoughts, delay=delay)
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=8799)
+    ap.add_argument("--delay", type=float, default=0.0, help="seconds each scripted model turn takes (to try Stop)")
     a = ap.parse_args()
     tmp = Path(tempfile.mkdtemp(prefix="scripted-"))
     g = box_gad(tmp / "box.dxf", Box())
     sheet = SheetSession(g["path"])
     uid = next(k for k, u in sheet.sm.units.items() if len(u.views) == 2)
     sheet.gem_per_run = True
-    sheet.gem_factory = lambda: make_script(sheet, uid, g)
+    sheet.gem_factory = lambda: make_script(sheet, uid, g, a.delay)
     httpd = ThreadingHTTPServer(("127.0.0.1", a.port), make_handler(Session(None), sheet))
     print(f"scripted demo on http://127.0.0.1:{httpd.server_address[1]}/  (the instruction to type:)\n{INSTRUCTION}\n", flush=True)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()

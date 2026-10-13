@@ -1050,7 +1050,7 @@ class Run:
         return {"stop": self.status in ("running",), "continue": live and self.status in RESUMABLE and not (self.status == "failed" and not self.retryable)
                 and self.status != "awaiting_user", "answer": live and self.status == "awaiting_user",
                 "apply": live and self.status in ("paused", "stopped", "exhausted", "awaiting_user", "failed") and self.bench is not None and bool(self.bench.units),
-                "revert": self.status in ("completed", "partial") and not self.reverted and self.revision_end is not None}
+                "revert": self.status in ("completed", "partial") and not self.reverted and self.revision_end is not None and bool((self.verdict or {}).get("applied"))}
 
     def summary(self) -> dict:
         v = self.verdict or {}

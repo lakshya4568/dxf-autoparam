@@ -3,7 +3,7 @@
 // value's geometry, the dotted original, reset value / reset drawing, and that no object is ever printed as "[object Object]".
 //
 //   uv run python tools/serve_scripted.py --port 8799 &
-//   node tools/ui_check.mjs --url http://127.0.0.1:8799/ --out /tmp/ui-check
+//   node tools/ui_check.mjs --url http://127.0.0.1:8799/ --out /tmp/ui-check [--slow-url http://127.0.0.1:8803/]   (a second server started with --delay 0.8 adds the Stop checks)
 //
 // Exit code 1 when any check fails; screenshots of every stage are saved to --out.
 import { spawn } from "node:child_process";
@@ -108,6 +108,22 @@ try {
   check("and one undo brings it all back", (await js("window.__ws.S.values['" + KEY + "']")) != null || (await js("window.__ws.S.can_redo")) === true);
   await shot("12_after_undo");
   check("no page error at any point", (await js("window.__errors.length")) === 0, await js("JSON.stringify(window.__errors)"));
+
+  // ── Stop, then apply what is valid: a run that did not finish is never "complete" (needs a slow scripted server: --slow-url) ──
+  if (args["slow-url"]) {
+    await send("Page.navigate", { url: args["slow-url"] }); await until("window.__ws && window.__ws.prims > 0", 15000);
+    await js("openView('V01', true); document.querySelector('[data-tab=ai]').click(); 1"); await sleep(400);
+    await js(`(() => { const t = document.querySelector('#ai-instr'); t.value = ${JSON.stringify(INSTR)}; t.dispatchEvent(new Event('input')); document.querySelector('#ai-run').click(); return 1; })()`);
+    await until("window.__ws.run && window.__ws.run.status === 'running' && window.__ws.run.usage && window.__ws.run.usage.turns >= 1", 15000);
+    check("while it works the page offers Stop (and no second Run)", (await js("getComputedStyle(document.querySelector('#ai-stop')).display")) !== "none" && (await js("document.querySelector('#ai-run').disabled")) === true);
+    await js("document.querySelector('#ai-stop').click(); 1");
+    check("Stop ends the run as STOPPED — resumable, no verdict", await until("window.__ws.run.status === 'stopped'", 15000) && (await js("window.__ws.run.verdict")) === null && (await js("window.__ws.run.can.continue")) === true);
+    await shot("13_stopped");
+    await js("document.querySelector('#ai-apply').click(); 1");
+    check("Apply what is valid says what is NOT done: partial, never complete", await until("window.__ws.run.verdict !== null", 10000) && ["partial", "failed"].includes(await js("window.__ws.run.verdict.state")) && /without a finish|waiting|plan/.test(await js("window.__ws.run.verdict.remaining.join(' ')")));
+    await shot("14_applied_partial"); await noObjectText("stopped and applied");
+    check("no page error in the Stop flow", (await js("window.__errors.length")) === 0);
+  }
 } catch (e) { check("the check itself ran", false, e.message); }
 finally { try { ws && ws.close(); } catch (e) { /* closing */ } chrome.kill(); }
 const failed = results.filter((r) => !r.ok);

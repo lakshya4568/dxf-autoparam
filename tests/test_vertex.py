@@ -198,3 +198,34 @@ def test_a_stalled_call_is_cut_and_retried_not_waited_on_for_ten_minutes():
     V._pumped(lambda put: [put(i) for i in range(3)], got.append, 5, None, "ok")
     assert got == [0, 1, 2]
     assert V._transient(httpx.ReadTimeout("The read operation timed out"))
+
+
+def test_the_real_agent_step_sends_a_picture_inside_a_function_response_and_replays_it_from_disk(gem):
+    """The path the live run uses (`Gemini.step`), against a fake Vertex: a picture a tool returned travels as an image part of the function
+    response, the model's turn comes back exactly as returned (thought signatures and all), and the same conversation is free the second time."""
+    from google.genai import types
+
+    from dxf_autoparam.ai.loop import pack
+
+    g, fake = gem()
+    sent = []
+    reply = types.Content(role="model", parts=[types.Part(function_call=types.FunctionCall(name="finish", args={"summary": "done"}))])
+
+    def generate_content(model, contents, config):
+        sent.append({"model": model, "contents": contents, "system": config.system_instruction, "tools": config.tools})
+        return SimpleNamespace(candidates=[SimpleNamespace(content=reply, finish_reason=SimpleNamespace(name="STOP"))],
+                               usage_metadata=SimpleNamespace(prompt_token_count=50, candidates_token_count=3, thoughts_token_count=4, cached_content_token_count=0))
+
+    fake.models.generate_content = generate_content
+    call_ = types.FunctionCall(name="zoom_view", args={"around": ["PL1"]})
+    history = [types.Content(role="user", parts=[types.Part.from_text(text="the task")]), types.Content(role="model", parts=[types.Part(function_call=call_)]),
+               types.Content(role="user", parts=[pack(call_, {"image": "IMG3", "revision": 4, "_image": {"png": b"\x89PNGdata", "id": "IMG3", "meta": {}}})])]
+    tools = [types.Tool(function_declarations=[types.FunctionDeclaration(name="finish", description="d", parameters_json_schema={"type": "object", "properties": {}})])]
+    content, usage = g.step("system", tools, [types.Part.from_text(text="OVERVIEW")], "key1", history, "turn 2", "high")
+    assert content.parts[0].function_call.name == "finish" and usage["model"] == "m-primary" and not usage["cached"]
+    last = sent[0]["contents"][-1].parts[0].function_response
+    assert last.name == "zoom_view" and last.response["result"]["image"] == "IMG3"
+    assert last.parts[0].inline_data.mime_type == "image/png" and last.parts[0].inline_data.data == b"\x89PNGdata"  # the picture, next to what it shows
+    assert sent[0]["system"] == "system" and sent[0]["contents"][0].parts[0].text == "OVERVIEW"  # the cached-prefix material comes first
+    content2, usage2 = g.step("system", tools, [types.Part.from_text(text="OVERVIEW")], "key1", history, "turn 2", "high")
+    assert usage2["cached"] and len(sent) == 1 and content2.parts[0].function_call.name == "finish"  # the identical conversation is replayed from disk
