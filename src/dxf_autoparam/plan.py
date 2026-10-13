@@ -567,18 +567,24 @@ def _question(qid: str, about: str, text: str, options: list[str], recommended: 
     return {"id": qid, "about": about, "text": text, "options": options, "recommended": recommended, "why": why}
 
 
-def build_plan(prog: Program, answer: dict, request: dict, sheet: dict | None = None) -> dict:
+def build_plan(prog: Program, answer: dict, request: dict, sheet: dict | None = None, reader: bool = True) -> dict:
     """A plan for one request on the program as it stands (built from `answer`). `request`: {instruction, driver?,
-    directives?, anchor?, requested_value?, decisions?, id?} — explicit fields (the agent's structured reading, the
-    person's choices) take precedence over the deterministic reading of the instruction. `sheet`: {revision, unit,
-    views_of(items) → view ids, shared {local: shared name}, other_units(local) → units} when the unit is on a sheet.
+    directives?, anchor?, requested_value?, decisions?, questions?, id?} — explicit fields (the agent's structured
+    reading, the person's choices) take precedence over the deterministic reading of the instruction. `sheet`:
+    {revision, unit, views_of(items) → view ids, shared {local: shared name}, other_units(local) → units} when the unit
+    is on a sheet.
+
+    `reader`: whether the built-in phrase matcher (read_instruction) also reads `instruction`. It is a narrow,
+    non-authoritative first pass kept for tests and the benchmark; everything a person uses (the agent's run) passes
+    reader=False, so the plan holds only what the model proposed (its directives quote the person's words, which are
+    checked here) and what the person decided. `request["questions"]`: ambiguities the model puts to the person.
 
     Nothing is changed: the plan says what WOULD happen, what is decided and what is not."""
     an = prog.analysis
     parts = _parts(prog)
     vocab = vocabulary(prog, parts)
     instruction = (request.get("instruction") or "").strip()
-    reading = read_instruction(instruction, vocab, prog) if instruction else {"driver": None, "anchor": None, "clauses": []}
+    reading = read_instruction(instruction, vocab, prog) if instruction and reader else {"driver": None, "anchor": None, "clauses": []}
     decisions = dict(request.get("decisions") or {})
     plan: dict = {"format": PLAN_FORMAT, "id": request.get("id") or "P1", "instruction": instruction, "status": "draft",
                   "revision": {"sheet": (sheet or {}).get("revision"), "unit": (sheet or {}).get("unit")},
@@ -712,6 +718,7 @@ def build_plan(prog: Program, answer: dict, request: dict, sheet: dict | None = 
         if mode == "update_views" and not c["targets"]:
             add("views", "generic", "update_views", c["text"])
     said = re.sub(r"\s+", " ", instruction.lower())
+    asked: dict[str, dict] = {}
     for d in request.get("directives") or []:  # explicit (the agent's reading, a person's edit): replaces the same target's
         tgt = d.get("target")
         src = d.get("source") or "person"
@@ -722,6 +729,11 @@ def build_plan(prog: Program, answer: dict, request: dict, sheet: dict | None = 
         if mode not in MODES:
             plan["conflicts"].append(f"{tgt}: {mode!r} is not a directive mode ({', '.join(MODES)})")
             continue
+        before = asked.get(tgt)
+        if before is not None and before["mode"] != mode and not (before.get("relation") or d.get("relation")):
+            # one proposal that says two things of one part is not one instruction: the later never silently wins
+            plan["conflicts"].append(f"{tgt}: {before['mode']} and {mode} cannot both hold ('{before['clause'][:70]}' / '{clause[:70]}') — ask which is meant")
+        asked[tgt] = {"mode": mode, "clause": clause, "relation": d.get("relation")}
         dirs[:] = [x for x in dirs if x["target"] != tgt]
         nd = add(tgt, d.get("kind") or _kind_of(prog, parts, tgt), mode, clause, source=src,
                  **{k: d[k] for k in ("relation", "interface", "options", "axis", "why") if d.get(k)})
@@ -782,6 +794,10 @@ def build_plan(prog: Program, answer: dict, request: dict, sheet: dict | None = 
                        + "; ".join(f"{o}: {MODES[o]}" for o in d.get("options", [])), d.get("options", []))
             if pick:
                 d.update(mode=pick, status="accepted", source="person")
+    for k, q in enumerate(request.get("questions") or []):  # an ambiguity the model found: put to the person, never settled by a guess
+        q = q if isinstance(q, dict) else {"text": str(q)}
+        if (q.get("text") or "").strip():
+            ask(f"ask:{k + 1}", q["text"].strip(), [str(o) for o in q.get("options") or []], why=q.get("why") or "")
     fixed_parts = {d["target"] for d in dirs if d["kind"] == "part" and d["mode"] in FIXED_MODES and d["status"] == "accepted"}
     followers = {d["target"] for d in dirs if d["kind"] == "part" and d["mode"] in MOVING_MODES and d["status"] == "accepted"}
     # ── 6. conflicts between directives, and with the driver ──

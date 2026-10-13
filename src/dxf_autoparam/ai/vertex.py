@@ -244,6 +244,7 @@ class Gemini:
             client = genai.Client(vertexai=True, project=self.cfg.project, location=self.cfg.location,
                                   http_options=types.HttpOptions(timeout=timeout_ms))
         self.client = client
+        self.step_timeout_s: float | None = None  # one agent turn's deadline, set from a run's budget (else VERTEX_STEP_TIMEOUT_MS)
         # (model, prefix hash) → cached-content name; None when Vertex refused a cache for that prefix
         self._prompt_caches: dict[tuple[str, str], str | None] = {}
 
@@ -325,7 +326,7 @@ class Gemini:
             plan.append((self.cfg.fallback_model, self.cfg.fallback_thinking))
         t0, last = time.perf_counter(), None
         # Vertex ends the call itself at this deadline (sent as its server timeout); the worker thread backs it up
-        step_ms = int(os.environ.get("VERTEX_STEP_TIMEOUT_MS", "240000"))
+        step_ms = int((self.step_timeout_s or 0) * 1000) or int(os.environ.get("VERTEX_STEP_TIMEOUT_MS", "240000"))
         for model, think in plan:
             for attempt in range(2):
                 if stop and stop():

@@ -5,6 +5,7 @@
     dxf-autoparam views    drawing.dxf
     dxf-autoparam bench    [fixtures/library] [--domain bridge]
     dxf-autoparam serve    [drawing.dxf] [--domain bridge] [--port 8765]
+    dxf-autoparam plan-bench / agent-eval   free benchmarks of the plan engine and (scripted, or --live --yes-spend) of the agent, per category
 
 Sizes on the command line are millimetres; levels are metres.
 """
@@ -82,6 +83,15 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--project", default=None, help="open the workspace with a saved parametric project (.autoparam.json)")
     p = sub.add_parser("plan-bench", help="free, no AI: instruction-guided assembly edits on generated drawings with known intent, scored")
     p.add_argument("--out", default="plan_bench.json")
+    p = sub.add_parser("agent-eval", help="score the agent per category (reading, parts, values, anchor, plan, geometry …) on a drawing whose intended result is known")
+    p.add_argument("--live", action="store_true", help="run the REAL model (billed): needs --yes-spend; without it the limits are printed and nothing starts")
+    p.add_argument("--yes-spend", action="store_true", help="the owner's explicit go-ahead for the paid calls of --live")
+    p.add_argument("--soft-turns", type=int, default=30)
+    p.add_argument("--max-turns", type=int, default=60)
+    p.add_argument("--max-tokens", type=int, default=250000)
+    p.add_argument("--wall-minutes", type=float, default=20.0)
+    p.add_argument("--instruction", default=None, help="a file with the instruction (default: the brief's own example)")
+    p.add_argument("--out", default="agent_eval.json")
     a = ap.parse_args(argv)
 
     if a.cmd == "check":
@@ -96,6 +106,35 @@ def main(argv: list[str] | None = None) -> int:
                   f"{len(r['worked_out'])} worked out, {len(r['lost'])} lost | breaks {len(r['breaks'])} | export {r.get('export')} | "
                   f"{'PASS' if r['passed'] else 'FAIL'}")
         return 0 if all(r.get("passed") for r in rows) else 1
+    if a.cmd == "agent-eval":
+        from .ai import acceptance as acc
+        from .ai.loop import Budget
+
+        budget = Budget.from_env(soft_turns=a.soft_turns, max_turns=a.max_turns, max_tokens=a.max_tokens, wall_s=a.wall_minutes * 60)
+        text = Path(a.instruction).read_text() if a.instruction else acc.INSTRUCTION
+        report: dict = {"instruction": text}
+        if a.live:
+            print("LIVE acceptance run — the real model, billed. Limits:", json.dumps(acc.live_limits(budget)))
+            if not a.yes_spend:
+                print("Not started: pass --yes-spend to give the go-ahead for these paid calls.")
+                return 3
+            from .ai.vertex import Gemini
+
+            case = acc.make_case(instruction=text)
+            res = acc.evaluate(Gemini(), case, budget={k: v for k, v in budget.to_dict().items() if k in ("soft_turns", "max_turns", "max_tokens", "wall_s")}, timeout_s=a.wall_minutes * 60)
+            report["live"] = {"scores": res["scores"], "usage": res["run"]["usage"], "status": res["run"]["status"], "seconds": res["seconds"]}
+            print(acc.table(res["scores"]))
+            print("usage:", json.dumps(res["run"]["usage"]))
+        else:
+            print("OFFLINE: scripted models of different care on the generated two-view box (no model, no cost). The live run uses the same scorer.\n")
+            for style in ("careful", "careless", "wrong_part"):
+                case = acc.make_case(instruction=text)
+                res = acc.evaluate(acc.script_for(case, style), case, log=lambda *x: None)
+                report[style] = res["scores"]
+                print(f"[{style}]\n{acc.table(res['scores'])}\n")
+        Path(a.out).write_text(json.dumps(report, indent=1, default=str))
+        print(f"wrote {a.out}")
+        return 0
     if a.cmd == "views":
         dr, _ = read_dxf(a.dxf)
         for v in detect_views(dr):

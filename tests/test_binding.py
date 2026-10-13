@@ -280,9 +280,12 @@ def test_a_result_worked_out_on_an_older_sheet_is_refused(tmp_path):
     assert sm.units[uid].answer == before and sm.layout.group("V02").name == "SIDE WALL DETAIL"  # the person's edit stands
 
 
-def test_the_workspace_runs_the_unit_stage_in_the_background_and_commits_or_refuses_it(tmp_path):
+def test_the_workspace_runs_the_agent_in_the_background_and_commits_or_refuses_it(tmp_path):
+    """What the agent defines reaches the sheet only through the sheet's transaction: a size another view follows that would stop driving is
+    REFUSED with nothing changed — and the run says it did not apply anything, instead of reporting success."""
     import time
 
+    from dxf_autoparam.ai.scripted import ScriptedModel
     from dxf_autoparam.workspace import SheetSession
 
     sheet = SheetSession(mini_gad(tmp_path / "mini.dxf"))
@@ -294,21 +297,24 @@ def test_the_workspace_runs_the_unit_stage_in_the_background_and_commits_or_refu
     u = an.drawing.units_mm
     span = next(c.id for c in an.clusters.values() if round(c.value * u) == 2400 and "x" in c.axes)
     big = next(c for c in an.clusters.values() if round(c.value * u) == 2700)
+    view = sm.units[uid].views[0]
 
     def run(script):
-        sheet.gem = ScriptedGemini(script)
-        assert sheet.start_ai("unit", {"unit": uid})["ok"]
+        sheet.gem = ScriptedModel(script)
+        sheet.start_run({"instruction": "Parametrize it.", "scope": {"views": [view]}})
         for _ in range(400):
-            p = sheet.progress(0)
-            if not p["running"]:
+            p = sheet.run_progress(None, 0)
+            if p["status"] not in ("queued", "running", "stopping"):
                 return p
             time.sleep(0.05)
-        raise AssertionError("the job did not end")
+        raise AssertionError("the run did not end")
 
     rev = sm.revision
     p = run([[call("define_parameters", items=[{"name": "OuterWall", "part": "", "candidate": big.id, "occurrences": [big.gaps[0]]}])],
-             [call("finish", summary="x")], [call("finish", summary="x")]])
-    assert p["error"].startswith("refused, nothing changed") and sm.revision == rev  # said in the page; the sheet untouched
+             [call("finish", summary="x")], [call("finish", summary="x")], [call("finish", summary="x")]])
+    assert p["status"] == "failed" and sm.revision == rev  # the sheet untouched, and the run says so
+    committed = next(c for c in p["verdict"]["criteria"] if c["id"] == "committed")
+    assert not committed["ok"] and "refused" in committed["detail"] and any("refused" in x for x in p["verdict"]["remaining"])
     p = run([[call("define_parameters", items=[{"name": "ClearSpan", "part": "", "candidate": span, "occurrences": ["all"]}])],
              [call("finish", summary="x")], [call("finish", summary="x")]])
-    assert p["error"] is None and p["result"]["revision"] == rev + 1 and "ClearSpan" in sm.units[uid].prog.params
+    assert p["status"] == "completed" and sm.revision == rev + 1 and "ClearSpan" in sm.units[uid].prog.params

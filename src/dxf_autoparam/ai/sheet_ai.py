@@ -231,6 +231,28 @@ def apply_shared(sm: SheetModel, answer: dict) -> dict:
     return {"applied": done, "refused": refused, "questions": answer.get("questions", [])}
 
 
+def commit_unit(sm: SheetModel, uid: str, answer: dict, expected_revision: int | None, lock=None, discard_values: bool = False) -> dict:
+    """An answer becomes the unit's only through the sheet's transaction (refused, with nothing changed, if the sheet changed
+    meanwhile or would no longer hold); the value each ACCEPTED plan asks for is then set the way a person sets it — the whole
+    sheet must hold at it, or it is not set (and the refusal is said). Raises SheetError when the commit is refused."""
+    from contextlib import nullcontext
+
+    with lock or nullcontext():
+        commit = sm.commit_answer(uid, answer, expected_revision=expected_revision, discard_values=discard_values)
+        applied, refused = [], []
+        for plan in (p for p in (answer.get("plans") or []) if p.get("status") == "accepted"):
+            want = (plan.get("driver") or {}).get("requested_value")
+            if want is None:
+                continue
+            key = sm._key(uid, plan["driver"]["parameter"])
+            if abs(sm.current().get(key, float("nan")) - float(want)) < 1e-6:
+                applied.append({"name": key, "value": want, "already": True})
+                continue
+            r = sm.apply({key: float(want)})
+            (applied if r.ok else refused).append({"name": key, "value": want, **({} if r.ok else {"why": r.errors[:3]})})
+        return {"commit": commit, "values_applied": applied, "values_refused": refused, "revision": sm.revision}
+
+
 def parametrize_unit(sm: SheetModel, uid: str, gem, instructions: str = "", on_event=None, stop=None, log=print, lock=None, **kw) -> dict:
     """Stage UNITS: the tool-using agent on one unit's own drawing — on the unit's OWN analysis (the sheet's candidate,
     occurrence and line ids), seeing the sheet through a read-only scope (shared sizes, views, revision). Its answer
@@ -256,19 +278,12 @@ def parametrize_unit(sm: SheetModel, uid: str, gem, instructions: str = "", on_e
     prog, rep, info = agent_parametrize(sm.path, region=(x0, y0, x1, y1), instructions=instructions.strip(), note=note,
                                         start=start, gem=gem, on_event=on_event, stop=stop, log=log, drawing=u.sub,
                                         analysis=analysis, scope=scope, **kw)
-    with lock or nullcontext():
-        commit = sm.commit_answer(uid, info["answer"], expected_revision=scope.revision)
-        # the value an accepted plan asks for is set the way a person sets it: the whole sheet must hold at it, or it is not set
-        applied, refused = [], []
-        for plan in (p for p in (info["answer"].get("plans") or []) if p.get("status") == "accepted"):
-            want = (plan.get("driver") or {}).get("requested_value")
-            if want is None:
-                continue
-            key = sm._key(uid, plan["driver"]["parameter"])
-            r = sm.apply({key: float(want)})
-            (applied if r.ok else refused).append({"name": key, "value": want, **({} if r.ok else {"why": r.errors[:3]})})
+    done = commit_unit(sm, uid, info["answer"], scope.revision, lock=lock)
+    commit, applied, refused = done["commit"], done["values_applied"], done["values_refused"]
     return {"unit": uid, "params": len(prog.params), "named": sum(1 for p in prog.params.values() if p.source == "ai"),
             "rejected": rep.rejected, "tokens_in": info.get("tokens_in"), "tokens_out": info.get("tokens_out"),
             "revision": commit["revision"], "values_dropped": commit["values_dropped"], "plans": info.get("plans", []),
-            "values_applied": applied, "values_refused": refused}
+            "values_applied": applied, "values_refused": refused,
+            # how the agent ended — never "done" because it stopped: only a finish the engine's gate accepted is complete
+            "complete": info.get("complete"), "stopped": info.get("stopped"), "waiting_for_person": info.get("waiting_for_person", [])}
 

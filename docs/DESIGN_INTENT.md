@@ -365,10 +365,13 @@ point, kept values, thickness, symmetry, contacts torn, members running into eac
 notes, every other named value still driving. A failure blocks the commit (`commit_answer`), and slider edits on a
 unit with an accepted plan are checked against it.
 
-**Who decides what.** The built-in reader is generic English resolved against THIS drawing's names and the knowledge
-pack's aliases; what it cannot resolve is asked, never guessed. The agent (`inspect_assembly`, `propose_plan`) reads
-semantics; a directive it claims from the instruction must quote the person's words, otherwise it is a proposal the
-person accepts. The engine resolves, predicts and measures; a person settles the rest.
+**Who decides what.** (Revised: see `AGENT_SESSION.md`.) The model reads the instruction — nothing else does. The built-in phrase
+matcher (`plan.read_instruction`, generic English against THIS drawing's names) is NOT on any path a person uses: `build_plan(…,
+reader=False)` in the agent, and the page has no plan panel any more. It stays as a narrow, non-authoritative first pass for the free
+benchmark (`plan-bench`) and tests. What the model proposes is checked, never interpreted: each directive quotes the person's own words
+(a clause not in their text makes it a proposal they accept), every sentence of the instruction must be accounted for, references must
+resolve, a proposal that contradicts itself on one part is a conflict, and the engine predicts and measures the plan; a person settles
+the rest.
 
 **Measured on generated drawings with known intent** (`dxf-autoparam plan-bench`, no model): 54/54 cases (boxes of
 1–4 cells drawn as separate members, two views in projection, foundation, wing walls, an unrelated detail; the

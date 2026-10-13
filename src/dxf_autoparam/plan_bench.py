@@ -235,6 +235,27 @@ def box_answer(sm, uid: str, b: Box, handles: dict, names: dict | None = None) -
     return ans
 
 
+def answer_as_calls(ans: dict) -> list[tuple[str, dict]]:
+    """An answer (box_answer's) as the tool calls a model would make to build it: parts by region, named sizes by candidate and
+    occurrences (or by their two lines), levels. For a scripted model in tests and the demo — the engine checks every one."""
+    calls: list[tuple[str, dict]] = []
+    parts = [{"name": c["name"], "type": c.get("type", ""), "level": c.get("level", "component"), **({"parent": c["parent"]} if c.get("parent") else {}),
+              "regions": c.get("regions", [])} for c in ans["components"]]
+    calls.append(("define_parts", {"items": parts}))
+    params = []
+    for p in ans["parameters"]:
+        row = {"name": p["name"], "part": p.get("component") or "Box"}
+        if p.get("candidate"):
+            row.update(candidate=p["candidate"], occurrences=p.get("occurrences") or ["all"])
+        else:
+            row.update(from_line=p["from_datum"], to_line=p["to_datum"])
+        params.append(row)
+    calls.append(("define_parameters", {"items": params}))
+    if ans.get("levels"):
+        calls.append(("set_levels", {"items": [{"line": lv["datum"], "name": lv["name"], "role": lv["role"]} for lv in ans["levels"]]}))
+    return calls
+
+
 # ── the cases ────────────────────────────────────────────────────────────────────
 
 

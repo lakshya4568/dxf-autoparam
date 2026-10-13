@@ -440,6 +440,13 @@ def test_the_agent_plans_the_change_before_writing_behaviour_and_the_sheet_commi
             {"target": "PitchingDetail", "mode": "exclude", "clause": "Do not modify the unrelated pitching detail"}]
     anchor = {"policy": "centered", "clause": "centred about the centre line"}
     script = [
+        # the model reads the instruction (nothing reads it for the model): each clause quoted, what it means, what handles it
+        [call("account_instruction", items=[
+            {"quote": "Reduce the clear span to 2500 mm", "kind": "change_value", "meaning": "ClearSpan becomes 2500", "handled_by": "plan"},
+            {"quote": "centred about the centre line", "kind": "keep", "meaning": "the box stays about its centre line", "handled_by": "plan"},
+            {"quote": "Keep the foundation fixed", "kind": "keep", "meaning": "the foundation does not move", "handled_by": "plan"},
+            {"quote": "Wing walls follow the box", "kind": "keep", "meaning": "wings follow", "handled_by": "plan"},
+            {"quote": "Do not modify the unrelated pitching detail", "kind": "keep", "meaning": "excluded", "handled_by": "plan"}])],
         [call("set_formulas", items=[{"line": "x3", "expr": "x6 - ClearSpan"}])],  # behaviour before a plan: refused
         [call("inspect_assembly", parameter="ClearSpan")],
         # the agent's own inference (no words of the person behind it) is a proposal, not a decision
@@ -450,13 +457,15 @@ def test_the_agent_plans_the_change_before_writing_behaviour_and_the_sheet_commi
     ]
     gem = ScriptedGemini(script)
     res = parametrize_unit(sm, uid, gem, instructions=said, log=lambda *a: None)
-    first = gem.seen[0][0]["result"][0]
+    read = gem.seen[0][0]["result"]
+    assert all(v["ok"] for v in read) and gem.seen[0][0]["status"]["instruction"]["unaccounted"] == []  # every sentence accounted for
+    first = gem.seen[1][0]["result"][0]
     assert first["ok"] is False and first["failure"]["code"] == "PLAN_FIRST"
-    look = gem.seen[1][0]
+    look = gem.seen[2][0]
     assert any(a["policy"] == "centered" and a["possible"] for a in look["anchors"]) and "Foundation" in look["tied_to_it"]
-    pending = gem.seen[2][0]["result"]
+    pending = gem.seen[3][0]["result"]
     assert pending["plan"] == "needs_decision" and any("The AI proposes" in q for q in pending["questions"])
-    done = gem.seen[3][0]["result"]
+    done = gem.seen[4][0]["result"]
     assert done["ok"] and done["plan"] == "accepted and measured" and done["checks"]["failed"] == 0
     assert res["values_applied"] == [{"name": f"{uid}.ClearSpan", "value": 2500}]
     assert off_intent(sm, g, 2500, "centered", foundation="keep_fixed") == []

@@ -10,12 +10,14 @@
     --canvas: #161a21; --struct: #e9edf3; --anno: #8fa3bd; --dim: #6fb6ff; --fixed: #465062; --ref: #f08a7a;
     --sel: #ffb020; --hov: #22d3ee; --imp: rgba(34,211,238,.55); --chg: #ff5ab4; --ghost: rgba(233,237,243,.22); --ok: #4ade80; --warn: #fbbf24; --bad: #f87171;
     --accent: #3b82f6; --ai: #a78bfa; --chip: #2b3342; --viewbox: rgba(59,130,246,.55); --table: rgba(74,222,128,.5); --notes: rgba(251,191,36,.45);
+    --h-drives: #ff6bd5; --h-follows: #22d3ee; --h-texts: #a78bfa; --h-holds: #4ade80; --h-open: #fbbf24; --h-base: #4f6bff;
   }
   :root[data-theme="light"] {
     --bg: #eef1f5; --panel: #ffffff; --panel2: #f6f8fb; --ink: #1d2430; --muted: #5d6878; --line: #dde2ea; --hover: #eef2f8;
     --canvas: #ffffff; --struct: #111827; --anno: #55657d; --dim: #1d6fd6; --fixed: #c3cad6; --ref: #dc2626;
     --sel: #e07b00; --hov: #0891b2; --imp: rgba(8,145,178,.55); --chg: #d6247f; --ghost: rgba(17,24,39,.18); --chip: #edf1f7;
     --viewbox: rgba(37,99,235,.5); --table: rgba(22,163,74,.45); --notes: rgba(202,138,4,.45);
+    --h-drives: #d6247f; --h-follows: #0891b2; --h-texts: #7c3aed; --h-holds: #16a34a; --h-open: #ca8a04;
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; }
@@ -115,6 +117,53 @@
   #menu label { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 8px; }
   .ev.thought { color: var(--muted); font-style: italic; } .ev.call { color: var(--ai); } .ev.done { color: var(--ok); } .ev.error { color: var(--bad); } .ev.stopped { color: var(--warn); }
   kbd { font: 10.5px ui-monospace, Menlo, monospace; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; }
+
+  main.wide { grid-template-columns: 440px 1fr 330px; }
+  /* the agent */
+  .agent-box { margin: 6px 10px; display: flex; flex-direction: column; gap: 6px; }
+  .agent-box textarea { width: 100%; min-height: 96px; }
+  .agent-box .row2 { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .agent-box select { max-width: 100%; }
+  button.run { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; padding: 4px 14px; }
+  .chip.big { font-size: 11.5px; padding: 1px 9px; }
+  .pill { display: inline-block; padding: 0 7px; border-radius: 9px; font-size: 10.5px; line-height: 17px; background: var(--chip); color: var(--muted); white-space: nowrap; }
+  .st-complete, .st-validated, .st-completed { color: var(--ok); } .st-partial, .st-paused, .st-exhausted, .st-awaiting_user, .st-stopped, .st-components_identified { color: var(--warn); }
+  .st-bound { color: var(--accent); } .st-found, .st-identified, .st-named, .st-not_analyzed { color: var(--muted); } .st-excluded { color: var(--warn); } .st-unresolved, .st-worked_out { color: var(--bad); }
+  .st-failed, .st-refused { color: var(--bad); } .st-running, .st-stopping, .st-analyzing, .st-parametrizing { color: var(--ai); }
+  .meter { height: 4px; background: var(--chip); border-radius: 2px; overflow: hidden; margin-top: 2px; } .meter > i { display: block; height: 100%; background: var(--ai); }
+  .meter.warn > i { background: var(--warn); }
+  .stats { display: flex; gap: 10px; flex-wrap: wrap; color: var(--muted); font-size: 11px; }
+  .crit { display: grid; grid-template-columns: 14px 1fr; gap: 1px 6px; font-size: 11.5px; margin: 2px 0; } .crit .m { text-align: center; }
+  .crit.ok .m { color: var(--ok); } .crit.no .m { color: var(--bad); } .crit .d { color: var(--muted); }
+  .q { border: 1px solid var(--warn); border-radius: 6px; padding: 6px 8px; margin: 4px 0; display: flex; flex-direction: column; gap: 4px; }
+  .q .opts { display: flex; flex-wrap: wrap; gap: 4px; } .q .opts label { border: 1px solid var(--line); border-radius: 5px; padding: 2px 7px; cursor: pointer; }
+  .q .opts label.on { border-color: var(--accent); background: var(--hover); }
+  .turn { margin: 4px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel2); }
+  .turn > summary { cursor: pointer; list-style: none; padding: 5px 8px; display: flex; align-items: center; gap: 6px; font-size: 12px; }
+  .turn > summary::-webkit-details-marker { display: none; }
+  .turn > summary::before { content: "▸"; font-size: 9px; transition: transform .12s; } .turn[open] > summary::before { transform: rotate(90deg); }
+  .turn.live { border-color: var(--ai); }
+  .turn > .body { padding: 0 8px 6px 8px; display: flex; flex-direction: column; gap: 5px; }
+  .call { display: grid; grid-template-columns: 14px 1fr auto; gap: 1px 6px; align-items: baseline; font-size: 11.5px; }
+  .call .m { text-align: center; } .call.ok .m { color: var(--ok); } .call.no .m { color: var(--bad); } .call.run .m { color: var(--ai); animation: pulse 1.2s infinite; }
+  .call.wait .m { color: var(--warn); }
+  .call .said { grid-column: 2 / 4; color: var(--ink); font-style: italic; } .call .sum { grid-column: 2 / 4; color: var(--muted); }
+  .call .bad { grid-column: 2 / 4; color: var(--bad); } .call .ms { color: var(--muted); font-size: 10.5px; }
+  .call details { grid-column: 2 / 4; } .call details > summary { cursor: pointer; color: var(--muted); font-size: 10.5px; list-style: none; }
+  .call details > summary::-webkit-details-marker { display: none; }
+  pre.json { margin: 3px 0 0; padding: 5px 7px; background: var(--bg); border-radius: 5px; font: 10.5px/1.35 ui-monospace, Menlo, monospace; white-space: pre-wrap; word-break: break-word; max-height: 220px; overflow: auto; }
+  .thumb { grid-column: 2 / 4; } .thumb img { max-width: 100%; max-height: 120px; border: 1px solid var(--line); border-radius: 4px; cursor: zoom-in; background: #fff; }
+  .sys { margin: 3px 10px; font-size: 11.5px; color: var(--muted); display: flex; gap: 6px; } .sys.bad { color: var(--bad); } .sys.ok { color: var(--ok); } .sys.warn { color: var(--warn); }
+  .hist .row .nm { white-space: normal; }
+  #modal { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; align-items: center; justify-content: center; z-index: 50; }
+  #modal.on { display: flex; } #modal .box { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; max-width: 460px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 12px 40px rgba(0,0,0,.4); }
+  #modal .box.pic { max-width: 92vw; max-height: 92vh; overflow: auto; } #modal img { max-width: 100%; background: #fff; }
+  .legend { display: grid; grid-template-columns: 16px 1fr auto; gap: 3px 6px; align-items: center; font-size: 12px; }
+  .legend i { width: 14px; height: 4px; border-radius: 2px; display: block; } .legend i.dash { background: repeating-linear-gradient(90deg, currentColor 0 4px, transparent 4px 7px); height: 3px; }
+  .kvs { display: grid; grid-template-columns: 78px 1fr; gap: 2px 8px; font-size: 12px; } .kvs > div:nth-child(odd) { color: var(--muted); }
+  .vchip { display: inline-block; padding: 0 6px; border-radius: 8px; font-size: 10px; line-height: 15px; background: var(--chip); }
+  .vstat { font-size: 10.5px; }
+  .lnk { cursor: pointer; text-decoration: underline dotted; color: var(--accent); }
 </style>
 </head>
 <body>
@@ -126,19 +175,22 @@
   <span class="sp"></span>
   <button id="fitall" title="Fit the whole sheet (F)">Fit</button>
   <button class="icon" id="rotcw" title="Turn the view 90° clockwise (R) — the drawing itself is not changed">↻ <span id="rotlbl">0°</span></button>
+  <button id="orig" class="icon" title="Show the imported (original) geometry dotted under the current drawing, where it differs">Original ┅</button>
   <button class="primary" id="export" title="Download the edited DXF">Export DXF</button>
   <button class="icon" id="more" title="More">⋯</button>
   <div id="menu">
     <label>Clicks select <select id="filter"><option value="all">everything</option><option value="structure">structure only</option><option value="annotation">annotation only</option></select></label>
     <button id="rotccw">↺ Turn the view counter-clockwise <span class="muted">⇧R</span></button>
     <button id="project">Download the parametric project (.json)</button>
+    <label>Original colour <input type="color" id="origcolor" value="#4f6bff"></label>
+    <button id="resetdrawing" title="Back to the drawing as imported: values, plans, parametrization, sharing and view corrections">Reset drawing to the imported state…</button>
     <button id="theme">Light / dark theme</button>
     <a href="/classic">Old single-view page</a>
   </div>
 </header>
 <main id="main">
   <aside>
-    <div class="tabs"><button data-tab="sheet" class="on" title="The views found on the sheet">Views</button><button data-tab="params" title="The sizes you can change">Sizes</button><button data-tab="ai" title="Let Gemini name and link the sizes">Gemini</button></div>
+    <div class="tabs"><button data-tab="sheet" class="on" title="The views found on the sheet">Views</button><button data-tab="params" title="The sizes you can change">Sizes</button><button data-tab="ai" title="Tell the agent what to do — one instruction, it decides the steps">Agent</button></div>
     <div class="scroll" id="left"></div>
   </aside>
   <div id="stage">
@@ -150,6 +202,7 @@
   </div>
   <aside class="right"><div class="scroll" id="right"></div></aside>
 </main>
+<div id="modal"><div class="box" id="modalbox"></div></div>
 <footer>
   <span>Command:</span><input id="cmd" placeholder="F fit · V view · ESC · UNDO · HELP" />
   <span id="coords">—</span><span id="zoom">—</span><span id="selc">0 selected</span>
@@ -160,7 +213,10 @@
 window.__errors = []; window.addEventListener("error", (e) => window.__errors.push(String(e.message)));
 window.addEventListener("unhandledrejection", (e) => window.__errors.push(String(e.reason)));
 const $ = (s) => document.querySelector(s);
-const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+// An object put into the page is shown as its JSON, never as "[object Object]".
+const show = (v) => v == null ? "" : typeof v === "object" ? (() => { try { return JSON.stringify(v); } catch (e) { return String(v); } })() : String(v);
+const esc = (s) => show(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const jsonView = (v) => { let t; try { t = JSON.stringify(v, null, 1); } catch (e) { t = String(v); } return `<pre class="json">${esc(t ?? "")}</pre>`; };
 const fmt = (v, unit) => v == null ? "" : unit === "m" ? Number(v).toFixed(3) : (Math.round(Number(v) * 10) / 10).toLocaleString("en-US", { maximumFractionDigits: 1 });
 const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 
@@ -171,12 +227,14 @@ let byEnt = new Map();              // entity index -> [prim ids]
 let grid = null;                    // spatial index over primitives
 let cam = { x: 0, y: 0, s: 1, r: 0 };     // world point at the canvas centre, pixels per drawing unit, view rotation (quarter turns)
 let sel = new Set(), hov = -1;      // selected entities; hovered entity
-let impact = new Set();             // what the value in focus moves (measured)
+let hl = null;                      // the geometry of the value in focus, by category: {drives, follows, texts: Set, holds, open: [{name, set}], show}
+let base = { on: false, list: [], rev: -1, color: "#4f6bff", deviation: null };   // the imported geometry of what changed: the dotted layer
+let stat = null;                    // /api/sheet/status: how far each view, part and value really is
 let focus = null;                   // { kind: "view"|"param"|"entity"|"unit", id }
 let activeView = null;              // a view the canvas dims the others for
 let unitCache = new Map();          // unit id -> /api/sheet/unit
 const loading = new Set();          // units being analysed
-let paramInfo = null;               // /api/sheet/param of the parameter in focus
+let paramInfo = null;               // /api/sheet/param of the parameter in focus (card, highlight, original, deviation)
 let preview = null;                 // { changes, res, prims:Map(entity -> prims) }
 let tab = "sheet";
 let mode = null;                    // null | "split"
@@ -304,6 +362,7 @@ function render() {
   ctx.lineJoin = "round"; ctx.lineCap = "round";
   // hatch / solid fills, faint
   if (groups.fill.length) { ctx.fillStyle = theme === "light" ? "rgba(99,102,241,.10)" : "rgba(129,140,248,.12)"; ctx.beginPath(); for (const o of groups.fill) poly(o.p, true); ctx.fill(); }
+  if (base.on && base.list.length) drawBaseline();
   stroke(groups.dimmed, theme === "light" ? "rgba(120,130,150,.35)" : "rgba(150,160,180,.22)", 1);
   stroke(groups.f, colors.f, 1); stroke(groups.a, colors.a, 1); stroke(groups.d, colors.d, 1); stroke(groups.ref, colors.ref, 1, [6, 4]); stroke(groups.s, colors.s, 1.15);
   texts(ids, furniture, colors);
@@ -314,8 +373,8 @@ function render() {
     stroke(now, colors.chg, 1.6);
     ctx.fillStyle = colors.chg; for (const list of preview.prims.values()) for (const o of list) if (o.k === "t") text1(o);
   }
-  // what the value in focus moves (lighter than a selection; hidden while a preview shows the change itself)
-  if (impact.size && !preview) { const ip = []; for (const i of impact) for (const n of byEnt.get(i) || []) if (P[n].k !== "t") ip.push(P[n]); stroke(ip, css("--imp"), 1.8); }
+  // the geometry the value in focus belongs to, by category (hidden while a preview shows the change itself)
+  if (hl && !preview) drawHighlight();
   // selection and hover on top
   const selP = []; for (const i of sel) for (const n of byEnt.get(i) || []) if (P[n].k !== "t") selP.push(P[n]);
   stroke(selP, colors.sel, 2.4);
@@ -323,6 +382,22 @@ function render() {
   if (hov >= 0 && !sel.has(hov)) { const hp = (byEnt.get(hov) || []).map((n) => P[n]).filter((o) => o.k !== "t"); stroke(hp, colors.hov, 2.2); }
   boxes(); band();
   lastFrameMs = performance.now() - t0;
+}
+function drawBaseline() {   // the imported geometry, dotted, in the person's colour: where it differs, it shows what the drawing was
+  const lines = base.list.filter((o) => o.k !== "t" && o.p);
+  stroke(lines, base.color, 1.5, [2, 3]);
+  ctx.fillStyle = base.color; ctx.globalAlpha = 0.8; for (const o of base.list) if (o.k === "t") text1(o); ctx.globalAlpha = 1;
+}
+function entPrims(set, textOnly) { const out = []; for (const i of set) for (const n of byEnt.get(i) || []) { const o = P[n]; if ((o.k === "t") === !!textOnly) out.push(o); } return out; }
+function drawHighlight() {   // the primitives of each category are looked up once per change of the drawing, not on every frame
+  const on = hl.show, c = css;
+  const k = hl.cache || (hl.cache = { holds: hl.holds.map((g) => entPrims(g.set, false)), open: hl.open.map((g) => entPrims(g.set, false)), follows: entPrims(hl.follows, false),
+    texts: entPrims(hl.texts, false), textsT: entPrims(hl.texts, true), drives: entPrims(hl.drives, false) });
+  if (on.holds) for (const l of k.holds) stroke(l, c("--h-holds"), 2.4, [6, 4]);
+  if (on.open) for (const l of k.open) stroke(l, c("--h-open"), 2.4, [3, 3]);
+  if (on.follows) stroke(k.follows, c("--h-follows"), 2.2);
+  if (on.texts) { stroke(k.texts, c("--h-texts"), 2.2); ctx.fillStyle = c("--h-texts"); for (const o of k.textsT) text1(o, true); }
+  if (on.drives) stroke(k.drives, c("--h-drives"), 3);
 }
 function poly(p, closed) {
   const s = cam.s, [c, n] = rot(), cx = CW / 2, cy = CH / 2, x0 = cam.x, y0 = cam.y;
@@ -618,7 +693,7 @@ window.addEventListener("keyup", (e) => { if (e.code === "Space") { spaceDown = 
 function escape() {
   if (mode) { mode = null; say("cancelled"); draw(); return; }
   if (preview) { cancelPreview(); return; }
-  if (impact.size) { impact = new Set(); draw(); return; }
+  if (hl) { hl = null; paramInfo = null; focus = null; draw(); renderRight(); return; }
   if (sel.size) { sel.clear(); afterSelect(); return; }
   if (activeView) { activeView = null; draw(); renderLeft(); return; }
   focus = null; renderRight();
@@ -659,9 +734,10 @@ function renderLeft() {
   const L = $("#left");
   if (!S) { L.innerHTML = `<div class="note">No drawing open.</div>`; return; }
   const top = L.scrollTop, atEnd = top + L.clientHeight >= L.scrollHeight - 40;
-  L.innerHTML = tab === "params" ? paramList() : tab === "ai" ? geminiPanel() : sheetTree();
+  L.innerHTML = tab === "params" ? paramList() : tab === "ai" ? agentPanel() : sheetTree();
+  $("#main").classList.toggle("wide", tab === "ai");
   wireLeft(); wireFolds(L);
-  L.scrollTop = tab === "ai" && ai.running && atEnd ? L.scrollHeight : top;   // a running log follows unless scrolled up
+  L.scrollTop = tab === "ai" && run && ACTIVE.has(run.status) && atEnd ? L.scrollHeight : top;   // a running log follows unless scrolled up
 }
 function kindColor(g) { return g.kind === "view" ? css("--accent") : g.kind === "table" ? css("--ok") : g.kind === "title_block" ? css("--ai") : css("--warn"); }
 function sheetTree() {
@@ -673,11 +749,14 @@ function sheetTree() {
     h += `<div class="sec">Please check <span class="n">${qs.length}</span></div>`;
     for (const g of qs) h += `<div class="row" data-view="${g.id}"><span class="nm"><b>${esc(g.name || g.id)}</b><br><span class="sub" style="color:var(--warn)">${esc(g.questions[0])}</span></span></div>`;
   }
+  if (stat) h += `<div class="hint" title="Derived from the model: parts, values, plans and their measured checks — never from a message"><b>${esc(stat.overall.replace("_", " "))}</b> — ${esc(stat.sentence)}</div>`;
   h += `<div class="sec">Views on the sheet <span class="n">${views.length}</span></div>`;
   for (const g of views) {
     const u = unitOf(g); const linked = u && u.views.length > 1;
+    const vs = stat && stat.views.find((x) => x.id === g.id);
     h += `<div class="row ${activeView === g.id ? "on" : ""}" data-view="${g.id}" title="${esc(g.id)} · ${Math.round(g.confidence * 100)}% sure it is one view">
       <span class="k" style="background:${kindColor(g)}"></span><span class="nm">${esc(g.name || "(no title)")}<br><span class="sub">${esc(g.view_type)}${g.scale ? " · 1:" + g.scale : ""} · ${esc(g.id)}</span></span>
+      ${vs ? `<span class="pill st-${esc(vs.state)}" title="${esc(vs.label)}">${esc(vs.label)}</span>` : ""}
       ${linked ? `<span class="chip acc" title="drawn in line with ${esc(u.views.filter((v) => v !== g.id).join(", "))}: a change moves both">⇄ ${esc(u.views.filter((v) => v !== g.id).join(","))}</span>` : ""}
       ${g.confidence < 0.85 ? `<span class="chip warn" title="not sure this is one view">?</span>` : ""}</div>`;
   }
@@ -702,7 +781,7 @@ function sheetTree() {
 }
 function paramList() {
   let h = `<div class="sec">Shared by several views <span class="n">${S.shared.length}</span></div>`;
-  if (!S.shared.length) h += `<div class="note">None yet. Use “Find sizes two views both state” below, or Gemini step 3.</div>`;
+  if (!S.shared.length) h += `<div class="note">None yet. Use “Find sizes two views both state” below, or ask the agent (Agent tab) to link the sizes the views share.</div>`;
   for (const p of S.shared) {
     const st = p.bindings.map((b) => b.status); const ok = st.every((s) => s === "drives");
     h += `<div class="row ${focus && focus.kind === "param" && focus.id === p.name ? "on" : ""}" data-param="${esc(p.name)}"><span class="nm"><b>${esc(p.name)}</b><br><span class="sub">${p.bindings.map((b) => esc(b.views.join("+"))).join(" · ")}</span></span>
@@ -715,7 +794,6 @@ function paramList() {
   if (!uid) return h + `<div class="hint">Open a view (click it in <b>Views</b> or double-click it on the sheet) to see its sizes. Type a new value and press <b>Enter</b> to preview it; click a size to see what it moves.</div>`;
   const u = unitCache.get(uid);
   if (!u) { if (!loading.has(uid)) { loading.add(uid); loadUnit(uid).then(() => { loading.delete(uid); renderLeft(); }); } return h + `<div class="note">reading the view…</div>`; }
-  h += fold("plan", "Plan a change", planPanel(uid, u), (u.plans || []).length || null, !!planState || !(u.plans || []).length);
   h += `<div class="note"><input type="text" id="psearch" placeholder="filter by name, meaning or value" style="width:100%"></div>`;
   const ps = u.params.filter((p) => !p.shared).sort((a, b) => (b.source === "ai") - (a.source === "ai"));
   for (const p of ps.slice(0, 400)) {
@@ -728,96 +806,6 @@ function paramList() {
   return h;
 }
 
-// ── plans: an instruction read into what moves, what stays and why — decided, then applied and measured ─────────
-let planDraft = "", planState = null;   // planState: {uid, plan, decisions, edits, checks}
-const PLAN_MODES = ["resize", "translate", "follow", "keep_fixed", "keep_value", "no_parameter", "exclude", "preserve", "annotations_only"];
-function planPanel(uid, u) {
-  let h = `<div class="note">Say what to change and what must stay; the engine reads it into a plan you can check before anything moves.</div>
-    <div class="note"><textarea id="plan-instr" rows="3" style="width:100%" placeholder="e.g. Reduce the clear span to 2500. Keep the foundation fixed. Maintain wall thicknesses.">${esc(planDraft)}</textarea></div>
-    <div class="bar"><button id="plan-read">Read</button>${planState && planState.uid === uid && planState.plan.status === "ready" ? `<button class="primary" id="plan-apply">Apply plan</button>` : ""}</div>`;
-  if (planState && planState.uid === uid) h += planCard(planState);
-  for (const q of u.plans || []) {
-    const st = q.status === "accepted" ? (q.failed && q.failed.length ? `<span class="chip bad">${q.failed.length} check(s) fail</span>` : `<span class="chip ok">measured ✓ ${q.checks ? q.checks.passed : ""}</span>`) : `<span class="chip warn">${esc(q.status)}</span>`;
-    const by = {}; for (const x of q.directives) { const m = x.split(": ").pop(); by[m] = (by[m] || 0) + 1; }
-    h += `<div class="row" title="${esc(q.instruction + "\n" + q.directives.join("\n"))}"><span class="nm wrap"><b>${esc(q.driver || q.id)}</b>${q.requested != null ? " → " + fmt(q.requested) : ""} <span class="sub">${esc((q.anchor && q.anchor.policy) || "")}${q.anchor && q.anchor.centre ? " about " + esc(q.anchor.centre) : ""} · ${esc(Object.entries(by).map(([m, n]) => n + " " + m.replace("_", " ")).join(" · "))}</span></span>${st}</div>`;
-    for (const x of q.failed || []) h += `<div class="note bad">${esc(x)}</div>`;
-  }
-  return h;
-}
-function planCard(st) {
-  const P = st.plan, chip = { ready: "ok", accepted: "ok", needs_decision: "warn", conflict: "bad", draft: "" }[P.status] || "";
-  let h = `<div class="sec">Plan <span class="chip ${chip}">${esc(P.status.replace("_", " "))}</span></div>`;
-  const d = P.driver;
-  if (d) h += `<div class="row"><span class="nm"><b>${esc(d.parameter)}</b> ${fmt(d.value)} ${esc(d.unit)}<br><span class="sub">${(d.pairs || []).length} occurrence(s)</span></span>
-      → <input class="val" id="plan-value" value="${d.requested_value != null ? fmt(d.requested_value) : ""}" placeholder="new value"></div>`;
-  for (const c of P.conflicts || []) h += `<div class="note bad">${esc(c)}</div>`;
-  // what only the person can answer comes first
-  for (const q of P.questions || []) {
-    h += `<div class="note warn">${esc(q.about === "anchor" ? "Which side stays when " + (d ? d.parameter : "it") + " changes?" : q.text)}</div>`;
-    if ((q.options || []).length) h += `<div class="bar"><select data-q="${esc(q.about)}"><option value="">choose…</option>${q.options.map((x) => `<option ${st.decisions[q.about] === x ? "selected" : ""}>${esc(x)}</option>`).join("")}</select>${q.recommended ? `<span class="muted">suggested: ${esc(q.recommended)}</span>` : ""}</div>`;
-    if (q.why) h += `<div class="note muted">${esc(q.why)}</div>`;
-  }
-  const a = P.anchor;
-  if (a && (a.alternatives || []).length) {
-    let o = "";
-    for (const alt of a.alternatives) {
-      const key = alt.policy + (alt.centre ? " about " + alt.centre : ""), on = a.policy === alt.policy && (!alt.centre || a.centre === alt.centre);
-      const eff = Object.entries(alt.parts || {});
-      o += `<label class="row" style="align-items:flex-start;${alt.available ? "" : "opacity:.5"}"><input type="radio" name="plan-anchor" data-anchor="${esc(key)}" ${on ? "checked" : ""} ${alt.available ? "" : "disabled"}>
-        <span class="nm wrap"><b>${esc(key)}</b> <span class="sub">${esc(alt.why)}</span>
-        ${eff.length ? `<details><summary class="sub">${eff.length} part(s) move</summary>${eff.map(([k, v]) => `<span class="sub">${esc(k)}: ${esc(v)}</span>`).join("")}</details>` : ""}</span></label>`;
-    }
-    h += fold("plan-anchor", a.status === "accepted" ? `Anchor: ${esc(a.policy)}${a.centre ? " about " + esc(a.centre) : ""}` : "Anchor: the alternatives", o, null, false);
-  }
-  if ((P.directives || []).length) {
-    let o = "";
-    for (const x of P.directives) {
-      const ed = st.edits[x.target];
-      o += `<div class="row" title="${esc((x.clause || "") + (x.relation ? " · " + x.relation : ""))}"><span class="nm wrap"><b>${esc(x.target)}</b> <span class="sub">${esc(x.kind)}${x.relation ? " · " + esc(x.relation) : ""}</span></span>
-        ${x.kind === "part" || x.kind === "parameter" ? `<select data-dir="${esc(x.target)}">${PLAN_MODES.map((m) => `<option ${(ed || x.mode) === m ? "selected" : ""}>${m}</option>`).join("")}</select>` : `<span class="chip">${esc(x.mode)}</span>`}
-        <span class="chip ${x.status === "accepted" ? "ok" : x.status === "rejected" ? "bad" : "warn"}">${esc(x.status)}</span></div>`;
-    }
-    h += fold("plan-dirs", "What each part does", o, P.directives.length, false);
-  }
-  const aff = P.affected || {};
-  h += fold("plan-dep", "What follows", (P.dependency || []).map((x) => `<div class="note mono">${esc(x)}</div>`).join("")
-    + (Object.keys(aff.attached || {}).length ? `<div class="note">Tied to it: ${esc(Object.entries(aff.attached).map(([k, v]) => k + " (" + v + ")").join("; "))}</div>` : ""), null);
-  if (st.checks) {
-    const c = st.checks;
-    h += fold("plan-checks", `Measured: ${c.summary ? c.summary.passed + " passed, " + c.summary.failed + " failed" : ""}`, (c.checks || []).map((x) => `<div class="note ${x.status === "fail" ? "bad" : ""}">${x.status === "fail" ? "✗" : "✓"} ${esc(x.check)} ${esc(x.target)} — ${esc(x.measured)}${x.status === "fail" && x.cause ? " · " + esc(x.cause) : ""}</div>`).join("")
-      + (c.outcomes || []).map((o) => `<div class="note mono">${fmt(o.value)}: ${esc(Object.entries(o.parts || {}).slice(0, 8).map(([k, v]) => k + " " + v).join("; "))}</div>`).join(""), null, !c.ok);
-  }
-  return h;
-}
-function planRequest() {
-  const st = planState, req = { unit: st.uid, instruction: planDraft, decisions: st.decisions };
-  const dirs = Object.entries(st.edits).map(([target, mode]) => ({ target, mode, source: "person" }));
-  if (dirs.length) req.directives = dirs;
-  const v = $("#plan-value"); if (v && v.value.trim() !== "") { const n = parseNum(v.value); if (n != null) req.requested_value = n; }
-  return req;
-}
-async function planRead(keep) {
-  const uid = activeUnit(); if (!uid) return;
-  if (!keep || !planState || planState.uid !== uid) planState = { uid, plan: null, decisions: {}, edits: {}, checks: null };
-  const r = await guard(() => api("/api/sheet/plan", planRequest()), "Reading the instruction…");
-  if (r) { planState.plan = r.plan; planState.revision = r.revision; openFolds.add("plan"); renderLeft(); }
-}
-async function planApply() {
-  const st = planState; if (!st) return;
-  const r = await guard(() => api("/api/sheet/plan/apply", { ...planRequest(), revision: st.revision }), "Applying and measuring…");
-  if (r) { take(r); st.plan = r.result.plan; st.checks = r.result.checks; unitCache.delete(st.uid); await loadUnit(st.uid);
-    say(r.result.checks && r.result.checks.ok ? "plan applied and measured ✓" : "plan applied", "ok"); renderLeft(); renderRight(); draw(); }
-  else { await planRead(true); }
-}
-function wirePlan() {
-  const t = $("#plan-instr"); if (t) t.addEventListener("input", () => { planDraft = t.value; });
-  const rd = $("#plan-read"); if (rd) rd.onclick = () => planRead(false);
-  const ap = $("#plan-apply"); if (ap) ap.onclick = planApply;
-  document.querySelectorAll("#left [data-anchor]").forEach((el) => el.addEventListener("change", () => { planState.decisions.anchor = el.dataset.anchor; planRead(true); }));
-  document.querySelectorAll("#left [data-dir]").forEach((el) => el.addEventListener("change", () => { planState.edits[el.dataset.dir] = el.value; planRead(true); }));
-  document.querySelectorAll("#left [data-q]").forEach((el) => el.addEventListener("change", () => { if (el.value) { planState.decisions[el.dataset.q] = el.value; planRead(true); } }));
-  const pv = $("#plan-value"); if (pv) pv.addEventListener("keydown", (e) => { if (e.key === "Enter") planRead(true); });
-}
 function activeUnit() { const v = activeView || (focus && focus.kind === "view" ? focus.id : null); if (!v) return null; const g = S.groups.find((x) => x.id === v); return g && g.unit; }
 function wireLeft() {
   document.querySelectorAll("#left [data-view]").forEach((el) => el.addEventListener("click", () => openView(el.dataset.view, true)));
@@ -831,8 +819,7 @@ function wireLeft() {
   const ot = $("#ov-tidy"); if (ot) ot.addEventListener("change", () => { tidyOn = ot.checked; tidyAll(); draw(); });
   const ps = $("#psearch"); if (ps) ps.addEventListener("input", () => { const q = ps.value.toLowerCase(); document.querySelectorAll("#left [data-search]").forEach((r) => r.style.display = r.dataset.search.includes(q) ? "" : "none"); });
   const lp = $("#loadprops"); if (lp) lp.addEventListener("click", loadProposals);
-  if (tab === "params") wirePlan();
-  if (tab === "ai") wireGemini();
+  if (tab === "ai") wireAgent();
 }
 function parseNum(s) { const v = Number(String(s).replace(/[, ]/g, "")); return isFinite(v) ? v : null; }
 
@@ -847,12 +834,35 @@ async function loadUnit(uid) { return guard(async () => { const u = await api(`/
   const su = S.units.find((x) => x.id === uid); if (su) su.built = true; return u; }); }
 
 // ── parameters ───────────────────────────────────────────────────────────────
+function buildHl(h) {
+  const set = (a) => new Set(a || []);
+  return { name: h.name, drives: set(h.drives), follows: set(h.follows), texts: set(h.texts),
+    holds: Object.entries(h.holds || {}).map(([name, a]) => ({ name, set: set(a) })),
+    open: Object.entries(h.open || {}).map(([name, a]) => ({ name, set: set(a) })),
+    views: h.views || {}, show: { drives: true, follows: true, texts: true, holds: true, open: true } };
+}
+function hlBox(view) {   // the box of what the value belongs to (in one view, or everywhere)
+  if (!hl) return null;
+  const ents = new Set([...hl.drives, ...hl.follows, ...hl.texts]);
+  if (view) for (const i of [...ents]) { const o = P[(byEnt.get(i) || [])[0]]; if (!o || o.v !== view) ents.delete(i); }
+  return entBox(ents);
+}
+function inViewport(b) { const [x0, y0] = toScreen(b[0], b[1]), [x1, y1] = toScreen(b[2], b[3]);
+  const l = Math.min(x0, x1), r = Math.max(x0, x1), t = Math.min(y0, y1), d = Math.max(y0, y1);
+  return l >= 0 && t >= 0 && r <= CW && d <= CH && Math.max(r - l, d - t) > 0.12 * Math.min(CW, CH); }
+function fitValue(force) { const b = hlBox(); if (b && (force || !inViewport(b))) fit(b, 0.25); }
 async function openParam(key) {
-  focus = { kind: "param", id: key }; paramInfo = null; impact = new Set(); renderLeft(); renderRight();
-  const info = await guard(() => api(`/api/sheet/param?name=${encodeURIComponent(key)}`));
+  focus = { kind: "param", id: key }; paramInfo = null; hl = null; renderLeft(); renderRight();
+  const info = await guard(() => api(`/api/sheet/param?name=${encodeURIComponent(key)}`), "Finding the geometry…");
   if (!info || !focus || focus.id !== key) return;
-  paramInfo = info; impact = new Set(info.moves); $("#selc").textContent = `${sel.size} selected · ${impact.size} move with ${key}`;
-  renderRight(); draw();
+  paramInfo = info; hl = buildHl(info.highlight);
+  if (info.card && info.card.value != null) S.values[key] = info.card.value;   // a view analysed since the summary was read
+  $("#selc").textContent = `${sel.size} selected · ${hl.drives.size + hl.follows.size + hl.texts.size} belong to ${key}`;
+  renderRight(); fitValue(false); draw();
+}
+async function resetValue(key) {
+  const r = await guard(() => api("/api/sheet/reset_value", { name: key }), "Resetting…"); if (!r) return;
+  take(r); say(r.changed ? `${key} is back to its original value` : r.reason, "ok"); renderLeft(); openParam(key);
 }
 let pvTimer = 0;
 function startPreview(changes, applyIfOk) {
@@ -884,12 +894,49 @@ async function applyPreview() {
 }
 function take(res) {   // a committed change: the entities it moved (or moved back), as they now stand
   if (res.delta) { const fresh = ingest(res.delta); const ents = new Set(fresh.map((o) => o.i));
-    P = P.filter((o) => !ents.has(o.i)).concat(fresh); buildIndex(); tidyAll(); }
+    P = P.filter((o) => !ents.has(o.i)).concat(fresh); buildIndex(); tidyAll(); if (hl) hl.cache = null; }
   if (res.summary) { S = res.summary; unitCache.clear(); }
   $("#undo").disabled = !S.can_undo; $("#redo").disabled = !S.can_redo;
+  if (base.on) loadBaseline(); loadStatus();
 }
-async function undo() { const r = await guard(() => api("/api/sheet/undo", {})); if (r) { take(r); say(r.ok ? "undone" : "nothing to undo"); renderLeft(); renderRight(); draw(); } }
-async function redo() { const r = await guard(() => api("/api/sheet/redo", {})); if (r) { take(r); say(r.ok ? "redone" : "nothing to redo"); renderLeft(); renderRight(); draw(); } }
+async function loadStatus() { try { stat = await api("/api/sheet/status"); if (tab === "sheet") renderLeft(); } catch (e) { /* the chips are a convenience */ } }
+async function loadBaseline() {
+  if (!base.on) return;
+  try { const r = await api("/api/sheet/baseline"); base.list = ingest(r.prims); base.rev = r.revision; base.deviation = r.deviation; draw(); renderRightKeep(); } catch (e) { say(e.message, "bad"); }
+}
+function renderRightKeep() { if (focus && focus.kind === "param") return; renderRight(); }
+async function toggleBase(force) {
+  base.on = force != null ? force : !base.on;
+  $("#orig").classList.toggle("primary", base.on);
+  try { await api("/api/sheet/prefs", { baseline: { on: base.on, color: base.color } }); } catch (e) { /* a preference */ }
+  if (base.on) await loadBaseline(); else { base.list = []; draw(); }
+  if (focus && focus.kind === "param") renderRight();
+  say(base.on ? `the original geometry is shown dotted${base.deviation ? ` — ${base.deviation.changed} entities differ` : ""}` : "the original geometry is hidden", "ok");
+}
+// ── dialogs inside the page (a native confirm would block automation and look foreign) ──
+function closeModal() { $("#modal").classList.remove("on"); }
+function confirmBox(title, text, ok) {
+  return new Promise((resolve) => {
+    $("#modalbox").className = "box"; $("#modalbox").innerHTML = `<h3 style="margin:0">${esc(title)}</h3><div class="muted">${esc(text)}</div><div class="bar" style="justify-content:flex-end"><button id="m-no">Cancel</button><button class="primary" id="m-yes">${esc(ok || "OK")}</button></div>`;
+    $("#modal").classList.add("on");
+    const done = (v) => { closeModal(); resolve(v); };
+    $("#m-yes").onclick = () => done(true); $("#m-no").onclick = () => done(false);
+    $("#modal").onclick = (e) => { if (e.target === $("#modal")) done(false); };
+  });
+}
+function showPicture(src, caption) {
+  $("#modalbox").className = "box pic"; $("#modalbox").innerHTML = `<div class="bar"><b>${esc(caption || "")}</b><span class="muted">what the model was shown</span><button id="m-close" style="margin-left:auto">Close</button></div><img src="${esc(src)}" alt="${esc(caption || "")}">`;
+  $("#modal").classList.add("on"); $("#m-close").onclick = closeModal; $("#modal").onclick = (e) => { if (e.target === $("#modal")) closeModal(); };
+}
+window.addEventListener("keydown", (e) => { if (e.key === "Escape" && $("#modal").classList.contains("on")) { closeModal(); e.stopPropagation(); } }, true);
+async function resetDrawing() {
+  if (!(await confirmBox("Reset the drawing to the imported state?", "Every value, plan, parametrization, shared size and view correction goes; the drawing is as the file gave it. It is one undoable step (Ctrl/⌘ Z brings everything back), and a saved project file is not touched until you save again.", "Reset drawing"))) return;
+  const r = await guard(() => api("/api/sheet/reset_drawing", { confirm: true }), "Resetting…"); if (!r) return;
+  take(r); hl = null; paramInfo = null; focus = null; run = run && ACTIVE.has(run.status) ? run : run;
+  say(`the drawing is as imported (${r.reset.values} value(s), ${r.reset.plans} plan(s), ${r.reset.answers} parametrization(s) cleared)`, "ok"); renderLeft(); renderRight(); draw();
+}
+async function undo() { const r = await guard(() => api("/api/sheet/undo", {})); if (r) { take(r); say(r.ok ? "undone" : "nothing to undo"); renderLeft(); renderRight(); draw(); if (focus && focus.kind === "param") openParam(focus.id); } }
+async function redo() { const r = await guard(() => api("/api/sheet/redo", {})); if (r) { take(r); say(r.ok ? "redone" : "nothing to redo"); renderLeft(); renderRight(); draw(); if (focus && focus.kind === "param") openParam(focus.id); } }
 async function edit(op, body, done) {
   const r = await guard(() => api(`/api/sheet/${op}`, body), "Working…");
   if (r) { take(r); say(`${op}: done`, "ok"); renderLeft(); renderRight(); draw(); if (done) done(r); }
@@ -938,6 +985,11 @@ function viewInspector(gid) {
     <div>it is a</div><div><select id="vkind">${["view", "table", "notes", "title_block", "label"].map((k) => `<option ${k === g.kind ? "selected" : ""}>${k.replace("_", " ")}</option>`).join("")}</select></div></div>
     <div class="bar" style="padding:2px 10px"><button id="vsave">Save</button><button id="vsplit" title="Drag a box on the sheet around the part that is a separate view">Split off by a box…</button></div>
     <div class="bar" style="padding:4px 10px"><input type="text" id="vmerge" placeholder="merge with… e.g. V05, V06" style="flex:1"><button id="vmergebtn">Merge</button></div>`);
+  const us = u && stat && stat.units[u.id];
+  if (us && us.components && us.components.length) h += fold("vparts", "Parts", us.components.map((c) => `<div class="bar" style="padding:1px 10px"><span class="pill st-${esc(c.state)}" title="${esc(c.why || c.state)}">${esc(c.state)}</span><span>${esc(c.name)}</span><span class="muted">${esc(c.type)}${c.why ? " · " + esc(c.why) : ""}</span></div>`).join(""), us.components.length, true);
+  const ucc = u && unitCache.get(u.id);
+  const named = ucc ? ucc.params.filter((p) => p.source === "ai") : [];
+  if (named.length) h += fold("vvals", "Named values", named.map((p) => `<div class="row" data-param="${esc(p.key)}" title="Click: highlight the geometry it controls"><span class="nm">${esc(p.name)}</span><span class="pill st-${esc(p.state)}">${esc(p.state)}</span><span class="muted">${fmt(p.value, p.unit)} ${esc(p.unit)}</span></div>`).join(""), named.length, true);
   if ((g.evidence || []).length) h += fold("vwhy", "Why this was found as a view", g.evidence.map((e) => `<div class="note">${esc(e)}</div>`).join("") + `<div class="note">${Math.round(g.confidence * 100)}% sure</div>`);
   const uc = u && unitCache.get(u.id);
   if (uc) h += fold("vnamesize", "Name a size here (advanced)", `<div class="note">Pick a size measured in this view and give it a name: it then drives its lines, and other views' sizes can be linked to it.</div>
@@ -946,6 +998,7 @@ function viewInspector(gid) {
   return h + `</div>`;
 }
 function wireView(gid) {
+  document.querySelectorAll("#right [data-param]").forEach((el) => el.addEventListener("click", () => { tab = "params"; setTab(); openParam(el.dataset.param); }));
   const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
   on("#vsave", () => edit("view", { id: gid, name: $("#vname").value, view_type: $("#vtype").value, kind: $("#vkind").value }));
   on("#vfit", () => fit(viewBox(gid), 0.1));
@@ -957,13 +1010,19 @@ function wireView(gid) {
 }
 function splitBox(a, b) { const gid = focus && focus.kind === "view" ? focus.id : activeView; if (!gid) return say("open the view to split first", "bad");
   edit("split", { id: gid, box: [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1])] }); }
+const HL_CATS = [["drives", "controlled directly", "--h-drives", false], ["follows", "moves with it", "--h-follows", false], ["texts", "dimensions and notes that state it", "--h-texts", false],
+  ["holds", "kept fixed or outside the edit", "--h-holds", true], ["open", "waiting for your decision", "--h-open", true]];
 function paramInspector() {
   const key = focus.id; const shared = S.shared.find((p) => p.name === key);
-  const cur = S.values[key]; const info = paramInfo;
-  let h = `<div class="insp"><h3>${esc(key)}</h3>`;
+  const cur = S.values[key]; const info = paramInfo; const card = info && info.card;
+  const rows = card ? card.bindings : []; const b0 = rows[0] || {};
+  const unit = b0.unit_of_measure || (shared ? shared.unit : "mm");
+  const states = [...new Set(rows.map((r) => r.state).filter(Boolean))];
+  let h = `<div class="insp"><h3>${esc(key)}</h3><div class="bar">${states.map((x) => `<span class="chip big st-${esc(x)}" title="${esc({ validated: "changed a little either way: the sheet regenerates and something moves", bound: "it drives lines of the drawing", found: "found by the engine in the geometry or a dimension", refused: "the agent's last edit of it was refused", worked_out: "worked out from other values" }[x] || "")}">${esc(x.replace("_", " "))}</span>`).join("")}
+    ${shared ? `<span class="chip big acc">shared by ${shared.bindings.length} views</span>` : ""}${card && card.changed ? `<span class="chip big warn">changed</span>` : ""}</div>`;
   h += `<div class="bar"><input type="text" id="pname" value="${esc(shared ? shared.name : key.split(".").pop())}" style="flex:1"><button id="prename" title="Rename everywhere it is used">Rename</button></div>`;
   const rng = info && info.range;
-  h += `<div class="preview"><div class="bar"><input type="number" id="pval" value="${cur != null ? Math.round(cur * 1000) / 1000 : ""}" style="width:130px"> <span class="muted">${esc(shared ? shared.unit : "")}</span>
+  h += `<div class="preview"><div class="bar"><input type="number" id="pval" value="${cur != null ? Math.round(cur * 1000) / 1000 : ""}" style="width:130px"> <span class="muted">${esc(unit)}</span>
       <button class="primary" id="papply">Apply</button><button id="pcancel">Cancel</button></div>`;
   if (rng) h += `<input type="range" id="pslide" min="${rng.min}" max="${rng.max}" step="${(rng.max - rng.min) / 400}" value="${cur}"><div class="muted">valid ${fmt(rng.min)} … ${fmt(rng.max)} <span title="${esc((rng.min_reason || "") + "\n" + (rng.max_reason || ""))}">ⓘ</span></div>`;
   if (preview && preview.res) { const r = preview.res;
@@ -971,7 +1030,37 @@ function paramInspector() {
               : `<div class="note bad" style="padding:0">${r.errors.slice(0, 4).map(esc).join("<br>")}</div>`;
     if (r.warnings && r.warnings.length) h += `<div class="note warn" style="padding:0">${r.warnings.slice(0, 5).map(esc).join("<br>")}</div>`; }
   h += `</div>`;
-  if (!info) return h + `<div class="muted">measuring what it moves…</div></div>`;
+  if (!info) return h + `<div class="muted">finding the geometry it belongs to…</div></div>`;
+  // what the imported drawing has, and the way back to it
+  const o = b0.original || {}; const dev = info.deviation || {};
+  h += `<div class="sec" style="padding:0">Original</div><div class="kvs"><div>now</div><div><b>${fmt(cur, unit)}</b> ${esc(unit)}</div>
+    <div>imported</div><div>${o.value != null ? `<b>${fmt(o.value, unit)}</b> ${esc(unit)}${o.reliable === false ? ` <span class="chip warn" title="the value could not be confirmed on the imported drawing">?</span>` : ""}<div class="muted">${esc(o.basis || "")}</div>` : `<span class="muted">${esc(o.basis || "unknown")}</span>`}</div>
+    <div>change</div><div>${dev.changed ? `${dev.changed} entities differ from the imported drawing, by up to ${fmt(dev.max_shift_mm)} mm<div class="muted">${Object.entries(dev.by_view || {}).map(([v, r]) => `${esc(v || "—")} ${r.entities}`).join(" · ")}</div>` : `<span class="muted">none: the drawing is as imported</span>`}</div></div>
+    <div class="bar"><button id="preset" ${card && card.changed ? "" : "disabled"} title="Only this value goes back; every other value you set stays">Reset value</button>
+    <button id="porig" title="Show the imported geometry dotted under the current one">${base.on ? "Hide" : "Show"} original</button></div>`;
+  // which geometry it is
+  const hh = hl || { drives: new Set(), follows: new Set(), texts: new Set(), holds: [], open: [], show: {} };
+  const counts = { drives: hh.drives.size, follows: hh.follows.size, texts: hh.texts.size, holds: hh.holds.reduce((n, g) => n + g.set.size, 0), open: hh.open.reduce((n, g) => n + g.set.size, 0) };
+  h += `<div class="sec" style="padding:0">The geometry it belongs to</div><div class="legend">`;
+  for (const [k, label, col, dash] of HL_CATS) {
+    if (!counts[k] && (k === "holds" || k === "open")) continue;
+    const names = k === "holds" ? hh.holds.map((g) => g.name).join(", ") : k === "open" ? hh.open.map((g) => g.name).join(", ") : "";
+    h += `<i class="${dash ? "dash" : ""}" style="${dash ? `color:var(${col})` : `background:var(${col})`}"></i><label title="${esc(names)}"><input type="checkbox" data-hl="${k}" ${hh.show[k] !== false ? "checked" : ""}> ${esc(label)}${names ? ` <span class="muted">(${esc(names)})</span>` : ""}</label><span class="muted">${counts[k]}</span>`;
+  }
+  h += `</div>`;
+  const views = Object.entries(hh.views || {});
+  if (views.length) { h += `<div class="sec" style="padding:0">In views</div>`;
+    for (const [v, r] of views) { const n = r.drives.length + r.follows.length + r.texts.length; if (!n) continue;
+      h += `<div class="bar"><span class="vchip">${esc(v || "—")}</span><span>${esc(r.name || "")}</span><span class="muted">${n} entities</span><button data-go="${esc(v)}" style="margin-left:auto">Go to view</button></div>`; } }
+  h += `<div class="bar"><button id="hfit">Fit to what it belongs to</button></div>`;
+  // where it came from
+  if (rows.length) { h += `<div class="sec" style="padding:0">Where it comes from</div>`;
+    for (const r of rows) { if (r.state === "worked_out") { h += `<div class="note" style="padding:0">${esc(r.unit)}: ${esc(r.why)}</div>`; continue; }
+      h += `<div class="kvs"><div>${esc(r.unit)}</div><div>${esc(r.label && r.label !== r.param ? r.label : r.param)} · <span class="muted">${esc(r.source)}${r.confidence ? " · " + Math.round(r.confidence * 100) + "% sure" : ""}</span></div>
+        ${r.part ? `<div>part</div><div>${esc(r.part)}</div>` : ""}<div>occurrences</div><div>${r.occurrences} · drives ${r.drives.entities} entities${r.drives.notes ? ` and ${r.drives.notes} note(s)` : ""}</div>
+        ${r.drives.relations.length ? `<div>read by</div><div>${r.drives.relations.map(esc).join(", ")}</div>` : ""}</div>`;
+      for (const e of r.evidence || []) h += `<div class="note" style="padding:0">· ${esc(e)}</div>`;
+      const so = Object.entries(r.set_out || {}); if (so.length) h += fold(`pso-${r.unit}`, "Lines it sets out", so.map(([d, f]) => `<div class="note mono">${esc(d)} = ${esc(f)}</div>`).join(""), so.length); } }
   const imp = info.impact;
   h += `<div class="sec" style="padding:0">What it moves (measured)</div><div class="kv"><div>views</div><div>${imp.views.map((v) => `<span class="chip acc">${esc(v)}</span>`).join(" ") || "—"}</div>
     <div>entities</div><div>${imp.entities}</div><div>stays</div><div class="muted">${imp.stays.length} other view(s) unchanged</div></div>`;
@@ -998,6 +1087,12 @@ function wireParam() {
   on("#prename", "click", () => { const nn = $("#pname").value.trim(); const old = key; edit("rename", { old, new: nn }, () => openParam(S.shared.some((p) => p.name === nn) ? nn : `${old.split(".")[0]}.${nn}`)); });
   on("#punshare", "click", () => edit("unshare", { name: key }, () => { focus = null; renderRight(); }));
   document.querySelectorAll("#right [data-anchor]").forEach((el) => el.addEventListener("change", () => edit("anchor", { name: key, unit: el.dataset.anchor, mode: el.value }, () => openParam(key))));
+  on("#preset", "click", () => resetValue(key));
+  on("#porig", "click", () => toggleBase());
+  on("#hfit", "click", () => fitValue(true));
+  document.querySelectorAll("#right [data-hl]").forEach((el) => el.addEventListener("change", () => { if (hl) { hl.show[el.dataset.hl] = el.checked; draw(); } }));
+  document.querySelectorAll("#right [data-go]").forEach((el) => el.addEventListener("click", async () => {
+    const v = el.dataset.go; const box = hlBox(v) || viewBox(v); await openView(v, false); if (box) fit(box, 0.3); renderRight(); }));
 }
 async function loadProposals() {
   const res = await guard(() => api("/api/sheet/proposals"), "Comparing the views…"); if (!res) return;
@@ -1009,109 +1104,242 @@ async function loadProposals() {
     if (!name) return say("give it a PascalCase name", "bad"); edit("share", { name, targets: [p.a, p.b], evidence: p.evidence, source: "proposal" }, () => { tab = "params"; setTab(); openParam(name); }); }));
 }
 
-// ── Gemini ───────────────────────────────────────────────────────────────────
-let ai = { running: false, events: [], next: 0, result: null, error: null, kind: null }, aiDraft = "", aiPoll = 0;
-const md = (t) => esc(t).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\n+/g, "<br>");
+// ── the agent: one instruction, one session ────────────────────────────────────────────────────────────────────────
+// The page holds no logic of its own about success: what it shows of a run is what the server reports (state, verdict,
+// questions, budget), and a poll for one run never overwrites another.
+const ACTIVE = new Set(["queued", "running", "stopping"]);
+let run = null, runs = [], runPoll = 0, aiDraft = "", aiScope = "auto", aiOpts = { confirm: false, soft: 40, max: 400 };
 const dur = (s) => s == null ? "" : s < 60 ? `${s.toFixed(s < 10 ? 1 : 0)} s` : `${Math.floor(s / 60)} min ${String(Math.round(s % 60)).padStart(2, "0")} s`;
-function aiSteps(evs) {   // the event stream as steps: one per model call (its retries folded in), with what it thought and did
-  const steps = []; let cur = null;
-  const start = (e) => { cur = { label: e.label || "call", model: e.model, thinking: e.thinking, cache: e.prompt_cache, cached: e.cached, t0: e.t, t1: e.t, thoughts: [], tools: [], notes: [] }; steps.push(cur); };
-  for (const e of evs) {
-    if (e.kind === "call") { if (cur && cur.label === e.label) { if (e.model && e.model !== cur.model) cur.notes.push({ c: "warn", t: `switched to ${e.model}` }); cur.model = e.model || cur.model; cur.cache = e.prompt_cache || cur.cache; } else start(e); continue; }
-    if (!cur) start({ label: "start", t: e.t });
-    if (e.kind === "thought") cur.thoughts.push(e.text);
-    else if (e.kind === "tool") cur.tools.push(e);
-    else if (e.kind === "retry") cur.notes.push({ c: "warn", t: `retrying — ${e.why}` });
-    else if (e.kind === "status") cur.status = e;
-    else if (e.kind === "round") cur.notes.push({ c: e.rejected ? "warn" : "ok", t: `checked by the engine: ${e.accepted} accepted, ${e.rejected} refused` });
-    else cur.notes.push({ c: e.kind === "stopped" ? "warn" : "", t: e.text || e.kind });
-    cur.t1 = e.t;
-  }
-  return steps;
+const TOOL_WORDS = { inspect_sheet: "looked at the sheet", open_unit: "opened a view", inspect_regions: "inspected regions", inspect_lines: "inspected lines", inspect_candidates: "inspected candidate sizes",
+  inspect_dimensions: "inspected dimensions", resolve_labels: "resolved labels", find_values: "searched for sizes", knowledge: "consulted the knowledge pack", what_moves: "measured what a value moves",
+  inspect_assembly: "inspected the assembly", zoom_view: "zoomed into the drawing", account_instruction: "read the instruction", describe_views: "described the views", share_sizes: "linked sizes across views",
+  set_structure: "named the structure", define_parts: "named parts", define_parameters: "bound values", set_levels: "named levels", set_formulas: "wrote formulas", set_relation: "related values",
+  remove: "removed items", add_constraints: "stated constraints", state_behaviours: "stated behaviour", propose_plan: "proposed a plan", ask_person: "asked you", finish: "finished" };
+const STATUS_WORDS = { queued: "Waiting to start", running: "Working", stopping: "Stopping…", paused: "Paused", awaiting_user: "Waiting for your decision", stopped: "Stopped", exhausted: "Out of budget — incomplete",
+  completed: "Complete", partial: "Partly done", failed: "Failed", idle: "" };
+const nameOfView = (v) => { const g = S && S.groups.find((x) => x.id === v); return g ? (g.name || g.view_type || g.kind) : ""; };
+function scopeChoices() {
+  const v = activeView || (focus && focus.kind === "view" ? focus.id : null);
+  return [{ id: "view", label: v ? `This view — ${v} ${nameOfView(v)}` : "This view (open one first)", ok: !!v },
+    { id: "selection", label: `The selection (${sel.size} entit${sel.size === 1 ? "y" : "ies"})`, ok: sel.size > 0 },
+    { id: "param", label: focus && focus.kind === "param" ? `The value in focus — ${focus.id}` : "The value in focus (click one in Sizes)", ok: !!(focus && focus.kind === "param") },
+    { id: "drawing", label: "The whole drawing", ok: true }];
 }
-const TOOL_WORDS = { define_parts: "named parts", define_parameters: "named sizes", set_formulas: "wrote formulas", set_relations: "related sizes", finish: "finished",
-  inspect_region: "looked at a region", inspect_line: "looked at a line", search: "searched", measure: "measured", view: "looked at the picture" };
-function stepHtml(st, k, last, now) {
-  const live = last && ai.running, key = `step-${k}`;
-  const open = openFolds.has(key) || (live && !closedFolds.has(key));
-  const marks = st.tools.map((t) => `<span style="color:var(--${t.ok ? "ok" : "bad"})">${t.ok ? "✓" : "✗"}</span>`).join("");
-  const took = (last ? (ai.running ? now : st.t1) : st.next) - st.t0;
-  let b = `<div class="meta">${esc(st.model || "")}${st.thinking ? " @" + esc(st.thinking) : ""}${st.cache ? " · prompt cache " + esc(st.cache) : ""}${st.cached ? " · answer from cache (free)" : ""}</div>`;
-  if (st.thoughts.length) { const txt = st.thoughts.join("\n\n"); const words = txt.split(/\s+/).length;
-    b += `<details class="think" data-fold="${key}-t" ${openFolds.has(key + "-t") ? "open" : ""}><summary>Thinking · ${words} words</summary><div class="txt">${md(txt)}</div></details>`; }
-  for (const t of st.tools) b += `<div class="tool ${t.ok ? "ok" : "no"}"><span class="m">${t.ok ? "✓" : "✗"}</span><span><b>${esc(TOOL_WORDS[t.name] || t.name)}</b> <code>${esc(t.args || "")}</code>${t.why ? `<div class="why">${esc(t.why)}</div>` : ""}</span></div>`;
-  for (const n of st.notes) b += `<div class="note ${n.c}" style="padding:0">${esc(n.t)}</div>`;
-  if (st.status) b += `<div class="meta">so far: ${st.status.parts} parts · ${st.status.parameters} named sizes · ${st.status.open_problems} open problems${st.status.steps_left != null ? ` · ${st.status.steps_left} steps left` : ""}</div>`;
-  if (live && !st.thoughts.length && !st.tools.length) b += `<div class="meta">waiting for Gemini…</div>`;
-  return `<details class="step ${live ? "live" : ""}" data-fold="${key}" ${open ? "open" : ""}><summary><span class="lbl">${esc(st.label)}</span><span class="marks">${marks}</span>${st.thoughts.length ? `<span class="chip ai">thinking</span>` : ""}<span class="t">${dur(took)}</span></summary><div class="sbody">${b}</div></details>`;
+function scopeKind() {
+  if (aiScope !== "auto") return aiScope;
+  return sel.size ? "selection" : focus && focus.kind === "param" ? "param" : (activeView || (focus && focus.kind === "view")) ? "view" : "drawing";
+}
+function scopePayload() {
+  const kind = scopeKind(), v = activeView || (focus && focus.kind === "view" ? focus.id : null);
+  const views = new Set(v ? [v] : []);
+  if (kind === "selection") for (const i of sel) { const g = groupOf(i); if (g && g.kind === "view") views.add(g.id); }
+  if (kind === "param" && hl) for (const k of Object.keys(hl.views || {})) if (k) views.add(k);
+  return { kind, views: kind === "drawing" ? [] : [...views], entities: kind === "selection" ? [...sel] : [], param: kind === "param" ? focus.id : null };
+}
+function buildTurns(evs) {
+  const out = []; let cur = null;
+  for (const e of evs) {
+    switch (e.kind) {
+      case "turn": cur = { n: e.turn, label: e.label, items: [], thoughts: [], notes: [], t0: e.t, t1: e.t, model: "", thinking: "", cache: "", status: null }; out.push({ type: "turn", turn: cur }); break;
+      case "call": if (cur) { cur.model = e.model || cur.model; cur.thinking = e.thinking || cur.thinking; cur.cache = e.prompt_cache || cur.cache; if (e.cached) cur.cached = true; } break;
+      case "thought": if (cur) cur.thoughts.push(show(e.text)); break;
+      case "retry": if (cur) cur.notes.push({ c: "warn", t: `retrying — ${show(e.why)}` }); break;
+      case "tool_start": if (cur) cur.items.push({ id: e.id, name: e.name, args: e.args, running: true, unit: e.unit }); break;
+      case "tool": if (cur) { const i = cur.items.findIndex((x) => x.id === e.id); const row = { ...e, running: false }; if (i >= 0) cur.items[i] = row; else cur.items.push(row); } break;
+      case "status": if (cur) cur.status = e; break;
+      case "image": case "state": case "question": case "verdict": case "error": case "note": case "stage": case "budget": out.push({ type: "sys", e }); break;
+    }
+    if (cur) cur.t1 = e.t;
+  }
+  return out;
+}
+function callHtml(c) {
+  const cls = c.running ? "run" : c.waiting ? "wait" : c.ok ? "ok" : "no";
+  let h = `<div class="call ${cls}"><span class="m">${c.running ? "⟳" : c.waiting ? "⏸" : c.ok ? "✓" : "✗"}</span><span><b>${esc(TOOL_WORDS[c.name] || c.name)}</b> <code class="muted">${esc(c.name)}</code>${c.unit ? ` <span class="vchip">${esc(c.unit)}</span>` : ""}</span><span class="ms">${c.running ? "running…" : c.ms != null ? (c.ms >= 1000 ? (c.ms / 1000).toFixed(1) + " s" : c.ms + " ms") : ""}</span>`;
+  if (c.said) h += `<div class="said">“${esc(c.said)}”</div>`;
+  if (c.summary) h += `<div class="sum">${esc(c.summary)}</div>`;
+  if (!c.running && !c.ok && c.why) h += `<div class="bad">${esc(c.why)}</div>`;
+  if (c.image && run) h += `<div class="thumb"><img loading="lazy" alt="${esc(c.image.id)}" data-pic="${esc(c.image.id)}" src="/api/sheet/ai/image?run=${esc(run.id)}&id=${esc(c.image.id)}"><div class="muted" style="font-size:10.5px">${esc(c.image.id)} · revision ${esc(c.image.revision)} · ${esc(c.image.state || "")}</div></div>`;
+  if (!c.running) h += `<details><summary>arguments and result</summary>${jsonView(c.args_full ?? c.args)}${jsonView(c.result)}</details>`;
+  else h += `<div class="sum"><code>${esc(c.args || "")}</code></div>`;
+  return h + `</div>`;
+}
+function turnHtml(t, live) {
+  const key = `turn-${run.id}-${t.n}`, open = openFolds.has(key) || (live && !closedFolds.has(key));
+  const marks = t.items.map((c) => `<span style="color:var(--${c.running ? "ai" : c.waiting ? "warn" : c.ok ? "ok" : "bad"})">${c.running ? "⟳" : c.waiting ? "⏸" : c.ok ? "✓" : "✗"}</span>`).join("");
+  let b = `<div class="muted" style="font-size:10.5px">${esc(t.model || "")}${t.thinking ? " @" + esc(t.thinking) : ""}${t.cache ? " · prompt cache " + esc(t.cache) : ""}${t.cached ? " · answer replayed from cache" : ""}</div>`;
+  if (t.thoughts.length) { const txt = t.thoughts.join("\n\n"); b += `<details class="think" data-fold="${key}-t" ${openFolds.has(key + "-t") ? "open" : ""}><summary>The model's own summary of its thinking · ${txt.split(/\s+/).length} words</summary><div class="txt">${md(txt)}</div></details>`; }
+  for (const c of t.items) b += callHtml(c);
+  for (const n of t.notes) b += `<div class="note ${n.c}" style="padding:0">${esc(n.t)}</div>`;
+  if (t.status) b += `<div class="muted" style="font-size:10.5px">so far: ${esc(t.status.parts ?? "—")} parts · ${esc(t.status.parameters ?? "—")} named sizes · ${esc(t.status.open_problems ?? "—")} open problems${t.status.turns_left ? ` · ${t.status.turns_left.in_chunk} turns left in this chunk` : ""}${t.status.stale_pictures ? ` · ${esc(t.status.stale_pictures)}` : ""}</div>`;
+  if (live && !t.items.length && !t.thoughts.length) b += `<div class="muted">waiting for the model…</div>`;
+  return `<details class="turn ${live ? "live" : ""}" data-fold="${key}" ${open ? "open" : ""}><summary><b>Turn ${esc(t.n)}</b><span style="letter-spacing:1px">${marks}</span><span class="muted" style="margin-left:auto">${dur(Math.max(0, t.t1 - t.t0))}</span></summary><div class="body">${b}</div></details>`;
+}
+function sysHtml(e) {
+  switch (e.kind) {
+    case "run_start": return "";
+    case "stage": return e.stage === "validating" ? "" : `<div class="sys"><span>›</span><span>${esc(e.text || e.stage)}</span></div>`;
+    case "image": return `<div class="sys"><span>▣</span><span>picture <b>${esc(e.id)}</b> given to the model — ${esc(e.state)}${e.ids && e.ids !== "none" ? ", " + esc(e.ids) + " labelled" : ""}, ${esc((e.views || []).join(", ") || "whole sheet")}, revision ${esc(e.revision)}<br>${run ? `<img data-pic="${esc(e.id)}" style="max-height:70px;border:1px solid var(--line);border-radius:4px;cursor:zoom-in;background:#fff;margin-top:3px" src="/api/sheet/ai/image?run=${esc(run.id)}&id=${esc(e.id)}" alt="${esc(e.id)}">` : ""}</span></div>`;
+    case "state": return `<div class="sys ${["completed"].includes(e.to) ? "ok" : ["failed"].includes(e.to) ? "bad" : ["partial", "exhausted", "stopped", "paused", "awaiting_user"].includes(e.to) ? "warn" : ""}"><span>●</span><span><b>${esc(STATUS_WORDS[e.to] || e.to)}</b>${e.reason ? " — " + esc(e.reason) : ""}</span></div>`;
+    case "question": return `<div class="sys warn"><span>?</span><span>${esc(show(e.text).length > 170 ? show(e.text).slice(0, 167) + "…" : e.text)}${(e.options || []).length ? ` <span class="muted">(${(e.options || []).length} options below)</span>` : ""}</span></div>`;
+    case "note": return `<div class="sys"><span>·</span><span>${esc(e.text)}</span></div>`;
+    case "error": return `<div class="sys bad"><span>✗</span><span>${esc(plainError(e.text) || e.text)}${plainError(e.text) ? `<div class="muted" style="font-size:10.5px">${esc(e.text)}</div>` : ""}</span></div>`;
+    case "budget": return `<div class="sys"><span>⏱</span><span>${esc(e.turns)} turns · ${esc(e.tool_calls)} tool calls · ${esc(Number(e.tokens).toLocaleString())} tokens · ${dur(e.seconds)} — ${esc({ finished: "finished", wants_person: "waiting for you", soft_budget: "chunk used", hard_budget: "limit reached", tokens: "token budget reached", time: "time limit reached", stopped: "stopped" }[e.reason] || e.reason)}</span></div>`;
+    case "verdict": return "";
+    default: return "";
+  }
 }
 function plainError(e) {
-  if (/timed out|no reply|Stalled|DEADLINE|504/i.test(e)) return "Vertex stopped answering (its shared capacity was busy) and the retries did not get through. Nothing is lost: what was checked and applied stays — run it again.";
+  e = show(e);
+  if (/timed out|no reply|Stalled|DEADLINE|504|did not answer/i.test(e)) return "Vertex stopped answering (its shared capacity was busy) and the retries did not get through. Nothing is lost: what was checked stays — retry continues from where it was.";
   if (/429|RESOURCE_EXHAUSTED|capacity/i.test(e)) return "Vertex is out of capacity for this model right now. Try again in a few minutes.";
   if (/credential|auth|permission|403/i.test(e)) return "Vertex refused the credentials. Run `gcloud auth application-default login`.";
   return null;
 }
-function geminiPanel() {
-  const uid = activeUnit(); const u = uid && S.units.find((x) => x.id === uid);
-  const uname = u ? u.views.map((v) => (S.groups.find((g) => g.id === v) || {}).name || v).join(" + ") : "";
-  const evs = ai.events, steps = aiSteps(evs), now = evs.length ? evs[evs.length - 1].t : 0;
-  const KIND = { views: "Understanding the views", unit: "Parametrizing " + (ai.unitName || ""), shared: "Linking sizes across views" };
-  let h = "";
-  if (ai.running) {
-    const st = [...steps].reverse().find((x) => x.status);
-    h += `<div class="status run"><div class="top"><span class="dot"></span>${esc(KIND[ai.kind] || "Gemini is working")}<span class="muted" style="margin-left:auto;font-weight:400">${dur(now)}</span></div>
-      <div class="muted">step ${steps.filter((x) => /^step/.test(x.label)).length || steps.length}${st && st.status.steps_left != null ? ` · ${st.status.steps_left} left` : ""} · every edit is checked by the engine before it is kept</div>
-      <div class="bar"><button class="stop" id="ai-stop">■ Stop</button></div></div>`;
-  } else if (ai.error) {
-    const pe = plainError(ai.error);
-    h += `<div class="status fail"><div class="top" style="color:var(--bad)">Gemini stopped</div>${pe ? `<div>${esc(pe)}</div>` : ""}<div class="muted" style="font-size:11px">${esc(ai.error)}</div></div>`;
-  } else if (ai.result) {
-    const r = ai.result; let b = "";
-    for (const a of r.applied || []) b += `<div class="note ok" style="padding:0">✓ ${esc(a)}</div>`;
-    for (const a of r.refused || []) b += `<div class="note bad" style="padding:0">✗ ${esc(a)}</div>`;
-    for (const q of r.questions || []) b += `<div class="note warn" style="padding:0">? ${esc(q)}</div>`;
-    if (r.named != null) b += `<div class="note ok" style="padding:0">✓ ${r.named} sizes named in ${esc(r.unit)}${r.rejected && Object.keys(r.rejected).length ? ` · ${Object.keys(r.rejected).length} refused` : ""}</div>`;
-    if (r.usage && r.usage.model) b += `<div class="muted" style="font-size:11px">${esc(r.usage.model)} @${esc(r.usage.thinking)} · ${(r.usage.input_tokens || 0).toLocaleString()} in · ${((r.usage.output_tokens || 0) + (r.usage.thinking_tokens || 0)).toLocaleString()} out${r.usage.cached ? " · from cache (free)" : ""}</div>`;
-    h += `<div class="status done"><div class="top" style="color:var(--ok)">Done — review it on the sheet <span class="muted" style="margin-left:auto;font-weight:400">undo takes it back</span></div>${b}</div>`;
+const md = (t) => esc(t).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\n+/g, "<br>");
+function meter(used, cap, warnAt = 0.85) { const f = cap ? Math.min(1, used / cap) : 0; return `<div class="meter ${f >= warnAt ? "warn" : ""}"><i style="width:${Math.round(f * 100)}%"></i></div>`; }
+function statusCard() {
+  if (!run) return "";
+  const u = run.usage || {}, lim = u.limits || {}, st = run.status || "queued", v = run.verdict;
+  const live = ACTIVE.has(st);
+  const last = live ? [...(run.events || [])].reverse().find((e) => e.kind === "tool_start" && !(run.events || []).some((x) => x.kind === "tool" && x.id === e.id)) : null;
+  const warn = ["partial", "exhausted", "stopped", "paused", "awaiting_user"].includes(st);
+  let h = `<div class="status ${live ? "run" : st === "completed" ? "done" : st === "failed" ? "fail" : ""}" style="${warn ? "border-color:var(--warn)" : ""}">
+    <div class="top">${live ? `<span class="dot"></span>` : ""}<span class="st-${esc(st)}">${esc(STATUS_WORDS[st] || st)}</span><span class="muted" style="margin-left:auto;font-weight:400">${esc(run.id)} · ${dur(run.elapsed || 0)}</span></div>`;
+  if (live) h += `<div class="muted">${last ? `running <b>${esc(TOOL_WORDS[last.name] || last.name)}</b>${last.unit ? " in " + esc(last.unit) : ""}…` : esc(run.stage || "working")} · every edit is checked by the engine before it is kept</div>`;
+  else if (v) h += `<div>${esc(v.headline || "")}</div>`;
+  else if (run.reason) h += `<div class="muted">${esc(run.reason)}</div>`;
+  h += `<div class="stats"><span>turn ${esc(u.turns ?? 0)} of ${esc(lim.max_turns ?? "—")}</span><span>this chunk ${esc(u.chunk ? u.chunk.turns : 0)}/${esc(lim.soft_turns ?? "—")}</span><span>${esc(u.tool_calls ?? 0)} tool calls</span><span>${Number(u.tokens || 0).toLocaleString()} / ${Number(lim.max_tokens || 0).toLocaleString()} tokens</span></div>`;
+  h += meter(u.chunk ? u.chunk.turns : 0, lim.soft_turns || 1);
+  if (v) {
+    for (const c of v.criteria || []) h += `<div class="crit ${c.ok ? "ok" : "no"}"><span class="m">${c.ok ? "✓" : "✗"}</span><span>${esc(c.id.replace(/_/g, " "))}<div class="d">${esc(c.detail)}</div></span></div>`;
+    for (const p of v.plans || []) h += `<div class="note" style="padding:0">plan ${esc(p.id)} — ${esc(p.status)}${p.checks ? ` · measured ${esc(p.checks.passed)} passed, ${esc(p.checks.failed)} failed` : ""}${(p.failed || []).map((x) => `<div class="bad">${esc(x)}</div>`).join("")}</div>`;
+    for (const x of v.values_applied || []) h += `<div class="note ok" style="padding:0">✓ <span class="lnk" data-openparam="${esc(x.name)}" title="Highlight the geometry it controls">${esc(x.name)}</span> = ${esc(x.value)}${x.already ? " (already)" : ""}</div>`;
+    if (run.can && run.can.revert) h += `<div class="bar"><button id="ai-revert" title="Take back everything this run applied to the sheet">Revert this run</button></div>`;
   }
-  const off = ai.running ? "disabled" : "";
-  h += `<div class="sec">What Gemini can do</div>
-    <div class="stage3"><span class="num">1</span><span class="what">Understand the views</span><button id="ai-views" ${off}>Run</button><span class="why">names, types, and which views show the same part</span></div>
-    <div class="stage3"><span class="num">2</span><span class="what">Parametrize ${u ? esc(uname) : "a view"}</span><button id="ai-unit" ${off || !u ? "disabled" : ""}>Run</button><span class="why">${u ? "names its sizes and writes their formulas, in small checked edits" : "open a view first"}</span></div>
-    <div class="stage3"><span class="num">3</span><span class="what">Link sizes across views</span><button id="ai-shared" ${off}>Run</button><span class="why">one name for a size two views both state</span></div>`;
-  h += fold("ai-instr", "Instructions for Gemini (optional)", `<div class="note"><textarea id="ai-instr" rows="3" style="width:100%" placeholder="e.g. the left half is the existing structure: keep it as drawn">${esc(aiDraft)}</textarea></div>`, aiDraft ? "✎" : null);
-  h += `<div class="note" style="font-size:11px">Each run is billed. Nothing Gemini proposes is kept unless the engine checks it; all of it can be undone.</div>`;
-  if (steps.length) {
-    h += `<div class="sec">Run log <span class="n">${steps.length} step${steps.length > 1 ? "s" : ""}</span></div>`;
-    steps.forEach((st, k) => { st.next = k + 1 < steps.length ? steps[k + 1].t0 : st.t1; });
-    h += steps.map((st, k) => stepHtml(st, k, k === steps.length - 1, now)).join("");
+  return h + `</div>`;
+}
+function questionsCard() {
+  if (!run || run.status !== "awaiting_user" || !(run.questions || []).length) return "";
+  let h = `<div class="status" style="border-color:var(--warn)"><div class="top"><span class="st-awaiting_user">Your decision is needed</span></div><div class="muted">Nothing is applied until you answer; the agent continues with exactly what you choose.</div>`;
+  for (const q of run.questions) {
+    const opts = q.options || []; const val = (run.answers && run.answers[q.id]) ?? q.recommended ?? "";
+    h += `<div class="q" data-q="${esc(q.id)}"><div>${esc(q.about === "anchor" ? "Which side stays when this value changes?" : q.text)}</div>${q.why ? `<div class="muted">${esc(q.why)}</div>` : ""}`;
+    if (opts.length) h += `<div class="opts">${opts.map((o) => `<label class="${val === o ? "on" : ""}"><input type="radio" name="q-${esc(q.id)}" value="${esc(o)}" ${val === o ? "checked" : ""}> ${esc(o)}${q.recommended === o ? ` <span class="muted">(suggested)</span>` : ""}</label>`).join("")}</div>`;
+    h += `<input type="text" data-qtext="${esc(q.id)}" placeholder="${opts.length ? "or say it in your own words…" : "your answer…"}" value="${opts.includes(val) ? "" : esc(val)}"></div>`;
   }
+  return h + `<div class="bar"><button class="run" id="ai-answer">Continue with my answers</button></div></div>`;
+}
+function agentPanel() {
+  const choices = scopeChoices(), cur = scopeKind();
+  let h = `<div class="agent-box">
+    <div class="muted" style="font-size:11px">One instruction. The agent decides the steps: it looks at the sheet and the view, zooms where it needs to, reads what you wrote, plans, asks when something is yours to decide, and the engine checks everything before it is kept.</div>
+    <div class="row2"><span class="muted">Applies to</span><select id="ai-scope"><option value="auto" ${aiScope === "auto" ? "selected" : ""}>Where I am (${esc(choices.find((c) => c.id === cur).label)})</option>${choices.map((c) => `<option value="${c.id}" ${aiScope === c.id ? "selected" : ""} ${c.ok ? "" : "disabled"}>${esc(c.label)}</option>`).join("")}</select></div>
+    <textarea id="ai-instr" placeholder="e.g. Reduce the clear span to 2500 mm. Keep the middle wall centred, preserve the wall and slab thicknesses, hold the bed level and the existing foundation, update the half section and half elevation, keep the unrelated detail unchanged. Show me anything ambiguous before applying.">${esc(aiDraft)}</textarea>
+    <div class="row2"><button class="run" id="ai-run">▶ Run</button><button class="stop" id="ai-stop" style="display:none">■ Stop</button><button id="ai-continue" style="display:none">Continue</button><button id="ai-apply" style="display:none" title="Apply what is valid now, and say what is not done">Apply what is valid</button><span class="muted" style="font-size:11px">⌘/Ctrl + Enter</span></div>
+    ${fold("ai-opts", "Options and budget", `<div class="note"><label><input type="checkbox" id="ai-confirm" ${aiOpts.confirm ? "checked" : ""}> ask me to confirm a plan before it is applied</label></div>
+      <div class="note">pause after <input type="number" id="ai-soft" value="${aiOpts.soft}" style="width:64px"> turns (a pause is not a failure: continue goes on) · at most <input type="number" id="ai-max" value="${aiOpts.max}" style="width:70px"> turns in all</div>
+      <div class="note">Each run is billed by the model provider; nothing it proposes is kept unless the engine checks it, and everything can be undone.</div>`, null)}
+    </div><div id="ai-live"></div>`;
   return h;
 }
-function wireGemini() {
-  const t = $("#ai-instr"); if (t) t.addEventListener("input", () => { aiDraft = t.value; });
-  const go = (kind, body) => guard(async () => { await api(`/api/sheet/ai/${kind}`, body);
-    const su = S.units.find((x) => x.id === body.unit);
-    ai = { running: true, events: [], next: 0, result: null, error: null, kind, unitName: su ? su.views.map((v) => (S.groups.find((g) => g.id === v) || {}).name || v).join(" + ") : "" };
-    for (const k of [...openFolds, ...closedFolds]) if (k.startsWith("step-")) { openFolds.delete(k); closedFolds.delete(k); }
-    renderLeft(); pollAI(); });
+function renderAgentLive() {
+  const box = $("#ai-live"); if (!box) return;
+  const evs = run ? run.events || [] : [];
+  const turns = buildTurns(evs), liveRun = run && ACTIVE.has(run.status);
+  let h = statusCard() + questionsCard();
+  if (run && turns.length) {
+    h += `<div class="sec">Timeline <span class="n">${turns.filter((x) => x.type === "turn").length} turn${turns.filter((x) => x.type === "turn").length === 1 ? "" : "s"}</span></div>`;
+    const lastTurn = [...turns].reverse().find((x) => x.type === "turn");
+    for (const x of turns) h += x.type === "turn" ? turnHtml(x.turn, liveRun && x === lastTurn) : sysHtml(x.e);
+  }
+  if (runs.length) {
+    h += `<div class="sec">Runs <span class="n">${runs.length}</span></div><div class="hist">`;
+    for (const r of runs) h += `<div class="row ${run && run.id === r.id ? "on" : ""}" data-run="${esc(r.id)}"><span class="nm wrap"><b>${esc(r.id)}</b> <span class="st-${esc(r.status)}">${esc(STATUS_WORDS[r.status] || r.status)}</span><span class="sub">${esc((r.instruction || "").slice(0, 110))}</span></span><span class="muted">${r.usage ? dur(r.usage.seconds || 0) : ""}</span></div>`;
+    h += `</div>`;
+  }
+  box.innerHTML = h; wireFolds(box); wireAgentLive(); syncAgentControls();
+}
+function syncAgentControls() {
+  const st = run ? run.status : "idle", can = (run && run.can) || {}, live = run && ACTIVE.has(st);
+  const set = (id, on) => { const el = $(id); if (el) el.style.display = on ? "" : "none"; };
+  const r = $("#ai-run"); if (r) r.disabled = !!live;
+  set("#ai-stop", st === "running"); set("#ai-continue", !!can.continue); set("#ai-apply", !!can.apply && st !== "awaiting_user");
+  const c = $("#ai-continue"); if (c) c.textContent = st === "exhausted" ? `Continue (+${aiOpts.soft} turns)` : st === "failed" ? "Retry" : "Continue";
+}
+function wireAgentLive() {
   const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
-  on("#ai-views", () => go("views", {}));
-  on("#ai-unit", () => go("unit", { unit: activeUnit(), instructions: aiDraft }));
-  on("#ai-shared", () => go("shared", {}));
-  on("#ai-stop", () => guard(() => api("/api/sheet/ai/stop", {})));
+  document.querySelectorAll("#ai-live [data-openparam]").forEach((el) => el.addEventListener("click", () => { tab = "params"; setTab(); openParam(el.dataset.openparam); }));
+  document.querySelectorAll("#ai-live [data-pic]").forEach((el) => el.addEventListener("click", () => showPicture(el.src, el.dataset.pic)));
+  document.querySelectorAll("#ai-live [data-run]").forEach((el) => el.addEventListener("click", () => attachRun(el.dataset.run)));
+  document.querySelectorAll("#ai-live .q input[type=radio]").forEach((el) => el.addEventListener("change", () => { el.closest(".opts").querySelectorAll("label").forEach((l) => l.classList.toggle("on", l.contains(el) && el.checked)); }));
+  on("#ai-answer", async () => {
+    const answers = {};
+    document.querySelectorAll("#ai-live .q").forEach((q) => { const id = q.dataset.q, t = q.querySelector("[data-qtext]").value.trim(), r = q.querySelector("input[type=radio]:checked");
+      const v = t || (r ? r.value : ""); if (v) answers[id] = v; });
+    if (!Object.keys(answers).length) return say("choose or write an answer first", "bad");
+    run.answers = answers; await resumeRun({ answers });
+  });
+  on("#ai-revert", async () => { if (!(await confirmBox("Revert this run?", "Everything this run applied to the sheet is taken back (one undo per step). Only possible while nothing else has been changed.", "Revert"))) return;
+    const r = await guard(() => api("/api/sheet/ai/revert", { run: run.id }), "Reverting…"); if (r) { take(r); await afterRun(true); say(`reverted: ${r.steps_undone} step(s) taken back`, "ok"); } });
 }
-function pollAI() {
-  clearTimeout(aiPoll);
-  aiPoll = setTimeout(async () => {
-    let r; try { r = await api(`/api/sheet/ai/progress?since=${ai.next}`); } catch (e) { say(e.message, "bad"); return; }
-    ai.events.push(...r.events); ai.next = r.next; ai.running = r.running; ai.error = r.error; ai.kind = r.kind;
-    if (!r.running) { ai.result = r.result; S = await api("/api/sheet"); unitCache.clear(); renderRight(); draw();
-      say(r.error ? "Gemini: " + r.error : "Gemini finished — review what it applied (undo takes it back)", r.error ? "bad" : "ok"); }
-    if (tab === "ai" && (r.events.length || !r.running)) renderLeft();   // rebuilt only on news: folds and scroll stay put
-    if (r.running) pollAI();
-  }, 800);
+function wireAgent() {
+  const t = $("#ai-instr"); if (t) { t.addEventListener("input", () => { aiDraft = t.value; }); t.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); startRun(); } }); }
+  const sc = $("#ai-scope"); if (sc) sc.addEventListener("change", () => { aiScope = sc.value; });
+  const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
+  on("#ai-run", startRun);
+  on("#ai-stop", () => guard(() => api("/api/sheet/ai/stop", { run: run.id })).then(() => pollRun(true)));
+  on("#ai-continue", () => resumeRun({ more_turns: run && run.status === "exhausted" ? aiOpts.soft : undefined }));
+  on("#ai-apply", async () => { const r = await guard(() => api("/api/sheet/ai/apply", { run: run.id }), "Applying what is valid…"); if (r) { take(r); await attachRun(run.id); await afterRun(true); } });
+  const c = $("#ai-confirm"); if (c) c.addEventListener("change", () => { aiOpts.confirm = c.checked; });
+  const so = $("#ai-soft"); if (so) so.addEventListener("change", () => { aiOpts.soft = Math.max(1, +so.value || 40); });
+  const mx = $("#ai-max"); if (mx) mx.addEventListener("change", () => { aiOpts.max = Math.max(1, +mx.value || 400); });
+  renderAgentLive();
 }
+function mergeRun(r) {
+  const events = (run.events || []).concat(r.events || []);
+  run = { ...run, ...r, events, next: r.next, answers: run.answers };
+}
+async function startRun() {
+  const instruction = aiDraft.trim(); if (!instruction) return say("write an instruction first", "bad");
+  if (run && ACTIVE.has(run.status)) return say("the agent is still working: stop it first", "bad");
+  const body = { instruction, scope: scopePayload(), options: { confirm_plan: aiOpts.confirm, budget: { soft_turns: aiOpts.soft, max_turns: aiOpts.max } } };
+  const r = await guard(() => api("/api/sheet/ai/run", body), "Starting…"); if (!r) return;
+  run = { id: r.run, events: [], next: 0, status: "queued", usage: {}, can: {}, questions: [], verdict: null, elapsed: 0 };
+  for (const k of [...openFolds, ...closedFolds]) if (k.startsWith("turn-")) { openFolds.delete(k); closedFolds.delete(k); }
+  renderAgentLive(); pollRun();
+}
+async function resumeRun(body) {
+  const id = run.id, was = run;
+  run = { ...run, status: "running", questions: [], verdict: null, can: {} }; renderAgentLive();   // at once: a second click finds nothing to press
+  let r; try { r = await api("/api/sheet/ai/continue", { run: id, ...body }); } catch (e) { say(e.message, "bad"); run = was; await attachRun(id); return; }
+  if (r) pollRun();
+}
+async function attachRun(id) {   // show a run of this session (or a saved one) — its timeline, its verdict
+  let r; try { r = await api(`/api/sheet/ai/progress?run=${encodeURIComponent(id)}&since=0`); } catch (e) { return say(e.message, "bad"); }
+  if (!r.run) { run = null; renderAgentLive(); return; }
+  run = { id: r.run, events: [], next: 0 }; mergeRun(r);
+  renderAgentLive(); if (ACTIVE.has(run.status)) pollRun();
+}
+function pollRun(now) {
+  clearTimeout(runPoll); if (!run) return; const id = run.id;
+  runPoll = setTimeout(async () => {
+    let r; try { r = await api(`/api/sheet/ai/progress?run=${encodeURIComponent(id)}&since=${run.next}`); } catch (e) { say(e.message, "bad"); return; }
+    if (!run || run.id !== id || r.run !== id) return;   // a newer run (or a stale answer): this one never overwrites what the page shows
+    const before = run.status, news = (r.events || []).some((e) => e.kind === "applied" || e.kind === "state");
+    mergeRun(r);
+    if (tab === "ai") renderAgentLive();
+    if (news || before !== run.status) afterRun(!ACTIVE.has(run.status));
+    if (ACTIVE.has(run.status)) pollRun(); else { loadRuns(); }
+  }, now ? 0 : 650);
+}
+async function afterRun(final) {   // the sheet may have changed under the run: what moved comes back, as for any committed change
+  const d = await guard(() => api("/api/sheet/delta")); if (d) take(d);
+  if (final) { unitCache.clear(); loadStatus(); }
+  renderRight(); renderLeftKeep(); draw();
+}
+function renderLeftKeep() { if (tab !== "ai") renderLeft(); }
+async function loadRuns() { try { runs = (await api("/api/sheet/ai/runs")).runs; if (tab === "ai") renderAgentLive(); } catch (e) { /* the list is a convenience */ } }
 
 // ── file, tabs, theme ────────────────────────────────────────────────────────
 async function loadSheet() {
@@ -1122,7 +1350,10 @@ async function loadSheet() {
   P = ingest(g.j.prims); buildIndex(); tidyAll();
   sel = new Set(); hov = -1; focus = null; activeView = null; preview = null; unitCache.clear();
   $("#undo").disabled = !S.can_undo; $("#redo").disabled = !S.can_redo;
-  if (S.ai_running) { ai = { running: true, events: [], next: 0, result: null, error: null, kind: null }; pollAI(); }
+  base = { on: !!(S.prefs && S.prefs.baseline.on), list: [], rev: -1, color: (S.prefs && S.prefs.baseline.color) || "#4f6bff", deviation: null };
+  $("#orig").classList.toggle("primary", base.on); $("#origcolor").value = base.color; document.documentElement.style.setProperty("--h-base", base.color);
+  if (base.on) loadBaseline();
+  loadStatus(); loadRuns(); if (S.current_run) attachRun(S.current_run);
   renderLeft(); renderRight(); fitted = false; resize();
   say(`${S.entities.toLocaleString()} entities · ${S.groups.filter((x) => x.kind === "view").length} views · loaded in ${Math.round(g.ms)} ms`, "ok");
 }
@@ -1143,12 +1374,16 @@ async function download(url, fallback) {
     const blob = await r.blob(); const a = document.createElement("a"); const cd = r.headers.get("Content-Disposition") || "";
     a.download = (cd.match(/filename="([^"]+)"/) || [])[1] || fallback; a.href = URL.createObjectURL(blob); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }, "Preparing…");
 }
+$("#orig").onclick = () => toggleBase();
+$("#origcolor").addEventListener("input", (e) => { base.color = e.target.value; document.documentElement.style.setProperty("--h-base", base.color); draw(); });
+$("#origcolor").addEventListener("change", () => { api("/api/sheet/prefs", { baseline: { color: base.color } }).catch(() => {}); });
+$("#resetdrawing").onclick = () => { $("#menu").classList.remove("on"); resetDrawing(); };
 $("#export").onclick = () => download("/api/sheet/export", "sheet.dxf");
 $("#project").onclick = () => download("/api/sheet/project", "sheet.autoparam.json");
 $("#rotcw").addEventListener("click", (e) => rotateView(e.shiftKey ? 1 : -1)); $("#rotccw").addEventListener("click", () => rotateView(1));
 $("#more").addEventListener("click", (e) => { e.stopPropagation(); $("#menu").classList.toggle("on"); });
 document.addEventListener("click", (e) => { if (!$("#menu").contains(e.target)) $("#menu").classList.remove("on"); });
-window.__ws = { tidyAll, get labels() { return P.filter((o) => o.k === "t" && o.off).length; }, rotateView, toScreen, toWorld,  get prims() { return P.length; }, get frameMs() { return lastFrameMs; }, fit, draw, pick, boxSelect, cam, sheet: () => sheetBox(), render: () => { render(); return lastFrameMs; } };
+window.__ws = { get run() { return run; }, get hl() { return hl; }, get base() { return base; }, get stat() { return stat; }, openParam, startRun, attachRun, loadStatus, toggleBase, get S() { return S; }, get focus() { return focus; }, tidyAll, get labels() { return P.filter((o) => o.k === "t" && o.off).length; }, rotateView, toScreen, toWorld,  get prims() { return P.length; }, get frameMs() { return lastFrameMs; }, fit, draw, pick, boxSelect, cam, sheet: () => sheetBox(), render: () => { render(); return lastFrameMs; } };
 loadSheet().catch((e) => say(e.message, "bad"));
 </script>
 </body>

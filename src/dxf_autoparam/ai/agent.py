@@ -19,7 +19,6 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
-import os
 import re
 import time
 from importlib import resources
@@ -29,15 +28,16 @@ from ..cadjson import entity_id, entity_index
 from ..graph import affects
 from ..intent import _boxes, _geometry, classify, delta_of, resolve_parts
 from ..ir import GapKind, Role
-from ..plan import MAX_REPAIRS, MODES, accept, build_plan, read_instruction, vocabulary, with_plan
+from ..plan import MAX_REPAIRS, MODES, accept, build_plan, with_plan
 from ..program import ExprError, names_in
 from ..regen import regenerate_program
 from ..topology import DatumIndex, of
 from ..validator import apply
 from .context import drawing_context, fixed_lines, held_part_names, occurrence_pairs, owner, unit_context
+from .loop import AgentLoop, Budget
 from .parametrize import image_labels, images_for, prepare
 from .prompt import SYSTEM
-from .vertex import Gemini, GeminiStopped
+from .vertex import Gemini
 
 DRAFTSMAN = SYSTEM[SYSTEM.index("DRAFTSMAN'S RULES"): SYSTEM.index("THE PERSON'S INSTRUCTIONS")]
 PERSON = SYSTEM[SYSTEM.index("THE PERSON'S INSTRUCTIONS"): SYSTEM.index("CONSISTENCY")]
@@ -76,6 +76,13 @@ PLAYBOOK — small steps, each checked at once:
   7. state_behaviours and add_constraints for the intent that must hold (fixed levels, symmetry, connections).
   8. finish. Any rejection comes back at once with its reason: fix that one item, never redo the rest.
 
+READ THE INSTRUCTION FIRST. The person's words are yours to understand — nothing reads them for you. Call account_instruction:
+one item per clause (a clause is what one verb asks of one thing), each with the person's OWN words quoted exactly as
+written (quote), what you take them to mean, and what will handle it (a plan, the parts, the values, the views, a question,
+or nothing — say why). The engine checks that every quote is in the person's text and that every sentence of it is
+accounted for before you may finish: a sentence you skip is a sentence you did not read. A word you cannot resolve to
+something on this drawing is a question for the person (ask_person / propose_plan questions) — never a guess.
+
 WHEN THE PERSON ASKS FOR A CHANGE (a value to change; things to keep fixed, to follow, to leave alone): after the parts
 and the value are defined, inspect_assembly(value) shows the parts it belongs to, what touches or hangs on it, and what
 each anchor (centered / start_fixed / end_fixed / as_set_out) would do to every part. Then propose_plan: the value, the
@@ -84,9 +91,9 @@ words it comes from (clause). The meanings of "do not change" are different: kee
 keep_fixed (stays where it is), no_parameter (no value of its own), exclude (outside the edit), annotations_only,
 preserve (thickness / symmetry / level / connection), follow / translate / resize. What the person did NOT say is not
 yours to decide: a directive without their words is a proposal they accept or not; an ambiguous word ("don't touch")
-stays a question. The engine compiles an accepted plan into the set-out and measures it (grow, shrink, restore): a
-failed check comes back with expected / measured / cause; re-propose at most {MAX_REPAIRS} times, then ask_person.
-set_formulas / add_constraints / state_behaviours wait until the plan exists.
+stays a question (propose_plan `questions`, with the options you see). The engine compiles an accepted plan into the
+set-out and measures it (grow, shrink, restore): a failed check comes back with expected / measured / cause; re-propose at
+most {MAX_REPAIRS} times, then ask_person. set_formulas / add_constraints / state_behaviours for a change wait until its plan exists.
 
 EVERY VERDICT is ok, or rejected with a `failure`: {{code, binding, refs, expected, measured, cause, repair}}. repair
 "agent" = yours to fix (another occurrence, the other end, a formula); repair "person" = a decision that is not yours
@@ -145,8 +152,8 @@ TOOL_SPECS = [
     ("what_moves", ("Change a parameter (default +10 %) and report what each part does (grows / shrinks / moves / fixed, per axis) and "
      "whether the drawing stays valid."), _schema({"parameter": S, "change_mm": N}, ["parameter"])),
     ("inspect_assembly", ("The assembly a value belongs to: its core parts, the parts tied to it (drawn on its lines, set out from "
-     "them, touching it) with the evidence, each anchor policy with what it would do to every part, and how the person's "
-     "instruction was read (driver, directives, what is unresolved)."), _schema({"parameter": S}, ["parameter"])),
+     "them, touching it) with the evidence, and each anchor policy with what it would do to every part."),
+     _schema({"parameter": S}, ["parameter"])),
     ("knowledge", "This project's concepts / families / formulas matching the words (several queries at once).",
      _schema({"queries": LIST}, ["queries"])),
     ("set_structure", "What the drawing is.", _schema({"structure_type": S, "family": S, "views": LIST, "summary": S}, ["structure_type", "family"])),
@@ -184,24 +191,37 @@ TOOL_SPECS = [
      _schema({"parameter": S, "requested_value": N, "anchor": _schema({"policy": _enum("centered", "start_fixed", "end_fixed", "as_set_out"),
                                                                        "centre": S, "clause": S}, ["policy"]),
               "directives": {"type": "array", "items": _schema({"target": S, "mode": _enum(*MODES), "relation": _enum("thickness", "symmetry", "level", "connection"),
-                                                                "interface": LIST, "clause": S, "why": S}, ["target", "mode"])}},
+                                                                "interface": LIST, "clause": S, "why": S}, ["target", "mode"])},
+              "questions": {"type": "array", "items": _schema({"text": S, "options": LIST, "why": S}, ["text"])}},
              ["parameter"])),
-    ("ask_person", "A genuine ambiguity for the person to decide.", _schema({"question": S}, ["question"])),
+    ("account_instruction", ("How you read the person's instruction, clause by clause — all of them in one call. Each item: `quote` = their own "
+     "words, exactly as written; `kind` = what it asks (change_value, keep, scope, link_views, parametrize, annotate, process, context); "
+     "`meaning` = what you take it to mean on THIS drawing; `handled_by` = plan, parts, values, views, links, question or none (with `why` when none). "
+     "The engine checks the quotes and that every sentence is accounted for before you can finish."),
+     _batch({"quote": S, "kind": _enum("change_value", "keep", "scope", "link_views", "parametrize", "annotate", "process", "context"),
+             "meaning": S, "handled_by": _enum("plan", "parts", "values", "views", "links", "question", "none"), "why": S}, ["quote", "kind", "meaning", "handled_by"])),
+    ("ask_person", ("A genuine ambiguity for the person to decide — with the options you see, when there are some. The run waits for "
+                    "their answer and continues with it."), _schema({"question": S, "options": LIST}, ["question"])),
     ("finish", "Done: the engine runs every check. If problems remain they are listed; call finish again to stop anyway.",
      _schema({"summary": S}, ["summary"])),
 ]
+WHY = {"type": "string", "description": "One short sentence for the person watching: what you are doing with this call and why."}
+for _n, _d, _sch in TOOL_SPECS:  # every call may say, for the run's timeline, what it is for (shown as the model's own words, never as the engine's)
+    _sch["properties"].setdefault("why", WHY)
 READ_TOOLS = {"inspect_regions", "inspect_lines", "find_values", "what_moves", "knowledge", "inspect_candidates", "inspect_dimensions",
               "resolve_labels", "inspect_assembly"}
 BEHAVIOUR_EDITS = ("set_formula", "add_constraint", "state_behaviour", "set_relation")  # wait for the plan when a change was asked
 # a batch tool applies the single edit to each of its items; each item gets its own verdict
 BATCH = {"define_parts": "define_part", "define_parameters": "define_parameter", "set_formulas": "set_formula", "set_levels": "set_level",
-         "add_constraints": "add_constraint", "state_behaviours": "state_behaviour"}
+         "add_constraints": "add_constraint", "state_behaviours": "state_behaviour", "account_instruction": "account_clause"}
 
 
-def tools():
+def tools(extra: list | None = None):
+    """The tool list for the model: the unit tools, plus `extra` specs (the sheet session's own)."""
     from google.genai import types
 
-    return [types.Tool(function_declarations=[types.FunctionDeclaration(name=n, description=d, parameters_json_schema=p) for n, d, p in TOOL_SPECS])]
+    return [types.Tool(function_declarations=[types.FunctionDeclaration(name=n, description=d, parameters_json_schema=p)
+                                              for n, d, p in [*TOOL_SPECS, *(extra or [])]])]
 
 
 def _r(v: float) -> float:
@@ -216,10 +236,11 @@ class Workbench:
     are the sheet's). `scope`: the sheet the unit belongs to (context.SheetScope): shared sizes, views, the revision."""
 
     def __init__(self, path: str, region=None, hold_existing: bool = False, start: dict | None = None, selection: dict | None = None,
-                 drawing=None, analysis=None, scope=None, instructions: str = ""):
+                 drawing=None, analysis=None, scope=None, instructions: str = "", decisions: dict | None = None, confirm_plan: bool = False):
         self.path, self.region, self.hold, self.selection, self.drawing = path, region, hold_existing, selection, drawing
         self.analysis, self.scope = analysis, scope
-        self.instructions = instructions or ""
+        self.original = (instructions or "").strip()  # the person's instruction: every sentence of it must be accounted for
+        self.instructions = self.original  # and with their later answers: what a quote may come from
         self.plan_attempts: dict[str, int] = {}
         self.prechecked: dict[str, dict] = {}  # verdicts decided before validation (a reference that cannot be bound)
         self.answer = copy.deepcopy(start) if start else {
@@ -228,11 +249,22 @@ class Workbench:
         for k in ("components", "line_roles", "levels", "parameters", "datum_formulas", "relations", "behaviours", "constraints", "questions"):
             self.answer.setdefault(k, [])
         self.finish_calls = 0
+        self.ledger: list[dict] = []  # how the model read the instruction, clause by clause (account_instruction): its own words, checked
+        self.decisions: dict[str, str] = dict(decisions or {})  # the person's answers, by what they answer: the engine applies them itself
+        # ask_person questions the person answered: question → answer (what an earlier run asked is behind us: only THIS run's are open)
+        self.answered: dict[str, str] = {q: "(asked in an earlier run)" for q in self.answer["questions"]}
+        self.question_options: dict[str, list[str]] = {}
+        self.confirm_plan = confirm_plan
+        self.said_fn = None  # a sheet session shares ONE text of what the person said (and answered) across the units it opens
+        self.plans_anywhere = None  # ... and one knowledge of whether a plan exists in any of them
+        self._pause = False  # a decision is the person's and the model has said so (ask_person, or finish with questions open)
         self.validate()
-        # the person's instruction, read by the engine first (driver, directives, what it cannot resolve): the agent
-        # starts from it, and a change it asks for must be planned before behaviour is written
-        self.reading = read_instruction(self.instructions, vocabulary(self.prog), self.prog) if self.instructions.strip() else None
-        self.plan_required = bool(self.reading and (self.reading["driver"] or any(c["mode"] not in (None, "driver") for c in self.reading["clauses"])))
+
+    @property
+    def plan_required(self) -> bool:
+        """The model's own reading says a change was asked: what moves and what stays is decided in a plan before behaviour is
+        written. Nothing here reads the person's words — only what the model said it understood, which the engine has checked."""
+        return any(i.get("kind") in ("change_value", "keep") and i.get("handled_by") == "plan" for i in self.ledger)
 
     def validate(self, final: bool = False) -> None:
         """While the agent builds, every value stays editable (the AI's own "keep as drawn" recommendations are applied
@@ -571,21 +603,7 @@ class Workbench:
                 "anchors": [{"policy": a["policy"], "centre": a.get("centre"), "possible": a["available"], "why": a["why"][:160],
                              "parts": dict(list(a["parts"].items())[:14]), "evidence": a.get("evidence", "")} for a in anc.get("alternatives", [])],
                 "dimensions_reading_it": plan["affected"].get("dimensions_on_driver", []), "notes_stating_it": plan["affected"].get("notes", []),
-                "views": plan["affected"].get("views", []),
-                "instruction_read_as": self.reading_summary()}
-
-    def reading_summary(self) -> dict | None:
-        r = self.reading
-        if not r:
-            return None
-        drv = r["driver"]
-        return {"driver": drv and {"phrase": drv["phrase"], "names": drv["resolved"]["names"], "how": drv["resolved"]["how"],
-                                   "value_asked": drv["requested"]},
-                "anchor": r["anchor"], "clauses": [{"clause": c["text"], "mode": c["mode"],
-                                                    "targets": [f"{t['kind']} {', '.join(t['names'])}" for t in c["targets"]],
-                                                    "unresolved": c["unresolved"], "ambiguous": [a["phrase"] for a in c["ambiguous"]]}
-                                                   for c in r["clauses"]],
-                "plan_required": self.plan_required}
+                "views": plan["affected"].get("views", [])}
 
     def _upsert(self, key: str, field: str, value, row: dict) -> None:
         rows = self.answer[key]
@@ -602,7 +620,7 @@ class Workbench:
             item = (a.get("line") if name == "set_formula" else a.get("description") if name == "add_constraint"
                     else f"{a.get('parameter')}→{a.get('target')}" if name == "state_behaviour" else a.get("name", name))
             self.prechecked.pop(item, None)
-            if self.plan_required and not A.get("plans"):
+            if self.plan_required and not (A.get("plans") or (self.plans_anywhere and self.plans_anywhere())):
                 self.prechecked[item] = _failure(
                     "PLAN_FIRST", item, [], "a plan for the change the person asked for", "no plan yet",
                     "the person asked for a change: what moves and what stays is decided in a plan before behaviour is written",
@@ -694,8 +712,24 @@ class Workbench:
             else:
                 A["behaviours"].append({"parameter": a["parameter"], "effects": [effect]})
             return f"{a['parameter']}→{a['target']}", ""
+        if name == "account_clause":
+            quote = (a.get("quote") or "").strip()
+            item = f"clause:{quote[:40]}"
+            self.prechecked.pop(item, None)
+            if not quote or not self._quoted(quote):
+                self.prechecked[item] = _failure("QUOTE", item, [], "the person's own words, exactly as written", f"'{quote[:90]}' is not in their text",
+                                                 "a clause quotes the instruction verbatim — what is not in it is not theirs", "agent",
+                                                 "copy the words from THE PERSON'S INSTRUCTION")
+                return item, ""
+            self.ledger = [x for x in self.ledger if x["quote_norm"] != _norm(quote)] + [
+                {**{k: a.get(k, "") for k in ("quote", "kind", "meaning", "handled_by", "why")}, "quote_norm": _norm(quote)}]
+            return item, ""
         if name == "ask_person":
-            A["questions"].append(a["question"])
+            text = (a.get("question") or "").strip()
+            if text and text not in A["questions"]:
+                A["questions"].append(text)
+                self.question_options[text] = [str(o) for o in a.get("options") or []]
+            self._pause = True
             return "question", ""
         raise KeyError(name)
 
@@ -710,24 +744,53 @@ class Workbench:
                                              "the plan keeps failing its checks: what remains is a decision", "person",
                                              "ask_person with the last failure, or finish")
             return item, ""
-        said = self.instructions
         anchor = a.get("anchor") or {}
         if anchor.get("policy"):
-            clause = (anchor.get("clause") or "").strip()
-            grounded = bool(clause) and re.sub(r"\s+", " ", clause.lower()) in re.sub(r"\s+", " ", said.lower())
+            grounded = self._quoted(anchor.get("clause") or "")
             anchor = {"policy": anchor["policy"], "centre": anchor.get("centre"), "source": "instruction" if grounded else "ai"}
         dirs = [{**d, "source": "instruction" if (d.get("clause") or "").strip() else "ai"} for d in (a.get("directives") or [])]
-        req = {"id": pid, "instruction": said, "driver": {"parameter": name}, "requested_value": a.get("requested_value"),
-               "directives": dirs, "anchor": anchor or None}
+        req = {"id": pid, "instruction": self._said(), "driver": {"parameter": name}, "requested_value": a.get("requested_value"),
+               "directives": dirs, "anchor": anchor or None, "questions": a.get("questions") or []}
+        return item, self._make_plan(req, item)
+
+    def _make_plan(self, req: dict, item: str) -> str:
+        """The plan for a structured request, with every decision the person has made applied by the engine itself (never
+        relayed through the model). The model's reading is NOT merged with any phrase matcher: the plan holds what it
+        proposed — its directives checked against the person's quoted words — and what the person decided."""
+        pid = req["id"]
+        full = {**req, "decisions": {**(req.get("decisions") or {}), **self.decisions}, "instruction": self._said()}
         try:
-            plan = build_plan(self.prog, self.answer, req, sheet=self._sheet())
+            plan = build_plan(self.prog, self.answer, full, sheet=self._sheet(), reader=False)
         except (KeyError, ValueError, ExprError) as exc:
-            self.prechecked[item] = _failure("PLAN", item, [name], "a plan the engine can resolve", "refused", str(exc)[:200], "agent",
-                                             "use ids and names from the overview")
-            return item, ""
-        stored = accept(plan, by="the person's instruction") if plan["status"] == "ready" else plan
+            self.prechecked[item] = _failure("PLAN", item, [(req.get("driver") or {}).get("parameter", "")], "a plan the engine can resolve", "refused",
+                                             str(exc)[:200], "agent", "use ids and names from the overview")
+            return ""
+        approve = f"approve:{pid}"
+        if plan["status"] == "ready" and self.confirm_plan:
+            if self.decisions.get(approve) == "apply":
+                plan["confirmed"] = True
+            elif self.decisions.get(approve):
+                plan["status"] = "declined"
+                plan["conflicts"].append("you chose not to apply this plan")
+            else:
+                from ..plan import _question
+
+                d = plan["driver"] or {}
+                plan["questions"].append(_question("Q_approve", approve, f"Apply this plan? {d.get('parameter')} {d.get('value')} → {d.get('requested_value')}, "
+                                                   f"anchor {(plan.get('anchor') or {}).get('policy')}, {len(plan['directives'])} directive(s). The sheet is not changed until you say so.",
+                                                   ["apply", "do not apply"], "apply"))
+                plan["status"] = "needs_decision"
+        plan["request"] = {k: v for k, v in req.items() if k != "decisions"}
+        stored = accept(plan, by="the person's instruction, read by the model (quotes checked)") if plan["status"] == "ready" else plan
         self.answer = with_plan(self.answer, stored)
-        return item, f"plan {plan['status']}" + (f": {len(plan['questions'])} question(s) for the person" if plan["questions"] else "")
+        return f"plan {plan['status']}" + (f": {len(plan['questions'])} question(s) for the person" if plan["questions"] else "")
+
+    def rebuild_plans(self) -> None:
+        """After the person answered: every plan that was waiting is built again from the request it was made from, with their
+        answers — if nothing else is open it is accepted and compiled, with no further turn of the model needed."""
+        for p in list(self.answer.get("plans", [])):
+            if p.get("status") != "accepted" and p.get("request"):
+                self._make_plan(p["request"], f"plan:{p['request']['id']}")
 
     def _plan_verdict(self, item: str) -> dict:
         pid = item.split(":", 1)[1]
@@ -739,7 +802,7 @@ class Workbench:
         if plan.get("status") != "accepted":
             return {"ok": True, "plan": plan.get("status"), **brief, "questions": [q["text"][:240] for q in plan.get("questions", [])][:6],
                     "conflicts": plan.get("conflicts", [])[:4],
-                    "note": "waits for the person: put these questions to them (ask_person), or finish — they answer in the workspace"}
+                    "note": "waits for the person: call ask_person (or finish) and the run asks them; you are continued with their answers"}
         res = next((r for r in self.prog.intent.get("plans", []) if r.get("id") == pid), None) or {}
         fails = [c for c in res.get("checks", []) if c["status"] == "fail"] + [
             {"check": "compile", "target": pid, "expected": "the plan compiles", "measured": m, "cause": m, "action": "re-propose"}
@@ -934,7 +997,13 @@ class Workbench:
                "first_problems": [f"{e['code']} {e['item']}: {e['message']}"[:180] for e in errs[:3]]}
         if self.plan_required or self.answer.get("plans"):
             out["plans"] = [f"{p.get('id')}: {p.get('status')}" + (f", {len(p.get('questions', []))} question(s) for the person" if p.get("questions") else "")
-                            for p in self.answer.get("plans", [])] or ["none yet: the person asked for a change — propose_plan"]
+                            for p in self.answer.get("plans", [])] or ["none yet: you read the instruction as a change — propose_plan"]
+        if self.original:
+            gaps = self.uncovered()
+            out["instruction"] = {"sentences": len(sentences(self.original)), "unaccounted": [g[:110] for g in gaps][:4]}
+        qs = self.person_questions()
+        if qs:
+            out["questions_for_person"] = len(qs)
         if self.scope:
             here = self.scope.shared_here()
             values = {q.name: q.value for q in self.scope.sm.shared.values()}
@@ -952,6 +1021,162 @@ class Workbench:
                 out["sheet"] = (f"the sheet changed since you started (revision {self.scope.revision} → {self.scope.sm.revision}): "
                                 "this result will be refused when applied — finish, and it is run again on the current sheet")
         return out
+
+
+    # ── what the person is asked, and what they answer ────────────────────────
+
+    def _said(self) -> str:
+        return self.said_fn() if self.said_fn else self.instructions
+
+    def _quoted(self, quote: str) -> bool:
+        """Is this the person's own text? (case, spacing and punctuation aside) — what makes a directive THEIR instruction."""
+        q = _norm(quote)
+        return bool(q) and q in _norm(self._said())
+
+    def _quotes(self) -> list[str]:
+        out = [i["quote"] for i in self.ledger]
+        for p in self.answer.get("plans", []):
+            req = p.get("request") or {}
+            out += [(req.get("anchor") or {}).get("clause", ""), *[d.get("clause", "") for d in req.get("directives") or []]]
+        return [q for q in out if q and q.strip()]
+
+    def uncovered(self) -> list[str]:
+        """Sentences of the person's instruction that nothing the model said accounts for (no quote of theirs lies in them)."""
+        return uncovered_sentences(self.original, self._quotes()) if self.original else []
+
+    def person_questions(self) -> list[dict]:
+        """What only the person can decide, open now: a plan's questions and what the model asked — each with how to answer it."""
+        out = []
+        for p in self.answer.get("plans", []):
+            if p.get("status") == "accepted":
+                continue
+            for q in p.get("questions", []):
+                if q["about"] not in self.decisions:
+                    out.append({**q, "source": f"plan {p.get('id')}"})
+        for k, text in enumerate(self.answer.get("questions", [])):
+            if text not in self.answered:
+                out.append({"id": f"A{k + 1}", "about": f"say:{k + 1}", "text": text, "options": self.question_options.get(text, []), "recommended": None,
+                            "why": "", "source": "the model"})
+        return out
+
+    def wants_person(self) -> bool:
+        return self._pause and bool(self.person_questions())
+
+    def record_answers(self, answers: dict[str, str]) -> list[str]:
+        """The person's answers, keyed by question id or what it is about. A plan's answer joins its decisions (the engine builds
+        the plan again with it); the model's question is marked answered; a free-text answer also becomes text a quote may come
+        from. Returns one line per answer, for the model to read."""
+        lines = []
+        open_ = {q["id"]: q for q in self.person_questions()} | {q["about"]: q for q in self.person_questions()}
+        for key, val in answers.items():
+            val = str(val).strip()
+            q = open_.get(key)
+            if not val or q is None:
+                continue
+            if q["about"].startswith("say:"):
+                self.answered[q["text"]] = val
+            else:
+                self.decisions[q["about"]] = val
+            if val not in (q.get("options") or []):
+                self.instructions += f"\n[the person, answering '{q['text'][:80]}': {val}]"
+            lines.append(f"- {q['text'][:200]} → {val}")
+        self._pause = False
+        self.rebuild_plans()
+        self.validate()
+        return lines
+
+    # ── the loop's protocol (ai.loop.execute_calls) ───────────────────────────
+
+    def is_read(self, name: str) -> bool:
+        return name in READ_TOOLS
+
+    def read(self, name: str, a: dict):
+        return getattr(self, name)(**{k: v for k, v in a.items() if k != "why"})
+
+    def single_of(self, name: str) -> str | None:
+        return BATCH.get(name)
+
+    def snapshot(self):
+        return copy.deepcopy(self.answer)
+
+    def unit_label(self) -> str | None:
+        return self.scope.uid if self.scope else None
+
+    def decorate(self, name: str, item: str, v: dict) -> None:
+        if name == "define_parameters" and v["ok"]:
+            v["moves"] = self.prog.intent.get("impact", {}).get(item, {})
+            v.update(self.checked.get(item, {}))
+
+    def nudge(self) -> str | None:
+        return ("you have read enough to start: define the parts now (define_parts, all in one call), then the parameters"
+                if not self.answer["components"] else "make the edits now (define_parameters / set_formulas), in batches")
+
+    def finish(self, a: dict) -> tuple[dict, bool]:
+        """`finish`: refused while the person has questions open (the run asks them), and — once — while problems, a missing plan
+        or a sentence of the instruction nobody accounted for remain; a second finish ends with what is valid."""
+        self.validate()
+        self.finish_calls += 1
+        st = self.status()
+        qs = self.person_questions()
+        if qs:
+            self._pause = True
+            return {"done": False, **st, "waiting_for": [q["text"][:200] for q in qs[:6]],
+                    "hint": "the person has to decide first: the run asks them and continues you with their answers"}, False
+        gaps = self.uncovered()
+        problems = (st["open_problems"] or any("NOT " in x for x in st.get("shared_here", []))
+                    or (self.plan_required and not (self.answer.get("plans") or (self.plans_anywhere and self.plans_anywhere()))) or gaps)
+        if problems and self.finish_calls < 2:
+            hint = "fix these, or call finish again to stop with what is valid"
+            if gaps:
+                hint = ("account for every sentence of the person's instruction (account_instruction, quoting their words; or propose_plan "
+                        "with the clause they come from): " + " | ".join(g[:100] for g in gaps[:3]) + ". Then finish.")
+            return {"done": False, **st, "hint": hint}, False
+        return {"done": True, **st}, True
+
+
+def _norm(text: str) -> str:
+    """Words only, lower case: how two spellings of the same quoted sentence compare equal."""
+    return " ".join(re.findall(r"[a-z0-9]+(?:\.[0-9]+)?", (text or "").lower()))
+
+
+def sentences(text: str) -> list[tuple[int, int, str]]:
+    """(start, end, sentence) — a decimal point is not a full stop."""
+    out, start = [], 0
+    for m in re.finditer(r"(?<!\d)[.;!?]+(?=\s|$)|(?<=\d)[.;!?]+(?=\s|$)|\n+", text or ""):
+        seg = text[start:m.start()].strip()
+        if seg:
+            out.append((start, m.start(), seg))
+        start = m.end()
+    tail = (text or "")[start:].strip()
+    if tail:
+        out.append((start, len(text), tail))
+    return out
+
+
+def _spans(text: str, quote: str) -> list[tuple[int, int]]:
+    toks = re.findall(r"[A-Za-z0-9]+(?:\.[0-9]+)?", quote or "")
+    if not toks:
+        return []
+    pat = r"[^A-Za-z0-9]+".join(re.escape(t) for t in toks)
+    return [(m.start(), m.end()) for m in re.finditer(pat, text or "", flags=re.IGNORECASE)]
+
+
+def uncovered_sentences(text: str, quotes: list[str], min_cover: float = 0.5) -> list[str]:
+    """Sentences of `text` that less than half of is covered by the quotes: what the model said it read does not reach them."""
+    spans = sorted(sp for q in quotes for sp in _spans(text, q))
+    out = []
+    for a, b, sent in sentences(text):
+        if len(re.findall(r"[A-Za-z0-9]+", sent)) < 3:
+            continue
+        got, last = 0, a
+        for x, y in spans:
+            x, y = max(x, a, last), min(y, b)
+            if y > x:
+                got += y - x
+                last = y
+        if got / max(1, b - a) < min_cover:
+            out.append(sent)
+    return out
 
 
 REPAIR_BY_CODE = {"V1": "agent", "V2": "agent", "V3": "agent", "V4": "agent", "V5": "agent", "V7": "agent", "V8": "agent", "V9": "agent",
@@ -1073,72 +1298,59 @@ def _concept_names() -> str:
     return ", ".join(sorted({c["name"] for c in pack["concepts"]}))
 
 
-# ── the loop ───────────────────────────────────────────────────────────────────
+# ── the classic entry: one drawing, run to the end ──────────────────────────────
 
 
-def _trim(history: list, keep: int = 8) -> None:
-    """Tool results older than the last `keep` steps are cut to their verdict: every step re-sends the conversation,
-    and a long inspect result from ten steps ago is paid for again each time. The model can always ask again."""
+def unit_overview(path, region, bench, drawing=None, analysis=None, scope=None, context_extra: dict | None = None):
+    """The overview of one drawing (or sheet unit) with its CONTEXT — what every request starts from. Returns (overview, context,
+    the analysis and baseline it was made from)."""
+    an, base, region, _snap = prepare(path, None, region, drawing=drawing, analysis=analysis)
+    labels = image_labels(an, base)
+    context = (unit_context(scope.sm, scope.uid, bench.an, bench.prog, labels, bench.rep) if scope
+               else drawing_context(bench.an, bench.prog, labels, bench.answer, bench.rep))
+    if bench.answer.get("plans"):
+        context["plans"] = [{"id": p.get("id"), "status": p.get("status"), "driver": (p.get("driver") or {}).get("parameter"),
+                             "anchor": (p.get("anchor") or {}).get("policy"), "questions": [q["text"][:160] for q in p.get("questions", [])][:4]}
+                            for p in bench.answer["plans"]]
+    context.update(context_extra or {})
+    return overview(an, base, context), context, (an, base, region)
+
+
+def unit_prefix(path, region, bench, drawing=None, analysis=None, scope=None, context_extra: dict | None = None):
+    """The cached first part of every request for one drawing: the pictures, then the overview (with its CONTEXT). Returns
+    (prefix parts, key, overview dict, context dict)."""
     from google.genai import types
 
-    answers = [k for k, c in enumerate(history) if c.role == "user" and c.parts and getattr(c.parts[0], "function_response", None)]
-    for k in answers[:-keep]:
-        parts = []
-        for p in history[k].parts:
-            fr = p.function_response
-            res = (fr.response or {}).get("result")
-            if len(json.dumps(res, default=str)) <= 400:
-                parts.append(p)
-                continue
-            short = {"trimmed": "older result; call the tool again if you need it"}
-            if isinstance(res, dict):
-                short.update({x: res[x] for x in ("ok", "rejected", "done") if x in res})
-            parts.append(types.Part.from_function_response(name=fr.name, response={"result": short}))
-        history[k] = types.Content(role="user", parts=parts)
-
-
-def _args(call) -> dict:
-    a = getattr(call, "args", None) or {}
-    return dict(a) if not isinstance(a, dict) else a
-
-
-def _short(a: dict) -> str:
-    s = json.dumps(a, separators=(",", ":"))
-    return s if len(s) <= 140 else s[:137] + "…"
+    ov, context, (an, base, region) = unit_overview(path, region, bench, drawing, analysis, scope, context_extra)
+    images = images_for(an, base, region)
+    src = hashlib.sha256(Path(an.drawing.path).read_bytes()).hexdigest()
+    image_keys = [f"faithful:{src}:{region}", hashlib.sha256(images[1]).hexdigest(), hashlib.sha256(images[2]).hexdigest()]
+    ov_text = "OVERVIEW:\n" + json.dumps(ov, separators=(",", ":"))
+    parts = [types.Part.from_bytes(data=img, mime_type="image/png") for img in images] + [types.Part.from_text(text=ov_text)]
+    key = hashlib.sha256(("agent|" + AGENT_SYSTEM + "|".join(image_keys) + ov_text).encode()).hexdigest()[:24]
+    return parts, key, ov, context
 
 
 def agent_parametrize(path: str, region=None, instructions: str = "", start: dict | None = None, request: str = "",
                       hold_existing: bool = False, selection: dict | None = None, gem: Gemini | None = None, on_event=None,
                       stop=None, log=print, max_steps: int | None = None, max_output_tokens: int | None = None, drawing=None,
-                      analysis=None, scope=None, note: str = ""):
-    """Run the agent. `start`: an answer to continue from (a revision); `request`: what the person asks of it.
-    `drawing`: one view or unit of a sheet (already read and cut out) instead of the file's own region.
-    `analysis` + `scope`: a sheet unit — work on the unit's own analysis (the sheet's ids) and see the sheet (context.SheetScope)."""
+                      analysis=None, scope=None, note: str = "", budget: Budget | None = None):
+    """Run the agent on one drawing (or one unit of a sheet) to the end. `start`: an answer to continue from (a revision);
+    `request`: what the person asks of it. `drawing`: one view or unit of a sheet (already read and cut out) instead of the
+    file's own region. `analysis` + `scope`: a sheet unit — work on the unit's own analysis (the sheet's ids) and see the
+    sheet (context.SheetScope).
+
+    It runs until the model finishes, a decision is the person's, or a budget (ai.loop.Budget — never a fixed count of
+    turns) is used up. One chunk of turns that ends without a result simply goes on; the info says how it ended
+    (`stopped`: finished | wants_person | hard_budget | tokens | time | stopped) and `complete` is True only for `finished`."""
     from google.genai import types
 
     t0 = time.perf_counter()
     emit = on_event or (lambda e: None)
-    max_steps = max_steps or int(os.environ.get("VERTEX_AGENT_MAX_STEPS", "30"))
-    budget = max_output_tokens or int(os.environ.get("VERTEX_AGENT_MAX_OUTPUT_TOKENS", "150000"))
-    an, base, region, _snap = prepare(path, None, region, drawing=drawing, analysis=analysis)
-    images = images_for(an, base, region)
+    budget = budget or Budget.from_env(max_turns=max_steps, soft_turns=max_steps, max_tokens=max_output_tokens)
     bench = Workbench(path, region, hold_existing, start, selection, drawing=drawing, analysis=analysis, scope=scope,
                       instructions="\n".join(x for x in (instructions.strip(), request.strip()) if x))
-    labels = image_labels(an, base)
-    context = (unit_context(scope.sm, scope.uid, bench.an, bench.prog, labels, bench.rep) if scope
-               else drawing_context(bench.an, bench.prog, labels, bench.answer, bench.rep))
-    if bench.reading:  # the engine's own first reading of the person's words: ids, modes, and what it could not resolve
-        context["person_request_read_as"] = bench.reading_summary()
-    if bench.answer.get("plans"):
-        context["plans"] = [{"id": p.get("id"), "status": p.get("status"), "driver": (p.get("driver") or {}).get("parameter"),
-                             "anchor": (p.get("anchor") or {}).get("policy"), "questions": [q["text"][:160] for q in p.get("questions", [])][:4]}
-                            for p in bench.answer["plans"]]
-    ov = overview(an, base, context)
-    src = hashlib.sha256(Path(an.drawing.path).read_bytes()).hexdigest()
-    image_keys = [f"faithful:{src}:{region}", hashlib.sha256(images[1]).hexdigest(), hashlib.sha256(images[2]).hexdigest()]
-    ov_text = "OVERVIEW:\n" + json.dumps(ov, separators=(",", ":"))
-    prefix_parts = [types.Part.from_bytes(data=img, mime_type="image/png") for img in images] + [types.Part.from_text(text=ov_text)]
-    prefix_key = hashlib.sha256(("agent|" + AGENT_SYSTEM + "|".join(image_keys) + ov_text).encode()).hexdigest()[:24]
+    prefix_parts, prefix_key, _ov, context = unit_prefix(path, region, bench, drawing, analysis, scope)
     task = ("Parametrize this drawing with the tools, following the playbook." if not request else
             "You parametrized this drawing before; the current state is loaded in the tools (inspect_regions shows the parts, "
             "find_values the named values). The person asks for a change — make it with small edits, keep everything else.\n"
@@ -1149,116 +1361,31 @@ def agent_parametrize(path: str, region=None, instructions: str = "", start: dic
         task += f"\n\nTHE PERSON'S INSTRUCTIONS:\n{instructions.strip()}"
     if start:
         task += "\n\nCURRENT STATE: " + json.dumps(bench.status())
-    history = [types.Content(role="user", parts=[types.Part.from_text(text=task)])]
     own = gem is None
     gem = gem or Gemini()
-    plan_thinking = gem.cfg.thinking
-    step_thinking = os.environ.get("VERTEX_AGENT_STEP_THINKING") or plan_thinking  # every step thinks at the configured level unless the person lowers it
-    usages: list[dict] = []
-    done, steps, spent, reads_only = False, 0, 0, 0
-    log(f"agent on {gem.cfg.model}: plan @{plan_thinking}, steps @{step_thinking}, ≤{max_steps} steps, ≤{budget} output tokens")
+    loop = AgentLoop(gem, AGENT_SYSTEM, tools(), prefix_parts, prefix_key, [types.Content(role="user", parts=[types.Part.from_text(text=task)])], bench,
+                     budget, emit, stop)
+    log(f"agent on {gem.cfg.model}: plan @{loop.plan_thinking}, steps @{loop.step_thinking}, ≤{budget.max_turns} turns, ≤{budget.max_tokens} output tokens")
     try:
-        while not done and steps < max_steps:
-            if stop and stop():
-                raise GeminiStopped("stopped by the person")
-            steps += 1
-            content, usage = gem.step(AGENT_SYSTEM, tools(), prefix_parts, prefix_key, history, f"step {steps}",
-                                      plan_thinking if steps == 1 else step_thinking, max_out=32768 if steps == 1 else 16384, stop=stop, on_event=emit)
-            usage["thoughts"] = [p.text for p in content.parts or [] if getattr(p, "thought", False) and p.text]
-            usages.append(usage)
-            if not usage.get("cached"):
-                spent += usage.get("output_tokens", 0) + usage.get("thinking_tokens", 0)
-            history.append(content)
-            calls = [p.function_call for p in content.parts or [] if getattr(p, "function_call", None)]
-            if not calls:
-                history.append(types.Content(role="user", parts=[types.Part.from_text(text="Use the tools (one small edit at a time); call finish when done.")]))
-                continue
-            results, wrote, pending = [], False, []
-            before = copy.deepcopy(bench.answer)
-            for call in calls:
-                a = _args(call)
-                try:
-                    if call.name in READ_TOOLS and reads_only >= 6:
-                        # six turns of looking and nothing defined: looking is refused until an edit is made
-                        res = {"refused": "you have looked for six turns without an edit: make your edits now (define_parts / "
-                                          "define_parameters / set_formulas, in batches); looking is open again after an edit"}
-                        emit({"kind": "tool", "name": call.name, "args": _short(a), "ok": False, "why": "refused: edit first"})
-                    elif call.name in READ_TOOLS:
-                        res = getattr(bench, call.name)(**a)
-                        emit({"kind": "tool", "name": call.name, "args": _short(a), "ok": True})
-                    elif call.name == "finish":
-                        bench.validate()
-                        bench.finish_calls += 1
-                        st = bench.status()
-                        if (st["open_problems"] or any("NOT " in x for x in st.get("shared_here", []))
-                                or (bench.plan_required and not bench.answer.get("plans"))) and bench.finish_calls < 2:
-                            res = {"done": False, **st, "hint": "fix these, or call finish again to stop with what is valid"}
-                        else:
-                            res, done = {"done": True, **st}, True
-                        emit({"kind": "tool", "name": "finish", "args": _short(a), "ok": done})
-                    elif call.name in BATCH:
-                        done_items = [(*bench.write(BATCH[call.name], it), it) for it in (a.get("items") or [])]
-                        pending.append((len(results), done_items, call.name))
-                        res = None
-                        wrote = True
-                    else:
-                        item, note = bench.write(call.name, a)
-                        pending.append((len(results), [(item, note, a)], call.name))
-                        res = None
-                        wrote = True
-                except (KeyError, TypeError, ValueError) as exc:  # a malformed call: the model reads why and corrects it
-                    res = {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
-                    emit({"kind": "tool", "name": call.name, "args": _short(a), "ok": False, "why": res["error"]})
-                results.append([call, res])
-            if wrote:
-                bench.validate()  # one check for the whole batch of edits; each edit reads its own verdict
-                taken_back = bench.check_batch([(name, item) for _k, items, name in pending for item, _n, _a in items], before)
-                for k, items, name in pending:
-                    verdicts = []
-                    for item, note, a in items:
-                        if item in taken_back:
-                            f = taken_back[item]
-                            v = {"item": item, "ok": False, "rejected": [f"{f['code']}: {f['cause']} — {f['measured']}"[:300]], "failure": f,
-                                 "taken_back": True}
-                        else:
-                            v = {"item": item, **bench.verdict(item, name)}
-                        if note:
-                            v["engine"] = note
-                        if name == "define_parameters" and v["ok"]:
-                            v["moves"] = bench.prog.intent.get("impact", {}).get(item, {})
-                            v.update(bench.checked.get(item, {}))
-                        verdicts.append(v)
-                        emit({"kind": "tool", "name": BATCH.get(name, name), "args": _short(a), "ok": v["ok"], "why": "; ".join(v.get("rejected", []))[:200]})
-                    results[k][1] = verdicts if name in BATCH else verdicts[0]
-                st = {**bench.status(), "steps_left": max_steps - steps}
-                emit({"kind": "status", **st})
-                results[-1][1] = {"result": results[-1][1], "status": st}
-                reads_only = 0
-            else:
-                reads_only += 1
-                if reads_only >= 4 and not done:  # looking can go on for ever; the engine checks edits, so edit
-                    nudge = ("you have read enough to start: define the parts now (define_parts, all in one call), then the parameters"
-                             if not bench.answer["components"] else "make the edits now (define_parameters / set_formulas), in batches")
-                    results[-1][1] = {"result": results[-1][1], "nudge": nudge, "steps_left": max_steps - steps}
-            history.append(types.Content(role="user", parts=[types.Part.from_function_response(name=c.name, response={"result": r}) for c, r in results]))
-            _trim(history, keep=8)
-            if spent >= budget:
-                emit({"kind": "note", "text": f"output budget reached ({spent} tokens): stopping with what is valid"})
-                break
-        if not done:
-            emit({"kind": "note", "text": f"stopped after {steps} steps with what is valid"})
+        reason = "soft_budget"
+        while reason == "soft_budget":  # a chunk used up is a pause for a person to decide; there is nobody to ask here: go on
+            reason = loop.run()
+        if reason != "finished":
+            emit({"kind": "note", "text": f"stopped ({reason}) after {loop.state.turns} turns with what is valid"})
     finally:
         if own:
             gem.close()
     bench.validate(final=True)
+    usages = loop.state.usages
     info = {"answer": bench.answer, "path": path, "usage": usages, "seconds": round(time.perf_counter() - t0, 1),
-            "region": region, "steps": steps, "agent": True, "context": context, "baseline_error_mm": bench.baseline_error_mm(),
+            "region": region, "steps": loop.state.turns, "agent": True, "context": context, "baseline_error_mm": bench.baseline_error_mm(),
+            "stopped": reason, "complete": reason == "finished", "tool_calls": loop.state.tool_calls,
+            "waiting_for_person": [q["text"] for q in bench.person_questions()],
             "plans": [{"id": p.get("id"), "status": p.get("status"), "questions": [q["text"] for q in p.get("questions", [])]}
                       for p in bench.answer.get("plans", [])],
             "tokens_in": sum(u.get("input_tokens", 0) for u in usages if not u.get("cached")),
             "tokens_out": sum(u.get("output_tokens", 0) + u.get("thinking_tokens", 0) for u in usages if not u.get("cached")),
             "tokens_cached": sum(u.get("vertex_cached_tokens", 0) for u in usages if not u.get("cached"))}
-    emit({"kind": "round", "round": steps, "accepted": bench.rep.accepted, "rejected": bench.rep.rejected,
+    emit({"kind": "round", "round": loop.state.turns, "accepted": bench.rep.accepted, "rejected": bench.rep.rejected,
           "errors": [f"{e['code']} {e['item']}: {e['message']}"[:220] for e in bench.rep.errors()][:8]})
     return bench.prog, bench.rep, info
-

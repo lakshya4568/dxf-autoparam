@@ -16,6 +16,18 @@ shares, anchors, links and view corrections are transactions with undo / redo.
     GET  /api/sheet/proposals?units=…     sizes two views both state
     GET  /api/sheet/export                the edited DXF
     GET  /api/sheet/project               the parametric project (JSON); POST it back to restore
+    GET  /api/sheet/status                how far each view, part and value really is (derived from the model, never from a message)
+    GET  /api/sheet/baseline[?all=1]      the imported geometry of what has changed (or of everything): the dotted comparison layer
+    POST /api/sheet/reset_value {name}    one value back to the imported drawing's (regenerated and checked, or refused)
+    POST /api/sheet/reset_drawing {confirm}   the imported state; one undoable step
+    POST /api/sheet/prefs                 what a person chose to see (saved with the project)
+
+The agent — ONE instruction, one session (ai/run.py):
+    POST /api/sheet/ai/run {instruction, scope, options}   start a run
+    GET  /api/sheet/ai/progress?run=R1&since=n             its events, state, budget, questions, verdict
+    POST /api/sheet/ai/continue {run, answers, note}       after it asked, or after a budget pause
+    POST /api/sheet/ai/stop | apply | revert {run}
+    GET  /api/sheet/ai/runs                                the history; GET /api/sheet/ai/image?run=R1&id=IMG3
 """
 
 from __future__ import annotations
@@ -44,20 +56,27 @@ class SheetSession:
         self.shown: set[int] = set()  # entities the page draws changed (the committed state)
         self.opened = 0.0
         self.gem = None  # one Gemini client per sheet: its prompt cache serves the follow-ups
-        self.job: dict = {"running": False, "events": [], "error": None, "kind": None, "started": 0.0, "stop": threading.Event(), "result": None}
+        self.gem_factory = None  # a test (or another provider) supplies the model here
+        self.gem_per_run = False
+        self.pictures = None
+        self.runs: dict = {}
+        self.run_n = 0
+        self.current_run: str | None = None
         if path:
             self.open(path)
 
     # ── state ─────────────────────────────────────────────────────────────────
 
     def open(self, path: str) -> dict:
-        if self.job["running"]:
-            raise SheetError("Gemini is working on this sheet: stop it first")
+        if self.running():
+            raise SheetError("the agent is working on this sheet: stop it first")
         if self.gem is not None:
             self.gem.close()
             self.gem = None
         t = time.perf_counter()
         self.sm = SheetModel.open(path)
+        self.pictures = None
+        self.runs, self.current_run, self.run_n = {}, None, 0
         self.shown = set()
         self.opened = time.perf_counter() - t
         return self.summary()
@@ -86,7 +105,7 @@ class SheetSession:
                        for p in sm.shared.values()],
             "values": sm.current(), "can_undo": bool(sm.history), "can_redo": bool(sm.future),
             "relations": sm.relations, "questions": sm.questions, "accepted": sorted(list(k) for k in sm.accepted),
-            "ai_running": self.job["running"],
+            "ai_running": self.running(), "current_run": self.current_run, "prefs": sm.prefs,
         }
 
     def _prims(self, entities, sr: SheetRegen | None) -> list[dict]:
@@ -189,77 +208,146 @@ class SheetSession:
             raise SheetError(f"no such edit: {op}")
         return {"ok": True, "result": result, **self._commit_delta(), "summary": self.summary()}
 
-    # ── Gemini, in the background ─────────────────────────────────────────────
+    # ── the agent: one instruction, one session (ai/run.py) ─────────────────────
 
-    def start_ai(self, kind: str, body: dict) -> dict:
-        """views — name, type, merge and relate the views; unit — the agent parametrizes one unit; shared — name the sizes
-        separate views share. Progress (thought summaries, calls, what was applied or refused) streams into the job."""
-        from .ai.vertex import Gemini, GeminiStopped, GeminiUnavailable
+    def running(self) -> bool:
+        from .ai.run import ACTIVE
+
+        return any(r.status in ACTIVE for r in self.runs.values())
+
+    def get_gem(self):
+        """The model: one client per sheet (its prompt cache serves the follow-ups)."""
+        if self.gem_factory is not None and self.gem_per_run:
+            return self.gem_factory()  # an offline demo: every run gets its own script
+        if self.gem is None:
+            if self.gem_factory is not None:
+                self.gem = self.gem_factory()
+            else:
+                from .ai.vertex import Gemini
+
+                self.gem = Gemini()
+        return self.gem
+
+    def get_pictures(self):
+        from .viewimg import Pictures
+
+        if self.pictures is None or self.pictures.sm is not self.sm:
+            self.pictures = Pictures(self._sm())
+        return self.pictures
+
+    def _run(self, rid: str | None):
+        from .ai.run import RunError
+
+        rid = rid or self.current_run
+        run = self.runs.get(rid or "")
+        if run is None:
+            raise RunError(f"no such run: {rid}" if rid else "no run yet")
+        return run
+
+    def start_run(self, body: dict) -> dict:
+        """ONE instruction (and where it applies) starts a run: the model decides what the task needs. Returns at once; the run
+        works in the background and its progress is read with `run_progress`."""
+        from .ai.run import RESUMABLE, Run
 
         sm = self._sm()
-        if self.job["running"]:
-            raise SheetError("Gemini is already working on this sheet")
-        if kind not in ("views", "unit", "shared"):
-            raise SheetError(f"no Gemini stage {kind}")
-        uid = body.get("unit")
-        if kind == "unit" and uid not in sm.units:
-            raise SheetError(f"no unit {uid}")
-        job = {"running": True, "events": [], "error": None, "kind": kind, "started": time.time(), "stop": threading.Event(), "result": None}
-        self.job = job
+        if self.running():
+            raise SheetError("the agent is already working on this sheet: stop it, or wait for it")
+        for r in self.runs.values():  # a run left waiting is closed by a new one: it was decided on a sheet that is about to change
+            if r.status in RESUMABLE:
+                r.close("superseded by a newer run")
+        self.get_pictures()
+        run = Run(self, f"R{self.run_n + 1}", body.get("instruction", ""), body.get("scope"), body.get("options"), parent=body.get("parent"))
+        self.run_n += 1  # an id is used up only by a run that exists
+        self.runs[run.id] = run
+        self.current_run = run.id
+        run.start()
+        return {"ok": True, "run": run.id, "revision": sm.revision}
 
-        def push(e: dict) -> None:
-            if len(job["events"]) < 4000:
-                job["events"].append({**e, "t": round(time.time() - job["started"], 1)})
+    def continue_run(self, body: dict) -> dict:
+        run = self._run(body.get("run"))
+        if self.running():
+            raise SheetError("the agent is already working on this sheet")
+        run.resume(answers=body.get("answers"), note=body.get("note", ""), more_turns=body.get("more_turns"))
+        self.current_run = run.id
+        return {"ok": True, "run": run.id}
 
-        def work() -> None:
-            from .ai import sheet_ai
+    def stop_run(self, body: dict) -> dict:
+        run = self._run(body.get("run"))
+        run.stop()
+        return {"ok": True, "run": run.id, "status": run.status}
 
-            try:
-                if self.gem is None:
-                    self.gem = Gemini()
-                if kind == "views":
-                    ans, usage = sheet_ai.understand_views(sm, self.gem, on_event=push, stop=job["stop"].is_set)
-                    with self.lock:
-                        res = sheet_ai.apply_views(sm, ans)
-                elif kind == "shared":
-                    ans, usage = sheet_ai.name_shared(sm, self.gem, units=body.get("units"), on_event=push, stop=job["stop"].is_set)
-                    with self.lock:
-                        res = sheet_ai.apply_shared(sm, ans)
-                else:
-                    usage = {}
-                    res = sheet_ai.parametrize_unit(sm, uid, self.gem, instructions=body.get("instructions", ""), on_event=push,
-                                                    stop=job["stop"].is_set, log=lambda *a: push({"kind": "log", "text": " ".join(map(str, a))}),
-                                                    lock=self.lock)
-                job["result"] = {**res, "usage": {k: usage.get(k) for k in ("model", "thinking", "input_tokens", "output_tokens",
-                                                                                "thinking_tokens", "cached", "seconds") if usage}}
-                push({"kind": "done", "text": f"{kind}: {len(res.get('applied', []))} applied, {len(res.get('refused', []))} refused"
-                      if kind != "unit" else f"unit {uid}: {res['named']} named values"})
-            except GeminiStopped:
-                push({"kind": "stopped", "text": "Stopped. Nothing from this run was applied (tokens generated before the stop are billed)."})
-            except (GeminiUnavailable, SheetError) as exc:  # a refused commit says why, and that nothing changed
-                job["error"] = str(exc)
-                push({"kind": "error", "text": job["error"]})
-            except Exception as exc:  # noqa: BLE001 — the job's boundary: logged with its traceback, said in the page
-                import traceback
+    def apply_run(self, body: dict) -> dict:
+        run = self._run(body.get("run"))
+        v = run.apply_valid()
+        return {"ok": True, "run": run.id, "verdict": v, **self._commit_delta(), "summary": self.summary()}
 
-                traceback.print_exc()
-                job["error"] = f"{type(exc).__name__}: {exc}"
-                push({"kind": "error", "text": job["error"]})
-            finally:
-                job["running"] = False
+    def revert_run(self, body: dict) -> dict:
+        run = self._run(body.get("run"))
+        res = run.revert()
+        return {"ok": True, "run": run.id, **res, **self._commit_delta(), "summary": self.summary()}
 
-        threading.Thread(target=work, daemon=True, name=f"sheet-gemini-{kind}").start()
-        return {"ok": True, "kind": kind}
+    def run_progress(self, rid: str | None, since: int) -> dict:
+        if not self.runs:
+            return {"run": None, "status": "idle", "events": [], "next": 0}
+        return self._run(rid).progress(since)
 
-    def progress(self, since: int) -> dict:
-        job = self.job
-        return {"running": job["running"], "kind": job["kind"], "error": job["error"], "stopping": job["stop"].is_set(),
-                "events": job["events"][since:], "next": len(job["events"]), "result": job["result"] if not job["running"] else None}
+    def run_list(self) -> dict:
+        """This session's runs (newest first), then the history saved with the project that this session did not make."""
+        live = [r.summary() for r in self.runs.values()][::-1]
+        have = {r["id"] for r in live}
+        saved = [r for r in reversed(self.sm.runs if self.sm else []) if r.get("id") not in have]
+        return {"runs": live + saved, "current": self.current_run}
 
-    def stop_ai(self) -> dict:
-        if self.job["running"]:
-            self.job["stop"].set()
-        return {"ok": True, "stopping": self.job["running"]}
+    def run_image(self, rid: str | None, img_id: str) -> bytes | None:
+        pics = self.get_pictures()
+        return pics.png_of(img_id)
+
+    def record_run(self, run) -> None:
+        """A finished run goes into the project's history (a log: undo does not touch it)."""
+        sm = self._sm()
+        sm.runs = [r for r in sm.runs if r.get("id") != run.id or r.get("session") != id(self)] + [{**run.summary(), "session": id(self)}]
+        sm.runs = [{k: v for k, v in r.items() if k != "session"} for r in sm.runs][-200:]
+
+    def status(self) -> dict:
+        from .status import sheet_status
+
+        active = {}
+        for r in self.runs.values():
+            active.update(r.active_states())
+        return sheet_status(self._sm(), active)
+
+    # ── the baseline, reset and what a person chose to see ──────────────────────
+
+    def baseline(self, everything: bool = False) -> dict:
+        """The imported geometry — the dotted layer under the current drawing. By default only what has changed (everything
+        else coincides with it); `everything` sends every entity."""
+        sm = self._sm()
+        sr = sm.regenerate()
+        ents = range(len(sm.dr.items)) if everything else sr.changed
+        return {"prims": self._prims(ents, None), "changed": len(sr.changed), "revision": sm.revision, "deviation": sm.deviation()}
+
+    def reset_value(self, body: dict) -> dict:
+        sm = self._sm()
+        res = sm.reset_value(body["name"])
+        return {**res, **self._commit_delta(), "summary": self.summary()}
+
+    def reset_drawing(self, body: dict) -> dict:
+        if not body.get("confirm"):
+            raise SheetError("resetting the drawing returns it to the imported state: say confirm")
+        if self.running():
+            raise SheetError("the agent is working on this sheet: stop it first")
+        sm = self._sm()
+        res = sm.reset_drawing()
+        return {**res, **self._commit_delta(), "summary": self.summary()}
+
+    def set_prefs(self, body: dict) -> dict:
+        sm = self._sm()
+        b = body.get("baseline") or {}
+        if "on" in b:
+            sm.prefs["baseline"]["on"] = bool(b["on"])
+        if isinstance(b.get("color"), str) and b["color"].startswith("#") and len(b["color"]) in (4, 7):
+            sm.prefs["baseline"]["color"] = b["color"]
+        return {"ok": True, "prefs": sm.prefs}
 
     def unit(self, uid: str) -> dict:
         sm = self._sm()
@@ -269,10 +357,14 @@ class SheetSession:
         reach = affects(u.prog)
         bound = {b.param: p.name for p in sm.shared.values() for b in p.bindings if b.unit == uid}
         params = []
+        from .status import parameters_of
+
+        state = {p["name"]: p["state"] for p in parameters_of(sm, uid)}
         for name, prm in u.prog.params.items():
             r = reach.get(name, {})
             ents = [u.back[k] for k in r.get("entities", [])]
-            params.append({"name": name, "key": bound.get(name) or f"{uid}.{name}", "shared": name in bound, "label": prm.label,
+            params.append({"name": name, "key": bound.get(name) or f"{uid}.{name}", "shared": name in bound, "label": prm.label, "state": state.get(name, "named"),
+                           "changed": name in sm.values.get(uid, {}),
                            "value": sm.values.get(uid, {}).get(name, prm.value), "drawn": prm.value, "unit": prm.unit, "kind": prm.kind,
                            "source": prm.source, "measures": prm.measures, "confidence": prm.confidence, "evidence": prm.evidence[:4],
                            "occurrences": prm.occurrences, "entities": len(ents), "views": sorted({sm.layout.item_group.get(s, "") for s in ents} - {""}),
@@ -295,25 +387,9 @@ class SheetSession:
                                        "status": c.status.value, "name": c.name, "evidence": [e.kind for e in c.evidence]}
                                       for c in u.an.clusters.values()), key=lambda c: -c["value"])[:200]}
 
-    PLAN_KEYS = ("instruction", "decisions", "directives", "anchor", "requested_value", "id", "driver", "provisional_anchor")
-
-    def plan(self, body: dict) -> dict:
-        """An instruction read into a plan for one unit — resolved, predicted, with the questions only a person answers.
-        Nothing changes on the sheet."""
-        sm = self._sm()
-        plan = sm.plan(body.get("unit", ""), {k: body[k] for k in self.PLAN_KEYS if k in body})
-        return {"ok": True, "plan": plan, "revision": sm.revision}
-
-    def apply_plan(self, body: dict) -> dict:
-        """The plan made binding with the person's decisions and the value it asks for applied — one undoable step, or
-        refused with the reasons and nothing changed."""
-        sm = self._sm()
-        res = sm.apply_plan(body.get("unit", ""), {k: body[k] for k in self.PLAN_KEYS if k in body},
-                            expected_revision=body.get("revision"), discard_values=bool(body.get("discard_values")))
-        return {"ok": True, "result": {"checks": res["checks"], "applied": res["applied"], "plan": res["plan"], "values_dropped": res["values_dropped"]},
-                **self._commit_delta(), "summary": self.summary()}
-
     def param(self, name: str) -> dict:
+        """Everything a click on a value shows: what it moves (measured), how it grows, how far it can go, the geometry it belongs to by
+        category, what the imported drawing has, where it came from and whether it is validated."""
         sm = self._sm()
         out = {"impact": sm.impact(name)}
         try:
@@ -321,8 +397,10 @@ class SheetSession:
         except SheetError as exc:
             out["growth"] = [{"mode": "none", "why": str(exc)}]
         out["range"] = sm.valid_range(name)
-        r = sm.regenerate({name: out["impact"]["value"] + out["impact"]["step"]})
-        out["moves"] = sorted(r.changed)[:5000]
+        h = sm.highlight(name, out["impact"]["step"])
+        out["highlight"] = h
+        out["card"] = sm.card(name)
+        out["deviation"] = sm.deviation(set(h["drives"]) | set(h["follows"]) | set(h["texts"]))
         return out
 
 
@@ -357,7 +435,20 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
                     units = [u for u in q.get("units", [""])[0].split(",") if u] or None
                     return handler._json({"proposals": sheet._sm().shared_proposals(units)}) or True
                 if path == "/api/sheet/ai/progress":
-                    return handler._json(sheet.progress(int(q.get("since", ["0"])[0]))) or True
+                    return handler._json(sheet.run_progress(q.get("run", [None])[0], int(q.get("since", ["0"])[0]))) or True
+                if path == "/api/sheet/ai/runs":
+                    return handler._json(sheet.run_list()) or True
+                if path == "/api/sheet/ai/image":
+                    png = sheet.run_image(q.get("run", [None])[0], q.get("id", [""])[0])
+                    if png is None:
+                        return handler._json({"ok": False, "error": "that picture is no longer kept: ask the agent to look again"}, 404) or True
+                    return handler._send(200, png, "image/png", {"Cache-Control": "max-age=3600"}) or True
+                if path == "/api/sheet/status":
+                    return handler._json(sheet.status()) or True
+                if path == "/api/sheet/delta":
+                    return handler._json({"ok": True, **sheet._commit_delta(), "summary": sheet.summary()}) or True
+                if path == "/api/sheet/baseline":
+                    return handler._json(sheet.baseline(q.get("all", ["0"])[0] == "1")) or True
                 if path == "/api/sheet/export":
                     out = Path(tempfile.mkdtemp()) / (Path(sheet._sm().path).stem + "_parametric.dxf")
                     rep = sheet._sm().export(str(out))
@@ -383,19 +474,28 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
                     return handler._json(sheet.apply(body.get("changes", {}))) or True
                 if path in ("/api/sheet/undo", "/api/sheet/redo"):
                     return handler._json(sheet.history(path.rsplit("/", 1)[1])) or True
+                if path == "/api/sheet/ai/run":
+                    return handler._json(sheet.start_run(body)) or True
+                if path == "/api/sheet/ai/continue":
+                    return handler._json(sheet.continue_run(body)) or True
                 if path == "/api/sheet/ai/stop":
-                    return handler._json(sheet.stop_ai()) or True
-                if path == "/api/sheet/plan":
-                    return handler._json(sheet.plan(body)) or True
-                if path == "/api/sheet/plan/apply":
-                    return handler._json(sheet.apply_plan(body)) or True
-                if path.startswith("/api/sheet/ai/"):
-                    return handler._json(sheet.start_ai(path.rsplit("/", 1)[1], body)) or True
+                    return handler._json(sheet.stop_run(body)) or True
+                if path == "/api/sheet/ai/apply":
+                    return handler._json(sheet.apply_run(body)) or True
+                if path == "/api/sheet/ai/revert":
+                    return handler._json(sheet.revert_run(body)) or True
+                if path == "/api/sheet/reset_value":
+                    return handler._json(sheet.reset_value(body)) or True
+                if path == "/api/sheet/reset_drawing":
+                    return handler._json(sheet.reset_drawing(body)) or True
+                if path == "/api/sheet/prefs":
+                    return handler._json(sheet.set_prefs(body)) or True
                 if path == "/api/sheet/project":
                     tmp = Path(tempfile.mkdtemp()) / "project.json"
                     tmp.write_text(json.dumps(body))
                     sheet.sm = SheetModel.load(str(tmp), dxf=sheet._sm().path)
                     sheet.shown = set()
+                    sheet.pictures, sheet.runs, sheet.current_run = None, {}, None  # runs belong to the sheet model they worked on
                     return handler._json({"ok": True, "summary": sheet.summary()}) or True
                 op = path.rsplit("/", 1)[1]
                 return handler._json(sheet.edit(op, body)) or True

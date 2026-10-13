@@ -213,6 +213,11 @@ class SheetModel:
         # panel) is refused when it would land on another — it was decided on a sheet that no longer exists.
         self.revision = 0
         self._group_units()
+        # The imported state — what the file alone gives: the views the engine found, no links taken or refused, no values,
+        # no plans. A reset goes back to it (baseline.reset_drawing); the geometry itself (self.dr) is never edited.
+        self.import_state: dict = {"unlinked": set(), "groups": copy.deepcopy(self.layout.groups)}
+        self.prefs: dict = {"baseline": {"on": False, "color": "#4f6bff"}}  # what a person chose to see: saved with the project
+        self.runs: list[dict] = []  # finished agent runs (a log, not state: undo does not touch it)
 
     @classmethod
     def open(cls, path: str) -> SheetModel:
@@ -498,6 +503,8 @@ class SheetModel:
         for p in self.shared.values():
             out[p.name] = self._shared_now(p)
         for uid, u in self.units.items():
+            if not u.built and (u.answer or uid in self.values):  # undo / reset leave a unit to be rebuilt: its values are still its values
+                self.unit(uid)
             if not u.built:
                 continue
             for name, prm in u.prog.params.items():
@@ -1080,6 +1087,39 @@ class SheetModel:
             out[side], out[side + "_reason"] = good, why
         return out
 
+    # ── the baseline: what the drawing was, and the way back (baseline.py) ───────
+
+    def original(self, name: str) -> list[dict]:
+        """A value as the imported drawing has it, per unit it is bound in (value, how it was measured, whether it can be trusted)."""
+        from .baseline import current_of, original_of, targets
+
+        return [{"unit": uid, "param": local, "current": current_of(self, uid, local), **original_of(self, uid, local)} for uid, local in targets(self, name)]
+
+    def reset_value(self, name: str) -> dict:
+        from .baseline import reset_value
+
+        return reset_value(self, name)
+
+    def reset_drawing(self) -> dict:
+        from .baseline import reset_drawing
+
+        return reset_drawing(self)
+
+    def card(self, name: str) -> dict:
+        from .baseline import card
+
+        return card(self, name)
+
+    def highlight(self, name: str, step: float | None = None) -> dict:
+        from .baseline import highlight
+
+        return highlight(self, name, step)
+
+    def deviation(self, entities: set[int] | None = None) -> dict:
+        from .baseline import deviation
+
+        return deviation(self, entities)
+
     # ── output ────────────────────────────────────────────────────────────────
 
     def scene(self, sr: SheetRegen | None = None) -> list[dict]:
@@ -1114,11 +1154,21 @@ class SheetModel:
 
     def to_dict(self) -> dict:
         """The parametric project: what a person or the AI decided, keyed to the DXF it was made on."""
+        from .baseline import original_of
+
+        originals: dict[str, dict] = {}  # the imported value of every value a person has changed (a record: it is re-derived from the DXF)
+        for uid, vals in self.values.items():
+            if uid in self.units:
+                originals[uid] = {n: original_of(self, uid, n)["value"] for n in vals if n in self.unit(uid).prog.params}
+        import_groups = {g.key: g for g in self.import_state["groups"]}
+        views = [{"key": g.key, "name": g.name, "view_type": g.view_type, "kind": g.kind} for g in self.layout.groups
+                 if g.key in import_groups and (g.name, g.view_type, g.kind) != (import_groups[g.key].name, import_groups[g.key].view_type, import_groups[g.key].kind)]
         return {"format": "dxf-autoparam/sheet-1", "dxf": self.path, "fingerprint": self.fingerprint(),
                 "unlinked": sorted(list(k) for k in self.unlinked),
                 "answers": {uid: u.answer for uid, u in self.units.items() if u.answer},
-                "shared": [asdict(p) for p in self.shared.values()], "values": self.values,
-                "accepted": sorted(list(k) for k in self.accepted), "relations": self.relations, "questions": self.questions}
+                "shared": [asdict(p) for p in self.shared.values()], "values": self.values, "originals": originals,
+                "accepted": sorted(list(k) for k in self.accepted), "relations": self.relations, "questions": self.questions,
+                "views": views, "prefs": self.prefs, "runs": self.runs[-200:]}
 
     def save(self, path: str) -> None:
         Path(path).write_text(json.dumps(self.to_dict(), indent=1, default=list))
@@ -1141,5 +1191,12 @@ class SheetModel:
             sm.shared[p["id"]] = SharedParam(**{**p, "bindings": [Binding(**{**b, "datums": tuple(b["datums"]) if b.get("datums") else None})
                                                                       for b in p["bindings"]]})
         sm.values = {u: dict(v) for u, v in d.get("values", {}).items()}
+        by_key = {g.key: g for g in sm.layout.groups}
+        for v in d.get("views", []):  # corrections a person made to the views (by content key: stable across sessions)
+            g = by_key.get(v.get("key"))
+            if g is not None:
+                g.name, g.view_type, g.kind = v.get("name", g.name), v.get("view_type", g.view_type), v.get("kind", g.kind)
+        sm.prefs = {**sm.prefs, **(d.get("prefs") or {})}
+        sm.runs = list(d.get("runs") or [])
         return sm
 
