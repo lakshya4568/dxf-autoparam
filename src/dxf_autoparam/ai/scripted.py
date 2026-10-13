@@ -54,3 +54,39 @@ class ScriptedModel:
 
     def close(self):
         return []
+
+
+class RecordedModel(ScriptedModel):
+    """The model's OWN turns of an earlier live run, replayed — for judging what an engine would have made of them, with no network and no cost.
+
+    Each turn is the model's answer exactly as recorded (the client's on-disk cache keeps it with the key the usage ledger names), so what is replayed is
+    the model's real behaviour, not a reconstruction: the same calls with the same arguments, in the same order, whatever the engine now answers.
+    A turn the engine answers differently than it did then (a call that is now refused) simply goes on to the model's next recorded turn."""
+
+    def __init__(self, turns: list, delay: float = 0.0, then: list[list] | None = None):
+        """`then`: scripted turns (lists of calls) that follow the recorded ones — what the model would have gone on to do, to see what the
+        engine says of it. They are marked as scripted; nothing in them is the model's own."""
+        then = [list(t) for t in (then or [])]
+        super().__init__([[p for p in t.parts if getattr(p, "function_call", None)] for t in turns] + then, delay=delay,
+                         thoughts=["[replayed from the recorded run] " + (next((p.text for p in t.parts if getattr(p, "thought", False) and p.text), "") or "")[:300] for t in turns]
+                         + ["[scripted continuation, not the model]"] * len(then))
+        self.recorded = turns
+
+    @classmethod
+    def from_ledger(cls, ledger_path: str, cache_dir: str, **kw) -> RecordedModel:
+        """The turns of a run, from its usage ledger (one line per model call: label and cache key) and the client's answer cache."""
+        import json
+        from pathlib import Path
+
+        from google.genai import types
+
+        turns = []
+        for line in Path(ledger_path).read_text().splitlines():
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            f = Path(cache_dir) / f"{row['key']}.json"
+            if row.get("error") or row.get("stopped") or not f.exists():
+                continue
+            turns.append((row.get("at", ""), types.Content.model_validate(json.loads(f.read_text())["content"])))
+        return cls([t for _at, t in turns], **kw)
