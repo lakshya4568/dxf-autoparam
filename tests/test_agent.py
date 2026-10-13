@@ -8,6 +8,7 @@ from pathlib import Path
 
 from google.genai import types
 
+from dxf_autoparam.ai import domain
 from dxf_autoparam.ai.agent import Workbench, agent_parametrize, overview
 from dxf_autoparam.ai.parametrize import prepare
 from dxf_autoparam.topology import of
@@ -123,7 +124,8 @@ def test_the_overview_is_small_and_the_tools_answer_on_a_real_view():
     bench = Workbench(XX)
     lines = bench.inspect_lines(["y10", "x91"])
     assert lines["y10"]["chain"] and "at_mm" in lines["x91"]
-    assert bench.knowledge("clear span")[0].lower().startswith("clear")
+    assert "no domain pack" in bench.knowledge("clear span")[0]  # by default the model names things itself
+    assert Workbench(XX, pack=domain.active("bridge")).knowledge("clear span")[0].lower().startswith("clear")  # a pack a person switched on answers
     assert bench.what_moves("NoSuch")["error"].startswith("no parameter")
 
 

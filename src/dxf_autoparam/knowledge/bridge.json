@@ -1814,5 +1814,6 @@
    "families": [],
    "status": "DERIVED"
   }
- ]
+ ],
+ "guide": "DRAFTSMAN'S GUIDE \u2014 the design inputs a draftsman types to make the next drawing of the same type:\n  RCC box (1, 2, 3\u2026 cells): ClearSpan (one value for all equal cells), ClearHeight, OuterWall, MidWall (if >1 cell),\n    TopSlab, BottomSlab, Haunch, WearingCourse, footing/PCC courses (thickness + projection), cushion inputs, wing /\n    return wall sizes (length, top width, base width, slope), apron / curtain / drop walls.\n  Slab / girder spans: EffectiveSpan or ClearSpan per span (equal spans = one value), DeckWidth / overhang,\n    SlabThickness or GirderDepth + flange/web sizes, GirderSpacing, bearing / pedestal heights, kerb, ballast cushion.\n  Substructure (pier, abutment, wall, footing, well, pile cap): top width, base width or batter, height via levels,\n    footing width / depth / projections, cap sizes, pile spacing & diameter.\n  Pipe culverts: PipeDiameter, PipeThickness, PipeSpacing, number of rows, bedding / cradle sizes.\n  Levels: site levels (bed, formation, rail, ground, HFL\u2026) as levels; structure levels follow from sizes.\n  DOUBLING / EXTENSION drawings (a new bridge or track beside an existing one): identify which parts are PROPOSED and\n  which EXISTING (texts 'EXIST.', 'PROP.', 'EXISTING', 'PROPOSED', different layers / hatch). Parametrize both, with\n  names that say which (ExistingClearSpan, ClearSpan); mark existing components existing=true. Spacing between the two\n  (track centres, gap) is a parameter of its own."
 }

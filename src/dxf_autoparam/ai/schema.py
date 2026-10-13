@@ -14,10 +14,10 @@ Confidence = Field(default=0.8, ge=0.0, le=1.0, description="0..1: how sure you 
 
 
 class AIComponent(BaseModel):
-    name: str = Field(description="PascalCase name of this part on this drawing, e.g. ProposedBox, WingWallLeft, TopSlab, PccCourse")
+    name: str = Field(description="PascalCase name of this part on this drawing, in your own words: what it is and which one")
     type: str = Field(description="concept id from KNOWLEDGE (box, top_slab, wall, wing_wall, return_wall, apron, drop_wall, courses, earth_fill, track, deck, girder, pier, abutment, footing …) or a plain snake_case word")
     level: Literal["assembly", "component", "subcomponent"] = Field(
-        default="component", description="assembly: a whole structure (the proposed box, the existing bridge); component: a part of it (a wall, a slab, an apron); subcomponent: a detail of a part (a haunch, a coping, a step)")
+        default="component", description="assembly: a whole structure (the proposed one, an existing one); component: a part of it (a wall, a slab, a footing); subcomponent: a detail of a part (a haunch, a coping, a step)")
     parent: str | None = Field(default=None, description="name of the assembly / component this is part of (None for a top-level assembly)")
     regions: list[str] = Field(default_factory=list, description="ids of the closed regions (R…) that make it up")
     entities: list[str] = Field(default_factory=list, description="ids of other entities that belong to it but bound no region (open lines: track, ground line, a level line)")
@@ -39,13 +39,13 @@ class AILineRole(BaseModel):
 
 class AILevel(BaseModel):
     datum: str = Field(description="y datum id the level line is drawn at")
-    name: str = Field(description="PascalCase, ends in Level (or Hfl/Lwl), e.g. BedLevel, FormationLevel, RailLevel")
+    name: str = Field(description="PascalCase, ends in Level (or Hfl/Lwl): the name the drawing gives it")
     role: Literal["site_input", "check_only", "derived"] = Field(
         description="site_input: given by the site and held fixed (bed, formation, rail, ground); check_only: a water level the structure is checked against (HFL, LWL); derived: follows the structure (top of slab, soffit, foundation)")
 
 
 class AIParameter(BaseModel):
-    name: str = Field(description="PascalCase engineering name, from KNOWLEDGE where one fits (ClearSpan, OuterWall, TopSlab, Haunch …)")
+    name: str = Field(description="PascalCase engineering name of your own: what the size is, of which part (a domain pack's names are offered when one is on)")
     label: str = Field(description="plain words, e.g. 'Clear span of each cell'")
     component: str = Field(description="component name it belongs to")
     kind: Literal["length"] = "length"
@@ -63,7 +63,7 @@ class AIParameter(BaseModel):
 
 class AIFormula(BaseModel):
     datum: str = Field(description="datum id to set out")
-    expr: str = Field(description="expression in mm over datum ids and parameter names, e.g. 'y5 + ClearHeight'")
+    expr: str = Field(description="expression in mm over datum ids and parameter names, e.g. 'y5 + Height'")
     reason: str = ""
 
 
@@ -102,15 +102,15 @@ class AIConstraint(BaseModel):
     datums: list[str] = Field(default_factory=list)
     components: list[str] = Field(default_factory=list)
     entities: list[str] = Field(default_factory=list)
-    value: str | None = Field(default=None, description="for distance: an expression over parameter names (mm), e.g. 'OuterWall'")
+    value: str | None = Field(default=None, description="for distance: an expression over parameter names (mm), e.g. 'Thickness'")
     description: str = ""
     confidence: float = Confidence
     evidence: list[str] = Field(default_factory=list)
 
 
 class AIAnswer(BaseModel):
-    structure_type: str = Field(description="e.g. 'RCC box culvert, 2 cells' or 'PSC girder bridge, 3 spans'")
-    family: str = Field(description="family id from the knowledge pack (rcc_box, slab, girder, pipe, arch, rub, rob) or 'other'")
+    structure_type: str = Field(description="what kind of structure this is, in your own words, with its cells / spans / bays")
+    family: str = Field(description="a short word of your own for the kind of structure (the pack's id when a domain pack is on), or 'other'")
     views: list[str] = Field(description="what each view on the sheet is, e.g. 'half section / half elevation at A-A'")
     summary: str
     components: list[AIComponent]

@@ -1,7 +1,7 @@
 # The agent session — one instruction, one run
 
 What replaced the three Run buttons and the rule-based "Plan a change" panel. Everything here is implemented and tested
-(`tests/test_run.py`, `tests/test_acceptance.py`, `tests/test_baseline.py`, `tools/ui_check.mjs`); the model is replaced by a
+(`tests/test_run.py`, `tests/test_run_plan.py`, `tests/test_statement.py`, `tests/test_domain.py`, `tests/test_acceptance.py`, `tests/test_baseline.py`, `tools/ui_check.mjs`); the model is replaced by a
 script in every test, so nothing has been billed.
 
 ## What the person does
@@ -11,15 +11,19 @@ a second set of instructions), **Run**, and while it works **Stop**. The agent d
 state of a machine, and the page shows only what the server reports:
 
 ```
-queued → running ⇄ paused (a chunk of turns used)      ⇄ awaiting_user (a decision is the person's)
-                 → stopping → stopped                   ⇄ exhausted (a hard limit; continue with more turns)
+queued → running ⇄ paused (only if chunks were asked)  ⇄ awaiting_user (a decision is the person's)
+                 → stopping → stopped                   ⇄ exhausted (a hard limit; continuing lifts it)
                  → completed | partial | failed         (failed by the model not answering can be retried)
 ```
 
 `completed` only when every criterion of the verdict holds; otherwise `partial` with the list of what remains. The verdict is derived
 from the engine, never from a message: finished by the engine's gate · every unit's edits applied to the sheet · nothing pending · no
 open problem · every accepted plan measured (V16) · every requested value applied · nothing waiting for the person · no refused edit left
-(each is asked again of the engine's current state) · shared values still drive their views · every sentence of the instruction accounted for.
+(each is asked again of the engine's current state) · shared values still drive their views · every sentence of the instruction accounted for ·
+**the model's own commitments kept** (a clause it said a plan / links / views / parts / values would handle was handled) · **the plan it stated
+still holds on the sheet**. Beside the criteria the verdict carries `notes` (things to read that are not failures: what was left out on
+purpose and why, what the plan leaves out, a group the engine doubted that nobody looked at, views never parametrized), `given_up`, the
+plan itself, and `finish_summary` — what the model said it did, whole.
 
 ## Who does what
 
@@ -27,7 +31,8 @@ open problem · every accepted plan measured (V16) · every requested value appl
 |---|---|
 | reads the instruction clause by clause (`account_instruction`: its quote, what it means, what handles it) | checks every quote is in the person's text and every sentence is accounted for |
 | looks: the sheet and the open view as pictures, `inspect_sheet`, `zoom_view` (as often as it needs) | draws the pictures from the regenerated geometry, stamped with the revision, with ids and the pixel frame |
-| names views (`describe_views`), parts, values, levels, links (`share_sizes`), formulas, constraints | validates every edit at once (V1–V15), measures every binding, takes back what breaks the drawing |
+| names views (`describe_views`), parts, values, levels, links (`share_sizes`), formulas, constraints | validates every edit at once (V1–V15), measures every binding, takes back what breaks the drawing; a relation that names nothing (a bare number) is refused |
+| states the plan across views (`state_plan`): which components and dimensions appear in more than one view, as which part or value, how they relate, how that is bound — and what it assumed | checks every unit, view, part and value exists and every binding it claims is on the sheet (a shared value that drives each unit, views in projection, a relation between the views) or is said to be only noted; counts what the plan leaves out |
 | proposes the plan (`propose_plan`: value, anchor, directives with the person's words, its own questions) | resolves references, predicts each anchor, asks what only a person can decide, compiles the accepted plan into the set-out, measures it (V16) |
 | asks (`ask_person`) | pauses the run, applies the person's answers itself (not relayed by the model) and rebuilds the waiting plans |
 | `finish` | the gate, then the sheet's transaction: refused as a whole, with nothing changed, if the sheet changed meanwhile or would no longer hold |
@@ -36,13 +41,63 @@ No second engine or solver: the closed-form datum program (`program.py`, `assemb
 constraint solver was not needed for what is supported (linear set-out, anchors, equalities); a case outside that is refused or asked,
 not approximated.
 
-## Budgets pause, they never cut (`ai/loop.py`)
+## Budgets never cut good work (`ai/loop.py`)
 
-`Budget`: `soft_turns` (a chunk — the run pauses and can be continued, nothing lost, nothing done twice), `max_turns`, `max_tool_calls`,
-`wall_s` (working time; waiting for a person does not count), `max_tokens` (output + thinking), `call_s` (one model call), and a limit on
-turns of only looking. Set per run in the page (Options and budget) or by `AUTOPARAM_*` / `VERTEX_AGENT_MAX_STEPS`. Stop abandons the
+`Budget`: `soft_turns` (a chunk — only when a person asks for chunks: the run pauses and can be continued, nothing lost, nothing done twice;
+**0, the default, never pauses**), `max_turns` (1000), `max_tool_calls` (6000), `wall_s` (4 h of working time; waiting for a person does not
+count), `max_tokens` (2 M output + thinking), `call_s` (one model call), and a limit on turns of only looking. The hard limits are safety nets
+against a model that loops, set so that a sheet of any size finishes inside them. When a run does reach one, **continuing lifts exactly the
+limit that was reached** by another allowance of its own size (and says so in the timeline); nobody has to type a number. Set per run in the
+page (Options and budget) or by `AUTOPARAM_*` / `VERTEX_AGENT_MAX_STEPS`. Stop abandons the
 call in flight; the turn it would have made does not happen. A change made by a person while the run works is never overwritten silently:
 the run asks whether to apply its edits on top of it.
+
+## What a refused edit is, and what repairs it
+
+The engine takes a refused size back at once, so "the size is no longer in the answer" proves nothing. A refusal is therefore tracked **by its
+name** (`define_parameters` item, a shared name, a relation between views, a link in the plan) and is closed only by the **state** the engine
+shows now: the size kept by a program that reproduces the drawing, the shared value bound to every unit it named, the link stored in the plan.
+A sheet tool that applies part of a call and refuses the rest (`share_sizes`, `describe_views`, `state_plan`) answers `ok: false, partial: true`
+and lists what was applied and what was not; what was applied stays applied, what was refused stays open. Leaving one out **on purpose** is
+a different, explicit act, and it is said in the verdict (`given_up`, a note): `remove` of the size, `set_relation` with an empty expression,
+or a plan link with `bound_by: noted_only` that names the refused share. `finish` is refused once while any of this is open (with the list), and
+a second `finish` ends the run with what holds — the verdict then says what is open.
+
+## The plan across views (`ai/statement.py`)
+
+When the instruction asks for it — or whenever views relate — the model states the plan with `state_plan`: for every component or dimension that
+appears in more than one view, the places (`unit` / `view`, `part` and / or `value`), how they relate (`same_component`, `detail_of`,
+`same_dimension`, `same_dimension_other_scale`, `derived_from`, `other`) and how that is bound (`shared_value`, `projection`, `view_relation`,
+`noted_only`), plus assumptions and a summary. Nothing is read for meaning: the names are the model's own. The engine refuses a link that names a
+unit, view, part or value the sheet does not hold (and says what it does hold), and a binding that is not there (a shared value that does not
+drive every unit named; "projection" across two units; views the sheet does not relate). It is kept in the project (one undoable step, per run;
+a reset clears it), asked again of the sheet when the run ends (`plan holds`), and shown in the page. It also **counts what the model did across
+views that the plan leaves out**: a shared value not in it, a relation between views with no component in common listed, a name used in several
+units for the same value (neither shared nor in the plan), a part name in several units. The model sees these at its first `finish`; the person
+sees them as notes. `noted_only` is how a relation the engine cannot tie stays honest: it is shown as "not enforced".
+
+## Groups that are not views
+
+`inspect_sheet` lists `views` (only views) and `other_groups` (tables, notes, the title block) with what each holds as the engine counted it
+(drawn items, curved ones, dimensions, texts). A group taken for a table that holds a view's content (many drawn items, dimensions) is
+**doubted**, in words, and `zoom_view(view=<its id>)` shows it as drawn. The model says what it is (`describe_views`, `kind`); re-kinded as a
+view it becomes a unit of its own (named from the whole id, `UT01`, never taking another unit's name) that can be parametrized. A doubted group
+nobody looked at is said at the first `finish` and as a note of a whole-drawing run. In the segmenter a ruled grid with words is a table only
+if it holds no dimensions; a plan view that has no hatch used to qualify, because the rule never looked.
+
+## The domain pack is off by default (`ai/domain.py`)
+
+Nothing the model reads names a kind of structure, a family or a value (`tests/test_domain.py` scans every model-visible text for them): the
+model names parts, values and levels the way a designer of *this* drawing would, from what it sees, and the engine keeps the names as written.
+A pack (`knowledge/<name>.json`: concept names, structure families, formulas, and a drafting guide) is a person's choice for a run
+(`options.domain`) or the process (`AUTOPARAM_DOMAIN`); when on, its names are *offered* in the overview and the system prompt, and the
+`knowledge` tool exists. The bridge pack is the only one shipped. The engine (analysis, validation, regeneration, the sheet model) never reads it.
+
+## Replaying a recorded run (`tools/replay_trace.py`)
+
+A live run's own model turns are in the client's answer cache (the usage ledger names each key). `RecordedModel` replays them, free, through the
+*current* engine: what a change of the engine makes of the model's real behaviour — a call now refused, a promise now checked, a verdict now
+different. `--then FILE` adds scripted turns after the recorded ones (never the model's). It is faithful only while the sheet is segmented as it was.
 
 ## Pictures
 

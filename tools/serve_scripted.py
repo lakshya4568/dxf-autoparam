@@ -55,7 +55,8 @@ def make_script(sheet: SheetSession, uid: str, g: dict, delay: float = 0.0):
         "Look at the sheet before touching anything.", "Zoom into the section to tag its entities with the ids the tools use.",
         "Name the parts from the regions, bind the clear span on both cells, and try one wrong claim the engine must refuse.",
         "Repair: remove the wrong value and measure what the clear span moves.", "Inspect the assembly the clear span belongs to.",
-        "Propose the plan with the person's own words as clauses; the anchor was not said.", "Finish: the engine asks the person first.", "Finish.")]
+        "Propose the plan with the person's own words as clauses; the anchor was not said.", "Finish: the engine asks the person first.",
+        "State how the two views relate, then finish.")]
     return ScriptedModel([
         [call("account_instruction", why="read the instruction first", items=[{"quote": q, "kind": k, "meaning": m, "handled_by": h} for q, k, m, h in READING])],
         [call("inspect_sheet", why="see the views and what is parametrized")],
@@ -66,7 +67,11 @@ def make_script(sheet: SheetSession, uid: str, g: dict, delay: float = 0.0):
         [call("inspect_assembly", why="which parts the clear span belongs to and what each anchor would do", parameter="ClearSpan")],
         [call("propose_plan", why="the plan, with the person's words behind each directive", parameter="ClearSpan", requested_value=2500, directives=DIRS)],
         [call("finish", summary="the plan waits for the person's choice of anchor")],
-        [call("finish", summary="applied with the person's answers")]], thoughts=thoughts, delay=delay)
+        [call("state_plan", why="say how the two views of the box relate", summary="The half section and the half elevation show one box: they are drawn in projection, so a size changed in one is changed in the other.",
+              links=[{"what": "box walls", "kind": "component", "relation": "same_component", "appears_in": [{"view": "V01", "part": "LeftWall"}, {"view": "V02", "part": "LeftWall"}],
+                      "bound_by": "projection", "evidence": ["the two views share their vertical set-out lines"]}],
+              assumptions=[{"text": "the pitching detail is outside the edit", "why": "the person said to leave it unchanged"}]),
+         call("finish", summary="applied with the person's answers; the plan across the views is stated")]], thoughts=thoughts, delay=delay)
 
 
 def main() -> None:

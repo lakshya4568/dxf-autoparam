@@ -127,7 +127,9 @@ def test_the_agent_describes_the_views_in_one_run_and_what_holds_is_applied(tmp_
         time.sleep(0.05)
     call_ev = next(e for e in p["events"] if e["kind"] == "tool" and e["name"] == "describe_views")
     res = call_ev["result"]
-    assert call_ev["ok"] and res["applied"] == [f"{el}: name → MAIN ELEVATION"] and res["refused"] == ["V99: no such group"]  # what held, and what did not
+    # what held stays applied and is said; the call is not reported as accepted when part of it was refused, and the run does not call itself complete
+    assert not call_ev["ok"] and res["partial"] is True and res["applied"] == [f"{el}: name → MAIN ELEVATION"] and res["refused"] == ["V99: no such group"]
+    assert p["verdict"]["state"] == "partial" and p["verdict"]["refused"][0]["item"] == "view:V99"
     assert next(g for g in sheet.summary()["groups"] if g["id"] == el)["name"] == "MAIN ELEVATION"
     assert sheet.sm.undo() and next(g for g in sheet.summary()["groups"] if g["id"] == el)["name"] != "MAIN ELEVATION"
     with pytest.raises(Exception, match="write an instruction"):

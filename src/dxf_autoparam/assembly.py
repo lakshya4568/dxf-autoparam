@@ -21,7 +21,7 @@ values, no solver; nothing outside the assembly is rewritten; a line a person, t
 part sets is never rewritten — when it would have to move, the policy is refused with the reason.
 
     members = assembly_lines(prog, parts, core, "x")
-    st = stack(prog, "x", [Driver("ClearSpan", pairs, "start_fixed")], members)
+    st = stack(prog, "x", [Driver("Width", pairs, "start_fixed")], members)
 """
 
 from __future__ import annotations
@@ -92,7 +92,7 @@ def linear(expr: str) -> tuple[dict[str, float], float] | None:
 
 
 def expr_of(base: str | None, coefs: dict[str, float], const: float = 0.0) -> str:
-    """`base + Σ coef·name + const`, written as a person would ("x2 + ClearSpan", "x6 - 0.5 * ThkX4")."""
+    """`base + Σ coef·name + const`, written as a person would ("x2 + Width", "x6 - 0.5 * ThkX4")."""
     out = base or ""
     for n, c in sorted(coefs.items()):
         if abs(c) < 1e-12:

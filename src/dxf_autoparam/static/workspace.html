@@ -135,6 +135,8 @@
   .stats { display: flex; gap: 10px; flex-wrap: wrap; color: var(--muted); font-size: 11px; }
   .crit { display: grid; grid-template-columns: 14px 1fr; gap: 1px 6px; font-size: 11.5px; margin: 2px 0; } .crit .m { text-align: center; }
   .crit.ok .m { color: var(--ok); } .crit.no .m { color: var(--bad); } .crit .d { color: var(--muted); }
+  details.plan, details.notes { margin: 6px 0; font-size: 11.5px; } details.plan > summary, details.notes > summary { cursor: pointer; font-weight: 600; }
+  .planrow { border-left: 3px solid var(--ok); padding: 2px 0 2px 8px; margin: 4px 0; } .planrow.bad { border-left-color: var(--bad); } .planrow .bad { color: var(--bad); }
   .q { border: 1px solid var(--warn); border-radius: 6px; padding: 6px 8px; margin: 4px 0; display: flex; flex-direction: column; gap: 4px; }
   .q .opts { display: flex; flex-wrap: wrap; gap: 4px; } .q .opts label { border: 1px solid var(--line); border-radius: 5px; padding: 2px 7px; cursor: pointer; }
   .q .opts label.on { border-color: var(--accent); background: var(--hover); }
@@ -994,7 +996,7 @@ function viewInspector(gid) {
   const uc = u && unitCache.get(u.id);
   if (uc) h += fold("vnamesize", "Name a size here (advanced)", `<div class="note">Pick a size measured in this view and give it a name: it then drives its lines, and other views' sizes can be linked to it.</div>
      <div class="bar" style="padding:2px 10px"><select id="cand" style="flex:1;min-width:0">${uc.candidates.filter((c) => c.value >= 1).slice(0, 120).map((c) => `<option value="${c.id}">${fmt(c.value)} mm · ${c.axes.join("") === "x" ? "horizontal" : c.axes.join("") === "y" ? "vertical" : esc(c.axes.join(""))} ${esc(c.kind)}${c.evidence.includes("dimension") ? " · dimensioned" : ""}</option>`).join("")}</select></div>
-     <div class="bar" style="padding:4px 10px"><input type="text" id="sname" placeholder="a name, e.g. ClearSpan" style="flex:1"><button id="sharebtn">Name it</button></div>`);
+     <div class="bar" style="padding:4px 10px"><input type="text" id="sname" placeholder="a name for this size" style="flex:1"><button id="sharebtn">Name it</button></div>`);
   return h + `</div>`;
 }
 function wireView(gid) {
@@ -1108,13 +1110,13 @@ async function loadProposals() {
 // The page holds no logic of its own about success: what it shows of a run is what the server reports (state, verdict,
 // questions, budget), and a poll for one run never overwrites another.
 const ACTIVE = new Set(["queued", "running", "stopping"]);
-let run = null, runs = [], runPoll = 0, aiDraft = "", aiScope = "auto", aiOpts = { confirm: false, soft: 40, max: 400 };
+let run = null, runs = [], runPoll = 0, aiDraft = "", aiScope = "auto", aiOpts = { confirm: false, soft: 0, max: 1000 };
 const dur = (s) => s == null ? "" : s < 60 ? `${s.toFixed(s < 10 ? 1 : 0)} s` : `${Math.floor(s / 60)} min ${String(Math.round(s % 60)).padStart(2, "0")} s`;
 const TOOL_WORDS = { inspect_sheet: "looked at the sheet", open_unit: "opened a view", inspect_regions: "inspected regions", inspect_lines: "inspected lines", inspect_candidates: "inspected candidate sizes",
   inspect_dimensions: "inspected dimensions", resolve_labels: "resolved labels", find_values: "searched for sizes", knowledge: "consulted the knowledge pack", what_moves: "measured what a value moves",
   inspect_assembly: "inspected the assembly", zoom_view: "zoomed into the drawing", account_instruction: "read the instruction", describe_views: "described the views", share_sizes: "linked sizes across views",
   set_structure: "named the structure", define_parts: "named parts", define_parameters: "bound values", set_levels: "named levels", set_formulas: "wrote formulas", set_relation: "related values",
-  remove: "removed items", add_constraints: "stated constraints", state_behaviours: "stated behaviour", propose_plan: "proposed a plan", ask_person: "asked you", finish: "finished" };
+  remove: "removed items", add_constraints: "stated constraints", state_behaviours: "stated behaviour", propose_plan: "proposed a plan", state_plan: "stated the plan across views", ask_person: "asked you", finish: "finished" };
 const STATUS_WORDS = { queued: "Waiting to start", running: "Working", stopping: "Stopping…", paused: "Paused", awaiting_user: "Waiting for your decision", stopped: "Stopped", exhausted: "Out of budget — incomplete",
   completed: "Complete", partial: "Partly done", failed: "Failed", idle: "" };
 const nameOfView = (v) => { const g = S && S.groups.find((x) => x.id === v); return g ? (g.name || g.view_type || g.kind) : ""; };
@@ -1171,7 +1173,7 @@ function turnHtml(t, live) {
   if (t.thoughts.length) { const txt = t.thoughts.join("\n\n"); b += `<details class="think" data-fold="${key}-t" ${openFolds.has(key + "-t") ? "open" : ""}><summary>The model's own summary of its thinking · ${txt.split(/\s+/).length} words</summary><div class="txt">${md(txt)}</div></details>`; }
   for (const c of t.items) b += callHtml(c);
   for (const n of t.notes) b += `<div class="note ${n.c}" style="padding:0">${esc(n.t)}</div>`;
-  if (t.status) b += `<div class="muted" style="font-size:10.5px">so far: ${esc(t.status.parts ?? "—")} parts · ${esc(t.status.parameters ?? "—")} named sizes · ${esc(t.status.open_problems ?? "—")} open problems${t.status.turns_left ? ` · ${t.status.turns_left.in_chunk} turns left in this chunk` : ""}${t.status.stale_pictures ? ` · ${esc(t.status.stale_pictures)}` : ""}</div>`;
+  if (t.status) b += `<div class="muted" style="font-size:10.5px">so far: ${esc(t.status.parts ?? "—")} parts · ${esc(t.status.parameters ?? "—")} named sizes · ${esc(t.status.open_problems ?? "—")} open problems${t.status.turns_left ? ` · ${t.status.turns_left.in_chunk} turns left` : ""}${t.status.stale_pictures ? ` · ${esc(t.status.stale_pictures)}` : ""}</div>`;
   if (live && !t.items.length && !t.thoughts.length) b += `<div class="muted">waiting for the model…</div>`;
   return `<details class="turn ${live ? "live" : ""}" data-fold="${key}" ${open ? "open" : ""}><summary><b>Turn ${esc(t.n)}</b><span style="letter-spacing:1px">${marks}</span><span class="muted" style="margin-left:auto">${dur(Math.max(0, t.t1 - t.t0))}</span></summary><div class="body">${b}</div></details>`;
 }
@@ -1198,6 +1200,23 @@ function plainError(e) {
 }
 const md = (t) => esc(t).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\n+/g, "<br>");
 function meter(used, cap, warnAt = 0.85) { const f = cap ? Math.min(1, used / cap) : 0; return `<div class="meter ${f >= warnAt ? "warn" : ""}"><i style="width:${Math.round(f * 100)}%"></i></div>`; }
+// The plan the model STATED for the sheet (components and dimensions that appear in more than one view, how they relate, how that is bound) with
+// every link asked again of the sheet: a link that does not hold is shown as such. Nothing here is the page's own reading.
+function planCard(pl) {
+  if (!pl || !pl.stated) return "";
+  const rel = (r) => String(r || "").replace(/_/g, " ");
+  const links = pl.links || [], bad = links.filter((x) => !x.holds).length;
+  let h = `<details class="plan" open><summary>Plan across views — ${links.length} link${links.length === 1 ? "" : "s"}${bad ? ` · ${bad} no longer hold${bad === 1 ? "s" : ""}` : ""}</summary>`;
+  if (pl.summary) h += `<div class="note" style="padding:0 0 4px">${md(pl.summary)}</div>`;
+  for (const x of links) {
+    const where = (x.appears_in || []).map((p) => `${esc(p.unit)}${p.view ? ` (${esc(p.view)})` : ""} ${esc([p.part, p.value].filter(Boolean).join(" · "))}`).join(" ↔ ");
+    h += `<div class="planrow ${x.holds ? "" : "bad"}"><b>${esc(x.what)}</b> <span class="muted">${esc(rel(x.relation))}</span><div>${where}</div>`
+      + `<div class="muted">bound by ${esc(rel(x.bound_by))}${x.shared_value ? ` <code>${esc(x.shared_value)}</code>` : ""}${x.bound_by === "noted_only" ? " — not enforced by the engine" : ""}`
+      + `${x.holds ? "" : ` — <span class="bad">${esc(x.why)}</span>`}</div>${x.note ? `<div class="muted">${esc(x.note)}</div>` : ""}</div>`;
+  }
+  if ((pl.assumptions || []).length) h += `<div class="muted" style="margin-top:4px">Assumed</div>` + pl.assumptions.map((a) => `<div class="note" style="padding:0">• ${esc(a.text)}${a.why ? ` <span class="muted">— ${esc(a.why)}</span>` : ""}</div>`).join("");
+  return h + `</details>`;
+}
 function statusCard() {
   if (!run) return "";
   const u = run.usage || {}, lim = u.limits || {}, st = run.status || "queued", v = run.verdict;
@@ -1209,10 +1228,13 @@ function statusCard() {
   if (live) h += `<div class="muted">${last ? `running <b>${esc(TOOL_WORDS[last.name] || last.name)}</b>${last.unit ? " in " + esc(last.unit) : ""}…` : esc(run.stage || "working")} · every edit is checked by the engine before it is kept</div>`;
   else if (v) h += `<div>${esc(v.headline || "")}</div>`;
   else if (run.reason) h += `<div class="muted">${esc(run.reason)}</div>`;
-  h += `<div class="stats"><span>turn ${esc(u.turns ?? 0)} of ${esc(lim.max_turns ?? "—")}</span><span>this chunk ${esc(u.chunk ? u.chunk.turns : 0)}/${esc(lim.soft_turns ?? "—")}</span><span>${esc(u.tool_calls ?? 0)} tool calls</span><span>${Number(u.tokens || 0).toLocaleString()} / ${Number(lim.max_tokens || 0).toLocaleString()} tokens</span></div>`;
-  h += meter(u.chunk ? u.chunk.turns : 0, lim.soft_turns || 1);
+  h += `<div class="stats"><span>turn ${esc(u.turns ?? 0)} of ${esc(lim.max_turns ?? "—")}</span>${lim.soft_turns ? `<span>this chunk ${esc(u.chunk ? u.chunk.turns : 0)}/${esc(lim.soft_turns)}</span>` : ""}<span>${esc(u.tool_calls ?? 0)} tool calls</span><span>${Number(u.tokens || 0).toLocaleString()} / ${Number(lim.max_tokens || 0).toLocaleString()} tokens</span></div>`;
+  h += meter(lim.soft_turns ? (u.chunk ? u.chunk.turns : 0) : (u.turns || 0), lim.soft_turns || lim.max_turns || 1);
   if (v) {
     for (const c of v.criteria || []) h += `<div class="crit ${c.ok ? "ok" : "no"}"><span class="m">${c.ok ? "✓" : "✗"}</span><span>${esc(c.id.replace(/_/g, " "))}<div class="d">${esc(c.detail)}</div></span></div>`;
+    h += planCard(v.plan);
+    if ((v.notes || []).length) h += `<details class="notes"><summary>${v.notes.length} note${v.notes.length === 1 ? "" : "s"} to read — not failures</summary>${v.notes.map((n) => `<div class="note" style="padding:0">• ${esc(n)}</div>`).join("")}</details>`;
+    if (v.finish_summary) h += `<details class="notes"><summary>What the model says it did</summary><div class="note" style="padding:0">${md(v.finish_summary)}</div></details>`;
     for (const p of v.plans || []) h += `<div class="note" style="padding:0">plan ${esc(p.id)} — ${esc(p.status)}${p.checks ? ` · measured ${esc(p.checks.passed)} passed, ${esc(p.checks.failed)} failed` : ""}${(p.failed || []).map((x) => `<div class="bad">${esc(x)}</div>`).join("")}</div>`;
     for (const x of v.values_applied || []) h += `<div class="note ok" style="padding:0">✓ <span class="lnk" data-openparam="${esc(x.name)}" title="Highlight the geometry it controls">${esc(x.name)}</span> = ${esc(x.value)}${x.already ? " (already)" : ""}</div>`;
     if (run.can && run.can.revert) h += `<div class="bar"><button id="ai-revert" title="Take back everything this run applied to the sheet">Revert this run</button></div>`;
@@ -1235,10 +1257,10 @@ function agentPanel() {
   let h = `<div class="agent-box">
     <div class="muted" style="font-size:11px">One instruction. The agent decides the steps: it looks at the sheet and the view, zooms where it needs to, reads what you wrote, plans, asks when something is yours to decide, and the engine checks everything before it is kept.</div>
     <div class="row2"><span class="muted">Applies to</span><select id="ai-scope"><option value="auto" ${aiScope === "auto" ? "selected" : ""}>Where I am (${esc(choices.find((c) => c.id === cur).label)})</option>${choices.map((c) => `<option value="${c.id}" ${aiScope === c.id ? "selected" : ""} ${c.ok ? "" : "disabled"}>${esc(c.label)}</option>`).join("")}</select></div>
-    <textarea id="ai-instr" placeholder="e.g. Reduce the clear span to 2500 mm. Keep the middle wall centred, preserve the wall and slab thicknesses, hold the bed level and the existing foundation, update the half section and half elevation, keep the unrelated detail unchanged. Show me anything ambiguous before applying.">${esc(aiDraft)}</textarea>
+    <textarea id="ai-instr" placeholder="e.g. Parametrize every view and link the sizes the views share; say in your plan which components appear in more than one view. Or: Change the width of the opening to 2500 mm, keep the middle wall centred and the foundation fixed. Show me anything ambiguous before applying.">${esc(aiDraft)}</textarea>
     <div class="row2"><button class="run" id="ai-run">▶ Run</button><button class="stop" id="ai-stop" style="display:none">■ Stop</button><button id="ai-continue" style="display:none">Continue</button><button id="ai-apply" style="display:none" title="Apply what is valid now, and say what is not done">Apply what is valid</button><span class="muted" style="font-size:11px">⌘/Ctrl + Enter</span></div>
     ${fold("ai-opts", "Options and budget", `<div class="note"><label><input type="checkbox" id="ai-confirm" ${aiOpts.confirm ? "checked" : ""}> ask me to confirm a plan before it is applied</label></div>
-      <div class="note">pause after <input type="number" id="ai-soft" value="${aiOpts.soft}" style="width:64px"> turns (a pause is not a failure: continue goes on) · at most <input type="number" id="ai-max" value="${aiOpts.max}" style="width:70px"> turns in all</div>
+      <div class="note">pause after <input type="number" id="ai-soft" value="${aiOpts.soft}" min="0" style="width:64px"> turns (0 = never pause; a pause is not a failure: continue goes on) · at most <input type="number" id="ai-max" value="${aiOpts.max}" style="width:70px"> turns in all</div>
       <div class="note">Each run is billed by the model provider; nothing it proposes is kept unless the engine checks it, and everything can be undone.</div>`, null)}
     </div><div id="ai-live"></div>`;
   return h;
@@ -1265,7 +1287,7 @@ function syncAgentControls() {
   const set = (id, on) => { const el = $(id); if (el) el.style.display = on ? "" : "none"; };
   const r = $("#ai-run"); if (r) r.disabled = !!live;
   set("#ai-stop", st === "running"); set("#ai-continue", !!can.continue); set("#ai-apply", !!can.apply && st !== "awaiting_user");
-  const c = $("#ai-continue"); if (c) c.textContent = st === "exhausted" ? `Continue (+${aiOpts.soft} turns)` : st === "failed" ? "Retry" : "Continue";
+  const c = $("#ai-continue"); if (c) c.textContent = st === "exhausted" ? "Continue (lift the limit that was reached)" : st === "failed" ? "Retry" : "Continue";
 }
 function wireAgentLive() {
   const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
@@ -1289,11 +1311,11 @@ function wireAgent() {
   const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
   on("#ai-run", startRun);
   on("#ai-stop", () => guard(() => api("/api/sheet/ai/stop", { run: run.id })).then(() => pollRun(true)));
-  on("#ai-continue", () => resumeRun({ more_turns: run && run.status === "exhausted" ? aiOpts.soft : undefined }));
+  on("#ai-continue", () => resumeRun({}));
   on("#ai-apply", async () => { const r = await guard(() => api("/api/sheet/ai/apply", { run: run.id }), "Applying what is valid…"); if (r) { take(r); await attachRun(run.id); await afterRun(true); } });
   const c = $("#ai-confirm"); if (c) c.addEventListener("change", () => { aiOpts.confirm = c.checked; });
-  const so = $("#ai-soft"); if (so) so.addEventListener("change", () => { aiOpts.soft = Math.max(1, +so.value || 40); });
-  const mx = $("#ai-max"); if (mx) mx.addEventListener("change", () => { aiOpts.max = Math.max(1, +mx.value || 400); });
+  const so = $("#ai-soft"); if (so) so.addEventListener("change", () => { aiOpts.soft = Math.max(0, +so.value || 0); });
+  const mx = $("#ai-max"); if (mx) mx.addEventListener("change", () => { aiOpts.max = Math.max(1, +mx.value || 1000); });
   renderAgentLive();
 }
 function mergeRun(r) {

@@ -13,21 +13,21 @@ STAGE_OF = {
     "inspect_sheet": "inspecting", "open_unit": "inspecting", "inspect_regions": "inspecting", "inspect_lines": "inspecting",
     "inspect_candidates": "inspecting", "inspect_dimensions": "inspecting", "resolve_labels": "inspecting", "find_values": "inspecting",
     "knowledge": "inspecting", "what_moves": "measuring", "inspect_assembly": "measuring", "zoom_view": "looking",
-    "account_instruction": "interpreting", "describe_views": "understanding the views", "share_sizes": "linking the views",
+    "account_instruction": "interpreting", "describe_views": "understanding the views", "share_sizes": "linking the views", "state_plan": "stating the plan",
     "set_structure": "naming the parts", "define_parts": "naming the parts", "define_parameters": "binding values",
     "set_levels": "binding values", "set_formulas": "binding values", "set_relation": "binding values", "remove": "binding values",
     "add_constraints": "stating intent", "state_behaviours": "stating intent", "propose_plan": "planning",
     "ask_person": "asking", "finish": "validating",
 }
 STAGES = ("inspecting", "looking", "interpreting", "understanding the views", "naming the parts", "binding values", "stating intent", "planning",
-          "measuring", "linking the views", "asking", "validating", "committing")
+          "measuring", "linking the views", "stating the plan", "asking", "validating", "committing")
 
 WORDS = {
     "inspect_sheet": "looked at the sheet", "open_unit": "opened a view", "inspect_regions": "inspected regions", "inspect_lines": "inspected lines",
     "inspect_candidates": "inspected candidate sizes", "inspect_dimensions": "inspected dimensions", "resolve_labels": "resolved labels",
     "find_values": "searched for sizes", "knowledge": "consulted the knowledge pack", "what_moves": "measured what a value moves",
     "inspect_assembly": "inspected the assembly", "zoom_view": "zoomed into the drawing", "account_instruction": "read the instruction",
-    "describe_views": "described the views", "share_sizes": "linked sizes across views", "set_structure": "named the structure",
+    "describe_views": "described the views", "share_sizes": "linked sizes across views", "state_plan": "stated the plan", "set_structure": "named the structure",
     "define_parts": "named parts", "define_parameters": "bound values", "set_levels": "named levels", "set_formulas": "wrote formulas",
     "set_relation": "related values", "remove": "removed items", "add_constraints": "stated constraints", "state_behaviours": "stated behaviour",
     "propose_plan": "proposed a plan", "ask_person": "asked you", "finish": "finished",
@@ -61,6 +61,8 @@ def summarise(name: str, a: dict, res) -> str:
             return f"refused: {str(res['refused'])[:160]}"
         if isinstance(res, dict) and res.get("error"):
             return f"error: {str(res['error'])[:160]}"
+        if name == "zoom_view" and isinstance(res, dict) and res.get("group"):
+            return f"picture {res.get('image', '?')} of {res['group'].get('id')} ({res['group'].get('kind')}), revision {res.get('revision', '?')}"
         if name == "zoom_view":
             r = res if isinstance(res, dict) else {}
             return (f"picture {r.get('image', '?')} of {r.get('view') or r.get('unit') or 'the sheet'}"
@@ -73,7 +75,10 @@ def summarise(name: str, a: dict, res) -> str:
         if name == "find_values":
             return f"{_n(res)} candidate(s) near {a.get('value_mm', a.get('region', 'the request'))}"
         if name == "inspect_sheet" and isinstance(res, dict):
-            return f"{_n(res.get('views'))} views, {_n(res.get('units'))} units, revision {res.get('revision')}"
+            other = res.get("other_groups") or []
+            doubted = sum(1 for g in other if g.get("doubt"))
+            return (f"{_n(res.get('views'))} views, {_n(other)} other groups" + (f" ({doubted} doubted)" if doubted else "") +
+                    f", {_n(res.get('units'))} units, revision {res.get('revision')}")
         if name == "open_unit" and isinstance(res, dict):
             c = res.get("committed_previous")
             return f"{res.get('unit')} ({', '.join(res.get('views', []))}){'; previous unit ' + ('applied' if c and c.get('ok') else 'kept pending' + (': ' + str(c.get('why'))[:80] if c else '')) if c is not None else ''}"
@@ -83,7 +88,14 @@ def summarise(name: str, a: dict, res) -> str:
         if name == "inspect_assembly" and isinstance(res, dict):
             return f"{res.get('parameter')}: {_n(res.get('core_parts'))} core part(s), {_n(res.get('tied_to_it'))} tied, {_n(res.get('anchors'))} anchor option(s)"
         vs = _verdicts(res)
-        if name in ("define_parts", "define_parameters", "set_levels", "set_formulas", "add_constraints", "state_behaviours", "account_instruction", "describe_views", "share_sizes") and vs:
+        if name == "state_plan" and vs:
+            v = vs[0]
+            return (f"{len(v.get('applied') or [])} kept in the plan" + (f"; {len(v.get('refused') or [])} refused ({str((v.get('refused') or ['?'])[0])[:90]})" if v.get("refused") else "")
+                    + (f"; not yet in the plan: {str((v.get('not_yet_in_the_plan') or [''])[0])[:90]}" if v.get("not_yet_in_the_plan") else ""))
+        if name in ("describe_views", "share_sizes") and vs:
+            v = vs[0]
+            return f"{len(v.get('applied') or [])} applied" + (f"; {len(v.get('refused') or [])} refused ({str((v.get('refused') or ['?'])[0])[:90]})" if v.get("refused") else "")
+        if name in ("define_parts", "define_parameters", "set_levels", "set_formulas", "add_constraints", "state_behaviours", "account_instruction") and vs:
             ok = [v for v in vs if v.get("ok")]
             bad = [v for v in vs if not v.get("ok")]
             names = _ids([v.get("item") for v in ok])

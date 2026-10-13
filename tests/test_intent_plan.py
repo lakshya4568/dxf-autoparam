@@ -22,6 +22,13 @@ from dxf_autoparam.intent import _boxes, _geometry, classify
 from dxf_autoparam.plan import build_plan, plan_errors_at, read_instruction, verify_plan, vocabulary
 from dxf_autoparam.plan_bench import Box, _expected_points, box_answer, box_gad
 
+
+@pytest.fixture(autouse=True)
+def bridge_pack(monkeypatch):
+    """These cases are box culverts and their instructions use the bridge pack's words ('foundation' for a footing): the pack is on, as a person
+    would switch it on. Nothing in the engine asks for it."""
+    monkeypatch.setenv("AUTOPARAM_DOMAIN", "bridge")
+
 FOLLOW_ALL = "Wing walls follow the box. The foundation follows the box. Do not modify the unrelated pitching detail."
 
 

@@ -6,10 +6,10 @@ drift: it is the file's own geometry, and a parameter's ORIGINAL value is what i
 geometry (`u.an` is the analysis of the unmodified view). Nothing here reconstructs an original from regenerated
 points.
 
-    original_of(sm, uid, "ClearSpan")      # {"value": 3000, "basis": "measured between x4 and x9 on the imported drawing", …}
-    reset_value(sm, "ClearSpan")           # back to it, regenerated and checked on the whole sheet — or refused, nothing changed
+    original_of(sm, uid, "Width")          # {"value": 3000, "basis": "measured between x4 and x9 on the imported drawing", …}
+    reset_value(sm, "Width")               # back to it, regenerated and checked on the whole sheet — or refused, nothing changed
     reset_drawing(sm)                      # the imported state: values, plans, parametrization, sharing, view corrections
-    highlight(sm, "ClearSpan")             # the geometry it controls / moves / leaves, per view, for the canvas
+    highlight(sm, "Width")                 # the geometry it controls / moves / leaves, per view, for the canvas
     deviation(sm)                          # how far the current drawing is from the imported one, per view
 
 Reset is not undo. Undo reverses the last step; a reset goes back to the source whatever came between, and is itself one
@@ -122,7 +122,7 @@ def reset_value(sm, name: str) -> dict:
 
 def reset_drawing(sm) -> dict:
     """The imported state: values, accepted plans and every parametrization, shared sizes, links a person took or
-    refused, relations and questions, and the corrections made to the views (names, types, merges, splits) — back to what
+    refused, relations, the plan an agent stated, and questions, and the corrections made to the views (names, types, merges, splits) — back to what
     the file alone gives. One undoable step; the undo history before it is kept (a full reset is never a point of no return),
     the redo stack is cleared (as for any new edit), and the saved project file is untouched until it is saved again."""
     st = sm.import_state
@@ -130,7 +130,7 @@ def reset_drawing(sm) -> dict:
            "shared": len(sm.shared), "plans": sum(len((u.answer or {}).get("plans", [])) for u in sm.units.values())}
     sm._push()
     sm.values, sm.shared, sm.unlinked = {}, {}, set(st["unlinked"])
-    sm.accepted, sm.relations, sm.questions = set(), [], []
+    sm.accepted, sm.relations, sm.questions, sm.stated_plan = set(), [], [], {}
     sm.layout.groups = copy.deepcopy(st["groups"])
     sm._relayout()
     for u in sm.units.values():

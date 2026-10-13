@@ -33,10 +33,12 @@ from ..status import parameters_of, sheet_status
 from ..topology import of as topology_of
 from ..viewimg import box_around
 from . import agent as A
+from . import domain
 from .context import SheetScope
 from .loop import AgentLoop, Budget
 from .narrate import STAGE_OF
 from .sheet_ai import apply_shared, apply_views, commit_unit
+from .statement import BOUND, KINDS, RELATIONS, apply_plan, gap_lines, group_facts, plan_gaps, plan_report
 from .vertex import GeminiStopped, GeminiUnavailable
 
 STATES = ("queued", "running", "stopping", "paused", "awaiting_user", "stopped", "exhausted", "completed", "partial", "failed")
@@ -78,7 +80,8 @@ SHEET_TOOL_SPECS = [
     ("open_unit", ("Open a unit (or the unit of a view) so the edit tools work on it. The previous unit's edits are applied to the sheet first "
                    "(checked on the whole sheet; a refusal is said and the edits stay pending). Returns its overview and a picture with its set-out lines."),
      {"type": "object", "properties": {"unit": S, "view": S, "why": WHY}, "required": []}),
-    ("zoom_view", ("Look at the drawing: a picture of the open unit, a view, the whole sheet, or a crop. `around`: entity / region / line / part / "
+    ("zoom_view", ("Look at the drawing: a picture of the open unit, a view, any other group of the sheet (a table, notes — give its id as `view`), "
+                   "the whole sheet, or a crop. `around`: entity / region / line / part / "
                    "candidate ids to frame; or `box_mm`: [x0, y0, x1, y1] in the same mm as the overview's lines. `labels`: entities (every entity tagged "
                    "with the id the tools use — default for a crop), lines (set-out lines x… y…), regions (R…) or none. `state`: drawn (what ids and "
                    "numbers describe — default) or current (with the person's values applied; `baseline`: the imported geometry dotted where it moved). "
@@ -104,9 +107,25 @@ SHEET_TOOL_SPECS = [
                      "or would not drive in its view."),
      {"type": "object", "properties": {"items": {"type": "array", "items": {"type": "object", "properties": {
          "name": S, "targets": {"type": "array", "items": LIST}, "evidence": LIST}, "required": ["name", "targets"]}}, "why": WHY}, "required": ["items"]}),
+    ("state_plan", ("State your plan for the sheet, for the person: for every component or dimension that appears in more than one view — which views, "
+                    "which part or value in each, how they relate (the same component, a detail of it, the same dimension at another scale, derived from "
+                    "it …) and how that is bound: a shared value (share_sizes), views drawn in projection or related with describe_views, or only noted "
+                    "(the engine cannot tie them: say why). Also what you assumed, and a short summary. Every unit, view, part and value you name is "
+                    "checked against the sheet and a binding you claim must exist; what is refused is said, and the rest is kept. Call it again to add or "
+                    "correct links (a link with the same `what` is replaced). Edits pending in the open unit are applied first."),
+     {"type": "object", "properties": {
+         "summary": S,
+         "links": {"type": "array", "items": {"type": "object", "properties": {
+             "what": {"type": "string", "description": "your own name for the component or dimension"},
+             "kind": {"type": "string", "enum": list(KINDS)}, "relation": {"type": "string", "enum": list(RELATIONS)},
+             "appears_in": {"type": "array", "items": {"type": "object", "properties": {"unit": S, "view": S, "part": S, "value": S}}},
+             "bound_by": {"type": "string", "enum": list(BOUND)}, "shared_value": {"type": "string", "description": "the shared value's name, when bound_by is shared_value"},
+             "evidence": LIST, "note": S}, "required": ["what", "relation", "appears_in", "bound_by"]}},
+         "assumptions": {"type": "array", "items": {"type": "object", "properties": {"text": S, "about": S, "why": S}, "required": ["text"]}},
+         "why": WHY}, "required": []}),
 ]
 SHEET_READ = {"inspect_sheet", "open_unit", "zoom_view"}
-SHEET_WRITE = {"describe_views", "share_sizes"}
+SHEET_WRITE = {"describe_views", "share_sizes", "state_plan"}
 
 SESSION = """THIS IS A SESSION ON A WHOLE SHEET of an existing, fully digitised General Arrangement Drawing (a DXF with several views).
 You never draw anything new: you turn what is drawn into a parametric model, as the person's ONE instruction asks. You decide which
@@ -115,7 +134,9 @@ stages the task needs and skip the rest; use the tools for each:
   • READ the instruction first — account_instruction (their words quoted, what you take them to mean, what handles each). Nobody reads it
     for you, and every sentence of it must be accounted for before you finish.
   • LOOK. You are given the whole sheet and the view you work on as PICTURES (each stamped with the sheet revision it shows) and an
-    OVERVIEW of the open unit. inspect_sheet shows the sheet's structure. zoom_view looks at anything closer — a region, a joint, a
+    OVERVIEW of the open unit. inspect_sheet shows the sheet's structure, and what each group that is not a view holds: a group
+    that holds drawn linework and dimensions may be a view the engine took for a table — look (zoom_view with its id) and say what it
+    is (describe_views, kind). zoom_view looks at anything closer — a region, a joint, a
     dimension — as often as you need; the ids drawn on its pictures are the ids every other tool takes. A coordinate read off a picture
     is approximate: the numbers tools return are exact. A picture older than the sheet revision is stale: ask for a new one.
   • UNDERSTAND THE VIEWS (describe_views) when they are unnamed, mistyped or unrelated and the task needs it. Not otherwise.
@@ -124,22 +145,31 @@ stages the task needs and skip the rest; use the tools for each:
   • PLAN a change the person asked for (propose_plan) — never write behaviour for it ad hoc. The engine measures the plan; a failure
     comes back with expected / measured / cause.
   • LINK sizes two views state (share_sizes) only when the task asks for it or a change must reach the other view.
+  • STATE THE PLAN (state_plan) when the person asks for one, and whenever views relate: which components and dimensions appear in more
+    than one view, as which part or value in each, how they relate and how that is bound (a shared value, views related with
+    describe_views, or only noted — say why), and what you assumed. The engine checks every reference and every binding you claim;
+    say what you did not tie as noted, never as bound.
   • ASK (ask_person, or propose_plan questions) whatever the person did not settle: a word that names nothing on the drawing, "don't touch"
     without saying what it means, which side stays. The run waits for the answer and continues you with it. A guess is a failure.
   • FINISH. The engine checks every edit, plan and view and commits only what holds. It reports what is complete and what is not:
     never say more than it does.
 
-A session may take many turns; every status says how many are left in this chunk. If the chunk ends you are paused and continued with
-everything you have — nothing is lost, nothing is done twice. Keep each turn small and checked.
+A session may take as many turns as the drawing needs; every status says how many are left. If the person has the run work in chunks and
+one ends, you are paused and continued with everything you have — nothing is lost, nothing is done twice. Keep each turn small and checked.
 
 """
 
 UNIFIED_SYSTEM = SESSION + A.AGENT_SYSTEM.replace("Aim to finish in about 10 turns; every status tells you how many are left.",
-                                                 "Every status tells you how many turns are left in this chunk; a long task is continued, never cut.")
+                                                 "Every status tells you how many turns are left; a long task is not cut short.")
 
 
-def unified_tools():
-    return A.tools(extra=SHEET_TOOL_SPECS)
+def unified_tools(pack: dict | None = None):
+    return A.tools(extra=SHEET_TOOL_SPECS, pack=pack)
+
+
+def unified_system(pack: dict | None = None) -> str:
+    """The session's system prompt; a domain pack's guide is added only when a person switched one on for the run (options.domain)."""
+    return UNIFIED_SYSTEM + ("\n" + domain.guide(pack) if pack else "")
 
 
 # ── the run ──────────────────────────────────────────────────────────────────────
@@ -192,6 +222,11 @@ class SheetBench:
         self.own_revision = self.sm.revision
         self.pictures = run.host.pictures
         self.touched: list[str] = []
+        self.given_up: list[dict] = []  # refused edits left out on purpose (removed by the model; said in the plan to be only noted): said in the verdict
+        self.looked: set[str] = set()  # groups that are not views which the model looked at or described
+        self.described = 0  # what describe_views applied in this run
+        self.proposed = False  # a plan for a change was proposed in this run (units opened and closed again keep no memory of it)
+        self.finish_summary = ""  # what the model said it did, in its own words, when the engine let it finish
         self.rebase: dict | None = None  # the sheet changed under the run: the person decides whether the edits go on the current sheet
 
     # ── units ───────────────────────────────────────────────────────────────────
@@ -216,7 +251,7 @@ class SheetBench:
             start = copy.deepcopy(u.answer)
             region = box_around([self.sm.layout.group(v).bbox for v in u.views], 0.0)
         wb = A.Workbench(self.sm.path, region=region, start=start, drawing=u.sub, analysis=analysis, scope=scope, instructions=self.original,
-                         confirm_plan=self.run.options.get("confirm_plan", False))
+                         confirm_plan=self.run.options.get("confirm_plan", False), pack=self.run.pack)
         wb.ledger = self.ledger  # one reading of the instruction for the whole run
         wb.said_fn = lambda: self.said
         wb.plans_anywhere = self.any_plan
@@ -226,7 +261,7 @@ class SheetBench:
         return wb
 
     def any_plan(self) -> bool:
-        return any(w.answer.get("plans") for w in self.units.values())
+        return self.proposed or any(w.answer.get("plans") for w in self.units.values())
 
     def dirty(self, uid: str) -> bool:
         wb = self.units[uid]
@@ -293,7 +328,22 @@ class SheetBench:
             return getattr(self, "_" + name)(a)
         if name == "account_clause":
             return self._account(a)
-        return self.wb.write(name, a)
+        out = self.wb.write(name, a)
+        if name == "propose_plan":
+            self.proposed = True
+        elif name == "remove":
+            self._withdraw(a)
+        elif name == "set_relation" and not (a.get("expr") or "").strip():  # a relation taken out is a relation left out on purpose
+            self._withdraw({"parameters": [a.get("name")]}, exact=True)
+        return out
+
+    def _withdraw(self, a: dict, exact: bool = False) -> None:
+        """A size the engine refused and the model then removed is left out on purpose: it is said in the verdict, not held as a failure."""
+        for key in ("parameters", "parts"):
+            for n in a.get(key) or []:
+                r = self.refusals.pop((self.active, n if exact else A.pascal(n)), None)
+                if r is not None:
+                    self.given_up.append({**r, "how": "removed by the model"})
 
     def _account(self, a: dict) -> tuple[str, str]:
         """The reading of the instruction is the run's, not a unit's: checked against the person's text, kept once."""
@@ -325,6 +375,8 @@ class SheetBench:
         return self.wb.verdict(item, kind) if self.active is not None else {"ok": True}
 
     def decorate(self, name: str, item: str, v: dict) -> None:
+        if name in SHEET_WRITE:  # a sheet tool keeps its own refusals, item by item (_record_sheet)
+            return
         if self.active is not None:
             self.wb.decorate(name, item, v)
         key = (self.active, item)
@@ -334,21 +386,64 @@ class SheetBench:
             self.refusals[key] = {"unit": self.active, "item": item, "kind": name, "why": "; ".join(v.get("rejected", []))[:240]}
 
     def open_refusals(self) -> list[dict]:
-        """Refused edits that are STILL refused: each is asked again of the engine as it stands now (a size the engine refused to keep
-        while the set-out was wrong is fine once a plan has set the anchor; one the model removed is gone). A refusal is repaired
-        by the state of the drawing, not by the model saying so."""
+        """Refused edits that are STILL refused: each is asked again of the engine as it stands now (a size the engine refused to keep while the
+        set-out was wrong is fine once a plan has set the anchor). A refusal is repaired by the state of the drawing — the size is kept, the
+        shared value is bound, the link is in the plan — not by the model saying so, and not by the item being gone: the engine takes a refused
+        size back, so it is gone from the first moment. Leaving one out on purpose is another thing (`given_up`), and it is said."""
         out = []
         for key, r in list(self.refusals.items()):
-            w = self.units.get(r["unit"]) if r["unit"] is not None else None
-            if w is not None:
-                gone = r.get("kind") == "define_parameters" and r["item"] not in {p.get("name") for p in w.answer["parameters"]}
-                if gone or w.verdict(r["item"], r.get("kind", "")).get("ok"):
-                    self.refusals.pop(key)
-                    continue
-            elif r["unit"] is None and r["item"] in self.sheet_results and self.sheet_results[r["item"]].get("ok"):
+            if self._repaired(r):
                 self.refusals.pop(key)
-                continue
-            out.append(r)
+            else:
+                out.append(r)
+        return out
+
+    def _repaired(self, r: dict) -> bool:
+        uid = r["unit"]
+        if uid is None:
+            return self._sheet_item_holds(r)
+        w = self.units.get(uid)
+        if w is not None:
+            return bool(w.verdict(r["item"], r.get("kind", "")).get("ok"))
+        u = self.sm.units.get(uid)  # its workbench was dropped (a shared name was applied): the sheet's own answer is what is asked
+        return bool(u is not None and u.answer and _in_answer(u.answer, r["item"]))
+
+    def _sheet_item_holds(self, r: dict) -> bool:
+        sm = self.sm
+        kind, _, rest = r["item"].partition(":")
+        if kind == "share":
+            sp = next((p for p in sm.shared.values() if p.name == rest), None)
+            return sp is not None and set(r.get("units") or []) <= {b.unit for b in sp.bindings}
+        if kind == "relation":
+            pair, _, rel = rest.rpartition(":")
+            a, _, b = pair.partition("-")
+            if rel == "projection":
+                return sm.unit_of_view.get(a) is not None and sm.unit_of_view.get(a) == sm.unit_of_view.get(b)
+            return any({x.get("a"), x.get("b")} == {a, b} and x.get("relation") == rel for x in sm.relations)
+        if kind == "view":
+            return any(g.id == rest for g in sm.layout.groups)
+        if kind == "plan":
+            plan = sm.stated_plan if sm.stated_plan.get("run") == self.run.id else {}
+            return any(" ".join(x["what"].lower().split()) == rest for x in plan.get("links", []))
+        return False  # a merge: repaired only by a later merge that is applied (it clears itself)
+
+    def _record_sheet(self, tool: str, res: dict) -> None:
+        """A sheet tool applies what holds and refuses the rest, item by item; each refusal stays open until the sheet shows that item applied."""
+        for k in res.get("applied_keys", []):
+            self.refusals.pop((None, k), None)
+        for r in res.get("refused_items", []):
+            self.refusals[(None, r["key"])] = {**{k: v for k, v in r.items() if k != "key"}, "unit": None, "item": r["key"], "kind": tool, "why": str(r["why"])[:240]}
+
+    @staticmethod
+    def _sheet_verdict(res: dict, extra: dict | None = None) -> dict:
+        """ok only when nothing was refused. A partial result says so: what was applied stays applied, and what is open is named."""
+        ok = not res["refused"]
+        out = {"ok": ok, "applied": res["applied"], "refused": res["refused"], **(extra or {})}
+        if not ok:
+            out["rejected"] = [("nothing applied: " if not res["applied"] else "refused: ") + res["refused"][0], *[f"refused: {x}" for x in res["refused"][1:4]]]
+            if res["applied"]:
+                out["partial"] = True
+                out["note"] = "the rest was applied and stays applied; only what is refused is open — repair it, or leave it out and say so in the plan"
         return out
 
     def nudge(self):
@@ -430,14 +525,17 @@ class SheetBench:
             return {"done": False, "waiting_for": [q["text"][:200] for q in qs[:6]], "hint": "the person has to decide first: the run asks them and continues you with their answers"}, False
         st = self.status()
         gaps = self.uncovered()
-        problems = (sum(len(w.rep.errors()) for w in self.units.values()) or gaps
+        matters = self.open_matters()
+        problems = (sum(len(w.rep.errors()) for w in self.units.values()) or gaps or matters
                     or (any(i.get("kind") in ("change_value", "keep") and i.get("handled_by") == "plan" for i in self.ledger) and not self.any_plan()))
         if problems and self.finish_calls < 2:
             hint = "fix these, or call finish again to stop with what is valid"
             if gaps:
                 hint = ("account for every sentence of the person's instruction (account_instruction, quoting their words; or propose_plan with the clause "
                         "they come from): " + " | ".join(g[:100] for g in gaps[:3]) + ". Then finish.")
-            return {"done": False, **st, "hint": hint}, False
+            if matters:
+                hint += " — OPEN: " + " | ".join(matters[:8]) + ". Settle them, or call finish again to stop with what holds (they will be said in the result)."
+            return {"done": False, **st, "hint": hint, **({"open": matters[:8]} if matters else {})}, False
         results = self.commit_all()
         refused = {u: r for u, r in results.items() if not r["ok"]}
         stale = [r["error"] for r in refused.values() if str(r["error"]).startswith("stale")]
@@ -448,6 +546,7 @@ class SheetBench:
             self.commit_refusals += 1
             return {"done": False, "commit_refused": {u: r["error"][:300] for u, r in refused.items()},
                     "hint": "the sheet did not accept the edits (nothing changed): repair what it names, then finish again"}, False
+        self.finish_summary = (a.get("summary") or "").strip()[:4000]
         return {"done": True, **self.status(), "applied": {u: r.get("revision") for u, r in results.items() if r["ok"]}}, True
 
     # ── the sheet tools ──────────────────────────────────────────────────────────
@@ -461,7 +560,9 @@ class SheetBench:
                 "views": [{"id": g.id, "kind": g.kind, "type": g.view_type, "name": g.name, "unit": sm.unit_of_view.get(g.id), "scale": g.scale,
                            "state": next((v["state"] for v in rep["views"] if v["id"] == g.id), None), "entities": len(g.items),
                            "bbox_mm": [round(v * (g.units_mm or sm.dr.units_mm)) for v in g.bbox], "questions": g.questions[:2]}
-                          for g in sm.layout.groups if g.kind in ("view", "table", "notes", "title_block")],
+                          for g in sm.layout.groups if g.kind == "view"],
+                "other_groups": group_facts(sm),
+                "plan": _plan_card(plan_report(sm, self.run.id)),
                 "units": [{"id": uid, "views": u.views, "state": rep["units"][uid]["state"], "parametrized": bool(u.answer),
                            "named_values": [p["name"] for p in parameters_of(sm, uid) if p["source"] == "ai"][:30] if u.answer and u.built else []}
                           for uid, u in sm.units.items()],
@@ -483,7 +584,7 @@ class SheetBench:
             prev = self.commit(self.active)
             prev = {"ok": prev["ok"], **({"why": prev.get("error")} if not prev["ok"] else {}), **({"nothing_to_apply": True} if prev.get("nothing_to_apply") else {})}
         wb = self.open(uid)
-        ov, _ctx, _x = A.unit_overview(self.sm.path, wb.region, wb, wb.drawing, wb.analysis, wb.scope)
+        ov, _ctx, _x = A.unit_overview(self.sm.path, wb.region, wb, wb.drawing, wb.analysis, wb.scope, pack=wb.pack)
         u = sm.units[uid]
         with self._lock():
             box = box_around([sm.layout.group(v).bbox for v in u.views])
@@ -499,6 +600,8 @@ class SheetBench:
                   width: float = 1400) -> dict:
         sm = self.sm
         around = list(around or [])
+        if view and view not in sm.unit_of_view and not unit and any(g.id == view for g in sm.layout.groups):
+            return self._zoom_group(view, margin, int(width))  # a table, a note, a label — any group of the sheet, as it is drawn
         uid = unit or (sm.unit_of_view.get(view) if view else None) or (self.active if not sheet else None)
         with self._lock():
             if sheet or uid is None:
@@ -542,6 +645,22 @@ class SheetBench:
                "_image": {"png": pic["png"], "id": pic["id"], "meta": meta}}
         if meta.get("regions_note"):
             res["regions_note"] = meta["regions_note"]
+        self.run.note_image(pic)
+        return res
+
+    def _zoom_group(self, gid: str, margin: float, width: int) -> dict:
+        """A picture of one group of the sheet that is not (yet) a unit: what it is drawn as, so that the model can say what it is."""
+        sm = self.sm
+        g = sm.layout.group(gid)
+        box = box_around([g.bbox], max(0.04, min(margin, 0.3)))
+        with self._lock():
+            pic = self.pictures.picture(box=box, state="drawn", sheet=True, caption=f"{gid} ({g.kind}) as drawn on the sheet", width=width)
+            res = {"image": pic["id"], "group": {"id": g.id, "kind": g.kind, "name": g.name, "counts": g.counts, "entities": len(g.items)},
+                   "revision": sm.revision, "size_px": pic["meta"]["frame"]["size"], "box_mm": [round(v * sm.dr.units_mm) for v in box],
+                   "frame": pic["meta"]["frame"], "entities_labelled_count": 0, "state": pic["meta"]["state"],
+                   "note": f"{gid} is a group of kind {g.kind}, not a unit: describe_views (kind, view_type, name) says what it is; as a view it becomes a unit to parametrize",
+                   "_image": {"png": pic["png"], "id": pic["id"], "meta": pic["meta"]}}
+        self.looked.add(gid)
         self.run.note_image(pic)
         return res
 
@@ -613,10 +732,10 @@ class SheetBench:
                 self.units.clear()
                 self.committed.clear()
                 self.active = None
-        ok = bool(res["applied"]) or not res["refused"]
-        self.sheet_results[item] = {"ok": ok, "applied": res["applied"], "refused": res["refused"],
-                                    **({"rejected": [f"nothing applied: {res['refused'][0]}"]} if not ok else {}),
-                                    **({"note": ["views were merged: open a unit again (open_unit)"]} if answer["merges"] and res["applied"] else {})}
+        self.described += len(res["applied"])
+        self.looked |= {v.get("id") for v in answer["views"] if v.get("id")}
+        self._record_sheet("describe_views", res)
+        self.sheet_results[item] = self._sheet_verdict(res, {"note_merged": "views were merged: open a unit again (open_unit)"} if answer["merges"] and res["applied"] else None)
         return item, f"{len(res['applied'])} applied, {len(res['refused'])} refused"
 
     def _share_sizes(self, a: dict) -> tuple[str, str]:
@@ -638,10 +757,127 @@ class SheetBench:
             self.active = None
         if reopen:
             self.open(reopen)
-        ok = bool(res["applied"]) or not res["refused"]
-        self.sheet_results[item] = {"ok": ok, "applied": res["applied"], "refused": res["refused"],
-                                    **({"rejected": [f"nothing applied: {res['refused'][0]}"]} if not ok else {})}
+        self._record_sheet("share_sizes", res)
+        for sh in answer["shared"]:  # a size a unit had named and refused, now one shared size, is no longer open there
+            if f"share:{sh['name']}" in res["applied_keys"]:
+                for t in sh["targets"]:
+                    if isinstance(t, (list, tuple)) and len(t) >= 2:
+                        self.refusals.pop((t[0], A.pascal(str(t[1]))), None)
+        self._acknowledge_noted()
+        self.sheet_results[item] = self._sheet_verdict(res)
         return item, f"{len(res['applied'])} applied, {len(res['refused'])} refused"
+
+    def _state_plan(self, a: dict) -> tuple[str, str]:
+        item = "plan"
+        committed = {u: self.commit(u) for u in list(self.units)}  # the plan points at what the sheet holds: pending edits are applied first
+        bad = {u: r for u, r in committed.items() if not r["ok"]}
+        if bad:
+            self.sheet_results[item] = {"ok": False, "rejected": [f"{u}: its edits could not be applied first — {r['error'][:200]}" for u, r in bad.items()]}
+            return item, ""
+        with self._lock():
+            res = apply_plan(self.sm, self.run.id, a)
+            self.sync_revision()
+            self.run.emit({"kind": "applied", "unit": None, "revision": self.sm.revision, "plan": res["links"]})
+        self._record_sheet("state_plan", res)
+        self._acknowledge_noted()
+        self.sheet_results[item] = self._sheet_verdict(res, {"links_in_plan": res["links"], "not_yet_in_the_plan": gap_lines(res["gaps"])})
+        return item, f"{len(res['applied'])} kept, {len(res['refused'])} refused"
+
+    def _acknowledge_noted(self) -> None:
+        """A link the plan says is only noted, for a size the sheet refused to share, is left out on purpose and said so: the person reads it
+        in the plan as something the model does not enforce, instead of finding a refusal nobody answered."""
+        plan = self.sm.stated_plan if self.sm.stated_plan.get("run") == self.run.id else {}
+        for link in plan.get("links", []):
+            if link.get("bound_by") == "noted_only" and link.get("shared_value"):
+                r = self.refusals.pop((None, f"share:{link['shared_value']}"), None)
+                if r is not None:
+                    self.given_up.append({**r, "how": f"said in the plan to be only noted ({link['what']})"})
+
+    # ── what the engine asks of the model's own commitments ──────────────────────
+
+    def commitments(self) -> list[dict]:
+        """What the model said would handle each clause of the instruction (`handled_by`), asked of the engine: was it done? Nothing here reads
+        the clause — only what the model said it would do about it, and the sheet as it stands."""
+        sm = self.sm
+        plan = sm.stated_plan if sm.stated_plan.get("run") == self.run.id else {}
+        stated = bool(plan.get("links") or plan.get("summary"))
+        wbs = list(self.units.values())
+        parts = any(w.answer.get("components") for w in wbs) or any((u.answer or {}).get("components") for u in sm.units.values())
+        values = any(w.answer.get("parameters") or w.answer.get("levels") for w in wbs) or any(
+            (u.answer or {}).get("parameters") or (u.answer or {}).get("levels") for u in sm.units.values())
+        out = []
+        for i in self.ledger:
+            by = i.get("handled_by")
+            ok, why = True, ""
+            if by == "plan":
+                ok, why = stated or self.any_plan(), "no plan was made: state_plan for how the views relate, propose_plan for a change"
+            elif by == "links":  # views are bound by a shared value, by being drawn in projection (one unit), or by a link the plan states
+                projected = any(len(u.views) > 1 for u in sm.units.values())
+                ok, why = bool(sm.shared) or projected or bool(plan.get("links")), "nothing links the views: no shared value, no views drawn in projection, no link in a plan"
+            elif by == "views":  # the views were described, or the work was done in them
+                ok, why = self.described > 0 or bool(self.units) or bool(self.touched), "no view was described or worked in (describe_views, open_unit)"
+            elif by == "parts":
+                ok, why = parts, "no part was defined"
+            elif by == "values":
+                ok, why = values, "no value was named"
+            out.append({"clause": i.get("quote", ""), "handled_by": by, "ok": bool(ok), "why": "" if ok else why})
+        return out
+
+    def unexamined_doubts(self) -> list[str]:
+        """Groups the engine doubts (taken for a table, holding what a view holds) that the model never looked at or described — said only on a run
+        over the whole drawing: one asked to work on a view or a value has not been asked to account for the rest of the sheet."""
+        if self.run.scope.get("kind") != "drawing":
+            return []
+        return [f["doubt"] for f in group_facts(self.sm) if f.get("doubt") and f["id"] not in self.looked]
+
+    def open_matters(self) -> list[str]:
+        """What the engine knows is still open, as sentences for the model's first `finish`: refusals nobody repaired, commitments not kept,
+        what the plan leaves out, a doubted group nobody looked at."""
+        out = [f"refused and never repaired: {r['item']} ({r['why'][:100]}) — repair it, or leave it out on purpose (remove it; or say in the plan it is only noted)"
+               for r in self.open_refusals()[:6]]
+        out += [f"you said “{c['clause'][:70]}” is handled by {c['handled_by']}: {c['why']}" for c in self.commitments() if not c["ok"]]
+        plan = self.sm.stated_plan if self.sm.stated_plan.get("run") == self.run.id else {}
+        if plan.get("links") or plan.get("summary"):
+            out += [f"plan: {g}" for g in gap_lines(plan_gaps(self.sm, plan))]
+        out += self.unexamined_doubts()
+        return out
+
+    def notes(self) -> list[str]:
+        """Things the person should read next to the verdict, that are not failures: what was left out on purpose, what the plan leaves out, what
+        the engine doubted and the model never looked at, units never opened."""
+        out = [f"left out on purpose: {g['item']} — {g.get('how', '')}; the engine had refused it: {g.get('why', '')[:140]}" for g in self.given_up]
+        plan = self.sm.stated_plan if self.sm.stated_plan.get("run") == self.run.id else {}
+        if plan.get("links") or plan.get("summary"):
+            out += [f"plan: {g}" for g in gap_lines(plan_gaps(self.sm, plan))]
+        out += [f"not examined: {d}" for d in self.unexamined_doubts()]
+        def parametrized(uid: str, u) -> bool:
+            w = self.units.get(uid)
+            return bool(u.answer) or bool(w and (w.answer.get("components") or w.answer.get("parameters")))
+
+        untouched = [uid for uid, u in self.sm.units.items() if not parametrized(uid, u)]
+        if untouched and self.run.scope.get("kind") == "drawing":
+            out.append(f"views never parametrized in this run: {', '.join(untouched)}")
+        return out
+
+
+def _in_answer(answer: dict, item: str) -> bool:
+    """Whether an answer holds something called `item`: a part, a value, a level, a relation, a formula (by its line) or a constraint."""
+    def walk(o) -> bool:
+        if isinstance(o, dict):
+            return any(o.get(k) == item for k in ("name", "datum", "description", "parameter")) or any(walk(v) for v in o.values())
+        if isinstance(o, list):
+            return any(walk(v) for v in o)
+        return False
+
+    return walk(answer)
+
+
+def _plan_card(rep: dict) -> dict:
+    """The plan so far, compact: what appears in several views, how it is bound, whether that still holds, and what it leaves out."""
+    return {"stated": rep["stated"], "summary": rep["summary"][:300],
+            "links": [{"what": x["what"], "relation": x["relation"], "in": [" ".join(filter(None, [p["unit"], p["part"], p["value"]])) for p in x["appears_in"]],
+                       "bound_by": x["bound_by"], **({"shared_value": x["shared_value"]} if x.get("shared_value") else {}), "holds": x["holds"]} for x in rep["links"]],
+            "assumptions": len(rep["assumptions"]), "not_yet_in_the_plan": gap_lines(rep["gaps"])}
 
 
 def _empty(wb) -> dict:
@@ -674,6 +910,7 @@ class Run:
         if not self.instruction:
             raise RunError("write an instruction first")
         self.options = dict(options or {})
+        self.pack = domain.active(self.options.get("domain"))  # None unless a person switched a domain pack on: the model names things itself
         self.scope = normalize_scope(host.sm, scope)
         self.parent = parent
         self.status = "queued"
@@ -693,6 +930,7 @@ class Run:
         self.answers_text: list[str] = []
         self.images: dict[str, dict] = {}
         self.retryable = False
+        self.limit_hit: str | None = None  # the limit that ended the last chunk (hard_budget / tokens / time): lifted when the run is continued
         self.error: str | None = None
         self.revision0 = host.sm.revision
         self.depth0 = len(host.sm.history)
@@ -842,7 +1080,7 @@ class Run:
         self.emit({"kind": "stage", "stage": "interpreting", "text": "Ready: the model reads the instruction"})
         task = self._first_message(bench)
         history = [types.Content(role="user", parts=[types.Part.from_text(text=task)])]
-        self.loop = AgentLoop(model, UNIFIED_SYSTEM, unified_tools(), parts, key, history, bench, self.budget, self._on_event, self._stop.is_set,
+        self.loop = AgentLoop(model, unified_system(self.pack), unified_tools(self.pack), parts, key, history, bench, self.budget, self._on_event, self._stop.is_set,
                               label_prefix="turn")
 
     def _prefix(self, bench: SheetBench):
@@ -872,11 +1110,11 @@ class Run:
         ov = None
         if uid is not None:
             wb = bench.open(uid)
-            ov, _ctx, _x = A.unit_overview(sm.path, wb.region, wb, wb.drawing, wb.analysis, wb.scope, self._context_extra())
+            ov, _ctx, _x = A.unit_overview(sm.path, wb.region, wb, wb.drawing, wb.analysis, wb.scope, self._context_extra(), wb.pack)
         parts = [types.Part.from_bytes(data=pic["png"], mime_type="image/png") for pic in pics]
         text = ("OVERVIEW:\n" + json.dumps(ov, separators=(",", ":"), default=str)) if ov is not None else "No unit is open yet: inspect_sheet, then open_unit."
         parts.append(types.Part.from_text(text=text))
-        key = "|".join(["unified", UNIFIED_SYSTEM, *(f"{p['id']}:{p['meta']['fingerprint']}:{p['meta']['revision']}" for p in pics), text])
+        key = "|".join(["unified", unified_system(self.pack), *(f"{p['id']}:{p['meta']['fingerprint']}:{p['meta']['revision']}" for p in pics), text])
         return parts, hashlib.sha256(key.encode()).hexdigest()[:24]
 
     def _context_extra(self) -> dict:
@@ -913,10 +1151,16 @@ class Run:
     def _resume_state(self) -> None:
         p = getattr(self, "_pending", {})
         b = self.bench
-        if p.get("more_turns"):
-            self.budget.max_turns = max(self.budget.max_turns, self.loop.state.turns + int(p["more_turns"]))
-            self.budget.soft_turns = max(self.budget.soft_turns, int(p["more_turns"]))
+        if p.get("more_turns") or self.limit_hit:
+            before = self.budget.to_dict()
+            self.budget = self.budget.extended(self.loop.state, p.get("more_turns"))
+            if self.budget.soft_turns and p.get("more_turns"):
+                self.budget.soft_turns = max(self.budget.soft_turns, int(p["more_turns"]))
             self.loop.budget = self.budget
+            lifted = {k: [before[k], v] for k, v in self.budget.to_dict().items() if v != before[k]}
+            if lifted:
+                self.emit({"kind": "note", "text": "limits lifted so the work can go on: " + ", ".join(f"{k} {a:g} → {b:g}" for k, (a, b) in lifted.items())})
+            self.limit_hit = None
         if p.get("answers") or p.get("note"):
             lines = b.record_answers(p.get("answers") or {})
             if p.get("note"):
@@ -947,6 +1191,7 @@ class Run:
             self.to("paused", f"{st.turns} turns done; continue to go on — nothing is lost")
         elif reason in ("hard_budget", "tokens", "time"):
             what = {"hard_budget": "turn / tool-call limit", "tokens": "token budget", "time": "time limit"}[reason]
+            self.limit_hit = reason
             self.to("exhausted", f"the {what} was reached before the work was done")
         elif reason == "stopped":
             self.to("stopped", "stopped by you")
@@ -1011,13 +1256,25 @@ class Run:
         add("shared_drive", not shared_bad, "every shared value still drives its views" if not shared_bad else "; ".join(shared_bad[:3]))
         gaps = b.uncovered()
         add("instruction_accounted", not gaps, "every sentence of the instruction is accounted for" if not gaps else f"not accounted for: {gaps[0][:120]}")
+        broken = [c for c in b.commitments() if not c["ok"]]
+        add("commitments_kept", not broken, "everything the model said would handle the instruction was done" if not broken else
+            "; ".join(f"“{c['clause'][:70]}” (said: {c['handled_by']}) — {c['why']}" for c in broken[:3]))
+        plan = plan_report(self.host.sm, self.id)
+        if plan["stated"]:
+            bad_links = [x for x in plan["links"] if not x["holds"]]
+            add("plan_holds", not bad_links, f"{len(plan['links'])} link(s) stated in the plan, each holds on the sheet" if not bad_links else
+                "; ".join(f"{x['what']}: {x['why'][:120]}" for x in bad_links[:3]))
+        notes = b.notes()
         failed = [c for c in crit if not c["ok"]]
         applied_any = any(r.get("ok") and not r.get("nothing_to_apply") for r in results.values())
         state = "completed" if not failed else "partial" if applied_any or not committed_bad else "failed"
         remaining = [c["detail"] for c in failed]
         headline = ("Complete: " + "every criterion holds." if not failed else
                     f"{'Partly done' if state == 'partial' else 'Failed'}: {len(failed)} thing(s) remain — {remaining[0][:140]}")
+        if notes:
+            headline += f" ({len(notes)} note{'s' if len(notes) != 1 else ''} to read)"
         return {"state": state, "ended_by": ended_by, "criteria": crit, "remaining": remaining, "headline": headline, "plans": plan_rows,
+                "plan": plan, "notes": notes, "given_up": b.given_up, "finish_summary": b.finish_summary,
                 "applied": {u: r.get("revision") for u, r in results.items() if r.get("ok") and not r.get("nothing_to_apply")},
                 "values_applied": [x for r in results.values() for x in r.get("values_applied", [])], "values_refused": [x for _u, x in refused_vals],
                 "refused": refused, "unaccounted": gaps, "questions": [{"id": q["id"], "text": q["text"][:200]} for q in qs],
@@ -1056,7 +1313,8 @@ class Run:
         v = self.verdict or {}
         return {"id": self.id, "kind": "run", "instruction": self.instruction[:400], "status": self.status, "label": LABELS[self.status],
                 "scope": self.scope, "started": self.t_started, "finished": self.t_finished, "usage": self.usage(), "units": self.units_touched or
-                (list(self.bench.units) if self.bench else []), "verdict": {k: v.get(k) for k in ("state", "headline", "remaining", "refused", "criteria", "plans", "values_applied", "values_refused")}
+                (list(self.bench.units) if self.bench else []), "verdict": {k: v.get(k) for k in ("state", "headline", "remaining", "refused", "criteria", "plans", "values_applied", "values_refused", "plan", "notes", "given_up",
+                                                  "finish_summary")}
                 if v else None, "reason": self.reason, "reverted": self.reverted,
                 "timeline": [{k: e.get(k) for k in ("kind", "name", "ok", "summary", "said", "why", "text", "to", "t", "turn") if e.get(k) not in (None, "")}
                              for e in self.events if e["kind"] in ("tool", "state", "question", "verdict", "error", "note")][-400:]}

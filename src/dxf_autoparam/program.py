@@ -1,9 +1,9 @@
 """The parametric program — the UPCE shape, in plain data:
 
-    PARAMETERS   named values a person types (ClearSpan = 3000 mm, BedLevel = 96.100 m)
+    PARAMETERS   named values a person types (Width = 3000 mm, GroundLevel = 96.100 m)
         ↓
     FORMULAS     every set-out line (datum) as an expression of parameters and other datums
-                 ("x7 = x3 + ClearSpan"), plus named derived values ("OverallWidth = …")
+                 ("x7 = x3 + Width"), plus named derived values ("TotalWidth = …")
         ↓
     BINDINGS     every entity point = its datum + a fixed offset (from the analysis)
         ↓

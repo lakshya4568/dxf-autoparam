@@ -23,13 +23,12 @@ Nothing here executes text: an instruction is read into ids and modes, and the d
 from __future__ import annotations
 
 import copy
-import json
 import math
 import os
 import re
 from functools import lru_cache
-from importlib import resources
 
+from .ai import domain
 from .assembly import (
     POLICIES,
     POLICY_WORDS,
@@ -108,12 +107,17 @@ def words(s: str) -> set[str]:
     return out
 
 
-@lru_cache(maxsize=1)
-def _concepts() -> dict[str, list[frozenset[str]]]:
-    """Concept name → its aliases as word sets (this project's knowledge pack): 'FOUNDATION' names a Footing."""
-    pack = json.loads(resources.files("dxf_autoparam.knowledge").joinpath("bridge.json").read_text())
+def _concepts(pack_name: str | None = None) -> dict[str, list[frozenset[str]]]:
+    """Concept name → its aliases as word sets, from the domain pack when one is on ('FOUNDATION' names a Footing) — none without a pack: the
+    names an instruction may use are then the words of this drawing's own parts, values and levels."""
+    return _concepts_of(domain.name_of(pack_name))
+
+
+@lru_cache(maxsize=8)
+def _concepts_of(name: str | None) -> dict[str, list[frozenset[str]]]:
+    pack = domain.active(name) if name else None
     out: dict[str, list[frozenset[str]]] = {}
-    for c in pack.get("concepts", []):
+    for c in (pack or {}).get("concepts", []):
         al = [frozenset(words(a)) for a in [c.get("label", ""), *c.get("aliases", [])]]
         out[c["name"]] = [a for a in al if a]
     return out
@@ -665,7 +669,7 @@ def build_plan(prog: Program, answer: dict, request: dict, sheet: dict | None = 
         unread = c["text"] if mode is None else c.get("unread")
         if unread:  # never silently dropped: what the reading could not account for is put to the person
             pick = ask(f"unread:{unread}", f"I could not read: '{unread}' ({c['text']}). What should happen? Say it again plainly "
-                       "(e.g. 'Keep the foundation fixed', 'Change the clear span to 2800'), or ignore it.", ["ignore"])
+                       "(e.g. 'Keep the foundation fixed', 'Change the width to 2800'), or ignore it.", ["ignore"])
             if pick:
                 c["unread_answer"] = pick
         if mode in (None, "driver", "anchor"):

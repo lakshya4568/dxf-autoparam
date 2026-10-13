@@ -373,7 +373,7 @@ function renderGemini() {
   const presets = ["Parametrize only the proposed structure; keep existing work exactly as drawn.", "Every repeated size (cells, spans, spacings) is one value.",
     "Keep tracks, annotation details and title block as drawn.", "The main span / clear height will change; levels stay fixed.", "Make wing / return wall length and slope parameters."];
   let html = `<div class="grp"><span>Tell Gemini what to parametrize</span></div>
-    <textarea id="instr" placeholder="e.g. Parametrize the proposed box and its wing walls; keep the existing bridge and the tracks as drawn. The clear span will change; the bed level stays. R12 and R13 are one footing.">${esc(draft ?? "")}</textarea>
+    <textarea id="instr" placeholder="e.g. Parametrize the proposed structure; keep the existing one as drawn. The width of the opening will change; the ground level stays. R12 and R13 are one footing.">${esc(draft ?? "")}</textarea>
     <div class="chips">${presets.map((p, i) => `<button data-preset="${i}">+ ${esc(p.split(";")[0])}</button>`).join("")}</div>
     <div class="note">Tip: tick <b>regions</b> on the drawing and click a region's label to add it here; or use <b>Tell Gemini…</b> in Structure.</div>
     <div class="bar">${job.running ? `<button class="stop" id="stopG" ${job.stopping ? "disabled" : ""}>${job.stopping ? "Stopping…" : "■ Stop Gemini"}</button>` : ""}

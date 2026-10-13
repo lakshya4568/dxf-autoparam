@@ -67,6 +67,10 @@ try {
   await js("document.querySelector('#ai-answer').click(); 1");
   check("after the answer the run completes, with every criterion shown", await until("window.__ws.run.status === 'completed'", 15000) && (await js("document.querySelectorAll('#ai-live .crit.ok').length")) >= 9 && (await js("document.querySelectorAll('#ai-live .crit.no').length")) === 0);
   await sleep(500);
+  check("the plan the model stated across the views is shown, with how each link is bound and that it holds",
+    /Plan across views — 1 link/.test(await js("document.querySelector('#ai-live .status').innerText")) && /box walls/.test(await js("document.querySelector('#ai-live details.plan').innerText"))
+    && /bound by projection/.test(await js("document.querySelector('#ai-live details.plan').innerText")) && (await js("document.querySelectorAll('#ai-live .planrow.bad').length")) === 0);
+  check("what the model says it did is kept whole and shown", /plan across the views is stated/.test(await js("[...document.querySelectorAll('#ai-live details.notes')].map((d) => d.textContent).join(' ')")));
   check("the value was applied to the sheet and both views follow", (await js("window.__ws.S.values['" + KEY + "']")) === 2500);
   await shot("04_complete"); await noObjectText("complete");
   await js("document.querySelectorAll('#ai-live details.turn').forEach((d) => d.open = true); document.querySelectorAll('#ai-live .call details').forEach((d) => d.open = true); 1"); await sleep(300);

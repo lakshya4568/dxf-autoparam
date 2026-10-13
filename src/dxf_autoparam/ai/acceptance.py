@@ -96,7 +96,7 @@ def script_for(case: Case, style: str = "careful") -> ScriptedModel:
     sm, uid = case.sheet.sm, case.uid
     ans = box_answer(sm, uid, case.g["box"], case.g["handles"])
     built = answer_as_calls(ans)
-    reading = [{"quote": q, "kind": next(iter(k)), "meaning": q, "handled_by": next(iter(h))} for q, k, h in CLAUSES]
+    reading = [{"quote": q, "kind": min(k), "meaning": q, "handled_by": min(h)} for q, k, h in CLAUSES]  # min: the same reading in every process (a set's order is not)
     dirs = [{"target": "Foundation", "mode": "keep_fixed", "clause": "do not modify the existing foundation"},
             {"target": "WingLeft", "mode": "follow", "clause": "update the corresponding half-section and half-elevation geometry"},
             {"target": "WingRight", "mode": "follow", "clause": "update the corresponding half-section and half-elevation geometry"},
@@ -173,8 +173,8 @@ def evaluate(gem, case: Case | None = None, budget: dict | None = None, timeout_
 
 
 def _aka(a: str, b: str) -> bool:
-    """Do two names mean the same thing? The same words, or one concept of this project's knowledge (every word of one of its aliases in
-    both) — 'Foundation' and 'Footing' do; 'Foundation' and 'WingLeft' do not."""
+    """Do two names mean the same thing? The same words, or one concept of the bridge pack this benchmark's case is drawn from (every word of
+    one of its aliases in both) — 'Foundation' and 'Footing' do; 'Foundation' and 'WingLeft' do not."""
     from ..plan import _concepts, words
 
     wa, wb = words(a), words(b)
@@ -182,7 +182,7 @@ def _aka(a: str, b: str) -> bool:
         return True
 
     def concepts(w: set[str]) -> set[str]:
-        return {c for c, als in _concepts().items() if any(al and al <= w for al in als)}
+        return {c for c, als in _concepts("bridge").items() if any(al and al <= w for al in als)}
 
     return bool(concepts(wa) & concepts(wb))
 

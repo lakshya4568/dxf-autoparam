@@ -6,7 +6,8 @@ Here the reasons a run stops are named and different:
 
   finished      the model called `finish` and the engine's gate let it end
   wants_person  a decision only the person can make is open (a plan's question, an ask_person)
-  soft_budget   one chunk of turns is used: the run is PAUSED with everything it holds, and can be continued
+  soft_budget   one chunk of turns is used (only when the person asked for chunks): the run is PAUSED with everything it holds, and
+                can be continued
   hard_budget   the most turns / tool calls one run may take, whatever the chunks: it stops, incomplete, and says so
   tokens        the most tokens (output + thinking) the run may spend
   time          the most working time (time waiting for a person does not count)
@@ -34,14 +35,15 @@ from .vertex import GeminiStopped
 
 @dataclass
 class Budget:
-    """Limits of one run. `soft_turns` is the size of a chunk (the run pauses after it and may be continued); the others are
-    absolute for the run, across its chunks."""
+    """Limits of one run. `soft_turns` is the size of a chunk (the run pauses after it and may be continued); 0, the default, means
+    the run is never paused for a chunk. The others are absolute for the run, across its chunks — safety nets against a model that
+    loops, set high enough that a drawing of any size finishes inside them."""
 
-    soft_turns: int = 40
-    max_turns: int = 400
-    max_tool_calls: int = 2500
-    wall_s: float = 3600.0
-    max_tokens: int = 600_000
+    soft_turns: int = 0
+    max_turns: int = 1000
+    max_tool_calls: int = 6000
+    wall_s: float = 14400.0
+    max_tokens: int = 2_000_000
     call_s: float = 240.0  # one model call (the provider's own deadline is set from it)
     reads_without_edit: int = 6  # looking goes on this many turns without a single edit; then an edit (or a question) is asked for
 
@@ -62,11 +64,28 @@ class Budget:
         for k, v in over.items():
             if v is not None and hasattr(out, k):
                 setattr(out, k, type(getattr(out, k))(v))
-        out.soft_turns = max(1, min(out.soft_turns, out.max_turns))
+        out.soft_turns = 0 if out.soft_turns <= 0 else min(out.soft_turns, out.max_turns)
         return out
 
     def to_dict(self) -> dict:
         return asdict(self)
+
+    def extended(self, s: LoopState, more_turns: int | None = None) -> Budget:
+        """What a continued run is allowed. A limit the run has reached is lifted by another allowance of its own size (the turn limit by
+        `more_turns` when that is given): a cap that stopped good work is lifted, not argued with. `more_turns` also raises a turn limit
+        that was not reached, for a person who wants the run to go on for that many turns."""
+        out = copy.copy(self)
+        if s.turns >= out.max_turns:
+            out.max_turns = s.turns + int(more_turns or out.max_turns)
+        elif more_turns:
+            out.max_turns = max(out.max_turns, s.turns + int(more_turns))
+        if s.tool_calls >= out.max_tool_calls:
+            out.max_tool_calls = s.tool_calls + out.max_tool_calls
+        if s.tokens >= out.max_tokens:
+            out.max_tokens = s.tokens + out.max_tokens
+        if s.seconds >= out.wall_s:
+            out.wall_s = s.seconds + out.wall_s
+        return out.with_()
 
 
 @dataclass
@@ -181,13 +200,14 @@ class AgentLoop:
             return "tokens"
         if s.seconds >= b.wall_s:
             return "time"
-        if s.chunk_turns >= b.soft_turns:
+        if b.soft_turns and s.chunk_turns >= b.soft_turns:
             return "soft_budget"
         return None
 
     def turns_left(self) -> dict:
         b, s = self.budget, self.state
-        return {"in_chunk": max(0, b.soft_turns - s.chunk_turns), "in_run": max(0, b.max_turns - s.turns)}
+        in_run = max(0, b.max_turns - s.turns)
+        return {"in_chunk": max(0, b.soft_turns - s.chunk_turns) if b.soft_turns else in_run, "in_run": in_run}
 
     # ── one chunk ───────────────────────────────────────────────────────────────
 

@@ -1,7 +1,7 @@
 """Design intent, checked by measurement: the parts, what each parameter does to them, what must stay true,
 and what a person chose to keep as drawn.
 
-The AI says what is SUPPOSED to happen ("when ClearSpan increases the top slab grows, the walls keep their
+The AI says what is SUPPOSED to happen ("when Width increases the top slab grows, the walls keep their
 thickness, the bed level stays"). This module never takes that on trust: it changes each parameter in the
 model, regenerates, measures every part, and compares. A constraint the model does not keep is enforced by
 rewriting one set-out formula when that is possible in closed form (distance, symmetry, centring, equality,

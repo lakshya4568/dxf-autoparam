@@ -2,9 +2,9 @@
 
     sm = SheetModel.open("gad.dxf")              # views found, projection links proposed / taken
     sm.shared_proposals()                          # sizes two units both state (with the evidence)
-    sm.share("ClearSpan", [("U1", "c12"), ("U3", "c40")])
-    r = sm.preview({"ClearSpan": 4000})            # every affected view regenerated, checked — nothing committed
-    sm.apply({"ClearSpan": 4000})                  # committed only if every check passes; undo() / redo()
+    sm.share("WidthA", [("U1", "c12"), ("U3", "c40")])
+    r = sm.preview({"WidthA": 4000})               # every affected view regenerated, checked — nothing committed
+    sm.apply({"WidthA": 4000})                     # committed only if every check passes; undo() / redo()
     sm.export("out.dxf")
 
 The layers:
@@ -208,6 +208,9 @@ class SheetModel:
         self.future: list[dict] = []
         self.accepted: set[tuple[str, str]] = set()  # projection links a person (or the AI, checked) took although weak
         self.relations: list[dict] = []  # views that show the same structure / a detail of another (semantic, not set-out)
+        # The plan an agent run STATED for the sheet: what it took to be the same component or dimension in more than one view, how they
+        # relate and how that is bound, and what it assumed (ai.sheet_ai.apply_plan). A statement, checked when made and again at the end.
+        self.stated_plan: dict = {}
         self.questions: list[str] = []  # what the AI or the engine asks a person to settle
         # Bumped by every change of state (an edit, undo, redo): work started on one revision (a Gemini run, an open
         # panel) is refused when it would land on another — it was decided on a sheet that no longer exists.
@@ -247,7 +250,9 @@ class SheetModel:
         self.units, self.unit_of_view = {}, {}
         for members in groups.values():
             ids = sorted(v.id for v in members)
-            uid = "U" + "_".join(v[1:] for v in ids)  # stable: named by its views (URL-safe)
+            # stable: named by its views (URL-safe). A group that was not found as a view (V…) but was said to be one keeps its whole id,
+            # so that "T01" (UT01) never takes the name of the unit of "V01" (U01).
+            uid = "U" + "_".join(v.removeprefix("V") for v in ids)
             items = sorted({i for v in members for i in v.items})
             units_mm = members[0].units_mm
             sub, back = view_drawing(self.dr, items)
@@ -517,7 +522,8 @@ class SheetModel:
     def _state(self) -> dict:
         return {"values": copy.deepcopy(self.values), "shared": copy.deepcopy(self.shared),
                 "answers": {uid: copy.deepcopy(u.answer) for uid, u in self.units.items()}, "unlinked": set(self.unlinked),
-                "groups": copy.deepcopy(self.layout.groups), "accepted": set(self.accepted), "relations": copy.deepcopy(self.relations)}
+                "groups": copy.deepcopy(self.layout.groups), "accepted": set(self.accepted), "relations": copy.deepcopy(self.relations),
+                "plan": copy.deepcopy(self.stated_plan)}
 
     def _push(self) -> None:
         self.history.append(self._state())
@@ -530,6 +536,7 @@ class SheetModel:
                     or [(g.id, g.kind, g.items) for g in st["groups"]] != [(g.id, g.kind, g.items) for g in self.layout.groups])
         self.values, self.shared, self.unlinked = st["values"], st["shared"], st["unlinked"]
         self.accepted, self.relations = st.get("accepted", set()), st.get("relations", [])
+        self.stated_plan = st.get("plan", {})
         self.layout.groups = st["groups"]
         if relayout:
             self._relayout()
@@ -537,6 +544,11 @@ class SheetModel:
             if uid in self.units and self.units[uid].answer != ans:
                 self.units[uid].answer = ans
                 self.units[uid].prog = None
+
+    def set_plan(self, plan: dict) -> None:
+        """Keep the plan an agent run stated (one undoable step)."""
+        self._push()
+        self.stated_plan = plan
 
     def undo(self) -> bool:
         if not self.history:
@@ -1167,7 +1179,7 @@ class SheetModel:
                 "unlinked": sorted(list(k) for k in self.unlinked),
                 "answers": {uid: u.answer for uid, u in self.units.items() if u.answer},
                 "shared": [asdict(p) for p in self.shared.values()], "values": self.values, "originals": originals,
-                "accepted": sorted(list(k) for k in self.accepted), "relations": self.relations, "questions": self.questions,
+                "accepted": sorted(list(k) for k in self.accepted), "relations": self.relations, "plan": self.stated_plan, "questions": self.questions,
                 "views": views, "prefs": self.prefs, "runs": self.runs[-200:]}
 
     def save(self, path: str) -> None:
@@ -1182,6 +1194,7 @@ class SheetModel:
             sm.accepted = {tuple(k) for k in d["accepted"]}
             sm._group_units(sm.units)
         sm.relations, sm.questions = d.get("relations", []), d.get("questions", [])
+        sm.stated_plan = d.get("plan") or {}
         if sm.fingerprint() != d.get("fingerprint"):
             raise SheetError("the DXF has changed since this project was saved: its views and values may not match")
         for uid, ans in d.get("answers", {}).items():

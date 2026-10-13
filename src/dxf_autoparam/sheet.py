@@ -986,8 +986,8 @@ def _describe(dr: Drawing, mem: list[int], forced: str | None = None) -> Group:
               "segments": len(segs), "long_h": long_h, "long_v": long_v}
     if tb_words >= 3 and len(texts) >= 4:
         kind = "title_block"
-    elif len(texts) >= 4 and straight >= 0.9 and curved <= 0.1 * max(1, len(segs)) and long_h >= 3 and long_v >= 2 and hatches == 0:
-        kind = "table"  # straight rules on a grid with words in the cells (rounded corners allowed)
+    elif len(texts) >= 4 and straight >= 0.9 and curved <= 0.1 * max(1, len(segs)) and long_h >= 3 and long_v >= 2 and hatches == 0 and dims == 0:
+        kind = "table"  # straight rules on a grid with words in the cells (rounded corners allowed); a table has no dimensions — a drawn view does
     elif texts and len(geom) <= max(2, len(texts) // 4) and dims == 0:
         kind = "notes" if len(texts) >= 2 else "label"
     elif len(geom) >= 3 or dims:
