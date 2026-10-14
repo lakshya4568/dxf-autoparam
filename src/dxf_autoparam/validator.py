@@ -673,7 +673,10 @@ def _set_slope(prog: Program, near, far, done: set[str], u: float, over_dimensio
         return False  # the line is set by a stronger rule: the slope is kept from its other end, if that one is free
     if any(prog.params.get(n) and prog.params[n].kind == "level" for n in names_in(prog.formulas[xf])):
         return False
-    ratio = (an.datums[xf].value - an.datums[xn].value) / (an.datums[yf].value - an.datums[yn].value)
+    dy = an.datums[yf].value - an.datums[yn].value
+    if abs(dy) <= an.drawing.tol:
+        return False
+    ratio = (an.datums[xf].value - an.datums[xn].value) / dy
     nice = round(ratio * 4) / 4 if abs(ratio * 4 - round(ratio * 4)) < 0.02 else ratio
     expr = f"{xn} + {nice:g} * ({yf} - {yn})"
     old = prog.formulas[xf]

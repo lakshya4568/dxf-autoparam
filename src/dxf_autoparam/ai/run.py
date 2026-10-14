@@ -476,6 +476,7 @@ class SheetBench:
             choice = str(answers["R:rebase"]).strip()
             if choice.startswith("apply"):
                 self.sync_revision()  # their edits stand; the agent's go on top of them, checked on the whole sheet like any other
+                self.run.depth0 = len(self.sm.history)
                 lines.append("- the sheet changed while you worked → apply your edits on the current sheet")
             else:
                 self.units.clear()
@@ -566,7 +567,7 @@ class SheetBench:
                 "units": [{"id": uid, "views": u.views, "state": rep["units"][uid]["state"], "parametrized": bool(u.answer),
                            "named_values": [p["name"] for p in parameters_of(sm, uid) if p["source"] == "ai"][:30] if u.answer and u.built else []}
                           for uid, u in sm.units.items()],
-                "projection_links": [{"views": [lk["a"], lk["b"]], "shared_lines": lk["planes"], "one_unit": lk["strong"] and (lk["a"], lk["b"]) not in sm.unlinked}
+                "projection_links": [{"views": [lk["a"], lk["b"]], "shared_lines": lk["planes"], "one_unit": sm.is_linked(lk)}
                                      for lk in sm.links],
                 "shared_values": [{"name": p.name, "value_mm": round(p.value, 1), "units": [b.unit for b in p.bindings]} for p in sm.shared.values()],
                 "values_changed_by_a_person": {k: v for k, v in sm.values.items()}, "view_relations": sm.relations[:20],
@@ -836,9 +837,10 @@ class SheetBench:
         out = [f"refused and never repaired: {r['item']} ({r['why'][:100]}) — repair it, or leave it out on purpose (remove it; or say in the plan it is only noted)"
                for r in self.open_refusals()[:6]]
         out += [f"you said “{c['clause'][:70]}” is handled by {c['handled_by']}: {c['why']}" for c in self.commitments() if not c["ok"]]
-        plan = self.sm.stated_plan if self.sm.stated_plan.get("run") == self.run.id else {}
-        if plan.get("links") or plan.get("summary"):
-            out += [f"plan: {g}" for g in gap_lines(plan_gaps(self.sm, plan))]
+        with self._lock():
+            plan = self.sm.stated_plan if self.sm.stated_plan.get("run") == self.run.id else {}
+            if plan.get("links") or plan.get("summary"):
+                out += [f"plan: {g}" for g in gap_lines(plan_gaps(self.sm, plan))]
         out += self.unexamined_doubts()
         return out
 
@@ -846,9 +848,10 @@ class SheetBench:
         """Things the person should read next to the verdict, that are not failures: what was left out on purpose, what the plan leaves out, what
         the engine doubted and the model never looked at, units never opened."""
         out = [f"left out on purpose: {g['item']} — {g.get('how', '')}; the engine had refused it: {g.get('why', '')[:140]}" for g in self.given_up]
-        plan = self.sm.stated_plan if self.sm.stated_plan.get("run") == self.run.id else {}
-        if plan.get("links") or plan.get("summary"):
-            out += [f"plan: {g}" for g in gap_lines(plan_gaps(self.sm, plan))]
+        with self._lock():
+            plan = self.sm.stated_plan if self.sm.stated_plan.get("run") == self.run.id else {}
+            if plan.get("links") or plan.get("summary"):
+                out += [f"plan: {g}" for g in gap_lines(plan_gaps(self.sm, plan))]
         out += [f"not examined: {d}" for d in self.unexamined_doubts()]
         def parametrized(uid: str, u) -> bool:
             w = self.units.get(uid)
@@ -1130,7 +1133,7 @@ class Run:
                      + (f"; the value in focus: {s['param']}" if s["param"] else "") + ". The instruction decides — the scope only says where they are looking.")
         views = [{"id": g.id, "kind": g.kind, "type": g.view_type, "name": g.name, "unit": sm.unit_of_view.get(g.id), "scale": f"1:{g.scale:g}" if g.scale else None}
                  for g in sm.layout.groups if g.kind == "view"]
-        links = [{"views": [lk["a"], lk["b"]], "shared_lines": lk["planes"], "one_unit": lk["strong"] and (lk["a"], lk["b"]) not in sm.unlinked} for lk in sm.links]
+        links = [{"views": [lk["a"], lk["b"]], "shared_lines": lk["planes"], "one_unit": sm.is_linked(lk)} for lk in sm.links]
         shared = [{"name": p.name, "value_mm": round(p.value, 1), "units": [b.unit for b in p.bindings]} for p in sm.shared.values()]
         lines.append(f"THE SHEET (revision {sm.revision}; drawing units are {sm.dr.units_mm:g} mm):\nVIEW MAP: {json.dumps(views)}\nVIEWS DRAWN IN PROJECTION (one unit): {json.dumps(links)}"
                      f"\nSHARED VALUES: {json.dumps(shared)}")
@@ -1252,14 +1255,15 @@ class Run:
         add("questions_answered", not qs, "nothing is waiting for you" if not qs else f"{len(qs)} question(s) wait for you: {qs[0]['text'][:120]}")
         refused = b.open_refusals()
         add("refusals_repaired", not refused, "no refused edit is left" if not refused else f"{len(refused)} refused edit(s) never repaired: {refused[0]['item']} — {refused[0]['why'][:120]}")
-        shared_bad = [f"{p.name}: {bd.unit} {bd.status}" for p in self.host.sm.shared.values() for bd in p.bindings if bd.unit in b.units and bd.status != "drives"]
+        with b._lock():
+            shared_bad = [f"{p.name}: {bd.unit} {bd.status}" for p in self.host.sm.shared.values() for bd in p.bindings if bd.unit in b.units and bd.status != "drives"]
+            plan = plan_report(self.host.sm, self.id)
         add("shared_drive", not shared_bad, "every shared value still drives its views" if not shared_bad else "; ".join(shared_bad[:3]))
         gaps = b.uncovered()
         add("instruction_accounted", not gaps, "every sentence of the instruction is accounted for" if not gaps else f"not accounted for: {gaps[0][:120]}")
         broken = [c for c in b.commitments() if not c["ok"]]
         add("commitments_kept", not broken, "everything the model said would handle the instruction was done" if not broken else
             "; ".join(f"“{c['clause'][:70]}” (said: {c['handled_by']}) — {c['why']}" for c in broken[:3]))
-        plan = plan_report(self.host.sm, self.id)
         if plan["stated"]:
             bad_links = [x for x in plan["links"] if not x["holds"]]
             add("plan_holds", not bad_links, f"{len(plan['links'])} link(s) stated in the plan, each holds on the sheet" if not bad_links else

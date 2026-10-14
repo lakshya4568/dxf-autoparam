@@ -82,9 +82,10 @@ def _apply(e, it: Item, pts: list, reg: Regenerated, report: dict) -> None:
         if _render(e, it, report):
             # A text override that writes the measured number ("CLEAR SPAN 3000") follows the new measurement.
             text = e.dxf.get("text", "")
-            old_mm = (it.extra.get("measurement") or 0.0) * report.get("_units_mm", 1.0)
+            u_mm = (report.get("_item_units_mm") or {}).get(it.index, report.get("_units_mm", 1.0))
+            old_mm = (it.extra.get("measurement") or 0.0) * u_mm
             if text and text != "<>" and old_mm > 0:
-                new_mm = float(e.get_measurement()) * report.get("_units_mm", 1.0)
+                new_mm = float(e.get_measurement()) * u_mm
                 tokens = re.findall(r"\d+(?:\.\d+)?", text)
                 for tok in tokens:
                     v = float(tok)
@@ -150,7 +151,8 @@ def write_dxf(model, reg: Regenerated, out_path: str) -> dict:
         doc = ezdxf.readfile(dr.path)
     db = doc.entitydb
     report = {"updated": 0, "dimensions_rendered": 0, "dimension_render_failed": 0, "texts_changed": 0, "kept": 0,
-              "blocks_exploded": 0, "blocks_moved": 0, "symbols_moved": 0, "_units_mm": dr.units_mm}
+              "blocks_exploded": 0, "blocks_moved": 0, "symbols_moved": 0, "_units_mm": dr.units_mm,
+              "_item_units_mm": getattr(model, "item_units_mm", None) or {}}
     by_top: dict[str, list[Item]] = defaultdict(list)
     for it in dr.items:
         by_top[it.handle].append(it)
@@ -160,28 +162,33 @@ def write_dxf(model, reg: Regenerated, out_path: str) -> dict:
         e = db.get(top)
         if e is None:
             continue
-        if all(it.role == Role.FIXED or it.index not in reg.pts for it in items):
+        if all(it.role == Role.FIXED or (it.index not in reg.pts and it.index not in reg.texts and it.index not in reg.radius) for it in items):
             report["kept"] += len(items)
             continue
         if e.dxftype() != "INSERT":
             for it in items:
-                if it.index in reg.pts and it.role != Role.FIXED:
-                    _apply(e, it, reg.pts[it.index], reg, report)
+                if (it.index in reg.pts or it.index in reg.texts or it.index in reg.radius) and it.role != Role.FIXED:
+                    _apply(e, it, reg.pts.get(it.index, it.pts), reg, report)
             continue
         # a block reference
         anchor = by_src.get(top)
         if anchor is not None and anchor.dxftype == "INSERT":  # rigid symbol
-            if _moved(reg.pts[anchor.index], anchor.pts):
+            if _moved(reg.pts.get(anchor.index, anchor.pts), anchor.pts):
                 e.dxf.insert = _v(reg.pts[anchor.index][0], e.dxf.insert.z)
                 report["symbols_moved"] += 1
             continue
-        content = [it for it in items if it.index in reg.pts]
-        if not any(_moved(reg.pts[it.index], it.pts) for it in content):
+        content = [it for it in items if (it.index in reg.pts or it.index in reg.texts or it.index in reg.radius) and it.role != Role.FIXED]
+        reshaped_in_place = any(
+            (it.index in reg.texts and reg.texts[it.index] != it.text)
+            or (it.index in reg.radius and abs(reg.radius[it.index] - (it.radius or 0.0)) > 1e-9)
+            for it in content
+        )
+        if not any(_moved(reg.pts.get(it.index, it.pts), it.pts) for it in content) and not reshaped_in_place:
             report["kept"] += len(items)
             continue
-        shifts = {(round(reg.pts[it.index][k][0] - p[0], 9), round(reg.pts[it.index][k][1] - p[1], 9))
+        shifts = {(round(reg.pts.get(it.index, it.pts)[k][0] - p[0], 9), round(reg.pts.get(it.index, it.pts)[k][1] - p[1], 9))
                   for it in content for k, p in enumerate(it.pts)}
-        if len(shifts) == 1:  # the whole view moved as one piece
+        if len(shifts) == 1 and not reshaped_in_place:  # the whole view moved as one piece
             dx, dy = next(iter(shifts))
             ins = e.dxf.insert
             e.dxf.insert = Vec3(ins.x + dx, ins.y + dy, ins.z)
@@ -194,6 +201,7 @@ def write_dxf(model, reg: Regenerated, out_path: str) -> dict:
         report["blocks_exploded"] += 1
     doc.saveas(out_path)
     report.pop("_units_mm", None)
+    report.pop("_item_units_mm", None)
     return report
 
 
@@ -214,8 +222,8 @@ def _explode(ins, prefix: str, by_src: dict[str, Item], reg: Regenerated, report
             _explode(e, sub, by_src, reg, report)
             continue
         it = by_src.get(sub)
-        if it is not None and it.index in reg.pts and it.role != Role.FIXED:
-            _apply(e, it, reg.pts[it.index], reg, report)
+        if it is not None and (it.index in reg.pts or it.index in reg.texts or it.index in reg.radius) and it.role != Role.FIXED:
+            _apply(e, it, reg.pts.get(it.index, it.pts), reg, report)
 
 
 def audit(path: str) -> dict:

@@ -1170,7 +1170,7 @@ def _units(dr: Drawing, lay: SheetLayout) -> None:
                 stated = float(nums[0]) if nums else 0.0
                 if drawn > 0 and stated > 0:
                     ratios.append(stated / drawn)
-        if len(ratios) >= 3:
+        if len(ratios) >= 3 and dr.units_mm > 0:
             ratios.sort()
             r = statistics.median(ratios)
             agree = sum(1 for x in ratios if abs(x / r - 1) < 0.02)

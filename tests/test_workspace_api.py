@@ -4,6 +4,7 @@ committed), apply (only the touched entities come back), undo, share, rename, ex
 from __future__ import annotations
 
 import gzip
+import io
 import json
 import threading
 import urllib.error
@@ -17,6 +18,57 @@ from dxf_autoparam.server import Session, make_handler
 from dxf_autoparam.workspace import SheetSession
 
 
+class _InProcessServer:
+    """In-process HTTP dispatch through the real BaseHTTPRequestHandler when socket.bind is blocked by a sandbox."""
+
+    def __init__(self, handler_cls):
+        self.handler_cls = handler_cls
+
+    def dispatch(self, path: str, data: bytes | None, headers: dict[str, str]):
+        h = self.handler_cls.__new__(self.handler_cls)
+        h.path = path
+        h.headers = {k: v for k, v in headers.items()}
+        if data is not None:
+            h.headers["Content-Length"] = str(len(data))
+        h.rfile = io.BytesIO(data or b"")
+        h.wfile = io.BytesIO()
+        status = 200
+        resp_headers: dict[str, str] = {}
+
+        def send_response(code: int, message=None):
+            nonlocal status
+            status = code
+
+        def send_header(k: str, v: str):
+            resp_headers[k] = v
+
+        h.send_response = send_response
+        h.send_header = send_header
+        h.end_headers = lambda: None
+        if data is not None:
+            h.do_POST()
+        else:
+            h.do_GET()
+        payload = h.wfile.getvalue()
+        if resp_headers.get("Content-Encoding") == "gzip":
+            payload = gzip.decompress(payload)
+        return status, payload, resp_headers
+
+    def shutdown(self) -> None:
+        pass
+
+
+def _start_server(sheet: SheetSession):
+    handler_cls = make_handler(Session(None), sheet)
+    try:
+        httpd = ThreadingHTTPServer(("127.0.0.1", 0), handler_cls)
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        return f"http://127.0.0.1:{httpd.server_address[1]}", httpd
+    except PermissionError:
+        srv = _InProcessServer(handler_cls)
+        return srv, srv
+
+
 def call_http(*a, **k):
     return call(*a, **k)
 
@@ -25,17 +77,17 @@ def call_http(*a, **k):
 def server(tmp_path):
     path = built_sheet(tmp_path / "sheet.dxf")
     sheet = SheetSession()
-    httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Session(None), sheet))
-    threading.Thread(target=httpd.serve_forever, daemon=True).start()
-    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    base, httpd = _start_server(sheet)
     yield base, path
     httpd.shutdown()
 
 
 def call(base, path, body=None, raw: bytes | None = None, gz=False):
     data = raw if raw is not None else (json.dumps(body).encode() if body is not None else None)
-    req = urllib.request.Request(base + path, data=data, method="POST" if data is not None else "GET",
-                                 headers={"Content-Type": "application/json", **({"Accept-Encoding": "gzip"} if gz else {})})
+    headers = {"Content-Type": "application/json", **({"Accept-Encoding": "gzip"} if gz else {})}
+    if isinstance(base, _InProcessServer):
+        return base.dispatch(path, data, headers)
+    req = urllib.request.Request(base + path, data=data, method="POST" if data is not None else "GET", headers=headers)
     try:
         with urllib.request.urlopen(req) as r:
             payload = r.read()
@@ -140,7 +192,6 @@ def test_a_run_is_started_asked_answered_and_checked_over_http(tmp_path):
     """The page's routes for the agent, as HTTP: start a run, read its progress (events, state, questions), see a picture it was shown, answer, and
     read the verdict, the status, the original and the highlight — then reset a value and the drawing, and undo."""
     import time
-    from http.server import ThreadingHTTPServer
 
     from dxf_autoparam.ai.scripted import ScriptedModel, call
     from dxf_autoparam.cadjson import entity_id
@@ -164,9 +215,7 @@ def test_a_run_is_started_asked_answered_and_checked_over_http(tmp_path):
                           {"target": "WingRight", "mode": "follow", "clause": "The wing walls follow the box"},
                           {"target": "PitchingDetail", "mode": "exclude", "clause": "Keep the unrelated pitching detail unchanged"}])],
         [call("finish", summary="x")], [call("finish", summary="x")], [call("finish", summary="x")]])
-    httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Session(None), sheet))
-    threading.Thread(target=httpd.serve_forever, daemon=True).start()
-    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    base, httpd = _start_server(sheet)
     try:
         def wait_for(pred, rid, t=30):
             end = time.time() + t
@@ -236,8 +285,39 @@ def test_model_choices_and_per_run_config(monkeypatch):
         vertex.config("gemini-nope")
 
 
+def test_get_gem_switches_back_to_default_and_preserves_cache_for_same_model(monkeypatch):
+    """Switching from Argon back to default (None) closes Argon and opens Flash; passing None then explicit Flash keeps the same client."""
+    from dxf_autoparam.ai import vertex
+
+    monkeypatch.setenv("GOOGLE_CLOUD_PROJECT", "p")
+    monkeypatch.delenv("VERTEX_MODEL", raising=False)
+    monkeypatch.delenv("GEMINI_MODEL", raising=False)
+    created = []
+    closed = []
+
+    class FakeGemini:
+        def __init__(self, cfg):
+            self.cfg = cfg
+            created.append(cfg.model)
+
+        def close(self):
+            closed.append(self.cfg.model)
+            return []
+
+    monkeypatch.setattr(vertex, "Gemini", FakeGemini)
+    sheet = SheetSession()
+    g1 = sheet.get_gem(None)
+    assert g1.cfg.model == "gemini-3.8-flash" and sheet.gem_model == "gemini-3.8-flash"
+    g2 = sheet.get_gem("gemini-3.8-flash")
+    assert g2 is g1 and closed == []  # same canonical model: prompt cache is kept
+    g3 = sheet.get_gem("gemini-4-argon")
+    assert g3 is not g1 and g3.cfg.model == "gemini-4-argon" and closed == ["gemini-3.8-flash"]
+    g4 = sheet.get_gem(None)
+    assert g4 is not g3 and g4.cfg.model == "gemini-3.8-flash" and closed == ["gemini-3.8-flash", "gemini-4-argon"]
+
+
 def test_usage_summary_costs_each_model_from_the_ledger(tmp_path, monkeypatch):
-    """Uncached input, cached input and output (answer + thinking) are priced separately; an unpriced model shows tokens and no amount."""
+    """Uncached input, cached input and output (answer + thinking) are priced separately; cut-off errors keep their billed tokens; stopped calls do not inflate calls."""
     import json
 
     import pytest
@@ -247,13 +327,106 @@ def test_usage_summary_costs_each_model_from_the_ledger(tmp_path, monkeypatch):
     monkeypatch.delenv("VERTEX_PRICES", raising=False)
     rows = [{"model": "gemini-4-argon", "input_tokens": 1_000_000, "vertex_cached_tokens": 400_000, "output_tokens": 50_000, "thinking_tokens": 50_000, "at": "2026-10-13 10:00:00"},
             {"model": "gemini-4-argon", "error": "429", "at": "2026-10-13 10:01:00"},
+            {"model": "gemini-4-argon", "error": "no complete JSON (finish_reason=MAX_TOKENS)", "input_tokens": 100_000, "output_tokens": 10_000, "thinking_tokens": 10_000, "at": "2026-10-13 10:02:00"},
+            {"model": "gemini-4-argon", "stopped": True, "input_tokens": 0, "output_tokens": 0, "thinking_tokens": 0, "at": "2026-10-13 10:03:00"},
             {"model": "gemini-3.8-flash", "input_tokens": 10, "output_tokens": 5, "at": "2026-10-12 09:00:00"}]
     ledger = tmp_path / "usage.jsonl"
     ledger.write_text("\n".join(json.dumps(r) for r in rows) + "\nnot json\n")
     s = summary("all", ledger)
     argon = next(m for m in s["models"] if m["model"] == "gemini-4-argon")
-    assert (argon["input"], argon["cached"], argon["output"], argon["calls"], argon["errors"]) == (600_000, 400_000, 100_000, 1, 1)
-    assert argon["cost"] == pytest.approx(0.6 * 2.0 + 0.4 * 0.10 + 0.1 * 10.0)
+    assert (argon["input"], argon["cached"], argon["output"], argon["calls"], argon["errors"]) == (700_000, 400_000, 120_000, 1, 2)
+    assert argon["cost"] == pytest.approx(0.7 * 2.0 + 0.4 * 0.10 + 0.12 * 10.0)
     assert next(m for m in s["models"] if m["model"] == "gemini-3.8-flash")["cost"] is None and s["unpriced"] == ["gemini-3.8-flash"]
     monkeypatch.setenv("VERTEX_PRICES", json.dumps({"gemini-3.8-flash": {"input": 1, "output": 4}}))
     assert summary("all", ledger)["unpriced"] == []
+
+
+def test_split_shared_lines_restores_datums_and_slots_on_rebuild(tmp_path):
+    """Holding a part splits shared datums (adding <id>h); rebuilding without hold_parts restores original datums and slot bindings."""
+    from dxf_autoparam.ai.parametrize import _restore, _snapshot
+    from dxf_autoparam.crossview import SheetModel
+    from dxf_autoparam.plan_bench import Box, box_answer, box_gad
+
+    g = box_gad(tmp_path / "box.dxf", Box())
+    sm = SheetModel.open(g["path"])
+    uid = next(k for k, u in sm.units.items() if len(u.views) == 2)
+    u = sm.unit(uid)
+    orig_datums = set(u.an.datums)
+    orig_slots = dict(u.an.slot_datum)
+
+    ans_held = box_answer(sm, uid, g["box"], g["handles"])
+    ans_held["plans"] = [{"id": "P1", "status": "accepted", "driver": {"parameter": "ClearSpan"},
+                          "anchor": {"policy": "as_set_out", "source": "person"},
+                          "directives": [{"kind": "part", "target": "RightWall", "mode": "exclude", "status": "accepted"}]}]
+    sm.set_answer(uid, ans_held)
+    assert any(d.endswith("h") for d in sm.unit(uid).an.datums)
+
+    # Pristine analysis and un-holding must restore the original datums and slot bindings cleanly
+    pristine = sm.pristine_analysis(uid)
+    assert set(pristine.datums) == orig_datums
+    assert pristine.slot_datum == orig_slots
+
+    ans_unheld = box_answer(sm, uid, g["box"], g["handles"])
+    sm.set_answer(uid, ans_unheld)
+    assert set(sm.unit(uid).an.datums) == orig_datums
+    assert sm.unit(uid).an.slot_datum == orig_slots
+
+    # Also check ai/parametrize.py _snapshot / _restore
+    snap = _snapshot(pristine)
+    pristine.datums["x0h"] = pristine.datums["x0"]
+    _restore(pristine, snap)
+    assert "x0h" not in pristine.datums
+
+
+def test_project_save_and_load_preserves_rekinded_and_merged_views_and_weak_links(tmp_path):
+    """Re-kinding a table/notes group to a view (or merging views) and saving/loading the project preserves its unit and answers; weak links toggle cleanly."""
+    from dxf_autoparam.crossview import SheetError, SheetModel
+
+    path = built_sheet(tmp_path / "sheet.dxf")
+    sm = SheetModel.open(str(path))
+    non_view = next(g for g in sm.layout.groups if g.kind != "view")
+    nid = non_view.id
+    sm.set_view(nid, name="EXTRA VIEW", view_type="detail", kind="view")
+    uid = sm.unit_of_view[nid]
+    assert uid in sm.units
+    sm.units[uid].answer = {"structure_type": "TestDetail", "family": "other", "components": [], "parameters": []}
+
+    proj_file = tmp_path / "proj.autoparam.json"
+    sm.save(str(proj_file))
+    loaded = SheetModel.load(str(proj_file), dxf=str(path))
+    assert nid in loaded.unit_of_view
+    loaded_uid = loaded.unit_of_view[nid]
+    assert loaded.units[loaded_uid].answer and loaded.units[loaded_uid].answer["structure_type"] == "TestDetail"
+
+    # Weak projection link toggling via sm.link()
+    sm2 = SheetModel.open(str(path))
+    lk = sm2.links[0]
+    lk["strong"] = False
+    sm2._group_units()
+    assert sm2.unit_of_view[lk["a"]] != sm2.unit_of_view[lk["b"]]
+    sm2.link(lk["a"], lk["b"], True)
+    assert sm2.is_linked(lk) and sm2.unit_of_view[lk["a"]] == sm2.unit_of_view[lk["b"]]
+    sm2.link(lk["a"], lk["b"], False)
+    assert not sm2.is_linked(lk) and sm2.unit_of_view[lk["a"]] != sm2.unit_of_view[lk["b"]]
+    with pytest.raises(SheetError, match="no projection link"):
+        sm2.link("V01", "V99", True)
+
+
+def test_workbench_remove_normalizes_parameter_names_and_guards_work(tmp_path):
+    """Workbench.write('remove', ...) normalizes parameter names to PascalCase when pruning parameters and relations."""
+    from dxf_autoparam.ai.agent import Workbench
+    from dxf_autoparam.crossview import SheetModel
+    from dxf_autoparam.plan_bench import Box, box_gad
+
+    g = box_gad(tmp_path / "box.dxf", Box())
+    sm = SheetModel.open(g["path"])
+    uid = next(k for k, u in sm.units.items() if len(u.views) == 2)
+    wb = Workbench(g["path"], analysis=sm.pristine_analysis(uid))
+    cand = next(c.id for c in wb.an.clusters.values() if len(c.gaps) == 1)
+    wb.write("define_parameter", {"name": "clear_span", "candidate": cand})
+    wb.write("set_relation", {"name": "total_width", "expr": "ClearSpan * 2"})
+    assert any(p["name"] == "ClearSpan" for p in wb.answer["parameters"])
+    assert any(r["name"] == "TotalWidth" for r in wb.answer["relations"])
+    wb.write("remove", {"parameters": ["clear_span", "total_width"]})
+    assert not any(p["name"] == "ClearSpan" for p in wb.answer["parameters"])
+    assert not any(r["name"] == "TotalWidth" for r in wb.answer["relations"])

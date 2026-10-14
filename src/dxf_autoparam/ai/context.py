@@ -141,7 +141,7 @@ def unit_context(sm, uid: str, an, prog: Program, labels: dict | None = None, re
                       "own_units_mm": g.units_mm, "questions": g.questions[:3]})
     ctx["views"] = views
     ctx["projection"] = [{"views": [lk["a"], lk["b"]], "shared_lines": lk["planes"], "axis": lk["axis"],
-                          "one_unit": lk["strong"] and (lk["a"], lk["b"]) not in sm.unlinked or (lk["a"], lk["b"]) in sm.accepted}
+                          "one_unit": sm.is_linked(lk)}
                          for lk in sm.links if lk["a"] in u.views or lk["b"] in u.views]
     shared = []
     for p in sm.shared.values():

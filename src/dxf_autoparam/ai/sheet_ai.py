@@ -122,7 +122,7 @@ def views_input(sm: SheetModel) -> dict:
                        "entities": len(g.items), "counts": {k: v for k, v in g.counts.items() if k in ("geometry", "texts", "dimensions", "hatches")},
                        "title": [" ".join((sm.dr.items[i].text or "").split())[:90] for i in g.titles], "words": _words(sm, g.items),
                        "engine_questions": g.questions})
-    links = [{"a": lk["a"], "b": lk["b"], "shared_lines": lk["planes"], "taken": lk["strong"] and (lk["a"], lk["b"]) not in sm.unlinked}
+    links = [{"a": lk["a"], "b": lk["b"], "shared_lines": lk["planes"], "taken": sm.is_linked(lk)}
              for lk in sm.links]
     return {"sheet": {"entities": len(sm.dr.items), "groups": len(groups)}, "groups": groups, "engine_links": links}
 

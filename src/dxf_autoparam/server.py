@@ -374,7 +374,10 @@ def make_handler(session: Session, sheet=None):
             try:
                 if url.path == "/api/upload":
                     name = parse_qs(url.query).get("name", ["upload.dxf"])[0]
-                    tmp = Path(tempfile.mkdtemp()) / Path(name).name
+                    fname = Path(name).name
+                    if not fname or fname in (".", ".."):
+                        fname = "upload.dxf"
+                    tmp = Path(tempfile.mkdtemp()) / fname
                     tmp.write_bytes(self._body())
                     if session.busy():
                         return self._json({"ok": False, "error": "Gemini is working on this drawing; wait for it to finish"}, 409)
@@ -383,7 +386,10 @@ def make_handler(session: Session, sheet=None):
                     return self._json({"ok": True})
                 if url.path == "/api/learn":
                     name = parse_qs(url.query).get("name", ["edited.dxf"])[0]
-                    tmp = Path(tempfile.mkdtemp()) / Path(name).name
+                    fname = Path(name).name
+                    if not fname or fname in (".", ".."):
+                        fname = "edited.dxf"
+                    tmp = Path(tempfile.mkdtemp()) / fname
                     tmp.write_bytes(self._body())
                     with session.lock:
                         lesson = learn(session.path, str(tmp), session.prog)

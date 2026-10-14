@@ -155,6 +155,8 @@ class Unit:
     prog: Program | None = None
     report: Report | None = None
     gap_clusters: dict | None = None
+    orig_datums: dict | None = None
+    orig_slot_datum: dict | None = None
     dropped: str = ""  # why a parametrization it had was dropped (its views changed)
 
     @property
@@ -229,6 +231,10 @@ class SheetModel:
 
     # ── units ────────────────────────────────────────────────────────────────
 
+    def is_linked(self, lk: dict) -> bool:
+        key = (lk["a"], lk["b"])
+        return (lk["strong"] or key in getattr(self, "accepted", set())) and key not in self.unlinked
+
     def _group_units(self, keep: dict[str, Unit] | None = None) -> None:
         views = self.layout.views()
         parent = {v.id: v.id for v in views}
@@ -240,8 +246,7 @@ class SheetModel:
             return x
 
         for lk in self.links:
-            key = (lk["a"], lk["b"])
-            if (lk["strong"] or key in getattr(self, "accepted", set())) and key not in self.unlinked:
+            if self.is_linked(lk):
                 parent[find(lk["b"])] = find(lk["a"])
         groups: dict[str, list[Group]] = {}
         for v in views:
@@ -283,7 +288,13 @@ class SheetModel:
             self._drop_layout_gaps(u)
             u.snap = {cid: (c.name, c.accepted, list(c.gaps)) for cid, c in u.an.clusters.items()}
             u.gap_clusters = {gid: g.cluster for gid, g in u.an.gaps.items()}
+            u.orig_datums = {did: copy.copy(d) for did, d in u.an.datums.items()}
+            u.orig_slot_datum = dict(u.an.slot_datum)
         else:  # apply() renames and splits candidates: start from the analysis as found
+            if u.orig_datums is not None:
+                u.an.datums = {did: copy.copy(d) for did, d in u.orig_datums.items()}
+            if u.orig_slot_datum is not None:
+                u.an.slot_datum = dict(u.orig_slot_datum)
             for cid, (name, acc, gaps) in u.snap.items():
                 c = u.an.clusters[cid]
                 c.name, c.accepted, c.gaps = name, acc, list(gaps)
@@ -305,7 +316,7 @@ class SheetModel:
             return
         cross = set()
         for lk in self.links:
-            if {lk["a"], lk["b"]} <= set(u.views) and lk["strong"]:
+            if {lk["a"], lk["b"]} <= set(u.views) and self.is_linked(lk):
                 cross.add("y" if lk["axis"] == "x" else "x")
         if not cross:
             return
@@ -870,6 +881,10 @@ class SheetModel:
         distances between linked views already dropped) — for work that applies answers to it on its own (the agent)."""
         u = self.unit(uid)
         an = copy.deepcopy(u.an)
+        if u.orig_datums is not None:
+            an.datums = {did: copy.deepcopy(d) for did, d in u.orig_datums.items()}
+        if u.orig_slot_datum is not None:
+            an.slot_datum = dict(u.orig_slot_datum)
         for cid, (name, acc, gaps) in u.snap.items():
             if cid in an.clusters:
                 c = an.clusters[cid]
@@ -943,11 +958,17 @@ class SheetModel:
     def link(self, a: str, b: str, linked: bool) -> None:
         """Take or refuse a projection link between two views (their units are re-formed; a unit whose views changed
         loses its parametrization, said in the result)."""
-        key = (a, b) if (a, b) in {(lk["a"], lk["b"]) for lk in self.links} else (b, a)
+        lk = next((x for x in self.links if {x["a"], x["b"]} == {a, b}), None)
+        if lk is None:
+            raise SheetError(f"{a} and {b} have no projection link")
+        key = (lk["a"], lk["b"])
         self._push()
         if linked:
             self.unlinked.discard(key)
+            if not lk["strong"]:
+                self.accepted.add(key)
         else:
+            self.accepted.discard(key)
             self.unlinked.add(key)
         self._group_units(self.units)
 
@@ -1154,7 +1175,8 @@ class SheetModel:
         """The original DXF with every regenerated entity written back (dimensions re-rendered, notes rewritten); then
         re-opened strictly."""
         sr = self.regenerate(units={uid for uid, u in self.units.items() if u.built})
-        rep = write_dxf(SimpleNamespace(analysis=SimpleNamespace(drawing=self.dr)), sr.reg, out_path)  # the writer reads .analysis.drawing
+        units_of = {s: u.sub.units_mm for u in self.units.values() for s in u.items}
+        rep = write_dxf(SimpleNamespace(analysis=SimpleNamespace(drawing=self.dr), item_units_mm=units_of), sr.reg, out_path)  # the writer reads .analysis.drawing
         rep["audit"] = audit(out_path)
         rep["errors"] = sr.errors
         return rep
@@ -1173,8 +1195,16 @@ class SheetModel:
             if uid in self.units:
                 originals[uid] = {n: original_of(self, uid, n)["value"] for n in vals if n in self.unit(uid).prog.params}
         import_groups = {g.key: g for g in self.import_state["groups"]}
-        views = [{"key": g.key, "name": g.name, "view_type": g.view_type, "kind": g.kind} for g in self.layout.groups
-                 if g.key in import_groups and (g.name, g.view_type, g.kind) != (import_groups[g.key].name, import_groups[g.key].view_type, import_groups[g.key].kind)]
+        topology_changed = [g.key for g in self.layout.groups] != [g.key for g in self.import_state["groups"]]
+        views = []
+        for g in self.layout.groups:
+            if not topology_changed and g.key in import_groups and (g.name, g.view_type, g.kind) == (import_groups[g.key].name, import_groups[g.key].view_type, import_groups[g.key].kind):
+                continue
+            row = {"id": g.id, "key": g.key, "name": g.name, "view_type": g.view_type, "kind": g.kind}
+            if topology_changed or g.key not in import_groups:
+                row.update({"items": g.items, "bbox": list(g.bbox), "titles": g.titles, "scale": g.scale, "units_mm": g.units_mm,
+                            "confidence": g.confidence, "evidence": g.evidence, "questions": g.questions, "counts": g.counts})
+            views.append(row)
         return {"format": "dxf-autoparam/sheet-1", "dxf": self.path, "fingerprint": self.fingerprint(),
                 "unlinked": sorted(list(k) for k in self.unlinked),
                 "answers": {uid: u.answer for uid, u in self.units.items() if u.answer},
@@ -1190,13 +1220,34 @@ class SheetModel:
         d = json.loads(Path(project).read_text())
         dr, _ = read_dxf(dxf or d["dxf"])
         sm = cls(dr, unlinked={tuple(k) for k in d.get("unlinked", [])})
-        if d.get("accepted"):
-            sm.accepted = {tuple(k) for k in d["accepted"]}
-            sm._group_units(sm.units)
-        sm.relations, sm.questions = d.get("relations", []), d.get("questions", [])
-        sm.stated_plan = d.get("plan") or {}
         if sm.fingerprint() != d.get("fingerprint"):
             raise SheetError("the DXF has changed since this project was saved: its views and values may not match")
+        if d.get("accepted"):
+            sm.accepted = {tuple(k) for k in d["accepted"]}
+        views = d.get("views", [])
+        if views and all("items" in v and "bbox" in v for v in views):
+            sm.layout.groups = [Group(id=v["id"], kind=v["kind"], items=list(v["items"]), bbox=tuple(v["bbox"]), name=v.get("name", ""),
+                                      view_type=v.get("view_type", "unknown"), titles=list(v.get("titles", [])), scale=v.get("scale"),
+                                      units_mm=v.get("units_mm"), confidence=v.get("confidence", 0.0), evidence=list(v.get("evidence", [])),
+                                      questions=list(v.get("questions", [])), counts=dict(v.get("counts", {})), key=v.get("key", ""))
+                                for v in views]
+            sm._relayout()
+        elif views or d.get("accepted"):
+            by_key = {g.key: g for g in sm.layout.groups}
+            by_id = {g.id: g for g in sm.layout.groups}
+            relayout = False
+            for v in views:  # corrections a person made to the views (by content key: stable across sessions)
+                g = by_key.get(v.get("key")) or by_id.get(v.get("id"))
+                if g is not None:
+                    if v.get("kind") and v["kind"] != g.kind:
+                        relayout = True
+                    g.name, g.view_type, g.kind = v.get("name", g.name), v.get("view_type", g.view_type), v.get("kind", g.kind)
+            if relayout:
+                sm._relayout()
+            elif d.get("accepted"):
+                sm._group_units(sm.units)
+        sm.relations, sm.questions = d.get("relations", []), d.get("questions", [])
+        sm.stated_plan = d.get("plan") or {}
         for uid, ans in d.get("answers", {}).items():
             if uid in sm.units:
                 sm.units[uid].answer = ans
@@ -1204,11 +1255,6 @@ class SheetModel:
             sm.shared[p["id"]] = SharedParam(**{**p, "bindings": [Binding(**{**b, "datums": tuple(b["datums"]) if b.get("datums") else None})
                                                                       for b in p["bindings"]]})
         sm.values = {u: dict(v) for u, v in d.get("values", {}).items()}
-        by_key = {g.key: g for g in sm.layout.groups}
-        for v in d.get("views", []):  # corrections a person made to the views (by content key: stable across sessions)
-            g = by_key.get(v.get("key"))
-            if g is not None:
-                g.name, g.view_type, g.kind = v.get("name", g.name), v.get("view_type", g.view_type), v.get("kind", g.kind)
         sm.prefs = {**sm.prefs, **(d.get("prefs") or {})}
         sm.runs = list(d.get("runs") or [])
         return sm

@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import gzip
 import json
+import shutil
 import tempfile
 import threading
 import time
@@ -76,6 +77,7 @@ class SheetSession:
         if self.gem is not None:
             self.gem.close()
             self.gem = None
+        self.gem_model = None
         t = time.perf_counter()
         self.sm = SheetModel.open(path)
         self.pictures = None
@@ -222,17 +224,24 @@ class SheetSession:
         """The model: one client per sheet and per chosen model (its prompt cache serves the follow-ups)."""
         if self.gem_factory is not None and self.gem_per_run:
             return self.gem_factory()  # an offline demo: every run gets its own script
-        if self.gem is not None and model and self.gem_model != model:
+        target = model or None
+        if self.gem_factory is None and (target is not None or self.gem_model is not None):
+            from .ai.vertex import model_choices
+
+            target = target or model_choices()["default"]
+        if self.gem is not None and (target is not None or self.gem_model is not None) and self.gem_model != target:
             self.gem.close()  # another model was picked: the old client's caches belong to the old model
             self.gem = None
         if self.gem is None:
             if self.gem_factory is not None:
                 self.gem = self.gem_factory()
+                self.gem_model = target
             else:
                 from .ai.vertex import Gemini, config
 
-                self.gem = Gemini(config(model))
-            self.gem_model = model
+                cfg = config(target)
+                self.gem = Gemini(cfg)
+                self.gem_model = cfg.model
         return self.gem
 
     def models(self) -> dict:
@@ -311,7 +320,10 @@ class SheetSession:
         return {"runs": live + saved, "current": self.current_run}
 
     def run_image(self, rid: str | None, img_id: str) -> bytes | None:
-        pics = self.get_pictures()
+        pics = self.pictures
+        if pics is None:
+            with self.lock:
+                pics = self.get_pictures()
         return pics.png_of(img_id)
 
     def record_run(self, run) -> None:
@@ -433,6 +445,23 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
         return False
     q = parse_qs(url.query)
     try:
+        if method == "GET":
+            if path == "/api/sheet/ai/progress":
+                return handler._json(sheet.run_progress(q.get("run", [None])[0], int(q.get("since", ["0"])[0]))) or True
+            if path == "/api/sheet/ai/image":
+                png = sheet.run_image(q.get("run", [None])[0], q.get("id", [""])[0])
+                if png is None:
+                    return handler._json({"ok": False, "error": "that picture is no longer kept: ask the agent to look again"}, 404) or True
+                return handler._send(200, png, "image/png", {"Cache-Control": "max-age=3600"}) or True
+            if path == "/api/sheet/ai/usage":
+                from .ai.usage import summary
+
+                return handler._json(summary(q.get("period", ["all"])[0])) or True
+            if path == "/api/sheet/ai/models":
+                return handler._json(sheet.models()) or True
+        if method == "POST" and path == "/api/sheet/ai/stop":
+            body = json.loads(handler._body() or b"{}")
+            return handler._json(sheet.stop_run(body)) or True
         with sheet.lock:
             if method == "GET":
                 if path == "/api/sheet":
@@ -446,21 +475,8 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
                 if path == "/api/sheet/proposals":
                     units = [u for u in q.get("units", [""])[0].split(",") if u] or None
                     return handler._json({"proposals": sheet._sm().shared_proposals(units)}) or True
-                if path == "/api/sheet/ai/progress":
-                    return handler._json(sheet.run_progress(q.get("run", [None])[0], int(q.get("since", ["0"])[0]))) or True
                 if path == "/api/sheet/ai/runs":
                     return handler._json(sheet.run_list()) or True
-                if path == "/api/sheet/ai/image":
-                    png = sheet.run_image(q.get("run", [None])[0], q.get("id", [""])[0])
-                    if png is None:
-                        return handler._json({"ok": False, "error": "that picture is no longer kept: ask the agent to look again"}, 404) or True
-                    return handler._send(200, png, "image/png", {"Cache-Control": "max-age=3600"}) or True
-                if path == "/api/sheet/ai/usage":
-                    from .ai.usage import summary
-
-                    return handler._json(summary(q.get("period", ["all"])[0])) or True
-                if path == "/api/sheet/ai/models":
-                    return handler._json(sheet.models()) or True
                 if path == "/api/sheet/status":
                     return handler._json(sheet.status()) or True
                 if path == "/api/sheet/delta":
@@ -468,11 +484,16 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
                 if path == "/api/sheet/baseline":
                     return handler._json(sheet.baseline(q.get("all", ["0"])[0] == "1")) or True
                 if path == "/api/sheet/export":
-                    out = Path(tempfile.mkdtemp()) / (Path(sheet._sm().path).stem + "_parametric.dxf")
-                    rep = sheet._sm().export(str(out))
-                    if rep["audit"]["errors"] or rep["errors"]:
-                        return handler._json({"ok": False, "error": "the export did not pass its checks", "report": rep}, 409) or True
-                    return handler._send(200, out.read_bytes(), "application/dxf",
+                    tmpdir = Path(tempfile.mkdtemp())
+                    try:
+                        out = tmpdir / (Path(sheet._sm().path).stem + "_parametric.dxf")
+                        rep = sheet._sm().export(str(out))
+                        if rep["audit"]["errors"] or rep["errors"]:
+                            return handler._json({"ok": False, "error": "the export did not pass its checks", "report": rep}, 409) or True
+                        data = out.read_bytes()
+                    finally:
+                        shutil.rmtree(tmpdir, ignore_errors=True)
+                    return handler._send(200, data, "application/dxf",
                                          {"Content-Disposition": f'attachment; filename="{out.name}"', "X-Export-Report": json.dumps(rep)[:4000]}) or True
                 if path == "/api/sheet/project":
                     body = json.dumps(sheet._sm().to_dict(), indent=1, default=list).encode()
@@ -482,7 +503,10 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
                 raw = handler._body()
                 if path == "/api/sheet/open":
                     name = q.get("name", ["upload.dxf"])[0]
-                    tmp = Path(tempfile.mkdtemp()) / Path(name).name
+                    fname = Path(name).name
+                    if not fname or fname in (".", ".."):
+                        fname = "upload.dxf"
+                    tmp = Path(tempfile.mkdtemp()) / fname
                     tmp.write_bytes(raw)
                     return handler._json(sheet.open(str(tmp))) or True
                 body = json.loads(raw or b"{}")
@@ -496,8 +520,6 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
                     return handler._json(sheet.start_run(body)) or True
                 if path == "/api/sheet/ai/continue":
                     return handler._json(sheet.continue_run(body)) or True
-                if path == "/api/sheet/ai/stop":
-                    return handler._json(sheet.stop_run(body)) or True
                 if path == "/api/sheet/ai/apply":
                     return handler._json(sheet.apply_run(body)) or True
                 if path == "/api/sheet/ai/revert":
@@ -509,9 +531,19 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
                 if path == "/api/sheet/prefs":
                     return handler._json(sheet.set_prefs(body)) or True
                 if path == "/api/sheet/project":
-                    tmp = Path(tempfile.mkdtemp()) / "project.json"
-                    tmp.write_text(json.dumps(body))
-                    sheet.sm = SheetModel.load(str(tmp), dxf=sheet._sm().path)
+                    if sheet.running():
+                        raise SheetError("the agent is working on this sheet: stop it first")
+                    tmpdir = Path(tempfile.mkdtemp())
+                    try:
+                        tmp = tmpdir / "project.json"
+                        tmp.write_text(json.dumps(body))
+                        sheet.sm = SheetModel.load(str(tmp), dxf=sheet._sm().path)
+                    finally:
+                        shutil.rmtree(tmpdir, ignore_errors=True)
+                    if sheet.gem is not None:
+                        sheet.gem.close()
+                        sheet.gem = None
+                    sheet.gem_model = None
                     sheet.shown = set()
                     sheet.pictures, sheet.runs, sheet.current_run = None, {}, None  # runs belong to the sheet model they worked on
                     return handler._json({"ok": True, "summary": sheet.summary()}) or True

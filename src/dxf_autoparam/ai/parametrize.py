@@ -32,12 +32,23 @@ from .vertex import Gemini, GeminiStopped, GeminiUnavailable
 
 
 def _snapshot(an):
-    return {cid: (c.name, c.accepted) for cid, c in an.clusters.items()}
+    return {
+        "clusters": {cid: (c.name, c.accepted, list(c.gaps)) for cid, c in an.clusters.items()},
+        "gap_clusters": {gid: g.cluster for gid, g in an.gaps.items()},
+        "datums": {did: copy.copy(d) for did, d in an.datums.items()},
+        "slot_datum": dict(an.slot_datum),
+    }
 
 
 def _restore(an, snap) -> None:
-    for cid, (name, acc) in snap.items():
-        an.clusters[cid].name, an.clusters[cid].accepted = name, acc
+    for cid, (name, acc, gaps) in snap["clusters"].items():
+        if cid in an.clusters:
+            an.clusters[cid].name, an.clusters[cid].accepted, an.clusters[cid].gaps = name, acc, list(gaps)
+    for gid, cl in snap["gap_clusters"].items():
+        if gid in an.gaps:
+            an.gaps[gid].cluster = cl
+    an.datums = {did: copy.copy(d) for did, d in snap["datums"].items()}
+    an.slot_datum = dict(snap["slot_datum"])
 
 
 def prepare(path: str, view: int | None = None, region=None, drawing=None, analysis=None):

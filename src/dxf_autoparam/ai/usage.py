@@ -50,12 +50,18 @@ def summary(period: str = "all", ledger: Path | None = None, recent: int = 15) -
         if not isinstance(e, dict) or not e.get("model") or (period == "today" and not str(e.get("at", "")).startswith(today)):
             continue
         r = rows.setdefault(e["model"], {"model": e["model"], "calls": 0, "errors": 0, "input": 0, "cached": 0, "output": 0, "thinking": 0, "seconds": 0.0})
-        if e.get("error"):
-            r["errors"] += 1
-            continue
         inp, cac = int(e.get("input_tokens") or 0), int(e.get("vertex_cached_tokens") or 0)
         out, think = int(e.get("output_tokens") or 0), int(e.get("thinking_tokens") or 0)
-        r["calls"] += 1
+        has_tokens = bool(inp or cac or out or think)
+        if e.get("error"):
+            r["errors"] += 1
+            if not has_tokens:
+                continue
+        elif e.get("stopped"):
+            if not has_tokens:
+                continue
+        else:
+            r["calls"] += 1
         r["input"] += max(inp - cac, 0)
         r["cached"] += cac
         r["output"] += out + think

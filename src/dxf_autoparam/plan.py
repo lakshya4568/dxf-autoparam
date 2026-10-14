@@ -126,7 +126,11 @@ def _concepts_of(name: str | None) -> dict[str, list[frozenset[str]]]:
 def vocabulary(prog: Program, parts: dict[str, Part] | None = None) -> list[dict]:
     """What an instruction may name on THIS drawing: its parts, its named values and levels, its centre lines — each
     with the words of its name, type and label, and the knowledge pack's aliases for the concept it is."""
-    concepts = _concepts()
+    pack_name = domain.name_of()
+    fam = (prog.structure or {}).get("family")
+    if not pack_name and fam and fam != "other":
+        pack_name = next((p for p in domain.available() if any(f[0] == fam for f in domain.families(domain.active(p)))), None)
+    concepts = _concepts(pack_name)
     parts = parts if parts is not None else (prog.intent.get("parts") or {})
     comps = {c.name: c for c in prog.components}
     out = []
@@ -142,11 +146,13 @@ def vocabulary(prog: Program, parts: dict[str, Part] | None = None) -> list[dict
         typ = comps[n].type if n in comps else p.type
         out.append({"kind": "part", "name": n, "words": words(n) | words(typ), "core": words(n), "alias": aliases(n, typ),
                     "existing": p.existing})
+    void_params = {c.name for c in prog.analysis.clusters.values() if c.name and c.kind.value == "void"}
     for n, q in prog.params.items():
         if q.source == "geometry" and q.kind != "level":
             continue  # a size nobody named is reached through a part or an id, never guessed from words
         kind = "level" if q.kind == "level" else "parameter"
-        out.append({"kind": kind, "name": n, "words": words(n) | words(q.label), "core": words(n), "alias": aliases(n)})
+        extra = [frozenset({"opening", "clear"})] if n in void_params else []
+        out.append({"kind": kind, "name": n, "words": words(n) | words(q.label), "core": words(n), "alias": aliases(n) + extra})
     an = prog.analysis
     for d in an.datums.values():
         if d.source == "drawn-axis" and d.id in prog.formulas:

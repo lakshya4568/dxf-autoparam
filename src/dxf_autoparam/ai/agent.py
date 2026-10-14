@@ -650,8 +650,10 @@ class Workbench:
                     "ask_person (or leave it): unsharing happens in the workspace, not here")
             gone = {k: set(a.get(k) or []) for k in ("parts", "parameters", "constraints", "formulas")}
             gone["parts"] |= {pascal(n) for n in gone["parts"]}
+            gone["parameters"] |= {pascal(n) for n in gone["parameters"]}
             A["components"] = [c for c in A["components"] if c.get("name") not in gone["parts"]]
             A["parameters"] = [p for p in A["parameters"] if p.get("name") not in gone["parameters"]]
+            A["relations"] = [r for r in A["relations"] if r.get("name") not in gone["parameters"]]
             A["constraints"] = [c for c in A["constraints"] if c.get("description") not in gone["constraints"]]
             A["datum_formulas"] = [f for f in A["datum_formulas"] if f.get("datum") not in gone["formulas"]]
             return "removed", f"removed {sum(len(v) for v in gone.values())} item(s)"
@@ -683,6 +685,7 @@ class Workbench:
                 A["datum_formulas"].append({"datum": a["line"], "expr": a["expr"].strip()})
             return a["line"], ""
         if name == "set_relation":
+            a = {**a, "name": pascal(a["name"])}
             expr = (a.get("expr") or "").strip()
             if expr and _is_constant(expr):  # a bare number depends on nothing: it would claim a relation and freeze the value
                 item = a["name"]
