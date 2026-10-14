@@ -69,12 +69,16 @@ def search(pack: dict | None, queries: list[str] | str | None, query: str = "") 
 
 
 def guide(pack: dict | None) -> str:
-    """The pack's drafting guide for the model's system prompt (empty without a pack)."""
+    """The pack's drafting guide for the model's system prompt (empty without a pack), and — when the pack has an engineering library
+    (`knowledge/library/<name>/`) — the paragraph that says how to retrieve from it."""
     if not pack or not pack.get("guide"):
         return ""
+    from . import library
+
+    lib = library.protocol_text(pack)
     return ("DOMAIN PACK (on for this run: " + pack["name"] + ") — names and guidance for one kind of structure. They are offered, not required: use a name "
             "when it is what the drawing shows, otherwise name the thing the way its designer would.\n" + pack["guide"] + "\n"
-            "The OVERVIEW lists the pack's concept names and structure families with their parts; `knowledge` searches them.\n")
+            "The OVERVIEW lists the pack's concept names and structure families with their parts; `knowledge` searches them.\n" + (("\n" + lib + "\n") if lib else ""))
 
 
 def knowledge_text(pack: dict | None) -> str:

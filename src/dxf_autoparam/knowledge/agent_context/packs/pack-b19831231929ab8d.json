@@ -1,0 +1,122 @@
+{
+  "agent_summary": "Task source_evidence for rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p3 (rdso_page, family rcc_box). Completeness: not_saved. Claims: 0. Candidates: 0. Conflicts: 2. Open questions: 3. Every dimension is a candidate; binding is blocked. CAD binding: unavailable.",
+  "blocked_next_actions": [
+    {
+      "action": "state a value as verified",
+      "reason": "no human verification is recorded in the repository"
+    },
+    {
+      "action": "promote a proposal or an unreviewed entry into accepted knowledge",
+      "reason": "proposals and unreviewed entries are never merged or promoted by this layer"
+    },
+    {
+      "action": "use this pack as training data",
+      "reason": "packs are derived artefacts, not labels or sources"
+    }
+  ],
+  "built_from": {
+    "registry_digest": "4395427d73da1f49797b137de95fca5c02e47a348949116c34504a7c60a0471b"
+  },
+  "candidate_interpretations": [],
+  "claims": [],
+  "completeness": {
+    "capabilities": {
+      "dimension_text": false,
+      "disputes_recorded": 0,
+      "identity": true,
+      "levels": false,
+      "live_cad_binding": false,
+      "parameters": false,
+      "parts": false,
+      "picture": false,
+      "relations": false,
+      "vector_text": false,
+      "verified_values": 0,
+      "views": false
+    },
+    "missing": [
+      "page json and markdown"
+    ],
+    "notes": [
+      "No value in this pack is verified by a person; the registry holds no verification record.",
+      "Page reads were made by eye (no OCR). Saved is not the same as checked against the picture."
+    ],
+    "status": "not_saved"
+  },
+  "component_definitions": [],
+  "conflicts": [
+    {
+      "issue_id": "issue:status_conflict:rdso-extract:RDSO-RCC-BOX-10157-6TO-10157-10",
+      "kind": "status_conflict",
+      "text": "_STATUS_AUDIT.txt (2026-10-09 22:37) says 1 JSON pages; the disk has 2. The disk count is used; the audit is out of date."
+    },
+    {
+      "issue_id": "issue:unverified_claim:rdso-extract:RDSO-RCC-BOX-10157-6TO-10157-10",
+      "kind": "unverified_claim",
+      "text": "scratch ledgers in this folder say values were displayed; the status notes say page 1 values were never read from a displayed image. The ledger is not evidence for those values."
+    }
+  ],
+  "derived": true,
+  "formulas": [],
+  "generator": "agentctx 1.0",
+  "input_hashes": {},
+  "live_cad_binding": {
+    "reason": "no runtime CAD snapshot supplied; PDF primitives and picture coordinates are not CAD entities",
+    "snapshot": null,
+    "status": "unavailable"
+  },
+  "observations": {
+    "texts": [],
+    "views": []
+  },
+  "observations_summary": {},
+  "pack_id": "pack-b19831231929ab8d",
+  "pack_kind": "derived_evidence_pack",
+  "pack_version": "1.0",
+  "permitted_next_actions": [
+    "cite evidence ids from this pack in your answer",
+    "report which sections are missing, as listed under completeness"
+  ],
+  "source_fingerprints": {
+    "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p3": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "source_references": [
+    {
+      "fingerprint": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "kind": "rdso_page",
+      "record_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p3",
+      "role": "subject",
+      "source_paths": []
+    }
+  ],
+  "subject": {
+    "bridge_ids": [],
+    "family": "rcc_box",
+    "kind": "rdso_page",
+    "record_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p3",
+    "source_paths": [],
+    "title": "RDSO-RCC-BOX-10157-6TO-10157-10 page 3"
+  },
+  "task": {
+    "description": "Find the sources and stored observations for a record, with their trust labels and gaps.",
+    "name": "source_evidence",
+    "requested_scope": {}
+  },
+  "unresolved_questions": [
+    {
+      "issue_id": "issue:open_point:rdso-extract:RDSO-RCC-BOX-10157-6TO-10157-10",
+      "kind": "open_point",
+      "text": "scratch ledgers in this folder claim values that were not displayed; do not use page 1 until re-read"
+    },
+    {
+      "issue_id": "issue:status_conflict:rdso-extract:RDSO-RCC-BOX-10157-6TO-10157-10",
+      "kind": "status_conflict",
+      "text": "_STATUS_AUDIT.txt (2026-10-09 22:37) says 1 JSON pages; the disk has 2. The disk count is used; the audit is out of date."
+    },
+    {
+      "issue_id": "issue:unverified_claim:rdso-extract:RDSO-RCC-BOX-10157-6TO-10157-10",
+      "kind": "unverified_claim",
+      "text": "scratch ledgers in this folder say values were displayed; the status notes say page 1 values were never read from a displayed image. The ledger is not evidence for those values."
+    }
+  ]
+}

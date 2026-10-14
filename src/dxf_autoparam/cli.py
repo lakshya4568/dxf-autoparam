@@ -6,6 +6,7 @@
     dxf-autoparam bench    [fixtures/library] [--domain bridge]
     dxf-autoparam serve    [drawing.dxf] [--domain bridge] [--port 8765]
     dxf-autoparam plan-bench / agent-eval   free benchmarks of the plan engine and (scripted, or --live --yes-spend) of the agent, per category
+    dxf-autoparam library  list | search WORDS | show ID [--section S] | discover drawing.dxf   the engineering library (read-only, no model)
 
 Sizes on the command line are millimetres; levels are metres.
 """
@@ -27,6 +28,56 @@ from .views import detect_views
 
 def _region(s: str | None):
     return tuple(float(v) for v in s.split(",")) if s else None
+
+
+def _library(a) -> int:
+    """`library list | search | show | discover`: what the agent can retrieve and what it would find for a drawing, printed as the model sees it."""
+    from .ai import library as L
+
+    lib = L.open_domain(a.domain)
+    if lib is None:
+        print(f"no library for domain {a.domain!r}; available: {', '.join(L.domains()) or 'none'}", file=sys.stderr)
+        return 2
+    ks = L.KnowledgeSession(lib)
+    if a.action == "list":
+        res = ks.call("list_skills", {"match_drawing": False})
+        print(f"{lib.title} — {len(res['skills'])} skills")
+        for s in res["skills"]:
+            secs = s["sections"].items() if isinstance(s["sections"], dict) else [(k, "") for k in s["sections"]]
+            print(f"  {s['id']:<26} {s['kind']:<9} {s['title'][:60]}   [{', '.join(f'{k}:{v}' if v != '' else k for k, v in secs)}]")
+        return 0
+    if a.arg is None:
+        print(f"library {a.action}: give {'words' if a.action == 'search' else 'an id' if a.action == 'show' else 'a DXF file'}", file=sys.stderr)
+        return 2
+    if a.action == "search":
+        res = ks.call("search_library", {"queries": [a.arg], "categories": a.category, "topics": a.topic, "limit": a.limit})
+        for h in res.get("hits", []):
+            print(f"{h['id']}  [{h['category']}/{h.get('topic')}; {h.get('review')}; {h.get('status')}]  {h['title']}\n    {h['text']}")
+        print(f"{res.get('count', 0)} hit(s)")
+        return 0
+    if a.action == "show":
+        if lib.skill(a.arg) is not None:
+            res = ks.call("load_skill", {"id": a.arg, **({"sections": a.section} if a.section else {})})
+            print(f"# {res['title']}  ({res['kind']}; {res['trust']})")
+            for k, text in res["sections"].items():
+                print(f"\n## {k}\n{text}")
+            if res["not_included"]:
+                print("\nnot shown (use --section): " + ", ".join(f"{n['section']} ({n['chars']} chars)" for n in res["not_included"]))
+            return 0
+        print(json.dumps(ks.call("get_reference", {"id": a.arg}), indent=1, ensure_ascii=False))
+        return 0
+    from .crossview import SheetModel
+
+    sm = SheetModel.open(a.arg)
+    texts = L.drawing_texts(sm.dr.items)
+    found = lib.discover(texts, top=5)
+    print(f"{len(texts)} printed notes read; {len(lib.match_labels(texts))} vocabulary label match(es)")
+    for m in found:
+        print(f"  {m['skill']:<22} score {m['score']:>6}  {'STRUCTURE label printed' if m['strong'] else 'parts only'}: "
+              + ", ".join(dict.fromkeys(b['printed'] for b in m['because'])))
+    if not found:
+        print("  no skill's cues match this drawing's printed words: the agent works from the drawing alone (the recipes still apply)")
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -81,6 +132,14 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--port", type=int, default=8765)
     p.add_argument("--answer", default=None, help="open with a saved Gemini answer (validated again, no AI call)")
     p.add_argument("--project", default=None, help="open the workspace with a saved parametric project (.autoparam.json)")
+    p = sub.add_parser("library", help="the engineering library the agent retrieves from (read-only, no model, no cost)")
+    p.add_argument("action", choices=["list", "search", "show", "discover"])
+    p.add_argument("arg", nargs="?", default=None, help="search: words · show: a skill id or a record id · discover: a DXF")
+    p.add_argument("--domain", default="bridge")
+    p.add_argument("--section", action="append", default=[], help="show a skill: this section (repeat); default the working set")
+    p.add_argument("--category", action="append", default=[], help="search: B reference, C vocabulary, D proposed or disputed, E operational")
+    p.add_argument("--topic", action="append", default=[], help="search: formula, rule, component, level_chain, conflict …")
+    p.add_argument("--limit", type=int, default=12)
     p = sub.add_parser("plan-bench", help="free, no AI: instruction-guided assembly edits on generated drawings with known intent, scored")
     p.add_argument("--out", default="plan_bench.json")
     p = sub.add_parser("agent-eval", help="score the agent per category (reading, parts, values, anchor, plan, geometry …) on a drawing whose intended result is known")
@@ -94,6 +153,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--out", default="agent_eval.json")
     a = ap.parse_args(argv)
 
+    if a.cmd == "library":
+        return _library(a)
     if a.cmd == "check":
         from .robustness import check_all
 

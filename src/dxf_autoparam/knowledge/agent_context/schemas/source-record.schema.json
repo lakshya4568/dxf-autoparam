@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "agentctx source record (registry/sources.jsonl)",
+  "description": "One source the registry knows about: a drawing sheet, its grounding, a vector sheet, an RDSO document or page, a book source, an instruction, a status document, a schema. Points to the repository file; never copies it.",
+  "x-schema-version": "1.0",
+  "type": "object",
+  "required": ["id", "kind", "category", "title", "family", "source_paths", "fingerprint", "existing_ids", "completeness", "verification", "trust", "eligibility", "provenance", "issues"],
+  "properties": {
+    "id": {"type": "string", "minLength": 1},
+    "kind": {"enum": ["drawing_sheet", "grounding", "bridge", "vector_sheet", "rdso_document", "rdso_extract", "rdso_page", "book_source", "book_pdf", "engineering_note", "ontology_file", "teaching_file", "instruction", "schema", "status_document", "proposal_log", "training_artifact", "kb_file", "kb_entries_file"]},
+    "category": {"enum": ["A", "B", "C", "D", "E", null]},
+    "title": {"type": "string"},
+    "summary": {"type": ["string", "null"]},
+    "family": {"type": ["string", "null"]},
+    "owner": {"type": ["string", "null"]},
+    "bridge_ids": {"type": "array", "items": {"type": "string"}},
+    "source_paths": {"type": "array", "items": {"type": "string"}},
+    "source_sha256": {"type": ["string", "null"]},
+    "fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "existing_ids": {"type": "object"},
+    "completeness": {"type": "object"},
+    "verification": {"type": "object", "properties": {"human_verified": {"const": false}}},
+    "trust": {"type": "object"},
+    "eligibility": {"$ref": "#/$defs/eligibility"},
+    "provenance": {"type": "object"},
+    "issues": {"type": "array", "items": {"type": "string", "pattern": "^issue:"}}
+  },
+  "$defs": {
+    "eligibility": {
+      "type": "object",
+      "required": ["retrieval", "binding", "finetune"],
+      "properties": {
+        "retrieval": {"type": "string", "pattern": "^(eligible|blocked):[a-z0-9_+]+$"},
+        "binding": {"type": "string", "pattern": "^(eligible|blocked):[a-z0-9_+]+$"},
+        "finetune": {"type": "string", "pattern": "^(eligible|blocked):[a-z0-9_+]+$"}
+      }
+    }
+  }
+}

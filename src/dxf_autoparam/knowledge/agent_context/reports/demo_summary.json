@@ -1,0 +1,135 @@
+{
+  "packs": [
+    {
+      "candidates": 60,
+      "claims": 60,
+      "completeness": "grounded_unverified",
+      "conflicts": 5,
+      "errors": [],
+      "live_cad_binding": "unavailable",
+      "missing": [],
+      "pack_id": "pack-4d0e7f899d167904",
+      "record_id": "21cc08a32dd8-p1",
+      "task": "dimension_binding",
+      "valid": true,
+      "why": "grounded RUB sheet with open disputes and revision conflicts",
+      "written_to": "agent-context/packs/pack-4d0e7f899d167904.json"
+    },
+    {
+      "candidates": 12,
+      "claims": 12,
+      "completeness": "partially_grounded",
+      "conflicts": 1,
+      "errors": [],
+      "live_cad_binding": "unavailable",
+      "missing": [
+        "grounding section empty: repeats",
+        "grounding section empty: disputes",
+        "grounding section empty: absent"
+      ],
+      "pack_id": "pack-7ca8f5fa3cf0b564",
+      "record_id": "418834d8e9df-p1",
+      "task": "component_interpretation",
+      "valid": true,
+      "why": "grounded pipe culvert sheet",
+      "written_to": "agent-context/packs/pack-7ca8f5fa3cf0b564.json"
+    },
+    {
+      "candidates": 0,
+      "claims": 0,
+      "completeness": "limited_ungrounded",
+      "conflicts": 0,
+      "errors": [],
+      "live_cad_binding": "unavailable",
+      "missing": [
+        "grounding (no views, dimensions, parts or levels filed)"
+      ],
+      "pack_id": "pack-47c1dbba898dbafd",
+      "record_id": "03838b68a761-p1",
+      "task": "source_evidence",
+      "valid": true,
+      "why": "ungrounded RCC box sheet: identity and picture only (limited pack)",
+      "written_to": "agent-context/packs/pack-47c1dbba898dbafd.json"
+    },
+    {
+      "candidates": 22,
+      "claims": 21,
+      "completeness": "partially_grounded",
+      "conflicts": 1,
+      "errors": [],
+      "live_cad_binding": "unavailable",
+      "missing": [
+        "grounding section empty: absent"
+      ],
+      "pack_id": "pack-75189085011d8e38",
+      "record_id": "2da8cb493f51-p1",
+      "task": "geometric_relationships",
+      "valid": true,
+      "why": "grounded sheet with missing grounding sections (partial)",
+      "written_to": "agent-context/packs/pack-75189085011d8e38.json"
+    },
+    {
+      "candidates": 0,
+      "claims": 0,
+      "completeness": "vector_text_observed",
+      "conflicts": 0,
+      "errors": [],
+      "live_cad_binding": "unavailable",
+      "missing": [],
+      "pack_id": "pack-6d1e9dc77fc058f4",
+      "record_id": "v-993a513ea007-p1",
+      "task": "geometric_relationships",
+      "valid": true,
+      "why": "vector sheet: text layer only, no grounding",
+      "written_to": "agent-context/packs/pack-6d1e9dc77fc058f4.json"
+    },
+    {
+      "candidates": 0,
+      "claims": 0,
+      "completeness": "page_saved_unverified",
+      "conflicts": 0,
+      "errors": [],
+      "live_cad_binding": "unavailable",
+      "missing": [],
+      "pack_id": "pack-8241a32b11071047",
+      "record_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1",
+      "task": "source_evidence",
+      "valid": true,
+      "why": "saved RDSO page, checked at view level",
+      "written_to": "agent-context/packs/pack-8241a32b11071047.json"
+    },
+    {
+      "candidates": 9,
+      "claims": 9,
+      "completeness": "page_saved_unverified",
+      "conflicts": 2,
+      "errors": [],
+      "live_cad_binding": "unavailable",
+      "missing": [],
+      "pack_id": "pack-fc19b6686707b133",
+      "record_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1",
+      "task": "dimension_binding",
+      "valid": true,
+      "why": "RDSO page whose values were never read from a displayed image",
+      "written_to": "agent-context/packs/pack-fc19b6686707b133.json"
+    },
+    {
+      "candidates": 0,
+      "claims": 0,
+      "completeness": "not_saved",
+      "conflicts": 2,
+      "errors": [],
+      "live_cad_binding": "unavailable",
+      "missing": [
+        "page json and markdown"
+      ],
+      "pack_id": "pack-b19831231929ab8d",
+      "record_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p3",
+      "task": "source_evidence",
+      "valid": true,
+      "why": "RDSO page that is not saved",
+      "written_to": "agent-context/packs/pack-b19831231929ab8d.json"
+    }
+  ],
+  "valid": true
+}

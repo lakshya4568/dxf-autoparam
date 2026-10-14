@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "agentctx issue (registry/issues.jsonl)",
+  "description": "A known problem, source hazard or status conflict. Reported, never fixed automatically. affects lists the purposes it blocks.",
+  "x-schema-version": "1.0",
+  "type": "object",
+  "required": ["id", "kind", "subject", "severity", "affects", "description", "evidence", "detected_by"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^issue:"},
+    "kind": {"type": "string"},
+    "subject": {"type": "string"},
+    "severity": {"enum": ["info", "warning", "error"]},
+    "affects": {"type": "array", "items": {"enum": ["retrieval", "binding", "finetune"]}},
+    "description": {"type": "string"},
+    "evidence": {"type": "array", "items": {"type": "string"}},
+    "detected_by": {"type": "string"}
+  }
+}

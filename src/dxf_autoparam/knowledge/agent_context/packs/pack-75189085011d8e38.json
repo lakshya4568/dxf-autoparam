@@ -1,0 +1,4218 @@
+{
+  "agent_summary": "Task geometric_relationships for 2da8cb493f51-p1 (drawing_sheet, family rcc_box). Completeness: partially_grounded. Claims: 21. Candidates: 22. Conflicts: 1. Open questions: 20. Every dimension is a candidate; binding is blocked. CAD binding: unavailable.",
+  "blocked_next_actions": [
+    {
+      "action": "state a value as verified",
+      "reason": "no human verification is recorded in the repository"
+    },
+    {
+      "action": "promote a proposal or an unreviewed entry into accepted knowledge",
+      "reason": "proposals and unreviewed entries are never merged or promoted by this layer"
+    },
+    {
+      "action": "use this pack as training data",
+      "reason": "packs are derived artefacts, not labels or sources"
+    },
+    {
+      "action": "edit or select a CAD entity",
+      "reason": "no runtime CAD snapshot: picture coordinates and vector paths are not CAD entities"
+    },
+    {
+      "action": "measure geometry from the picture",
+      "reason": "this pack has no pixel measurement"
+    }
+  ],
+  "built_from": {
+    "registry_digest": "4395427d73da1f49797b137de95fca5c02e47a348949116c34504a7c60a0471b"
+  },
+  "candidate_interpretations": [
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "count": 7,
+        "members": [
+          "P2",
+          "P3",
+          "P4",
+          "P5",
+          "P6",
+          "P7",
+          "P8"
+        ],
+        "unit_class": "box_barrel"
+      },
+      "evidence_id": "2da8cb493f51-p1#R1",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "from": "P2",
+        "to": "P1",
+        "type": "part_of"
+      },
+      "evidence_id": "2da8cb493f51-p1#rel0",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "from": "P3",
+        "to": "P1",
+        "type": "part_of"
+      },
+      "evidence_id": "2da8cb493f51-p1#rel1",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "from": "P10",
+        "to": "P1",
+        "type": "connected_to"
+      },
+      "evidence_id": "2da8cb493f51-p1#rel10",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "from": "P15",
+        "to": "P11",
+        "type": "part_of"
+      },
+      "evidence_id": "2da8cb493f51-p1#rel11",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "from": "P11",
+        "to": "P1",
+        "type": "connected_to"
+      },
+      "evidence_id": "2da8cb493f51-p1#rel12",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "from": "P16",
+        "to": "P12",
+        "type": "part_of"
+      },
+      "evidence_id": "2da8cb493f51-p1#rel13",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "from": "P12",
+        "to": "P1",
+        "type": "connected_to"
+      },
+      "evidence_id": "2da8cb493f51-p1#rel14",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "from": "P17",
+        "to": "P9",
+        "type": "part_of"
+      },
+      "evidence_id": "2da8cb493f51-p1#rel15",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "from": "P1",
+        "to": "P19",
+        "type": "rests_on"
+      },
+      "evidence_id": "2da8cb493f51-p1#rel16",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "from": "P19",
+        "to": "P20",
+        "type": "rests_on"
+      },
+      "evidence_id": "2da8cb493f51-p1#rel17",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "from": "P21",
+        "to": "P1",
+        "type": "rests_on"
+      },
+      "evidence_id": "2da8cb493f51-p1#rel18",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "from": "P18",
+        "to": "P1",
+        "type": "bears_on"
+      },
+      "evidence_id": "2da8cb493f51-p1#rel19",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "from": "P4",
+        "to": "P1",
+        "type": "part_of"
+      },
+      "evidence_id": "2da8cb493f51-p1#rel2",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "from": "P1",
+        "to": "P24",
+        "type": "set_out_from"
+      },
+      "evidence_id": "2da8cb493f51-p1#rel20",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "from": "P5",
+        "to": "P1",
+        "type": "part_of"
+      },
+      "evidence_id": "2da8cb493f51-p1#rel3",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "from": "P6",
+        "to": "P1",
+        "type": "part_of"
+      },
+      "evidence_id": "2da8cb493f51-p1#rel4",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "from": "P7",
+        "to": "P1",
+        "type": "part_of"
+      },
+      "evidence_id": "2da8cb493f51-p1#rel5",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "from": "P8",
+        "to": "P1",
+        "type": "part_of"
+      },
+      "evidence_id": "2da8cb493f51-p1#rel6",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "from": "P13",
+        "to": "P9",
+        "type": "part_of"
+      },
+      "evidence_id": "2da8cb493f51-p1#rel7",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "from": "P9",
+        "to": "P1",
+        "type": "connected_to"
+      },
+      "evidence_id": "2da8cb493f51-p1#rel8",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "from": "P14",
+        "to": "P10",
+        "type": "part_of"
+      },
+      "evidence_id": "2da8cb493f51-p1#rel9",
+      "status": "candidate_only"
+    }
+  ],
+  "claims": [
+    {
+      "claim_id": "C1",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+        "finetune": "blocked:no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "2da8cb493f51-p1#rel0"
+      ],
+      "kind": "observation",
+      "source_ids": [
+        "grounding:2da8cb493f51-p1"
+      ],
+      "statement": "P2 part_of P1 (agent reading)",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {},
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C2",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+        "finetune": "blocked:no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "2da8cb493f51-p1#rel1"
+      ],
+      "kind": "observation",
+      "source_ids": [
+        "grounding:2da8cb493f51-p1"
+      ],
+      "statement": "P3 part_of P1 (agent reading)",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {},
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C3",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+        "finetune": "blocked:no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "2da8cb493f51-p1#rel10"
+      ],
+      "kind": "observation",
+      "source_ids": [
+        "grounding:2da8cb493f51-p1"
+      ],
+      "statement": "P10 connected_to P1 (agent reading)",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {},
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C4",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+        "finetune": "blocked:no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "2da8cb493f51-p1#rel11"
+      ],
+      "kind": "observation",
+      "source_ids": [
+        "grounding:2da8cb493f51-p1"
+      ],
+      "statement": "P15 part_of P11 (agent reading)",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {},
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C5",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+        "finetune": "blocked:no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "2da8cb493f51-p1#rel12"
+      ],
+      "kind": "observation",
+      "source_ids": [
+        "grounding:2da8cb493f51-p1"
+      ],
+      "statement": "P11 connected_to P1 (agent reading)",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {},
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C6",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+        "finetune": "blocked:no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "2da8cb493f51-p1#rel13"
+      ],
+      "kind": "observation",
+      "source_ids": [
+        "grounding:2da8cb493f51-p1"
+      ],
+      "statement": "P16 part_of P12 (agent reading)",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {},
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C7",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+        "finetune": "blocked:no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "2da8cb493f51-p1#rel14"
+      ],
+      "kind": "observation",
+      "source_ids": [
+        "grounding:2da8cb493f51-p1"
+      ],
+      "statement": "P12 connected_to P1 (agent reading)",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {},
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C8",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+        "finetune": "blocked:no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "2da8cb493f51-p1#rel15"
+      ],
+      "kind": "observation",
+      "source_ids": [
+        "grounding:2da8cb493f51-p1"
+      ],
+      "statement": "P17 part_of P9 (agent reading)",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {},
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C9",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+        "finetune": "blocked:no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "2da8cb493f51-p1#rel16"
+      ],
+      "kind": "observation",
+      "source_ids": [
+        "grounding:2da8cb493f51-p1"
+      ],
+      "statement": "P1 rests_on P19 (agent reading)",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {},
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C10",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+        "finetune": "blocked:no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "2da8cb493f51-p1#rel17"
+      ],
+      "kind": "observation",
+      "source_ids": [
+        "grounding:2da8cb493f51-p1"
+      ],
+      "statement": "P19 rests_on P20 (agent reading)",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {},
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C11",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+        "finetune": "blocked:no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "2da8cb493f51-p1#rel18"
+      ],
+      "kind": "observation",
+      "source_ids": [
+        "grounding:2da8cb493f51-p1"
+      ],
+      "statement": "P21 rests_on P1 (agent reading)",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {},
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C12",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+        "finetune": "blocked:no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "2da8cb493f51-p1#rel19"
+      ],
+      "kind": "observation",
+      "source_ids": [
+        "grounding:2da8cb493f51-p1"
+      ],
+      "statement": "P18 bears_on P1 (agent reading)",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {},
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C13",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+        "finetune": "blocked:no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "2da8cb493f51-p1#rel2"
+      ],
+      "kind": "observation",
+      "source_ids": [
+        "grounding:2da8cb493f51-p1"
+      ],
+      "statement": "P4 part_of P1 (agent reading)",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {},
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C14",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+        "finetune": "blocked:no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "2da8cb493f51-p1#rel20"
+      ],
+      "kind": "observation",
+      "source_ids": [
+        "grounding:2da8cb493f51-p1"
+      ],
+      "statement": "P1 set_out_from P24 (agent reading)",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {},
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C15",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+        "finetune": "blocked:no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "2da8cb493f51-p1#rel3"
+      ],
+      "kind": "observation",
+      "source_ids": [
+        "grounding:2da8cb493f51-p1"
+      ],
+      "statement": "P5 part_of P1 (agent reading)",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {},
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C16",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+        "finetune": "blocked:no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "2da8cb493f51-p1#rel4"
+      ],
+      "kind": "observation",
+      "source_ids": [
+        "grounding:2da8cb493f51-p1"
+      ],
+      "statement": "P6 part_of P1 (agent reading)",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {},
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C17",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+        "finetune": "blocked:no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "2da8cb493f51-p1#rel5"
+      ],
+      "kind": "observation",
+      "source_ids": [
+        "grounding:2da8cb493f51-p1"
+      ],
+      "statement": "P7 part_of P1 (agent reading)",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {},
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C18",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+        "finetune": "blocked:no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "2da8cb493f51-p1#rel6"
+      ],
+      "kind": "observation",
+      "source_ids": [
+        "grounding:2da8cb493f51-p1"
+      ],
+      "statement": "P8 part_of P1 (agent reading)",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {},
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C19",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+        "finetune": "blocked:no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "2da8cb493f51-p1#rel7"
+      ],
+      "kind": "observation",
+      "source_ids": [
+        "grounding:2da8cb493f51-p1"
+      ],
+      "statement": "P13 part_of P9 (agent reading)",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {},
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C20",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+        "finetune": "blocked:no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "2da8cb493f51-p1#rel8"
+      ],
+      "kind": "observation",
+      "source_ids": [
+        "grounding:2da8cb493f51-p1"
+      ],
+      "statement": "P9 connected_to P1 (agent reading)",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {},
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C21",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+        "finetune": "blocked:no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "2da8cb493f51-p1#rel9"
+      ],
+      "kind": "observation",
+      "source_ids": [
+        "grounding:2da8cb493f51-p1"
+      ],
+      "statement": "P14 part_of P10 (agent reading)",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {},
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    }
+  ],
+  "completeness": {
+    "capabilities": {
+      "dimension_text": true,
+      "disputes_recorded": 1,
+      "identity": true,
+      "levels": true,
+      "live_cad_binding": false,
+      "parameters": true,
+      "parts": true,
+      "picture": true,
+      "relations": true,
+      "vector_text": false,
+      "verified_values": 0,
+      "views": true
+    },
+    "missing": [
+      "grounding section empty: absent"
+    ],
+    "notes": [
+      "No value in this pack is verified by a person; the registry holds no verification record."
+    ],
+    "status": "partially_grounded"
+  },
+  "component_definitions": [],
+  "conflicts": [
+    {
+      "candidate": {
+        "value_a": "4X4.5M",
+        "value_b": "4.00 x 4.00 m"
+      },
+      "evidence_id": "2da8cb493f51-p1#dispute0",
+      "kind": "written_or_drawn_dispute",
+      "resolution": "not decided by this pack",
+      "text": "Size of the R.C.C. box"
+    }
+  ],
+  "derived": true,
+  "formulas": [
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:proposed_or_disputed+review_state_seed_unreviewed+evidence_disputed+not_marked_for_qa_training+no_training_permission_record",
+        "retrieval": "eligible:proposed_or_disputed_do_not_present_as_accepted"
+      },
+      "executed": false,
+      "expression": null,
+      "id": "kb:kb.formula.cg_val_002",
+      "statement": "girder depth ≥ L/20 (L/20 is a spacing ratio per the secondary source)",
+      "title": "CG-VAL-002",
+      "trust": {
+        "authored": null,
+        "evidence_status": "DISPUTED",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": false,
+          "retrieval": false,
+          "validator": false
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:proposed_or_disputed+review_state_seed_unreviewed+evidence_disputed+not_marked_for_qa_training+no_training_permission_record",
+        "retrieval": "eligible:proposed_or_disputed_do_not_present_as_accepted"
+      },
+      "executed": false,
+      "expression": null,
+      "id": "kb:kb.formula.cg_val_006",
+      "statement": "clearance ≥ 1.0 m confuses clearance (IRBM 312 table) with free board (313)",
+      "title": "CG-VAL-006",
+      "trust": {
+        "authored": null,
+        "evidence_status": "DISPUTED",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": false,
+          "retrieval": false,
+          "validator": false
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+        "retrieval": "eligible:unreviewed_reference"
+      },
+      "executed": false,
+      "expression": {
+        "executed": false,
+        "status": "not_executable_until_validated",
+        "text": "floor_level - slab_bottom_level"
+      },
+      "id": "kb:kb.formula.d_bottom_slab",
+      "statement": "bottom_slab = floor_level - slab_bottom_level",
+      "title": "D-BOTTOM-SLAB",
+      "trust": {
+        "authored": null,
+        "evidence_status": "DERIVED",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": true,
+          "retrieval": false,
+          "validator": true
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+        "retrieval": "eligible:unreviewed_reference"
+      },
+      "executed": false,
+      "expression": {
+        "executed": false,
+        "status": "not_executable_until_validated",
+        "text": "soffit_level - floor_level"
+      },
+      "id": "kb:kb.formula.d_clear_height",
+      "statement": "clear_height = soffit_level - floor_level",
+      "title": "D-CLEAR-HEIGHT",
+      "trust": {
+        "authored": null,
+        "evidence_status": "DERIVED",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": true,
+          "retrieval": false,
+          "validator": true
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+        "retrieval": "eligible:unreviewed_reference"
+      },
+      "executed": false,
+      "expression": {
+        "executed": false,
+        "status": "not_executable_until_validated",
+        "text": "soffit_level - bed_level"
+      },
+      "id": "kb:kb.formula.d_clear_height_from_bed",
+      "statement": "clear_height = soffit_level - bed_level",
+      "title": "D-CLEAR-HEIGHT-FROM-BED",
+      "trust": {
+        "authored": null,
+        "evidence_status": "DERIVED",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": true,
+          "retrieval": false,
+          "validator": true
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+        "retrieval": "eligible:unreviewed_reference"
+      },
+      "executed": false,
+      "expression": {
+        "executed": false,
+        "status": "not_executable_until_validated",
+        "text": "soffit_level - hfl"
+      },
+      "id": "kb:kb.formula.d_clearance",
+      "statement": "clearance = soffit_level - hfl when drawings write CL-/V.C. against the HFL; IRBM 312 measures clearance from the design-discharge water level incl. afflux (KC-6)",
+      "title": "D-CLEARANCE",
+      "trust": {
+        "authored": null,
+        "evidence_status": "COMMON_PRACTICE",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": true,
+          "retrieval": false,
+          "validator": true
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+        "retrieval": "eligible:unreviewed_reference"
+      },
+      "executed": false,
+      "expression": {
+        "executed": false,
+        "status": "not_executable_until_validated",
+        "text": "formation_level - top_slab_level"
+      },
+      "id": "kb:kb.formula.d_cushion",
+      "statement": "cushion = formation_level - top_slab_level when the datum of a standard drawing's 'fill height' (formation, sleeper or rail) is not settled (KC-5); the drawing's own cushion is formation − top of structure",
+      "title": "D-CUSHION",
+      "trust": {
+        "authored": null,
+        "evidence_status": "DERIVED",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": true,
+          "retrieval": false,
+          "validator": true
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+        "retrieval": "eligible:unreviewed_reference"
+      },
+      "executed": false,
+      "expression": {
+        "executed": false,
+        "status": "not_executable_until_validated",
+        "text": "hfl - bed_level"
+      },
+      "id": "kb:kb.formula.d_depth_of_flow",
+      "statement": "depth_of_flow = hfl - bed_level",
+      "title": "D-DEPTH-OF-FLOW",
+      "trust": {
+        "authored": null,
+        "evidence_status": "DERIVED",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": true,
+          "retrieval": false,
+          "validator": true
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+        "retrieval": "eligible:unreviewed_reference"
+      },
+      "executed": false,
+      "expression": {
+        "executed": false,
+        "status": "not_executable_until_validated",
+        "text": "footing_top_level - foundation_bottom"
+      },
+      "id": "kb:kb.formula.d_footing_depth",
+      "statement": "footing_depth = footing_top_level - foundation_bottom",
+      "title": "D-FOOTING-DEPTH",
+      "trust": {
+        "authored": null,
+        "evidence_status": "DERIVED",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": true,
+          "retrieval": false,
+          "validator": true
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+        "retrieval": "eligible:unreviewed_reference"
+      },
+      "executed": false,
+      "expression": {
+        "executed": false,
+        "status": "not_executable_until_validated",
+        "text": "bed_level - footing_top_level"
+      },
+      "id": "kb:kb.formula.d_footing_embedment",
+      "statement": "footing_embedment = bed_level - footing_top_level",
+      "title": "D-FOOTING-EMBEDMENT",
+      "trust": {
+        "authored": null,
+        "evidence_status": "DERIVED",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": true,
+          "retrieval": false,
+          "validator": true
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+        "retrieval": "eligible:unreviewed_reference"
+      },
+      "executed": false,
+      "expression": {
+        "executed": false,
+        "status": "not_executable_until_validated",
+        "text": "formation_level - hfl"
+      },
+      "id": "kb:kb.formula.d_freeboard",
+      "statement": "freeboard = formation_level - hfl when drawings write F.B. against the HFL; IRBM 313 measures free board from the design-discharge water level incl. afflux (KC-6)",
+      "title": "D-FREEBOARD",
+      "trust": {
+        "authored": null,
+        "evidence_status": "COMMON_PRACTICE",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": true,
+          "retrieval": false,
+          "validator": true
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+        "retrieval": "eligible:unreviewed_reference"
+      },
+      "executed": false,
+      "expression": {
+        "executed": false,
+        "status": "not_executable_until_validated",
+        "text": "top_slab_level - soffit_level"
+      },
+      "id": "kb:kb.formula.d_top_slab",
+      "statement": "top_slab = top_slab_level - soffit_level",
+      "title": "D-TOP-SLAB",
+      "trust": {
+        "authored": null,
+        "evidence_status": "DERIVED",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": true,
+          "retrieval": false,
+          "validator": true
+        }
+      }
+    }
+  ],
+  "generator": "agentctx 1.0",
+  "input_hashes": {
+    "bridges/rcc_box/brg-aad28bf3cb/sheets/2da8cb493f51-p1/grounding/agent-grounding.json": "c0697d82a130bd6784b4f85264c8e4a94ddfd548cb052178cce91bf5c2fcaf80",
+    "bridges/rcc_box/brg-aad28bf3cb/sheets/2da8cb493f51-p1/grounding/checks.md": "199e633ea15b0330e75f321b92d9fd7357b71a507b2373011a4d90a3f07464fb",
+    "bridges/rcc_box/brg-aad28bf3cb/sheets/2da8cb493f51-p1/grounding/review.md": "1b6bb60ae7bc0776f34f570540d62945442fae3ba1ff646a79e5498dfc57f09c",
+    "bridges/rcc_box/brg-aad28bf3cb/sheets/2da8cb493f51-p1/grounding/revisions/0001.json": "5116a67d12e82a591fde8736b7d15bdf41b0f4e4944c5ae07fe018f1ffbadbfa"
+  },
+  "live_cad_binding": {
+    "reason": "no runtime CAD snapshot supplied; PDF primitives and picture coordinates are not CAD entities",
+    "snapshot": null,
+    "status": "unavailable"
+  },
+  "observations": {
+    "levels": [
+      {
+        "candidate_interpretation": {
+          "datum": "rail",
+          "for": "track (rail level assumed 100.00, note 7)",
+          "unit": "m",
+          "value": 100.0
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#L1",
+        "geometry": {
+          "box": [
+            2429,
+            301,
+            2498,
+            328
+          ],
+          "space": "image_px",
+          "text_ref": "T2"
+        },
+        "obs_kind": "level",
+        "raw_text": "100.00",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "datum": "top_of_slab",
+          "for": "RCC box P1 top",
+          "unit": "m",
+          "value": 99.28
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#L2",
+        "geometry": {
+          "box": [
+            2429,
+            351,
+            2497,
+            376
+          ],
+          "space": "image_px",
+          "text_ref": "T4"
+        },
+        "obs_kind": "level",
+        "raw_text": "99.28",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "datum": "formation",
+          "for": "handwritten FORMATION LEVEL, same row as TOP OF BOX",
+          "unit": "m",
+          "value": 99.28
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#L3",
+        "geometry": {
+          "box": [
+            3128,
+            335,
+            3552,
+            385
+          ],
+          "space": "image_px",
+          "text_ref": "T12"
+        },
+        "obs_kind": "level",
+        "raw_text": "FORMATION LEVEL 99·28",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "datum": "ground",
+          "for": "ground level",
+          "unit": "m",
+          "value": 96.35
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#L4",
+        "geometry": {
+          "box": [
+            2429,
+            473,
+            2507,
+            500
+          ],
+          "space": "image_px",
+          "text_ref": "T6"
+        },
+        "obs_kind": "level",
+        "raw_text": "96.350",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "datum": "road",
+          "for": "PROP. ROAD LEVEL inside box",
+          "unit": "m",
+          "value": 94.83
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#L5",
+        "geometry": {
+          "box": [
+            2431,
+            635,
+            2490,
+            661
+          ],
+          "space": "image_px",
+          "text_ref": "T8"
+        },
+        "obs_kind": "level",
+        "raw_text": "94.83",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "datum": "other",
+          "for": "bottom of box P1 (bottom of box barrel)",
+          "unit": "m",
+          "value": 94.23
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#L6",
+        "geometry": {
+          "box": [
+            2431,
+            675,
+            2492,
+            701
+          ],
+          "space": "image_px",
+          "text_ref": "T10"
+        },
+        "obs_kind": "level",
+        "raw_text": "94.23",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "datum": "rail",
+          "for": "track (V4 repeat)",
+          "unit": "m",
+          "value": 100.0
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#L7",
+        "geometry": {
+          "box": [
+            4445,
+            3067,
+            4484,
+            3160
+          ],
+          "space": "image_px",
+          "text_ref": "T109"
+        },
+        "obs_kind": "level",
+        "raw_text": "100.00",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "datum": "top_of_slab",
+          "for": "RCC box P1 top (V4 repeat)",
+          "unit": "m",
+          "value": 99.28
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#L8",
+        "geometry": {
+          "box": [
+            4493,
+            3067,
+            4532,
+            3160
+          ],
+          "space": "image_px",
+          "text_ref": "T111"
+        },
+        "obs_kind": "level",
+        "raw_text": "99.28",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "datum": "ground",
+          "for": "ground level (V4 repeat)",
+          "unit": "m",
+          "value": 96.35
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#L9",
+        "geometry": {
+          "box": [
+            4562,
+            3055,
+            4601,
+            3154
+          ],
+          "space": "image_px",
+          "text_ref": "T112"
+        },
+        "obs_kind": "level",
+        "raw_text": "96.350",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      }
+    ],
+    "parts": [
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                2708,
+                373,
+                2993,
+                735
+              ],
+              "how": "cut",
+              "view": "V1"
+            },
+            {
+              "box": [
+                4055,
+                397,
+                4162,
+                897
+              ],
+              "how": "detail",
+              "view": "V2"
+            },
+            {
+              "box": [
+                2682,
+                2083,
+                3001,
+                2636
+              ],
+              "how": "half_view",
+              "view": "V3"
+            },
+            {
+              "box": [
+                4484,
+                2090,
+                4882,
+                2658
+              ],
+              "how": "cut",
+              "view": "V4"
+            }
+          ],
+          "class": "box_barrel",
+          "index": null,
+          "material": {
+            "evidence": "Note 12: R.C.C BOX TO BE CAST IN M-35.",
+            "raw": "M-35"
+          },
+          "parent": null,
+          "repeat": null,
+          "side": "centre",
+          "status": "PROPOSED",
+          "status_evidence": "Title block text \"PROVISION OF ROAD UNDER BRIDGE (1X4X4.00M R.C.C. BOX)\" and note 6 \"PROPOSED WORK WILL BE CARRIED OUT BY CUT & COVER METHOD\"; red label \"PROP. RUB (1X4.00X4.00M R.C.C.BOX)\" on the site plan",
+          "variant": null
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#P1",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "1X4.00X4.00M R.C.C. BOX",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": null
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            2708,
+            373,
+            2993,
+            735
+          ],
+          "how": "cut",
+          "view": "V1"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                2846,
+                1370,
+                3328,
+                2075
+              ],
+              "how": "hidden_dashed",
+              "view": "V3"
+            }
+          ],
+          "class": "wing_wall",
+          "index": null,
+          "material": {
+            "evidence": "Note 11",
+            "raw": "C:CONC M-20 GRADE"
+          },
+          "parent": null,
+          "repeat": null,
+          "side": "right",
+          "status": "PROPOSED",
+          "status_evidence": "Note 11: \"PROPOSED WING &RETAINING WALL ARE TO BE CONSTRUCTED IN MACHINE MIXED & VIBRATED C:CONC M-20 GRADE\"",
+          "variant": "splayed"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#P10",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "wing wall, top right as drawn",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": "drawn dashed (hidden) on the right half of the plan"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            2846,
+            1370,
+            3328,
+            2075
+          ],
+          "how": "hidden_dashed",
+          "view": "V3"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                2363,
+                2639,
+                2816,
+                3337
+              ],
+              "how": "half_view",
+              "view": "V3"
+            }
+          ],
+          "class": "wing_wall",
+          "index": null,
+          "material": {
+            "evidence": "Note 11",
+            "raw": "C:CONC M-20 GRADE"
+          },
+          "parent": null,
+          "repeat": null,
+          "side": "left",
+          "status": "PROPOSED",
+          "status_evidence": "Note 11: \"PROPOSED WING &RETAINING WALL ARE TO BE CONSTRUCTED IN MACHINE MIXED & VIBRATED C:CONC M-20 GRADE\"",
+          "variant": "splayed"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#P11",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "wing wall, bottom left as drawn",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": null
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            2363,
+            2639,
+            2816,
+            3337
+          ],
+          "how": "half_view",
+          "view": "V3"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                2831,
+                2639,
+                3335,
+                3337
+              ],
+              "how": "hidden_dashed",
+              "view": "V3"
+            }
+          ],
+          "class": "wing_wall",
+          "index": null,
+          "material": {
+            "evidence": "Note 11",
+            "raw": "C:CONC M-20 GRADE"
+          },
+          "parent": null,
+          "repeat": null,
+          "side": "right",
+          "status": "PROPOSED",
+          "status_evidence": "Note 11: \"PROPOSED WING &RETAINING WALL ARE TO BE CONSTRUCTED IN MACHINE MIXED & VIBRATED C:CONC M-20 GRADE\"",
+          "variant": "splayed"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#P12",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "wing wall, bottom right as drawn",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": "drawn dashed (hidden) on the right half of the plan"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            2831,
+            2639,
+            3335,
+            3337
+          ],
+          "how": "hidden_dashed",
+          "view": "V3"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                2541,
+                1808,
+                2623,
+                2001
+              ],
+              "how": "half_view",
+              "view": "V3"
+            },
+            {
+              "box": [
+                5670,
+                1907,
+                5707,
+                1930
+              ],
+              "how": "cut",
+              "view": "V7"
+            },
+            {
+              "box": [
+                6227,
+                1913,
+                6264,
+                1929
+              ],
+              "how": "cut",
+              "view": "V8"
+            },
+            {
+              "box": [
+                6827,
+                1909,
+                6865,
+                1926
+              ],
+              "how": "cut",
+              "view": "V9"
+            }
+          ],
+          "class": "coping",
+          "index": null,
+          "material": null,
+          "parent": "P9",
+          "repeat": null,
+          "side": null,
+          "status": "PROPOSED",
+          "status_evidence": "Note 11: \"PROPOSED WING &RETAINING WALL ARE TO BE CONSTRUCTED IN MACHINE MIXED & VIBRATED C:CONC M-20 GRADE\"; coping is the top of the wing wall (label 150 MM TH. C:C COPING)",
+          "variant": null
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#P13",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "150 MM TH. C:C COPING",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": null
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            2541,
+            1808,
+            2623,
+            2001
+          ],
+          "how": "half_view",
+          "view": "V3"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                3083,
+                1808,
+                3150,
+                1994
+              ],
+              "how": "half_view",
+              "view": "V3"
+            }
+          ],
+          "class": "coping",
+          "index": null,
+          "material": null,
+          "parent": "P10",
+          "repeat": null,
+          "side": null,
+          "status": "PROPOSED",
+          "status_evidence": "Note 11: \"PROPOSED WING &RETAINING WALL ARE TO BE CONSTRUCTED IN MACHINE MIXED & VIBRATED C:CONC M-20 GRADE\"; coping is the top of the wing wall (label 150 MM TH. C:C COPING)",
+          "variant": null
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#P14",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "150 MM TH. C:C COPING",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": null
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            3083,
+            1808,
+            3150,
+            1994
+          ],
+          "how": "half_view",
+          "view": "V3"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                2527,
+                2773,
+                2616,
+                2891
+              ],
+              "how": "half_view",
+              "view": "V3"
+            }
+          ],
+          "class": "coping",
+          "index": null,
+          "material": null,
+          "parent": "P11",
+          "repeat": null,
+          "side": null,
+          "status": "PROPOSED",
+          "status_evidence": "Note 11: \"PROPOSED WING &RETAINING WALL ARE TO BE CONSTRUCTED IN MACHINE MIXED & VIBRATED C:CONC M-20 GRADE\"; coping is the top of the wing wall (label 150 MM TH. C:C COPING)",
+          "variant": null
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#P15",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "150 MM TH. C:C COPING",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": null
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            2527,
+            2773,
+            2616,
+            2891
+          ],
+          "how": "half_view",
+          "view": "V3"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                3068,
+                2773,
+                3150,
+                2891
+              ],
+              "how": "half_view",
+              "view": "V3"
+            }
+          ],
+          "class": "coping",
+          "index": null,
+          "material": null,
+          "parent": "P12",
+          "repeat": null,
+          "side": null,
+          "status": "PROPOSED",
+          "status_evidence": "Note 11: \"PROPOSED WING &RETAINING WALL ARE TO BE CONSTRUCTED IN MACHINE MIXED & VIBRATED C:CONC M-20 GRADE\"; coping is the top of the wing wall (label 150 MM TH. C:C COPING)",
+          "variant": null
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#P16",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "150 MM TH. C:C COPING",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": null
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            3068,
+            2773,
+            3150,
+            2891
+          ],
+          "how": "half_view",
+          "view": "V3"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                5620,
+                2257,
+                5884,
+                2340
+              ],
+              "how": "cut",
+              "view": "V7"
+            },
+            {
+              "box": [
+                6191,
+                2096,
+                6424,
+                2176
+              ],
+              "how": "cut",
+              "view": "V8"
+            },
+            {
+              "box": [
+                6791,
+                2089,
+                6971,
+                2173
+              ],
+              "how": "cut",
+              "view": "V9"
+            }
+          ],
+          "class": "footing",
+          "index": null,
+          "material": null,
+          "parent": "P9",
+          "repeat": null,
+          "side": null,
+          "status": "PROPOSED",
+          "status_evidence": "Note 11: \"PROPOSED WING &RETAINING WALL ARE TO BE CONSTRUCTED IN MACHINE MIXED & VIBRATED C:CONC M-20 GRADE\"; footing is the stepped plain-concrete base drawn under the wing wall in the sections",
+          "variant": null
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#P17",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "wing wall stepped footing",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": "no label names it a footing or its material; read as a stipple-hatched concrete block 1.20 thick"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            5620,
+            2257,
+            5884,
+            2340
+          ],
+          "how": "cut",
+          "view": "V7"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                2668,
+                373,
+                2708,
+                735
+              ],
+              "how": "cut",
+              "view": "V1"
+            },
+            {
+              "box": [
+                3018,
+                373,
+                3058,
+                735
+              ],
+              "how": "seen_beyond",
+              "view": "V1"
+            }
+          ],
+          "class": "boulder_backing",
+          "index": null,
+          "material": null,
+          "parent": null,
+          "repeat": null,
+          "side": null,
+          "status": "PROPOSED",
+          "status_evidence": "Title block text \"PROVISION OF ROAD UNDER BRIDGE (1X4X4.00M R.C.C. BOX)\" and note 6 \"PROPOSED WORK WILL BE CARRIED OUT BY CUT & COVER METHOD\"; red label \"PROP. RUB (1X4.00X4.00M R.C.C.BOX)\" on the site plan",
+          "variant": null
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#P18",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "600 MM HAND PACKED BOULDER",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": "left stone-hatched column (cut) and right strip (dimension 0.60) both read as the 600 mm boulder backing; leader points to the right strip only"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            2668,
+            373,
+            2708,
+            735
+          ],
+          "how": "cut",
+          "view": "V1"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                2673,
+                697,
+                3033,
+                715
+              ],
+              "how": "cut",
+              "view": "V1"
+            },
+            {
+              "box": [
+                4852,
+                2090,
+                4889,
+                2658
+              ],
+              "how": "cut",
+              "view": "V4"
+            }
+          ],
+          "class": "other",
+          "index": null,
+          "material": null,
+          "parent": null,
+          "repeat": null,
+          "side": null,
+          "status": "PROPOSED",
+          "status_evidence": "Note 9: \"250 MM.TH. PRECAST R.C.C. BASE SLAB SHOULD BE PROVIDED\"; label 250 MM THICK PRECAST R.C.C. SLAB",
+          "variant": null
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#P19",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "250 MM THICK PRECAST R.C.C. BASE SLAB",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": null
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            2673,
+            697,
+            3033,
+            715
+          ],
+          "how": "cut",
+          "view": "V1"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                2682,
+                2083,
+                3001,
+                2157
+              ],
+              "how": "half_view",
+              "view": "V3"
+            }
+          ],
+          "class": "box_barrel",
+          "index": 1,
+          "material": null,
+          "parent": "P1",
+          "repeat": null,
+          "side": null,
+          "status": "PROPOSED",
+          "status_evidence": "Note 34: \"7 NoS. SEGMENTS EACH HAVING 1530 MM LONG\"; dimension 1.53X7 + 0.01X6 = 10.77 M on the plan",
+          "variant": "precast_segment"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#P2",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "precast box segment 1",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": "segment boundaries read from the cross lines in the plan; numbering from the top of the drawing, direction not labelled"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            2682,
+            2083,
+            3001,
+            2157
+          ],
+          "how": "half_view",
+          "view": "V3"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                2668,
+                715,
+                2863,
+                737
+              ],
+              "how": "cut",
+              "view": "V1"
+            }
+          ],
+          "class": "rubble_soling",
+          "index": null,
+          "material": null,
+          "parent": null,
+          "repeat": null,
+          "side": null,
+          "status": "PROPOSED",
+          "status_evidence": "Title block text \"PROVISION OF ROAD UNDER BRIDGE (1X4X4.00M R.C.C. BOX)\" and note 6 \"PROPOSED WORK WILL BE CARRIED OUT BY CUT & COVER METHOD\"; red label \"PROP. RUB (1X4.00X4.00M R.C.C.BOX)\" on the site plan",
+          "variant": null
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#P20",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "300 MM TH. RUBBLE SOLING",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": null
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            2668,
+            715,
+            2863,
+            737
+          ],
+          "how": "cut",
+          "view": "V1"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                2738,
+                661,
+                2988,
+                676
+              ],
+              "how": "cut",
+              "view": "V1"
+            },
+            {
+              "box": [
+                4806,
+                2090,
+                4852,
+                2658
+              ],
+              "how": "cut",
+              "view": "V4"
+            }
+          ],
+          "class": "other",
+          "index": null,
+          "material": null,
+          "parent": null,
+          "repeat": null,
+          "side": null,
+          "status": "PROPOSED",
+          "status_evidence": "Title block text \"PROVISION OF ROAD UNDER BRIDGE (1X4X4.00M R.C.C. BOX)\" and note 6 \"PROPOSED WORK WILL BE CARRIED OUT BY CUT & COVER METHOD\"; red label \"PROP. RUB (1X4.00X4.00M R.C.C.BOX)\" on the site plan",
+          "variant": null
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#P21",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "150 MM BASE COARSE (course inside box floor)",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": "position read from the 0.15 dimension below PROP. ROAD LEVEL and the leader of the label; V4 box is approximate"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            2738,
+            661,
+            2988,
+            676
+          ],
+          "how": "cut",
+          "view": "V1"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                4739,
+                1135,
+                4866,
+                3790
+              ],
+              "how": "cut",
+              "view": "V4"
+            }
+          ],
+          "class": "road",
+          "index": null,
+          "material": null,
+          "parent": null,
+          "repeat": null,
+          "side": null,
+          "status": "PROPOSED",
+          "status_evidence": "label \"PROP. C.C. ROAD\"",
+          "variant": null
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#P22",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "PROP. C.C. ROAD",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": null
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            4739,
+            1135,
+            4866,
+            3790
+          ],
+          "how": "cut",
+          "view": "V4"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                3660,
+                344,
+                5210,
+                412
+              ],
+              "how": "half_view",
+              "view": "V2"
+            }
+          ],
+          "class": "road",
+          "index": null,
+          "material": null,
+          "parent": null,
+          "repeat": null,
+          "side": null,
+          "status": "EXISTING",
+          "status_evidence": "drawn in black dashed lines; note 1 \"EXISTING WORK SHOWN IN BLACK.\"",
+          "variant": null
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#P23",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "SH ROAD",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": "only the road name is written; EXISTING comes from the black-ink convention of note 1"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            3660,
+            344,
+            5210,
+            412
+          ],
+          "how": "half_view",
+          "view": "V2"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                3660,
+                680,
+                5220,
+                704
+              ],
+              "how": "half_view",
+              "view": "V2"
+            },
+            {
+              "box": [
+                1874,
+                2342,
+                3699,
+                2375
+              ],
+              "how": "half_view",
+              "view": "V3"
+            },
+            {
+              "box": [
+                3914,
+                2359,
+                5297,
+                2386
+              ],
+              "how": "half_view",
+              "view": "V4"
+            }
+          ],
+          "class": "track",
+          "index": null,
+          "material": null,
+          "parent": null,
+          "repeat": null,
+          "side": null,
+          "status": "EXISTING",
+          "status_evidence": "note 1 \"EXISTING WORK SHOWN IN BLACK.\"; centre line of track drawn in black",
+          "variant": null
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#P24",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "℄ OF TRACK",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": "only one track centre line is drawn; whether it is single line is not written"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            3660,
+            680,
+            5220,
+            704
+          ],
+          "how": "half_view",
+          "view": "V2"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                4811,
+                2040,
+                4859,
+                2084
+              ],
+              "how": "cut",
+              "view": "V4"
+            }
+          ],
+          "class": "other",
+          "index": null,
+          "material": null,
+          "parent": null,
+          "repeat": null,
+          "side": null,
+          "status": "UNKNOWN",
+          "status_evidence": "label \"600 MM Ø PIPE\" carries no EXG./PRO. text and is drawn in black ink; note 1/2 give no direct answer",
+          "variant": null
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#P25",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "600 MM Ø PIPE",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": "circle on the road section; its relation to the road is not stated"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            4811,
+            2040,
+            4859,
+            2084
+          ],
+          "how": "cut",
+          "view": "V4"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                4272,
+                430,
+                4770,
+                444
+              ],
+              "how": "half_view",
+              "view": "V2"
+            }
+          ],
+          "class": "other",
+          "index": null,
+          "material": null,
+          "parent": null,
+          "repeat": null,
+          "side": null,
+          "status": "UNKNOWN",
+          "status_evidence": "label \"℄ OF L-XING NO. C-64 AT KM 88/4-5\" (green line); note 32 says the level crossing will be closed after completion of the RUB",
+          "variant": null
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#P26",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "L-XING No. C-64",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": "green line; neither EXG. nor dismantled is written for the line itself"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            4272,
+            430,
+            4770,
+            444
+          ],
+          "how": "half_view",
+          "view": "V2"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                2682,
+                2157,
+                3001,
+                2238
+              ],
+              "how": "half_view",
+              "view": "V3"
+            }
+          ],
+          "class": "box_barrel",
+          "index": 2,
+          "material": null,
+          "parent": "P1",
+          "repeat": null,
+          "side": null,
+          "status": "PROPOSED",
+          "status_evidence": "Note 34: \"7 NoS. SEGMENTS EACH HAVING 1530 MM LONG\"; dimension 1.53X7 + 0.01X6 = 10.77 M on the plan",
+          "variant": "precast_segment"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#P3",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "precast box segment 2",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": null
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            2682,
+            2157,
+            3001,
+            2238
+          ],
+          "how": "half_view",
+          "view": "V3"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                2682,
+                2238,
+                3001,
+                2320
+              ],
+              "how": "half_view",
+              "view": "V3"
+            }
+          ],
+          "class": "box_barrel",
+          "index": 3,
+          "material": null,
+          "parent": "P1",
+          "repeat": null,
+          "side": null,
+          "status": "PROPOSED",
+          "status_evidence": "Note 34: \"7 NoS. SEGMENTS EACH HAVING 1530 MM LONG\"; dimension 1.53X7 + 0.01X6 = 10.77 M on the plan",
+          "variant": "precast_segment"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#P4",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "precast box segment 3",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": null
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            2682,
+            2238,
+            3001,
+            2320
+          ],
+          "how": "half_view",
+          "view": "V3"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                2682,
+                2320,
+                3001,
+                2402
+              ],
+              "how": "half_view",
+              "view": "V3"
+            }
+          ],
+          "class": "box_barrel",
+          "index": 4,
+          "material": null,
+          "parent": "P1",
+          "repeat": null,
+          "side": null,
+          "status": "PROPOSED",
+          "status_evidence": "Note 34: \"7 NoS. SEGMENTS EACH HAVING 1530 MM LONG\"; dimension 1.53X7 + 0.01X6 = 10.77 M on the plan",
+          "variant": "precast_segment"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#P5",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "precast box segment 4",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": null
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            2682,
+            2320,
+            3001,
+            2402
+          ],
+          "how": "half_view",
+          "view": "V3"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                2682,
+                2402,
+                3001,
+                2476
+              ],
+              "how": "half_view",
+              "view": "V3"
+            }
+          ],
+          "class": "box_barrel",
+          "index": 5,
+          "material": null,
+          "parent": "P1",
+          "repeat": null,
+          "side": null,
+          "status": "PROPOSED",
+          "status_evidence": "Note 34: \"7 NoS. SEGMENTS EACH HAVING 1530 MM LONG\"; dimension 1.53X7 + 0.01X6 = 10.77 M on the plan",
+          "variant": "precast_segment"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#P6",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "precast box segment 5",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": null
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            2682,
+            2402,
+            3001,
+            2476
+          ],
+          "how": "half_view",
+          "view": "V3"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                2682,
+                2476,
+                3001,
+                2557
+              ],
+              "how": "half_view",
+              "view": "V3"
+            }
+          ],
+          "class": "box_barrel",
+          "index": 6,
+          "material": null,
+          "parent": "P1",
+          "repeat": null,
+          "side": null,
+          "status": "PROPOSED",
+          "status_evidence": "Note 34: \"7 NoS. SEGMENTS EACH HAVING 1530 MM LONG\"; dimension 1.53X7 + 0.01X6 = 10.77 M on the plan",
+          "variant": "precast_segment"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#P7",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "precast box segment 6",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": null
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            2682,
+            2476,
+            3001,
+            2557
+          ],
+          "how": "half_view",
+          "view": "V3"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                2682,
+                2557,
+                3001,
+                2636
+              ],
+              "how": "half_view",
+              "view": "V3"
+            }
+          ],
+          "class": "box_barrel",
+          "index": 7,
+          "material": null,
+          "parent": "P1",
+          "repeat": null,
+          "side": null,
+          "status": "PROPOSED",
+          "status_evidence": "Note 34: \"7 NoS. SEGMENTS EACH HAVING 1530 MM LONG\"; dimension 1.53X7 + 0.01X6 = 10.77 M on the plan",
+          "variant": "precast_segment"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#P8",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "precast box segment 7",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": null
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            2682,
+            2557,
+            3001,
+            2636
+          ],
+          "how": "half_view",
+          "view": "V3"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                2378,
+                1370,
+                2816,
+                2072
+              ],
+              "how": "half_view",
+              "view": "V3"
+            },
+            {
+              "box": [
+                5612,
+                1897,
+                5812,
+                2262
+              ],
+              "how": "cut",
+              "view": "V7"
+            },
+            {
+              "box": [
+                6191,
+                1916,
+                6371,
+                2103
+              ],
+              "how": "cut",
+              "view": "V8"
+            },
+            {
+              "box": [
+                6784,
+                1916,
+                6971,
+                2103
+              ],
+              "how": "cut",
+              "view": "V9"
+            }
+          ],
+          "class": "wing_wall",
+          "index": null,
+          "material": {
+            "evidence": "Note 11",
+            "raw": "C:CONC M-20 GRADE"
+          },
+          "parent": null,
+          "repeat": null,
+          "side": "left",
+          "status": "PROPOSED",
+          "status_evidence": "Note 11: \"PROPOSED WING &RETAINING WALL ARE TO BE CONSTRUCTED IN MACHINE MIXED & VIBRATED C:CONC M-20 GRADE\"",
+          "variant": "splayed"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#P9",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "wing wall, top left as drawn",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": "B 1 IN 8 / B 1 IN 16 batters and the sections B-B, C-C, D-D are cut across the top-left wing as marked on the plan; right-hand wings are drawn dashed"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            2378,
+            1370,
+            2816,
+            2072
+          ],
+          "how": "half_view",
+          "view": "V3"
+        }
+      }
+    ],
+    "relations": [
+      {
+        "candidate_interpretation": {
+          "from": "P2",
+          "to": "P1",
+          "type": "part_of"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#rel0",
+        "geometry": null,
+        "obs_kind": "relation",
+        "raw_text": "segments of one box barrel (note 34, V3 cross lines)",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "from": "P3",
+          "to": "P1",
+          "type": "part_of"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#rel1",
+        "geometry": null,
+        "obs_kind": "relation",
+        "raw_text": "segments of one box barrel (note 34, V3 cross lines)",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "from": "P10",
+          "to": "P1",
+          "type": "connected_to"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#rel10",
+        "geometry": null,
+        "obs_kind": "relation",
+        "raw_text": "wings meet the box ends at the 25MM GAP lines on the plan",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "from": "P15",
+          "to": "P11",
+          "type": "part_of"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#rel11",
+        "geometry": null,
+        "obs_kind": "relation",
+        "raw_text": "coping is the top of the wing wall (sections V7-V9)",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "from": "P11",
+          "to": "P1",
+          "type": "connected_to"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#rel12",
+        "geometry": null,
+        "obs_kind": "relation",
+        "raw_text": "wings meet the box ends at the 25MM GAP lines on the plan",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "from": "P16",
+          "to": "P12",
+          "type": "part_of"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#rel13",
+        "geometry": null,
+        "obs_kind": "relation",
+        "raw_text": "coping is the top of the wing wall (sections V7-V9)",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "from": "P12",
+          "to": "P1",
+          "type": "connected_to"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#rel14",
+        "geometry": null,
+        "obs_kind": "relation",
+        "raw_text": "wings meet the box ends at the 25MM GAP lines on the plan",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "from": "P17",
+          "to": "P9",
+          "type": "part_of"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#rel15",
+        "geometry": null,
+        "obs_kind": "relation",
+        "raw_text": "footing drawn under the wing wall in sections D-D, C-C, B-B",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "from": "P1",
+          "to": "P19",
+          "type": "rests_on"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#rel16",
+        "geometry": null,
+        "obs_kind": "relation",
+        "raw_text": "box sits on the 0.25 precast slab in the half section (V1 dimension stack)",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "from": "P19",
+          "to": "P20",
+          "type": "rests_on"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#rel17",
+        "geometry": null,
+        "obs_kind": "relation",
+        "raw_text": "0.25 slab over 0.30 rubble soling (V1 dimension stack)",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "from": "P21",
+          "to": "P1",
+          "type": "rests_on"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#rel18",
+        "geometry": null,
+        "obs_kind": "relation",
+        "raw_text": "150 mm base course under PROP. ROAD LEVEL inside the box floor",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "from": "P18",
+          "to": "P1",
+          "type": "bears_on"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#rel19",
+        "geometry": null,
+        "obs_kind": "relation",
+        "raw_text": "600 MM HAND PACKED BOULDER against the box wall (V1)",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "from": "P4",
+          "to": "P1",
+          "type": "part_of"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#rel2",
+        "geometry": null,
+        "obs_kind": "relation",
+        "raw_text": "segments of one box barrel (note 34, V3 cross lines)",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "from": "P1",
+          "to": "P24",
+          "type": "set_out_from"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#rel20",
+        "geometry": null,
+        "obs_kind": "relation",
+        "raw_text": "plan dimensions 8.53 M and 27.12 M run to the ℄ OF TRACK; box centre line is ℄ OF RUB AT KM 88/4-5",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "from": "P5",
+          "to": "P1",
+          "type": "part_of"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#rel3",
+        "geometry": null,
+        "obs_kind": "relation",
+        "raw_text": "segments of one box barrel (note 34, V3 cross lines)",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "from": "P6",
+          "to": "P1",
+          "type": "part_of"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#rel4",
+        "geometry": null,
+        "obs_kind": "relation",
+        "raw_text": "segments of one box barrel (note 34, V3 cross lines)",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "from": "P7",
+          "to": "P1",
+          "type": "part_of"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#rel5",
+        "geometry": null,
+        "obs_kind": "relation",
+        "raw_text": "segments of one box barrel (note 34, V3 cross lines)",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "from": "P8",
+          "to": "P1",
+          "type": "part_of"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#rel6",
+        "geometry": null,
+        "obs_kind": "relation",
+        "raw_text": "segments of one box barrel (note 34, V3 cross lines)",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "from": "P13",
+          "to": "P9",
+          "type": "part_of"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#rel7",
+        "geometry": null,
+        "obs_kind": "relation",
+        "raw_text": "coping is the top of the wing wall (sections V7-V9)",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "from": "P9",
+          "to": "P1",
+          "type": "connected_to"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#rel8",
+        "geometry": null,
+        "obs_kind": "relation",
+        "raw_text": "wings meet the box ends at the 25MM GAP lines on the plan",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "from": "P14",
+          "to": "P10",
+          "type": "part_of"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#rel9",
+        "geometry": null,
+        "obs_kind": "relation",
+        "raw_text": "coping is the top of the wing wall (sections V7-V9)",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      }
+    ],
+    "repeats": [
+      {
+        "candidate_interpretation": {
+          "count": 7,
+          "members": [
+            "P2",
+            "P3",
+            "P4",
+            "P5",
+            "P6",
+            "P7",
+            "P8"
+          ],
+          "unit_class": "box_barrel"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#R1",
+        "geometry": null,
+        "obs_kind": "repeat",
+        "raw_text": "Note 34 \"7 NoS. SEGMENTS EACH HAVING 1530 MM LONG\" and plan dimension 1.53X7 + 0.01X6 = 10.77 M; seven bays counted in V3",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": null
+      }
+    ],
+    "views": [
+      {
+        "candidate_interpretation": {
+          "type": "half_section_half_elevation"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#V1",
+        "geometry": {
+          "box": [
+            1843,
+            123,
+            3560,
+            1087
+          ],
+          "space": "image_px"
+        },
+        "obs_kind": "view",
+        "raw_text": "HALF SECTION & HALF ELEVATION",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": "V1"
+      },
+      {
+        "candidate_interpretation": {
+          "type": "notes"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#V10",
+        "geometry": {
+          "box": [
+            5212,
+            2420,
+            6376,
+            3173
+          ],
+          "space": "image_px"
+        },
+        "obs_kind": "view",
+        "raw_text": null,
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": "V10"
+      },
+      {
+        "candidate_interpretation": {
+          "type": "table"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#V11",
+        "geometry": {
+          "box": [
+            5754,
+            3269,
+            7345,
+            4139
+          ],
+          "space": "image_px"
+        },
+        "obs_kind": "view",
+        "raw_text": null,
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": "V11"
+      },
+      {
+        "candidate_interpretation": {
+          "type": "notes"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#V12",
+        "geometry": {
+          "box": [
+            5130,
+            3770,
+            5660,
+            3860
+          ],
+          "space": "image_px"
+        },
+        "obs_kind": "view",
+        "raw_text": null,
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": "V12"
+      },
+      {
+        "candidate_interpretation": {
+          "type": "table"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#V13",
+        "geometry": {
+          "box": [
+            6270,
+            2364,
+            7345,
+            3269
+          ],
+          "space": "image_px"
+        },
+        "obs_kind": "view",
+        "raw_text": null,
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": "V13"
+      },
+      {
+        "candidate_interpretation": {
+          "type": "plan"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#V2",
+        "geometry": {
+          "box": [
+            3600,
+            122,
+            5350,
+            1128
+          ],
+          "space": "image_px"
+        },
+        "obs_kind": "view",
+        "raw_text": "SITE PLAN",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": "V2"
+      },
+      {
+        "candidate_interpretation": {
+          "type": "half_plan"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#V3",
+        "geometry": {
+          "box": [
+            1792,
+            1066,
+            3858,
+            4034
+          ],
+          "space": "image_px"
+        },
+        "obs_kind": "view",
+        "raw_text": "HALF BOTTOM & HALF TOP",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": "V3"
+      },
+      {
+        "candidate_interpretation": {
+          "type": "longitudinal_section"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#V4",
+        "geometry": {
+          "box": [
+            3704,
+            1045,
+            5346,
+            4035
+          ],
+          "space": "image_px"
+        },
+        "obs_kind": "view",
+        "raw_text": "SECTION AT 'A-A'",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": "V4"
+      },
+      {
+        "candidate_interpretation": {
+          "type": "notes"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#V5",
+        "geometry": {
+          "box": [
+            5293,
+            106,
+            7307,
+            1490
+          ],
+          "space": "image_px"
+        },
+        "obs_kind": "view",
+        "raw_text": "NOTES:-",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": "V5"
+      },
+      {
+        "candidate_interpretation": {
+          "type": "notes"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#V6",
+        "geometry": {
+          "box": [
+            5293,
+            1515,
+            7050,
+            1855
+          ],
+          "space": "image_px"
+        },
+        "obs_kind": "view",
+        "raw_text": "MODUS OPERANDI",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": "V6"
+      },
+      {
+        "candidate_interpretation": {
+          "type": "detail"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#V7",
+        "geometry": {
+          "box": [
+            5462,
+            1822,
+            6098,
+            2440
+          ],
+          "space": "image_px"
+        },
+        "obs_kind": "view",
+        "raw_text": "SECTION AT 'D-D'",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": "V7"
+      },
+      {
+        "candidate_interpretation": {
+          "type": "detail"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#V8",
+        "geometry": {
+          "box": [
+            6070,
+            1860,
+            6600,
+            2300
+          ],
+          "space": "image_px"
+        },
+        "obs_kind": "view",
+        "raw_text": "SECTION AT 'C-C'",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": "V8"
+      },
+      {
+        "candidate_interpretation": {
+          "type": "detail"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation+unresolved_disputes_on_sheet",
+          "finetune": "blocked:no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "2da8cb493f51-p1#V9",
+        "geometry": {
+          "box": [
+            6680,
+            1860,
+            7220,
+            2330
+          ],
+          "space": "image_px"
+        },
+        "obs_kind": "view",
+        "raw_text": "SECTION AT 'B-B'",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {},
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": "V9"
+      }
+    ]
+  },
+  "pack_id": "pack-75189085011d8e38",
+  "pack_kind": "derived_evidence_pack",
+  "pack_version": "1.0",
+  "permitted_next_actions": [
+    "describe views, levels, parts and relations as recorded, with their evidence ids",
+    "propose a relationship as a candidate, with the evidence that supports it"
+  ],
+  "source_fingerprints": {
+    "2da8cb493f51-p1": "e24b9ab3c3966ab9e46d1d2aa84d4a517cb2faef51e2858a37f9622caa5e297f",
+    "grounding:2da8cb493f51-p1": "80f76c69c02eb0006888dcce98a9b9a544690a6639a96b59031fa2b057795b1c"
+  },
+  "source_references": [
+    {
+      "fingerprint": "e24b9ab3c3966ab9e46d1d2aa84d4a517cb2faef51e2858a37f9622caa5e297f",
+      "kind": "drawing_sheet",
+      "record_id": "2da8cb493f51-p1",
+      "role": "subject",
+      "source_paths": [
+        "bridges/rcc_box/brg-aad28bf3cb/sheets/2da8cb493f51-p1/grounding/agent-grounding.json"
+      ]
+    },
+    {
+      "fingerprint": "80f76c69c02eb0006888dcce98a9b9a544690a6639a96b59031fa2b057795b1c",
+      "kind": "grounding",
+      "record_id": "grounding:2da8cb493f51-p1",
+      "role": "observation_source",
+      "source_paths": [
+        "bridges/rcc_box/brg-aad28bf3cb/sheets/2da8cb493f51-p1/grounding/agent-grounding.json",
+        "bridges/rcc_box/brg-aad28bf3cb/sheets/2da8cb493f51-p1/grounding/checks.md",
+        "bridges/rcc_box/brg-aad28bf3cb/sheets/2da8cb493f51-p1/grounding/review.md",
+        "bridges/rcc_box/brg-aad28bf3cb/sheets/2da8cb493f51-p1/grounding/revisions/0001.json"
+      ]
+    }
+  ],
+  "subject": {
+    "bridge_ids": [
+      "brg-aad28bf3cb"
+    ],
+    "family": "rcc_box",
+    "kind": "drawing_sheet",
+    "record_id": "2da8cb493f51-p1",
+    "source_paths": [
+      "bridges/rcc_box/brg-aad28bf3cb/sheets/2da8cb493f51-p1/grounding/agent-grounding.json"
+    ],
+    "title": "RE-SDLP BR.NO.5B RUB KM 88.4-5.jpg"
+  },
+  "task": {
+    "description": "Describe the views, levels, parts and relations the record shows. Nothing here edits or measures a CAD entity.",
+    "name": "geometric_relationships",
+    "requested_scope": {}
+  },
+  "unresolved_questions": [
+    {
+      "evidence_id": "2da8cb493f51-p1#doubt0",
+      "kind": "doubt",
+      "text": "sheet.scope"
+    },
+    {
+      "evidence_id": "2da8cb493f51-p1#doubt1",
+      "kind": "doubt",
+      "text": "status of drawn parts"
+    },
+    {
+      "evidence_id": "2da8cb493f51-p1#doubt10",
+      "kind": "doubt",
+      "text": "B 1 IN 8 / B 1 IN 16"
+    },
+    {
+      "evidence_id": "2da8cb493f51-p1#doubt11",
+      "kind": "doubt",
+      "text": "handwritten corrections in notes"
+    },
+    {
+      "evidence_id": "2da8cb493f51-p1#doubt12",
+      "kind": "doubt",
+      "text": "note 27 value"
+    },
+    {
+      "evidence_id": "2da8cb493f51-p1#doubt13",
+      "kind": "doubt",
+      "text": "drawing number"
+    },
+    {
+      "evidence_id": "2da8cb493f51-p1#doubt14",
+      "kind": "doubt",
+      "text": "date"
+    },
+    {
+      "evidence_id": "2da8cb493f51-p1#doubt15",
+      "kind": "doubt",
+      "text": "unread faint text"
+    },
+    {
+      "evidence_id": "2da8cb493f51-p1#doubt16",
+      "kind": "doubt",
+      "text": "gate lodge and private house"
+    },
+    {
+      "evidence_id": "2da8cb493f51-p1#doubt17",
+      "kind": "doubt",
+      "text": "V12 stamp"
+    },
+    {
+      "evidence_id": "2da8cb493f51-p1#doubt2",
+      "kind": "doubt",
+      "text": "box size"
+    },
+    {
+      "evidence_id": "2da8cb493f51-p1#doubt3",
+      "kind": "doubt",
+      "text": "V1 vertical stack"
+    },
+    {
+      "evidence_id": "2da8cb493f51-p1#doubt4",
+      "kind": "doubt",
+      "text": "V1 small dimensions"
+    },
+    {
+      "evidence_id": "2da8cb493f51-p1#doubt5",
+      "kind": "doubt",
+      "text": "V4 small dimensions"
+    },
+    {
+      "evidence_id": "2da8cb493f51-p1#doubt6",
+      "kind": "doubt",
+      "text": "wing walls in sections and V2"
+    },
+    {
+      "evidence_id": "2da8cb493f51-p1#doubt7",
+      "kind": "doubt",
+      "text": "right half of V3"
+    },
+    {
+      "evidence_id": "2da8cb493f51-p1#doubt8",
+      "kind": "doubt",
+      "text": "segment numbering"
+    },
+    {
+      "evidence_id": "2da8cb493f51-p1#doubt9",
+      "kind": "doubt",
+      "text": "C-C / B-B / D-D small figures"
+    },
+    {
+      "issue_id": "issue:needs_review:2da8cb493f51-p1",
+      "kind": "needs_review",
+      "text": "grounding filed but marked needs_review in agent/state/done"
+    },
+    {
+      "issue_id": "issue:unresolved_disputes:2da8cb493f51-p1",
+      "kind": "unresolved_disputes",
+      "text": "1 written-versus-drawn or revision disputes are open in the grounding"
+    }
+  ]
+}

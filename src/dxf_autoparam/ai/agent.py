@@ -32,7 +32,7 @@ from ..program import ExprError, names_in
 from ..regen import regenerate_program
 from ..topology import DatumIndex, of
 from ..validator import apply
-from . import domain
+from . import domain, library
 from .context import drawing_context, fixed_lines, held_part_names, occurrence_pairs, owner, unit_context
 from .loop import AgentLoop, Budget
 from .parametrize import image_labels, images_for, prepare
@@ -206,10 +206,10 @@ TOOL_SPECS = [
      _schema({"summary": S}, ["summary"])),
 ]
 WHY = {"type": "string", "description": "One short sentence for the person watching: what you are doing with this call and why."}
-for _n, _d, _sch in TOOL_SPECS:  # every call may say, for the run's timeline, what it is for (shown as the model's own words, never as the engine's)
+for _n, _d, _sch in [*TOOL_SPECS, *library.LIBRARY_TOOL_SPECS]:  # every call may say, for the run's timeline, what it is for (the model's own words)
     _sch["properties"].setdefault("why", WHY)
 READ_TOOLS = {"inspect_regions", "inspect_lines", "find_values", "what_moves", "knowledge", "inspect_candidates", "inspect_dimensions",
-              "resolve_labels", "inspect_assembly"}
+              "resolve_labels", "inspect_assembly", *library.LIBRARY_TOOLS}
 BEHAVIOUR_EDITS = ("set_formula", "add_constraint", "state_behaviour", "set_relation")  # wait for the plan when a change was asked
 # a batch tool applies the single edit to each of its items; each item gets its own verdict
 BATCH = {"define_parts": "define_part", "define_parameters": "define_parameter", "set_formulas": "set_formula", "set_levels": "set_level",
@@ -217,11 +217,13 @@ BATCH = {"define_parts": "define_part", "define_parameters": "define_parameter",
 
 
 def tools(extra: list | None = None, pack: dict | None = None):
-    """The tool list for the model: the unit tools (`knowledge` only when a domain pack is on), plus `extra` specs (the sheet session's own)."""
+    """The tool list for the model: the unit tools (`knowledge` only when a domain pack is on, and the library tools only when that pack
+    has an engineering library), plus `extra` specs (the sheet session's own)."""
     from google.genai import types
 
+    lib = library.LIBRARY_TOOL_SPECS if library.for_pack(pack) else []
     return [types.Tool(function_declarations=[types.FunctionDeclaration(name=n, description=d, parameters_json_schema=p)
-                                              for n, d, p in [*TOOL_SPECS, *(extra or [])] if n != "knowledge" or pack])]
+                                              for n, d, p in [*TOOL_SPECS, *(extra or []), *lib] if n != "knowledge" or pack])]
 
 
 def agent_system(pack: dict | None = None) -> str:
@@ -245,6 +247,9 @@ class Workbench:
                  pack: dict | None = None):
         self.path, self.region, self.hold, self.selection, self.drawing = path, region, hold_existing, selection, drawing
         self.pack = pack  # the domain pack on for this run (None: none: the model names things itself)
+        lib = library.for_pack(pack)
+        # the engineering library's session (retrieval, rule checks, findings, trace); a sheet run replaces it with ITS one so a run has one trace
+        self.lib_session = library.KnowledgeSession(lib, texts=lambda: library.drawing_texts(self.an.drawing.items), values=self.value_of) if lib else None
         self.analysis, self.scope = analysis, scope
         self.original = (instructions or "").strip()  # the person's instruction: every sentence of it must be accounted for
         self.instructions = self.original  # and with their later answers: what a quote may come from
@@ -575,6 +580,36 @@ class Workbench:
 
     def knowledge(self, queries: list[str] | None = None, query: str = "") -> list[str]:
         return domain.search(self.pack, queries, query)
+
+    # ── the engineering library (only when the domain pack on has one) ─────────────
+
+    def _library(self, name: str, **kw) -> dict:
+        if self.lib_session is None:
+            return {"error": "no engineering library is on for this run"}
+        return self.lib_session.call(name, kw)
+
+    def list_skills(self, **kw):
+        return self._library("list_skills", **kw)
+
+    def load_skill(self, **kw):
+        return self._library("load_skill", **kw)
+
+    def search_library(self, **kw):
+        return self._library("search_library", **kw)
+
+    def get_reference(self, **kw):
+        return self._library("get_reference", **kw)
+
+    def check_rule(self, **kw):
+        return self._library("check_rule", **kw)
+
+    def record_finding(self, **kw):
+        return self._library("record_finding", **kw)
+
+    def value_of(self, name: str, unit: str | None = None) -> tuple[float, str] | None:
+        """A value or level the model defined (or the drawing's own named one), as (number, unit): what `check_rule` binds a role to."""
+        p = self.prog.params.get(name) or self.prog.params.get(pascal(name))
+        return (float(p.value), p.unit) if p is not None else None
 
     # ── writing ───────────────────────────────────────────────────────────────
 
@@ -1291,6 +1326,7 @@ def overview(an, base, context: dict | None = None, pack: dict | None = None) ->
         "candidates [id, kind, value, axes, occurrences, first pair, drawing says]": cands,
         **({"concept names (offered by the domain pack; use one only when it is what the drawing shows)": domain.concept_names(pack),
             "structure families [id, label, parts]": domain.families(pack)} if pack else {}),
+        **library.overview_rows(pack, library.drawing_texts(dr.items)),
     }
 
 
@@ -1389,7 +1425,8 @@ def agent_parametrize(path: str, region=None, instructions: str = "", start: dic
                       for p in bench.answer.get("plans", [])],
             "tokens_in": sum(u.get("input_tokens", 0) for u in usages if not u.get("cached")),
             "tokens_out": sum(u.get("output_tokens", 0) + u.get("thinking_tokens", 0) for u in usages if not u.get("cached")),
-            "tokens_cached": sum(u.get("vertex_cached_tokens", 0) for u in usages if not u.get("cached"))}
+            "tokens_cached": sum(u.get("vertex_cached_tokens", 0) for u in usages if not u.get("cached")),
+            "knowledge": bench.lib_session.summary() if bench.lib_session is not None else None}  # what the engineering library was used for
     emit({"kind": "round", "round": loop.state.turns, "accepted": bench.rep.accepted, "rejected": bench.rep.rejected,
           "errors": [f"{e['code']} {e['item']}: {e['message']}"[:220] for e in bench.rep.errors()][:8]})
     return bench.prog, bench.rep, info

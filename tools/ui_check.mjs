@@ -57,10 +57,15 @@ try {
   await js("document.querySelector('[data-tab=ai]').click(); 1"); await sleep(300);
   check("the model picker offers 3.8 Flash (selected) and 4 Argon", String(await js("[...document.querySelectorAll('#ai-model option')].map((o) => o.value + (o.selected ? '*' : '')).join()")).startsWith("gemini-3.8-flash*,gemini-4-argon"));
   await js("(() => { const m = document.querySelector('#ai-model'); m.value = 'gemini-4-argon'; m.dispatchEvent(new Event('change')); window.__sent = null; const f = window.fetch; window.fetch = (u, o) => { if (String(u).includes('/ai/run')) window.__sent = JSON.parse(o.body); return f(u, o); }; return 1; })()");
+  await until("!!document.querySelector('#ai-domain')", 5000);
+  const dom = JSON.parse(await js("JSON.stringify({v: document.querySelector('#ai-domain') && document.querySelector('#ai-domain').value, t: document.querySelector('#ai-domain') ? document.querySelector('#ai-domain').closest('.note').textContent : '', o: [...document.querySelectorAll('#ai-domain option')].map((o) => o.value).join()})"));
+  check("the sheet prints RCC BOX, so domain knowledge is suggested, with the words, and 'none' stays a choice",
+    dom.v === "bridge" && /RCC BOX/.test(dom.t) && dom.o === ",bridge", JSON.stringify(dom));
   check("the agent's scope follows the open view", /V01/.test((await js("document.querySelector('#ai-scope').selectedOptions[0].textContent")) || ""));
   await js(`(() => { const s = document.querySelector('#ai-soft'); document.querySelector('#ai-opts, [data-fold=ai-opts]').open = true; s.value = 3; s.dispatchEvent(new Event('change')); return 1; })()`);
   await js(`(() => { const t = document.querySelector('#ai-instr'); t.value = ${JSON.stringify(INSTR)}; t.dispatchEvent(new Event('input')); document.querySelector('#ai-run').click(); return 1; })()`);
   check("the chosen model travels with the run", (await js("window.__sent && window.__sent.options.model")) === "gemini-4-argon");
+  check("the domain knowledge the sheet's own words suggest travels with the run", (await js("window.__sent && window.__sent.options.domain")) === "bridge");
   check("a chunk of work ends in PAUSED, not in success", await until("window.__ws.run && window.__ws.run.status === 'paused'", 15000));
   await sleep(400);
   check("a paused run shows no verdict and offers Continue", (await js("window.__ws.run.verdict")) === null && (await js("getComputedStyle(document.querySelector('#ai-continue')).display")) !== "none" && /Paused/.test(await js("document.querySelector('#ai-live .status .top').textContent")));
@@ -77,6 +82,9 @@ try {
     /Plan across views — 1 link/.test(await js("document.querySelector('#ai-live .status').innerText")) && /box walls/.test(await js("document.querySelector('#ai-live details.plan').innerText"))
     && /bound by projection/.test(await js("document.querySelector('#ai-live details.plan').innerText")) && (await js("document.querySelectorAll('#ai-live .planrow.bad').length")) === 0);
   check("what the model says it did is kept whole and shown", /plan across the views is stated/.test(await js("[...document.querySelectorAll('#ai-live details.notes')].map((d) => d.textContent).join(' ')")));
+  check("the verdict says what the library was used for: the skill, the sections, the finding and its citation",
+    /Knowledge used — 4 library calls, 1 finding/.test(await js("[...document.querySelectorAll('#ai-live details.notes')].map((d) => d.textContent).join(' ')"))
+    && /family:rcc_box\s*— recognition, failure/.test(await js("document.querySelector('#ai-live').textContent")) && /box skill's cues were confirmed/.test(await js("document.querySelector('#ai-live').textContent")));
   check("the value was applied to the sheet and both views follow", (await js("window.__ws.S.values['" + KEY + "']")) === 2500);
   await shot("04_complete"); await noObjectText("complete");
   await js("document.querySelectorAll('#ai-live details.turn').forEach((d) => d.open = true); document.querySelectorAll('#ai-live .call details').forEach((d) => d.open = true); 1"); await sleep(300);

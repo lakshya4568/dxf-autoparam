@@ -1,0 +1,2017 @@
+{
+  "agent_summary": "Task component_interpretation for 418834d8e9df-p1 (drawing_sheet, family pipe). Completeness: partially_grounded. Claims: 12. Candidates: 12. Conflicts: 1. Open questions: 8. Every dimension is a candidate; binding is blocked. CAD binding: unavailable.",
+  "blocked_next_actions": [
+    {
+      "action": "state a value as verified",
+      "reason": "no human verification is recorded in the repository"
+    },
+    {
+      "action": "promote a proposal or an unreviewed entry into accepted knowledge",
+      "reason": "proposals and unreviewed entries are never merged or promoted by this layer"
+    },
+    {
+      "action": "use this pack as training data",
+      "reason": "packs are derived artefacts, not labels or sources"
+    },
+    {
+      "action": "add a component that is only listed as absent",
+      "reason": "absent entries record what is not drawn"
+    }
+  ],
+  "built_from": {
+    "registry_digest": "4395427d73da1f49797b137de95fca5c02e47a348949116c34504a7c60a0471b"
+  },
+  "candidate_interpretations": [
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "appears_in": [
+          {
+            "box": [
+              4287,
+              765,
+              4417,
+              895
+            ],
+            "how": "cut",
+            "view": "V5"
+          }
+        ],
+        "class": "pipe_barrel",
+        "index": null,
+        "material": null,
+        "parent": null,
+        "repeat": null,
+        "side": null,
+        "status": "EXISTING",
+        "status_evidence": "title \"(EXG. 1-3'-0\" DIA. R.C.C. PIPE CULVERT)\" and view title ELEVATION OF OLD BRIDGE",
+        "variant": null
+      },
+      "evidence_id": "418834d8e9df-p1#P1",
+      "raw_text": "1-3'-0\" DIA. R.C.C. PIPE (old culvert)",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "appears_in": [
+          {
+            "box": [
+              2415,
+              2057,
+              2850,
+              2157
+            ],
+            "how": "half_view",
+            "view": "V6"
+          }
+        ],
+        "class": "other",
+        "index": null,
+        "material": null,
+        "parent": null,
+        "repeat": null,
+        "side": null,
+        "status": "UNKNOWN",
+        "status_evidence": "no label on the sheet",
+        "variant": null
+      },
+      "evidence_id": "418834d8e9df-p1#P10",
+      "raw_text": "unlabelled rectangle at the top of the plan (11'-8\" overall)",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "appears_in": [
+          {
+            "box": [
+              1500,
+              2535,
+              3345,
+              2785
+            ],
+            "how": "half_view",
+            "view": "V6"
+          }
+        ],
+        "class": "track",
+        "index": null,
+        "material": null,
+        "parent": null,
+        "repeat": null,
+        "side": null,
+        "status": "UNKNOWN",
+        "status_evidence": "centre line with rails drawn in plan; both labels on the same centre line",
+        "variant": null
+      },
+      "evidence_id": "418834d8e9df-p1#P11",
+      "raw_text": "C/L OF BYE PASS LINE / DOWN LINE (NWL)",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "appears_in": [
+          {
+            "box": [
+              1510,
+              3130,
+              2640,
+              3365
+            ],
+            "how": "half_view",
+            "view": "V6"
+          }
+        ],
+        "class": "track",
+        "index": null,
+        "material": null,
+        "parent": null,
+        "repeat": null,
+        "side": null,
+        "status": "UNKNOWN",
+        "status_evidence": "centre line with rails drawn in plan",
+        "variant": null
+      },
+      "evidence_id": "418834d8e9df-p1#P12",
+      "raw_text": "C/L OF PRO. TRACK / UP LINE (NWL)",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "appears_in": [
+          {
+            "box": [
+              2561,
+              760,
+              2711,
+              910
+            ],
+            "how": "cut",
+            "view": "V4"
+          },
+          {
+            "box": [
+              4470,
+              2060,
+              4625,
+              3215
+            ],
+            "how": "cut",
+            "view": "V7"
+          },
+          {
+            "box": [
+              2570,
+              2150,
+              2700,
+              3790
+            ],
+            "how": "hidden_dashed",
+            "view": "V6"
+          }
+        ],
+        "class": "pipe_barrel",
+        "index": null,
+        "material": null,
+        "parent": null,
+        "repeat": null,
+        "side": null,
+        "status": "UNKNOWN",
+        "status_evidence": "No colour or EXG/PRO ink legend; PRO. and EXG. words on the sheet are struck through; single-colour scan",
+        "variant": null
+      },
+      "evidence_id": "418834d8e9df-p1#P2",
+      "raw_text": "3'-0\" DIA. R.C.C. PIPE (extension) AS PER DRG. No: I.R.S (B) BA. 2225 & 2226",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "appears_in": [
+          {
+            "box": [
+              4597,
+              3206,
+              4687,
+              3796
+            ],
+            "how": "cut",
+            "view": "V7"
+          },
+          {
+            "box": [
+              2640,
+              3200,
+              2945,
+              3795
+            ],
+            "how": "half_view",
+            "view": "V6"
+          }
+        ],
+        "class": "pipe_bedding",
+        "index": null,
+        "material": null,
+        "parent": null,
+        "repeat": null,
+        "side": null,
+        "status": "UNKNOWN",
+        "status_evidence": "No colour or EXG/PRO ink legend; PRO. and EXG. words on the sheet are struck through; single-colour scan",
+        "variant": null
+      },
+      "evidence_id": "418834d8e9df-p1#P3",
+      "raw_text": "C.C. 1:4:8 under pipe",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "appears_in": [
+          {
+            "box": [
+              4412,
+              3667,
+              4487,
+              3782
+            ],
+            "how": "cut",
+            "view": "V7"
+          }
+        ],
+        "class": "coping",
+        "index": null,
+        "material": null,
+        "parent": null,
+        "repeat": null,
+        "side": null,
+        "status": "UNKNOWN",
+        "status_evidence": "No colour or EXG/PRO ink legend; PRO. and EXG. words on the sheet are struck through; single-colour scan; label with leader",
+        "variant": null
+      },
+      "evidence_id": "418834d8e9df-p1#P4",
+      "raw_text": "C.C. COPING 1:3:6, 6\" THICK",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "appears_in": [
+          {
+            "box": [
+              2166,
+              685,
+              2606,
+              895
+            ],
+            "how": "cut",
+            "view": "V4"
+          },
+          {
+            "box": [
+              2175,
+              3620,
+              2640,
+              4130
+            ],
+            "how": "half_view",
+            "view": "V6"
+          },
+          {
+            "box": [
+              4452,
+              3762,
+              4642,
+              4352
+            ],
+            "how": "cut",
+            "view": "V7"
+          }
+        ],
+        "class": "pitching",
+        "index": null,
+        "material": null,
+        "parent": null,
+        "repeat": null,
+        "side": null,
+        "status": "UNKNOWN",
+        "status_evidence": "No colour or EXG/PRO ink legend; PRO. and EXG. words on the sheet are struck through; single-colour scan",
+        "variant": null
+      },
+      "evidence_id": "418834d8e9df-p1#P5",
+      "raw_text": "DRY STONE PITCHING 12\" THICK OVER 6\" GRAVEL BACKING",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "appears_in": [
+          {
+            "box": [
+              2570,
+              3838,
+              2665,
+              4038
+            ],
+            "how": "half_view",
+            "view": "V6"
+          }
+        ],
+        "class": "toe_wall",
+        "index": null,
+        "material": null,
+        "parent": null,
+        "repeat": null,
+        "side": null,
+        "status": "UNKNOWN",
+        "status_evidence": "No colour or EXG/PRO ink legend; PRO. and EXG. words on the sheet are struck through; single-colour scan",
+        "variant": null
+      },
+      "evidence_id": "418834d8e9df-p1#P6",
+      "raw_text": "DRY RUBBLE TOE WALL 2'-0\"X2'-0\"",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "appears_in": [
+          {
+            "box": [
+              2530,
+              3898,
+              2690,
+              4128
+            ],
+            "how": "half_view",
+            "view": "V6"
+          }
+        ],
+        "class": "floor_apron",
+        "index": null,
+        "material": null,
+        "parent": null,
+        "repeat": null,
+        "side": null,
+        "status": "UNKNOWN",
+        "status_evidence": "No colour or EXG/PRO ink legend; PRO. and EXG. words on the sheet are struck through; single-colour scan",
+        "variant": null
+      },
+      "evidence_id": "418834d8e9df-p1#P7",
+      "raw_text": "ROUGH STONE FLOORING 12\" THICK OVER 6\" GRAVEL BACKING",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "appears_in": [
+          {
+            "box": [
+              2270,
+              3778,
+              2650,
+              4128
+            ],
+            "how": "half_view",
+            "view": "V6"
+          },
+          {
+            "box": [
+              4592,
+              3782,
+              4732,
+              4202
+            ],
+            "how": "cut",
+            "view": "V7"
+          }
+        ],
+        "class": "other",
+        "index": null,
+        "material": null,
+        "parent": null,
+        "repeat": null,
+        "side": null,
+        "status": "UNKNOWN",
+        "status_evidence": "No colour or EXG/PRO ink legend; PRO. and EXG. words on the sheet are struck through; single-colour scan",
+        "variant": null
+      },
+      "evidence_id": "418834d8e9df-p1#P8",
+      "raw_text": "R.R. MASONRY RETAINING WALL IN C.M. 1:5 (curved wall in plan)",
+      "status": "candidate_only"
+    },
+    {
+      "binding": {
+        "reasons": [
+          "not_a_value_observation"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "appears_in": [
+          {
+            "box": [
+              2420,
+              3132,
+              2855,
+              3237
+            ],
+            "how": "hidden_dashed",
+            "view": "V6"
+          }
+        ],
+        "class": "parapet",
+        "index": null,
+        "material": null,
+        "parent": null,
+        "repeat": null,
+        "side": null,
+        "status": "UNKNOWN",
+        "status_evidence": "text \"PRO. PARAPET TO BE DISMANTLED SUITABLY\" with parts struck through; unclear which words remain in force",
+        "variant": null
+      },
+      "evidence_id": "418834d8e9df-p1#P9",
+      "raw_text": "PARAPET",
+      "status": "candidate_only"
+    }
+  ],
+  "claims": [
+    {
+      "claim_id": "C1",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation",
+        "finetune": "blocked:permission_unconfirmed+no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "418834d8e9df-p1#P1"
+      ],
+      "kind": "reference",
+      "source_ids": [
+        "grounding:418834d8e9df-p1"
+      ],
+      "statement": "part class 'pipe_barrel' is defined in the knowledge base as candidate context",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {
+          "doubt": "EXG. is struck through on the sheet; status taken from the view title OLD BRIDGE"
+        },
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C2",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation",
+        "finetune": "blocked:permission_unconfirmed+no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "418834d8e9df-p1#P10"
+      ],
+      "kind": "reference",
+      "source_ids": [
+        "grounding:418834d8e9df-p1"
+      ],
+      "statement": "part class 'other' is defined in the knowledge base as candidate context",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {
+          "doubt": "identity not given on the sheet"
+        },
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C3",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation",
+        "finetune": "blocked:permission_unconfirmed+no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "418834d8e9df-p1#P11"
+      ],
+      "kind": "reference",
+      "source_ids": [
+        "grounding:418834d8e9df-p1"
+      ],
+      "statement": "part class 'track' is defined in the knowledge base as candidate context",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {
+          "doubt": "BYE PASS LINE and DOWN LINE (NWL) both label what looks like one track; PRO. struck in the other track label"
+        },
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C4",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation",
+        "finetune": "blocked:permission_unconfirmed+no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "418834d8e9df-p1#P12"
+      ],
+      "kind": "reference",
+      "source_ids": [
+        "grounding:418834d8e9df-p1"
+      ],
+      "statement": "part class 'track' is defined in the knowledge base as candidate context",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {
+          "doubt": "right end of the rails not traced; PRO. struck in the label"
+        },
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C5",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation",
+        "finetune": "blocked:permission_unconfirmed+no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "418834d8e9df-p1#P2"
+      ],
+      "kind": "reference",
+      "source_ids": [
+        "grounding:418834d8e9df-p1"
+      ],
+      "statement": "part class 'pipe_barrel' is defined in the knowledge base as candidate context",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {
+          "doubt": "which drawn length of the double thick lines in the section is old pipe and which is extension is not stated; V6 box covers the dashed pipe edges only"
+        },
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C6",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation",
+        "finetune": "blocked:permission_unconfirmed+no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "418834d8e9df-p1#P3"
+      ],
+      "kind": "reference",
+      "source_ids": [
+        "grounding:418834d8e9df-p1"
+      ],
+      "statement": "part class 'pipe_bedding' is defined in the knowledge base as candidate context",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {
+          "doubt": "V6 box is the dotted concrete strip and footing in the half plan at founds; link to the C.C. 1:4:8 label of the section is by position only"
+        },
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C7",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation",
+        "finetune": "blocked:permission_unconfirmed+no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "418834d8e9df-p1#P4"
+      ],
+      "kind": "reference",
+      "source_ids": [
+        "grounding:418834d8e9df-p1"
+      ],
+      "statement": "part class 'coping' is defined in the knowledge base as candidate context",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {
+          "doubt": "leader end to the small block not traced to the pixel"
+        },
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C8",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation",
+        "finetune": "blocked:permission_unconfirmed+no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "418834d8e9df-p1#P5"
+      ],
+      "kind": "reference",
+      "source_ids": [
+        "grounding:418834d8e9df-p1"
+      ],
+      "statement": "part class 'pitching' is defined in the knowledge base as candidate context",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {
+          "doubt": null
+        },
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C9",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation",
+        "finetune": "blocked:permission_unconfirmed+no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "418834d8e9df-p1#P6"
+      ],
+      "kind": "reference",
+      "source_ids": [
+        "grounding:418834d8e9df-p1"
+      ],
+      "statement": "part class 'toe_wall' is defined in the knowledge base as candidate context",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {
+          "doubt": "leader end not traced; box is around the curved band end"
+        },
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C10",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation",
+        "finetune": "blocked:permission_unconfirmed+no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "418834d8e9df-p1#P7"
+      ],
+      "kind": "reference",
+      "source_ids": [
+        "grounding:418834d8e9df-p1"
+      ],
+      "statement": "part class 'floor_apron' is defined in the knowledge base as candidate context",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {
+          "doubt": "leader end not traced; class chosen from the printed words only"
+        },
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C11",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation",
+        "finetune": "blocked:permission_unconfirmed+no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "418834d8e9df-p1#P8"
+      ],
+      "kind": "reference",
+      "source_ids": [
+        "grounding:418834d8e9df-p1"
+      ],
+      "statement": "part class 'other' is defined in the knowledge base as candidate context",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {
+          "doubt": "no matching class in the list (retaining wall); which drawn line the leader names is not traced"
+        },
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    },
+    {
+      "claim_id": "C12",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+not_a_value_observation",
+        "finetune": "blocked:permission_unconfirmed+no_human_label",
+        "retrieval": "eligible:observation_unverified"
+      },
+      "evidence_ids": [
+        "418834d8e9df-p1#P9"
+      ],
+      "kind": "reference",
+      "source_ids": [
+        "grounding:418834d8e9df-p1"
+      ],
+      "statement": "part class 'parapet' is defined in the knowledge base as candidate context",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {
+          "doubt": null
+        },
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "needs_review"
+      }
+    }
+  ],
+  "completeness": {
+    "capabilities": {
+      "dimension_text": true,
+      "disputes_recorded": 0,
+      "identity": true,
+      "levels": true,
+      "live_cad_binding": false,
+      "parameters": true,
+      "parts": true,
+      "picture": true,
+      "relations": true,
+      "vector_text": false,
+      "verified_values": 0,
+      "views": true
+    },
+    "missing": [
+      "grounding section empty: repeats",
+      "grounding section empty: disputes",
+      "grounding section empty: absent"
+    ],
+    "notes": [
+      "No value in this pack is verified by a person; the registry holds no verification record."
+    ],
+    "status": "partially_grounded"
+  },
+  "component_definitions": [
+    {
+      "class": "pipe_barrel",
+      "definitions": [
+        {
+          "category": "C",
+          "eligibility": {
+            "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+            "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+            "retrieval": "eligible:unreviewed_vocabulary_interpretation_aid"
+          },
+          "id": "kb:phys.component.pipe_barrel",
+          "statement": "A pipe (one row); repeated with count and spacing.",
+          "title": "Pipe barrel",
+          "trust": {
+            "authored": null,
+            "evidence_status": "COMMON_PRACTICE",
+            "label_source": "knowledge_lookup",
+            "review_state": "seed_unreviewed",
+            "reviewed": null,
+            "risk_flags": [],
+            "use": {
+              "grounding": true,
+              "qa_training": true,
+              "retrieval": true,
+              "validator": false
+            }
+          }
+        }
+      ],
+      "evidence_id": "418834d8e9df-p1#P1"
+    },
+    {
+      "class": "other",
+      "definitions": [
+        {
+          "category": "C",
+          "eligibility": {
+            "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+            "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+            "retrieval": "eligible:unreviewed_vocabulary_interpretation_aid"
+          },
+          "id": "kb:phys.component.other",
+          "statement": "Anything drawn that no class fits; describe it in the instance label. Promoted to a class when seen ≥20 times across ≥5 structures.",
+          "title": "Other (not in ontology)",
+          "trust": {
+            "authored": null,
+            "evidence_status": "COMMON_PRACTICE",
+            "label_source": "knowledge_lookup",
+            "review_state": "seed_unreviewed",
+            "reviewed": null,
+            "risk_flags": [],
+            "use": {
+              "grounding": true,
+              "qa_training": true,
+              "retrieval": true,
+              "validator": false
+            }
+          }
+        }
+      ],
+      "evidence_id": "418834d8e9df-p1#P10"
+    },
+    {
+      "class": "track",
+      "definitions": [
+        {
+          "category": "C",
+          "eligibility": {
+            "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+            "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+            "retrieval": "eligible:unreviewed_vocabulary_interpretation_aid"
+          },
+          "id": "kb:phys.component.track",
+          "statement": "Rails on sleepers on ballast; one instance per track (existing/proposed line).",
+          "title": "Track",
+          "trust": {
+            "authored": null,
+            "evidence_status": "COMMON_PRACTICE",
+            "label_source": "knowledge_lookup",
+            "review_state": "seed_unreviewed",
+            "reviewed": null,
+            "risk_flags": [],
+            "use": {
+              "grounding": true,
+              "qa_training": true,
+              "retrieval": true,
+              "validator": false
+            }
+          }
+        }
+      ],
+      "evidence_id": "418834d8e9df-p1#P11"
+    },
+    {
+      "class": "track",
+      "definitions": [
+        {
+          "category": "C",
+          "eligibility": {
+            "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+            "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+            "retrieval": "eligible:unreviewed_vocabulary_interpretation_aid"
+          },
+          "id": "kb:phys.component.track",
+          "statement": "Rails on sleepers on ballast; one instance per track (existing/proposed line).",
+          "title": "Track",
+          "trust": {
+            "authored": null,
+            "evidence_status": "COMMON_PRACTICE",
+            "label_source": "knowledge_lookup",
+            "review_state": "seed_unreviewed",
+            "reviewed": null,
+            "risk_flags": [],
+            "use": {
+              "grounding": true,
+              "qa_training": true,
+              "retrieval": true,
+              "validator": false
+            }
+          }
+        }
+      ],
+      "evidence_id": "418834d8e9df-p1#P12"
+    },
+    {
+      "class": "pipe_barrel",
+      "definitions": [
+        {
+          "category": "C",
+          "eligibility": {
+            "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+            "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+            "retrieval": "eligible:unreviewed_vocabulary_interpretation_aid"
+          },
+          "id": "kb:phys.component.pipe_barrel",
+          "statement": "A pipe (one row); repeated with count and spacing.",
+          "title": "Pipe barrel",
+          "trust": {
+            "authored": null,
+            "evidence_status": "COMMON_PRACTICE",
+            "label_source": "knowledge_lookup",
+            "review_state": "seed_unreviewed",
+            "reviewed": null,
+            "risk_flags": [],
+            "use": {
+              "grounding": true,
+              "qa_training": true,
+              "retrieval": true,
+              "validator": false
+            }
+          }
+        }
+      ],
+      "evidence_id": "418834d8e9df-p1#P2"
+    },
+    {
+      "class": "pipe_bedding",
+      "definitions": [
+        {
+          "category": "C",
+          "eligibility": {
+            "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+            "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+            "retrieval": "eligible:unreviewed_vocabulary_interpretation_aid"
+          },
+          "id": "kb:phys.component.pipe_bedding",
+          "statement": "Concrete cradle or granular bedding under pipes.",
+          "title": "Pipe bedding / cradle",
+          "trust": {
+            "authored": null,
+            "evidence_status": "COMMON_PRACTICE",
+            "label_source": "knowledge_lookup",
+            "review_state": "seed_unreviewed",
+            "reviewed": null,
+            "risk_flags": [],
+            "use": {
+              "grounding": true,
+              "qa_training": true,
+              "retrieval": true,
+              "validator": false
+            }
+          }
+        }
+      ],
+      "evidence_id": "418834d8e9df-p1#P3"
+    },
+    {
+      "class": "coping",
+      "definitions": [
+        {
+          "category": "C",
+          "eligibility": {
+            "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+            "finetune": "blocked:review_state_draft+no_training_permission_record",
+            "retrieval": "eligible:unreviewed_vocabulary_interpretation_aid"
+          },
+          "id": "kb:phys.subcomponent.coping",
+          "statement": "Cap course on top of a wing/return wall or abutment, sometimes chamfered.",
+          "title": "Coping",
+          "trust": {
+            "authored": null,
+            "evidence_status": "COMMON_PRACTICE",
+            "label_source": "knowledge_lookup",
+            "review_state": "draft",
+            "reviewed": null,
+            "risk_flags": [],
+            "use": {
+              "grounding": true,
+              "qa_training": true,
+              "retrieval": true,
+              "validator": false
+            }
+          }
+        }
+      ],
+      "evidence_id": "418834d8e9df-p1#P4"
+    },
+    {
+      "class": "pitching",
+      "definitions": [
+        {
+          "category": "C",
+          "eligibility": {
+            "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+            "finetune": "blocked:review_state_draft+no_training_permission_record",
+            "retrieval": "eligible:unreviewed_vocabulary_interpretation_aid"
+          },
+          "id": "kb:phys.component.pitching",
+          "statement": "Stone or boulder pitching on slopes/bed.",
+          "title": "Pitching (stone / boulder)",
+          "trust": {
+            "authored": null,
+            "evidence_status": "COMMON_PRACTICE",
+            "label_source": "knowledge_lookup",
+            "review_state": "draft",
+            "reviewed": null,
+            "risk_flags": [],
+            "use": {
+              "grounding": true,
+              "qa_training": true,
+              "retrieval": true,
+              "validator": false
+            }
+          }
+        }
+      ],
+      "evidence_id": "418834d8e9df-p1#P5"
+    },
+    {
+      "class": "toe_wall",
+      "definitions": [
+        {
+          "category": "C",
+          "eligibility": {
+            "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+            "finetune": "blocked:review_state_draft+no_training_permission_record",
+            "retrieval": "eligible:unreviewed_vocabulary_interpretation_aid"
+          },
+          "id": "kb:phys.component.toe_wall",
+          "statement": "Small wall at toe of pitching/apron.",
+          "title": "Toe wall",
+          "trust": {
+            "authored": null,
+            "evidence_status": "COMMON_PRACTICE",
+            "label_source": "knowledge_lookup",
+            "review_state": "draft",
+            "reviewed": null,
+            "risk_flags": [],
+            "use": {
+              "grounding": true,
+              "qa_training": true,
+              "retrieval": true,
+              "validator": false
+            }
+          }
+        }
+      ],
+      "evidence_id": "418834d8e9df-p1#P6"
+    },
+    {
+      "class": "floor_apron",
+      "definitions": [
+        {
+          "category": "C",
+          "eligibility": {
+            "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+            "finetune": "blocked:review_state_draft+no_training_permission_record",
+            "retrieval": "eligible:unreviewed_vocabulary_interpretation_aid"
+          },
+          "id": "kb:phys.component.floor_apron",
+          "statement": "Paved floor through and beyond the structure (PCC/stone), between curtain walls.",
+          "title": "Floor / rigid apron",
+          "trust": {
+            "authored": null,
+            "evidence_status": "COMMON_PRACTICE",
+            "label_source": "knowledge_lookup",
+            "review_state": "draft",
+            "reviewed": null,
+            "risk_flags": [],
+            "use": {
+              "grounding": true,
+              "qa_training": true,
+              "retrieval": true,
+              "validator": false
+            }
+          }
+        }
+      ],
+      "evidence_id": "418834d8e9df-p1#P7"
+    },
+    {
+      "class": "other",
+      "definitions": [
+        {
+          "category": "C",
+          "eligibility": {
+            "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+            "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+            "retrieval": "eligible:unreviewed_vocabulary_interpretation_aid"
+          },
+          "id": "kb:phys.component.other",
+          "statement": "Anything drawn that no class fits; describe it in the instance label. Promoted to a class when seen ≥20 times across ≥5 structures.",
+          "title": "Other (not in ontology)",
+          "trust": {
+            "authored": null,
+            "evidence_status": "COMMON_PRACTICE",
+            "label_source": "knowledge_lookup",
+            "review_state": "seed_unreviewed",
+            "reviewed": null,
+            "risk_flags": [],
+            "use": {
+              "grounding": true,
+              "qa_training": true,
+              "retrieval": true,
+              "validator": false
+            }
+          }
+        }
+      ],
+      "evidence_id": "418834d8e9df-p1#P8"
+    },
+    {
+      "class": "parapet",
+      "definitions": [
+        {
+          "category": "C",
+          "eligibility": {
+            "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+            "finetune": "blocked:review_state_draft+no_training_permission_record",
+            "retrieval": "eligible:unreviewed_vocabulary_interpretation_aid"
+          },
+          "id": "kb:phys.component.parapet",
+          "statement": "Low wall/railing along deck edge.",
+          "title": "Parapet",
+          "trust": {
+            "authored": null,
+            "evidence_status": "COMMON_PRACTICE",
+            "label_source": "knowledge_lookup",
+            "review_state": "draft",
+            "reviewed": null,
+            "risk_flags": [],
+            "use": {
+              "grounding": true,
+              "qa_training": true,
+              "retrieval": true,
+              "validator": false
+            }
+          }
+        }
+      ],
+      "evidence_id": "418834d8e9df-p1#P9"
+    }
+  ],
+  "conflicts": [
+    {
+      "candidate": {
+        "expected": 0.9144,
+        "numbers": "287.87 - 284.87 = 3.000 m ; 3'-0\" = 0.9144 m",
+        "result": 3.0,
+        "tolerance": 0.01
+      },
+      "evidence_id": "418834d8e9df-p1#check4",
+      "kind": "arithmetic_check_disagrees",
+      "text": "same level difference if the levels were metres: 287.87 - 284.87 in m against 3'-0\" in m"
+    }
+  ],
+  "derived": true,
+  "formulas": [],
+  "generator": "agentctx 1.0",
+  "input_hashes": {
+    "bridges/pipe/brg-89da4faada/sheets/418834d8e9df-p1/grounding/agent-grounding.json": "520c2dbc2f0a2e3f49e011eae77cde834209a8512ddec338cac7bd6489a4f8aa",
+    "bridges/pipe/brg-89da4faada/sheets/418834d8e9df-p1/grounding/checks.md": "21121db7fc2b2adf993b74f1f9acc112f4f57a275b7ccd06ee34829aa2be1bcf",
+    "bridges/pipe/brg-89da4faada/sheets/418834d8e9df-p1/grounding/review.md": "dd46d535abb9912f99c73534c3a42482a4e1818fdc08b95f217c4e8bb70ed915",
+    "bridges/pipe/brg-89da4faada/sheets/418834d8e9df-p1/grounding/revisions/0001.json": "c08b7564b9be27323c64b2192ffef2ee1f68f0401373707a0a5b7aab1f78df1d"
+  },
+  "live_cad_binding": {
+    "reason": "no runtime CAD snapshot supplied; PDF primitives and picture coordinates are not CAD entities",
+    "snapshot": null,
+    "status": "unavailable"
+  },
+  "observations": {
+    "absent": [],
+    "parts": [
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                4287,
+                765,
+                4417,
+                895
+              ],
+              "how": "cut",
+              "view": "V5"
+            }
+          ],
+          "class": "pipe_barrel",
+          "index": null,
+          "material": null,
+          "parent": null,
+          "repeat": null,
+          "side": null,
+          "status": "EXISTING",
+          "status_evidence": "title \"(EXG. 1-3'-0\" DIA. R.C.C. PIPE CULVERT)\" and view title ELEVATION OF OLD BRIDGE",
+          "variant": null
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "418834d8e9df-p1#P1",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "1-3'-0\" DIA. R.C.C. PIPE (old culvert)",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": "EXG. is struck through on the sheet; status taken from the view title OLD BRIDGE"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            4287,
+            765,
+            4417,
+            895
+          ],
+          "how": "cut",
+          "view": "V5"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                2415,
+                2057,
+                2850,
+                2157
+              ],
+              "how": "half_view",
+              "view": "V6"
+            }
+          ],
+          "class": "other",
+          "index": null,
+          "material": null,
+          "parent": null,
+          "repeat": null,
+          "side": null,
+          "status": "UNKNOWN",
+          "status_evidence": "no label on the sheet",
+          "variant": null
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "418834d8e9df-p1#P10",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "unlabelled rectangle at the top of the plan (11'-8\" overall)",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": "identity not given on the sheet"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            2415,
+            2057,
+            2850,
+            2157
+          ],
+          "how": "half_view",
+          "view": "V6"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                1500,
+                2535,
+                3345,
+                2785
+              ],
+              "how": "half_view",
+              "view": "V6"
+            }
+          ],
+          "class": "track",
+          "index": null,
+          "material": null,
+          "parent": null,
+          "repeat": null,
+          "side": null,
+          "status": "UNKNOWN",
+          "status_evidence": "centre line with rails drawn in plan; both labels on the same centre line",
+          "variant": null
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "418834d8e9df-p1#P11",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "C/L OF BYE PASS LINE / DOWN LINE (NWL)",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": "BYE PASS LINE and DOWN LINE (NWL) both label what looks like one track; PRO. struck in the other track label"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            1500,
+            2535,
+            3345,
+            2785
+          ],
+          "how": "half_view",
+          "view": "V6"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                1510,
+                3130,
+                2640,
+                3365
+              ],
+              "how": "half_view",
+              "view": "V6"
+            }
+          ],
+          "class": "track",
+          "index": null,
+          "material": null,
+          "parent": null,
+          "repeat": null,
+          "side": null,
+          "status": "UNKNOWN",
+          "status_evidence": "centre line with rails drawn in plan",
+          "variant": null
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "418834d8e9df-p1#P12",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "C/L OF PRO. TRACK / UP LINE (NWL)",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": "right end of the rails not traced; PRO. struck in the label"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            1510,
+            3130,
+            2640,
+            3365
+          ],
+          "how": "half_view",
+          "view": "V6"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                2561,
+                760,
+                2711,
+                910
+              ],
+              "how": "cut",
+              "view": "V4"
+            },
+            {
+              "box": [
+                4470,
+                2060,
+                4625,
+                3215
+              ],
+              "how": "cut",
+              "view": "V7"
+            },
+            {
+              "box": [
+                2570,
+                2150,
+                2700,
+                3790
+              ],
+              "how": "hidden_dashed",
+              "view": "V6"
+            }
+          ],
+          "class": "pipe_barrel",
+          "index": null,
+          "material": null,
+          "parent": null,
+          "repeat": null,
+          "side": null,
+          "status": "UNKNOWN",
+          "status_evidence": "No colour or EXG/PRO ink legend; PRO. and EXG. words on the sheet are struck through; single-colour scan",
+          "variant": null
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "418834d8e9df-p1#P2",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "3'-0\" DIA. R.C.C. PIPE (extension) AS PER DRG. No: I.R.S (B) BA. 2225 & 2226",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": "which drawn length of the double thick lines in the section is old pipe and which is extension is not stated; V6 box covers the dashed pipe edges only"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            2561,
+            760,
+            2711,
+            910
+          ],
+          "how": "cut",
+          "view": "V4"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                4597,
+                3206,
+                4687,
+                3796
+              ],
+              "how": "cut",
+              "view": "V7"
+            },
+            {
+              "box": [
+                2640,
+                3200,
+                2945,
+                3795
+              ],
+              "how": "half_view",
+              "view": "V6"
+            }
+          ],
+          "class": "pipe_bedding",
+          "index": null,
+          "material": null,
+          "parent": null,
+          "repeat": null,
+          "side": null,
+          "status": "UNKNOWN",
+          "status_evidence": "No colour or EXG/PRO ink legend; PRO. and EXG. words on the sheet are struck through; single-colour scan",
+          "variant": null
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "418834d8e9df-p1#P3",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "C.C. 1:4:8 under pipe",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": "V6 box is the dotted concrete strip and footing in the half plan at founds; link to the C.C. 1:4:8 label of the section is by position only"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            4597,
+            3206,
+            4687,
+            3796
+          ],
+          "how": "cut",
+          "view": "V7"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                4412,
+                3667,
+                4487,
+                3782
+              ],
+              "how": "cut",
+              "view": "V7"
+            }
+          ],
+          "class": "coping",
+          "index": null,
+          "material": null,
+          "parent": null,
+          "repeat": null,
+          "side": null,
+          "status": "UNKNOWN",
+          "status_evidence": "No colour or EXG/PRO ink legend; PRO. and EXG. words on the sheet are struck through; single-colour scan; label with leader",
+          "variant": null
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "418834d8e9df-p1#P4",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "C.C. COPING 1:3:6, 6\" THICK",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": "leader end to the small block not traced to the pixel"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            4412,
+            3667,
+            4487,
+            3782
+          ],
+          "how": "cut",
+          "view": "V7"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                2166,
+                685,
+                2606,
+                895
+              ],
+              "how": "cut",
+              "view": "V4"
+            },
+            {
+              "box": [
+                2175,
+                3620,
+                2640,
+                4130
+              ],
+              "how": "half_view",
+              "view": "V6"
+            },
+            {
+              "box": [
+                4452,
+                3762,
+                4642,
+                4352
+              ],
+              "how": "cut",
+              "view": "V7"
+            }
+          ],
+          "class": "pitching",
+          "index": null,
+          "material": null,
+          "parent": null,
+          "repeat": null,
+          "side": null,
+          "status": "UNKNOWN",
+          "status_evidence": "No colour or EXG/PRO ink legend; PRO. and EXG. words on the sheet are struck through; single-colour scan",
+          "variant": null
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "418834d8e9df-p1#P5",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "DRY STONE PITCHING 12\" THICK OVER 6\" GRAVEL BACKING",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": null
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            2166,
+            685,
+            2606,
+            895
+          ],
+          "how": "cut",
+          "view": "V4"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                2570,
+                3838,
+                2665,
+                4038
+              ],
+              "how": "half_view",
+              "view": "V6"
+            }
+          ],
+          "class": "toe_wall",
+          "index": null,
+          "material": null,
+          "parent": null,
+          "repeat": null,
+          "side": null,
+          "status": "UNKNOWN",
+          "status_evidence": "No colour or EXG/PRO ink legend; PRO. and EXG. words on the sheet are struck through; single-colour scan",
+          "variant": null
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "418834d8e9df-p1#P6",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "DRY RUBBLE TOE WALL 2'-0\"X2'-0\"",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": "leader end not traced; box is around the curved band end"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            2570,
+            3838,
+            2665,
+            4038
+          ],
+          "how": "half_view",
+          "view": "V6"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                2530,
+                3898,
+                2690,
+                4128
+              ],
+              "how": "half_view",
+              "view": "V6"
+            }
+          ],
+          "class": "floor_apron",
+          "index": null,
+          "material": null,
+          "parent": null,
+          "repeat": null,
+          "side": null,
+          "status": "UNKNOWN",
+          "status_evidence": "No colour or EXG/PRO ink legend; PRO. and EXG. words on the sheet are struck through; single-colour scan",
+          "variant": null
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "418834d8e9df-p1#P7",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "ROUGH STONE FLOORING 12\" THICK OVER 6\" GRAVEL BACKING",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": "leader end not traced; class chosen from the printed words only"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            2530,
+            3898,
+            2690,
+            4128
+          ],
+          "how": "half_view",
+          "view": "V6"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                2270,
+                3778,
+                2650,
+                4128
+              ],
+              "how": "half_view",
+              "view": "V6"
+            },
+            {
+              "box": [
+                4592,
+                3782,
+                4732,
+                4202
+              ],
+              "how": "cut",
+              "view": "V7"
+            }
+          ],
+          "class": "other",
+          "index": null,
+          "material": null,
+          "parent": null,
+          "repeat": null,
+          "side": null,
+          "status": "UNKNOWN",
+          "status_evidence": "No colour or EXG/PRO ink legend; PRO. and EXG. words on the sheet are struck through; single-colour scan",
+          "variant": null
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "418834d8e9df-p1#P8",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "R.R. MASONRY RETAINING WALL IN C.M. 1:5 (curved wall in plan)",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": "no matching class in the list (retaining wall); which drawn line the leader names is not traced"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            2270,
+            3778,
+            2650,
+            4128
+          ],
+          "how": "half_view",
+          "view": "V6"
+        }
+      },
+      {
+        "candidate_interpretation": {
+          "appears_in": [
+            {
+              "box": [
+                2420,
+                3132,
+                2855,
+                3237
+              ],
+              "how": "hidden_dashed",
+              "view": "V6"
+            }
+          ],
+          "class": "parapet",
+          "index": null,
+          "material": null,
+          "parent": null,
+          "repeat": null,
+          "side": null,
+          "status": "UNKNOWN",
+          "status_evidence": "text \"PRO. PARAPET TO BE DISMANTLED SUITABLY\" with parts struck through; unclear which words remain in force",
+          "variant": null
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:observation_unverified"
+        },
+        "evidence_id": "418834d8e9df-p1#P9",
+        "geometry": null,
+        "obs_kind": "part",
+        "raw_text": "PARAPET",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "doubt": null
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "needs_review"
+        },
+        "view": {
+          "box": [
+            2420,
+            3132,
+            2855,
+            3237
+          ],
+          "how": "hidden_dashed",
+          "view": "V6"
+        }
+      }
+    ]
+  },
+  "pack_id": "pack-7ca8f5fa3cf0b564",
+  "pack_kind": "derived_evidence_pack",
+  "pack_version": "1.0",
+  "permitted_next_actions": [
+    "name a part only when the sheet draws or writes it; use the candidate class and its evidence id",
+    "use knowledge-base definitions as candidate context, labelled with their review state"
+  ],
+  "source_fingerprints": {
+    "418834d8e9df-p1": "47a22e8b703cc45b93438991481d14b2267fba0401ce2a5c918e46b191b44884",
+    "grounding:418834d8e9df-p1": "770ff7f4361042041cde5baaf572bf67deb11c2cfbcd2275b0da328cc2548075"
+  },
+  "source_references": [
+    {
+      "fingerprint": "47a22e8b703cc45b93438991481d14b2267fba0401ce2a5c918e46b191b44884",
+      "kind": "drawing_sheet",
+      "record_id": "418834d8e9df-p1",
+      "role": "subject",
+      "source_paths": [
+        "bridges/pipe/brg-89da4faada/sheets/418834d8e9df-p1/grounding/agent-grounding.json"
+      ]
+    },
+    {
+      "fingerprint": "770ff7f4361042041cde5baaf572bf67deb11c2cfbcd2275b0da328cc2548075",
+      "kind": "grounding",
+      "record_id": "grounding:418834d8e9df-p1",
+      "role": "observation_source",
+      "source_paths": [
+        "bridges/pipe/brg-89da4faada/sheets/418834d8e9df-p1/grounding/agent-grounding.json",
+        "bridges/pipe/brg-89da4faada/sheets/418834d8e9df-p1/grounding/checks.md",
+        "bridges/pipe/brg-89da4faada/sheets/418834d8e9df-p1/grounding/review.md",
+        "bridges/pipe/brg-89da4faada/sheets/418834d8e9df-p1/grounding/revisions/0001.json"
+      ]
+    }
+  ],
+  "subject": {
+    "bridge_ids": [
+      "brg-89da4faada"
+    ],
+    "family": "pipe",
+    "kind": "drawing_sheet",
+    "record_id": "418834d8e9df-p1",
+    "source_paths": [
+      "bridges/pipe/brg-89da4faada/sheets/418834d8e9df-p1/grounding/agent-grounding.json"
+    ],
+    "title": "2-AJJ-1174.tif"
+  },
+  "task": {
+    "description": "Interpret the components the record shows, using knowledge-base definitions as candidates.",
+    "name": "component_interpretation",
+    "requested_scope": {}
+  },
+  "unmatched_part_classes": [],
+  "unresolved_questions": [
+    {
+      "evidence_id": "418834d8e9df-p1#doubt0",
+      "kind": "doubt",
+      "text": "units of levels"
+    },
+    {
+      "evidence_id": "418834d8e9df-p1#doubt1",
+      "kind": "doubt",
+      "text": "struck-through text"
+    },
+    {
+      "evidence_id": "418834d8e9df-p1#doubt2",
+      "kind": "doubt",
+      "text": "status"
+    },
+    {
+      "evidence_id": "418834d8e9df-p1#doubt3",
+      "kind": "doubt",
+      "text": "tracks"
+    },
+    {
+      "evidence_id": "418834d8e9df-p1#doubt4",
+      "kind": "doubt",
+      "text": "handwritten dates and signatures"
+    },
+    {
+      "evidence_id": "418834d8e9df-p1#doubt5",
+      "kind": "doubt",
+      "text": "tiny figures in plan, half section and section"
+    },
+    {
+      "evidence_id": "418834d8e9df-p1#doubt6",
+      "kind": "doubt",
+      "text": "plan top rectangle"
+    },
+    {
+      "issue_id": "issue:needs_review:418834d8e9df-p1",
+      "kind": "needs_review",
+      "text": "grounding filed but marked needs_review in agent/state/done"
+    }
+  ]
+}

@@ -1,0 +1,492 @@
+{
+  "agent_summary": "Task geometric_relationships for v-993a513ea007-p1 (vector_sheet, family rcc_box). Completeness: vector_text_observed. Claims: 0. Candidates: 0. Conflicts: 0. Open questions: 2. Every dimension is a candidate; binding is blocked. CAD binding: unavailable.",
+  "blocked_next_actions": [
+    {
+      "action": "state a value as verified",
+      "reason": "no human verification is recorded in the repository"
+    },
+    {
+      "action": "promote a proposal or an unreviewed entry into accepted knowledge",
+      "reason": "proposals and unreviewed entries are never merged or promoted by this layer"
+    },
+    {
+      "action": "use this pack as training data",
+      "reason": "packs are derived artefacts, not labels or sources"
+    },
+    {
+      "action": "edit or select a CAD entity",
+      "reason": "no runtime CAD snapshot: picture coordinates and vector paths are not CAD entities"
+    },
+    {
+      "action": "measure geometry from the picture",
+      "reason": "this pack has no pixel measurement"
+    }
+  ],
+  "built_from": {
+    "registry_digest": "4395427d73da1f49797b137de95fca5c02e47a348949116c34504a7c60a0471b"
+  },
+  "candidate_interpretations": [],
+  "claims": [],
+  "completeness": {
+    "capabilities": {
+      "dimension_text": false,
+      "disputes_recorded": 0,
+      "identity": true,
+      "levels": false,
+      "live_cad_binding": false,
+      "parameters": false,
+      "parts": false,
+      "picture": false,
+      "relations": false,
+      "vector_text": true,
+      "verified_values": 0,
+      "views": false
+    },
+    "missing": [],
+    "notes": [
+      "No value in this pack is verified by a person; the registry holds no verification record."
+    ],
+    "status": "vector_text_observed"
+  },
+  "component_definitions": [],
+  "conflicts": [],
+  "derived": true,
+  "formulas": [
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:proposed_or_disputed+review_state_seed_unreviewed+evidence_disputed+not_marked_for_qa_training+no_training_permission_record",
+        "retrieval": "eligible:proposed_or_disputed_do_not_present_as_accepted"
+      },
+      "executed": false,
+      "expression": null,
+      "id": "kb:kb.formula.cg_val_002",
+      "statement": "girder depth ≥ L/20 (L/20 is a spacing ratio per the secondary source)",
+      "title": "CG-VAL-002",
+      "trust": {
+        "authored": null,
+        "evidence_status": "DISPUTED",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": false,
+          "retrieval": false,
+          "validator": false
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:proposed_or_disputed+review_state_seed_unreviewed+evidence_disputed+not_marked_for_qa_training+no_training_permission_record",
+        "retrieval": "eligible:proposed_or_disputed_do_not_present_as_accepted"
+      },
+      "executed": false,
+      "expression": null,
+      "id": "kb:kb.formula.cg_val_006",
+      "statement": "clearance ≥ 1.0 m confuses clearance (IRBM 312 table) with free board (313)",
+      "title": "CG-VAL-006",
+      "trust": {
+        "authored": null,
+        "evidence_status": "DISPUTED",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": false,
+          "retrieval": false,
+          "validator": false
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+        "retrieval": "eligible:unreviewed_reference"
+      },
+      "executed": false,
+      "expression": {
+        "executed": false,
+        "status": "not_executable_until_validated",
+        "text": "floor_level - slab_bottom_level"
+      },
+      "id": "kb:kb.formula.d_bottom_slab",
+      "statement": "bottom_slab = floor_level - slab_bottom_level",
+      "title": "D-BOTTOM-SLAB",
+      "trust": {
+        "authored": null,
+        "evidence_status": "DERIVED",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": true,
+          "retrieval": false,
+          "validator": true
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+        "retrieval": "eligible:unreviewed_reference"
+      },
+      "executed": false,
+      "expression": {
+        "executed": false,
+        "status": "not_executable_until_validated",
+        "text": "soffit_level - floor_level"
+      },
+      "id": "kb:kb.formula.d_clear_height",
+      "statement": "clear_height = soffit_level - floor_level",
+      "title": "D-CLEAR-HEIGHT",
+      "trust": {
+        "authored": null,
+        "evidence_status": "DERIVED",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": true,
+          "retrieval": false,
+          "validator": true
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+        "retrieval": "eligible:unreviewed_reference"
+      },
+      "executed": false,
+      "expression": {
+        "executed": false,
+        "status": "not_executable_until_validated",
+        "text": "soffit_level - bed_level"
+      },
+      "id": "kb:kb.formula.d_clear_height_from_bed",
+      "statement": "clear_height = soffit_level - bed_level",
+      "title": "D-CLEAR-HEIGHT-FROM-BED",
+      "trust": {
+        "authored": null,
+        "evidence_status": "DERIVED",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": true,
+          "retrieval": false,
+          "validator": true
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+        "retrieval": "eligible:unreviewed_reference"
+      },
+      "executed": false,
+      "expression": {
+        "executed": false,
+        "status": "not_executable_until_validated",
+        "text": "soffit_level - hfl"
+      },
+      "id": "kb:kb.formula.d_clearance",
+      "statement": "clearance = soffit_level - hfl when drawings write CL-/V.C. against the HFL; IRBM 312 measures clearance from the design-discharge water level incl. afflux (KC-6)",
+      "title": "D-CLEARANCE",
+      "trust": {
+        "authored": null,
+        "evidence_status": "COMMON_PRACTICE",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": true,
+          "retrieval": false,
+          "validator": true
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+        "retrieval": "eligible:unreviewed_reference"
+      },
+      "executed": false,
+      "expression": {
+        "executed": false,
+        "status": "not_executable_until_validated",
+        "text": "formation_level - top_slab_level"
+      },
+      "id": "kb:kb.formula.d_cushion",
+      "statement": "cushion = formation_level - top_slab_level when the datum of a standard drawing's 'fill height' (formation, sleeper or rail) is not settled (KC-5); the drawing's own cushion is formation − top of structure",
+      "title": "D-CUSHION",
+      "trust": {
+        "authored": null,
+        "evidence_status": "DERIVED",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": true,
+          "retrieval": false,
+          "validator": true
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+        "retrieval": "eligible:unreviewed_reference"
+      },
+      "executed": false,
+      "expression": {
+        "executed": false,
+        "status": "not_executable_until_validated",
+        "text": "hfl - bed_level"
+      },
+      "id": "kb:kb.formula.d_depth_of_flow",
+      "statement": "depth_of_flow = hfl - bed_level",
+      "title": "D-DEPTH-OF-FLOW",
+      "trust": {
+        "authored": null,
+        "evidence_status": "DERIVED",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": true,
+          "retrieval": false,
+          "validator": true
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+        "retrieval": "eligible:unreviewed_reference"
+      },
+      "executed": false,
+      "expression": {
+        "executed": false,
+        "status": "not_executable_until_validated",
+        "text": "footing_top_level - foundation_bottom"
+      },
+      "id": "kb:kb.formula.d_footing_depth",
+      "statement": "footing_depth = footing_top_level - foundation_bottom",
+      "title": "D-FOOTING-DEPTH",
+      "trust": {
+        "authored": null,
+        "evidence_status": "DERIVED",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": true,
+          "retrieval": false,
+          "validator": true
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+        "retrieval": "eligible:unreviewed_reference"
+      },
+      "executed": false,
+      "expression": {
+        "executed": false,
+        "status": "not_executable_until_validated",
+        "text": "bed_level - footing_top_level"
+      },
+      "id": "kb:kb.formula.d_footing_embedment",
+      "statement": "footing_embedment = bed_level - footing_top_level",
+      "title": "D-FOOTING-EMBEDMENT",
+      "trust": {
+        "authored": null,
+        "evidence_status": "DERIVED",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": true,
+          "retrieval": false,
+          "validator": true
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+        "retrieval": "eligible:unreviewed_reference"
+      },
+      "executed": false,
+      "expression": {
+        "executed": false,
+        "status": "not_executable_until_validated",
+        "text": "formation_level - hfl"
+      },
+      "id": "kb:kb.formula.d_freeboard",
+      "statement": "freeboard = formation_level - hfl when drawings write F.B. against the HFL; IRBM 313 measures free board from the design-discharge water level incl. afflux (KC-6)",
+      "title": "D-FREEBOARD",
+      "trust": {
+        "authored": null,
+        "evidence_status": "COMMON_PRACTICE",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": true,
+          "retrieval": false,
+          "validator": true
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+        "retrieval": "eligible:unreviewed_reference"
+      },
+      "executed": false,
+      "expression": {
+        "executed": false,
+        "status": "not_executable_until_validated",
+        "text": "top_slab_level - soffit_level"
+      },
+      "id": "kb:kb.formula.d_top_slab",
+      "statement": "top_slab = top_slab_level - soffit_level",
+      "title": "D-TOP-SLAB",
+      "trust": {
+        "authored": null,
+        "evidence_status": "DERIVED",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": true,
+          "retrieval": false,
+          "validator": true
+        }
+      }
+    }
+  ],
+  "generator": "agentctx 1.0",
+  "input_hashes": {
+    "vector-pdfs/rcc_box/vbr-037c6c8535/sheets/v-993a513ea007-p1/sheet.json": "03dc3271fb0f5900b7ab485b6158e167eb70f5fcc5d017854239cdc55268f7c6",
+    "vector-pdfs/rcc_box/vbr-037c6c8535/sheets/v-993a513ea007-p1/vector/meta.json": "1ae24e1199a81a487910e3ee455d768bd352ce314277c818a5692cbecf09441c",
+    "vector-pdfs/rcc_box/vbr-037c6c8535/sheets/v-993a513ea007-p1/vector/text.jsonl": "9da8beb750b7a260e5e4253d72054c0109f90bc9b74d7d52ef810b42b12c8db2"
+  },
+  "live_cad_binding": {
+    "reason": "no runtime CAD snapshot supplied; PDF primitives and picture coordinates are not CAD entities",
+    "snapshot": null,
+    "status": "unavailable"
+  },
+  "observations": {
+    "levels": [],
+    "parts": [],
+    "relations": [],
+    "repeats": [],
+    "views": []
+  },
+  "pack_id": "pack-6d1e9dc77fc058f4",
+  "pack_kind": "derived_evidence_pack",
+  "pack_version": "1.0",
+  "permitted_next_actions": [
+    "describe views, levels, parts and relations as recorded, with their evidence ids",
+    "propose a relationship as a candidate, with the evidence that supports it"
+  ],
+  "source_fingerprints": {
+    "v-993a513ea007-p1": "f4e2237d23a34ad5c03c673a0b2a378ac987670744ee19e7c0f899b8e7d520d1"
+  },
+  "source_references": [
+    {
+      "fingerprint": "f4e2237d23a34ad5c03c673a0b2a378ac987670744ee19e7c0f899b8e7d520d1",
+      "kind": "vector_sheet",
+      "record_id": "v-993a513ea007-p1",
+      "role": "subject",
+      "source_paths": [
+        "vector-pdfs/rcc_box/vbr-037c6c8535/sheets/v-993a513ea007-p1/sheet.json",
+        "vector-pdfs/rcc_box/vbr-037c6c8535/sheets/v-993a513ea007-p1/vector/meta.json",
+        "vector-pdfs/rcc_box/vbr-037c6c8535/sheets/v-993a513ea007-p1/vector/text.jsonl"
+      ]
+    }
+  ],
+  "subject": {
+    "bridge_ids": [
+      "vbr-037c6c8535"
+    ],
+    "family": "rcc_box",
+    "kind": "vector_sheet",
+    "record_id": "v-993a513ea007-p1",
+    "source_paths": [
+      "vector-pdfs/rcc_box/vbr-037c6c8535/sheets/v-993a513ea007-p1/sheet.json",
+      "vector-pdfs/rcc_box/vbr-037c6c8535/sheets/v-993a513ea007-p1/vector/meta.json",
+      "vector-pdfs/rcc_box/vbr-037c6c8535/sheets/v-993a513ea007-p1/vector/text.jsonl"
+    ],
+    "title": "BZU-EPC-II-CON-BRG-GAD-800-1_V4_APPROVE_P33.pdf"
+  },
+  "task": {
+    "description": "Describe the views, levels, parts and relations the record shows. Nothing here edits or measures a CAD entity.",
+    "name": "geometric_relationships",
+    "requested_scope": {}
+  },
+  "unresolved_questions": [
+    {
+      "issue_id": "issue:open_review_question:v-993a513ea007-p1",
+      "kind": "open_review_question",
+      "text": "title text says 'RCC SLAB', but the sheet prints box words (barrel x2, box level x5) and no slab words (bed block / dirt wall / clear span): filed as rcc_box; the title may be a stale template line"
+    },
+    {
+      "issue_id": "issue:title_conflicts_with_content:v-993a513ea007-p1",
+      "kind": "title_conflicts_with_content",
+      "text": "title text says 'RCC SLAB', but the sheet prints box words (barrel x2, box level x5) and no slab words (bed block / dirt wall / clear span): filed as rcc_box; the title may be a stale template line"
+    }
+  ]
+}

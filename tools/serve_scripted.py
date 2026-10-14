@@ -41,6 +41,28 @@ DIRS = [{"target": "Foundation", "mode": "keep_fixed", "clause": "keep the exist
         {"target": "BottomSlab", "mode": "keep_value", "clause": "preserve the wall and slab thicknesses"}]
 
 
+class DemoModel(ScriptedModel):
+    """The scripted model, plus — only when the run has the engineering library on (its protocol is in the system prompt) — one turn that
+    uses it the way a model might: look at which skills match, read the matching skill's recognition and failure sections, search a
+    definition, and say what it applied. Everything is the engine's real answer; the choices are scripted."""
+
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
+        self._library_turn_added = False
+
+    def step(self, system, tools, prefix_parts, prefix_key, history, label, thinking, **kw):
+        if "ENGINEERING LIBRARY" in system and not self._library_turn_added and self.script:
+            self._library_turn_added = True
+            self.script.insert(1, [call("list_skills", why="which skills match this drawing's own printed words"),
+                                   call("load_skill", why="read how a drawing of this kind is recognised, and when not to use the skill",
+                                        id="family:rcc_box", sections=["recognition", "failure"]),
+                                   call("search_library", why="the documented definition of the clear height", queries=["clear height soffit level"], topics=["formula"]),
+                                   call("record_finding", why="say what was used", findings=[
+                                       {"kind": "applied", "text": "the box skill's cues were confirmed on the sheet: it prints RCC BOX and the views are section and plan",
+                                        "evidence": ["skill:family:rcc_box", "kb:kb.formula.d_clear_height"]}])])
+        return super().step(system, tools, prefix_parts, prefix_key, history, label, thinking, **kw)
+
+
 def make_script(sheet: SheetSession, uid: str, g: dict, delay: float = 0.0):
     sm = sheet.sm
     ans = box_answer(sm, uid, g["box"], g["handles"])
@@ -57,7 +79,7 @@ def make_script(sheet: SheetSession, uid: str, g: dict, delay: float = 0.0):
         "Repair: remove the wrong value and measure what the clear span moves.", "Inspect the assembly the clear span belongs to.",
         "Propose the plan with the person's own words as clauses; the anchor was not said.", "Finish: the engine asks the person first.",
         "State how the two views relate, then finish.")]
-    return ScriptedModel([
+    return DemoModel([
         [call("account_instruction", why="read the instruction first", items=[{"quote": q, "kind": k, "meaning": m, "handled_by": h} for q, k, m, h in READING])],
         [call("inspect_sheet", why="see the views and what is parametrized")],
         [call("zoom_view", why="the whole sheet, to see how the views relate", sheet=True), call("zoom_view", why="a closer look at two outlines of the section", around=ents, labels="entities")],

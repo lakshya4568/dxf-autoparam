@@ -1111,7 +1111,7 @@ async function loadProposals() {
 // The page holds no logic of its own about success: what it shows of a run is what the server reports (state, verdict,
 // questions, budget), and a poll for one run never overwrites another.
 const ACTIVE = new Set(["queued", "running", "stopping"]);
-let run = null, runs = [], runPoll = 0, aiDraft = "", aiScope = "auto", aiOpts = { confirm: false, soft: 0, max: 1000, model: "" }, aiModels = null;
+let run = null, runs = [], runPoll = 0, aiDraft = "", aiScope = "auto", aiOpts = { confirm: false, soft: 0, max: 1000, model: "", domain: null }, aiModels = null, aiLibrary = null;
 const dur = (s) => s == null ? "" : s < 60 ? `${s.toFixed(s < 10 ? 1 : 0)} s` : `${Math.floor(s / 60)} min ${String(Math.round(s % 60)).padStart(2, "0")} s`;
 const TOOL_WORDS = { inspect_sheet: "looked at the sheet", open_unit: "opened a view", inspect_regions: "inspected regions", inspect_lines: "inspected lines", inspect_candidates: "inspected candidate sizes",
   inspect_dimensions: "inspected dimensions", resolve_labels: "resolved labels", find_values: "searched for sizes", knowledge: "consulted the knowledge pack", what_moves: "measured what a value moves",
@@ -1235,6 +1235,7 @@ function statusCard() {
     for (const c of v.criteria || []) h += `<div class="crit ${c.ok ? "ok" : "no"}"><span class="m">${c.ok ? "✓" : "✗"}</span><span>${esc(c.id.replace(/_/g, " "))}<div class="d">${esc(c.detail)}</div></span></div>`;
     h += planCard(v.plan);
     if ((v.notes || []).length) h += `<details class="notes"><summary>${v.notes.length} note${v.notes.length === 1 ? "" : "s"} to read — not failures</summary>${v.notes.map((n) => `<div class="note" style="padding:0">• ${esc(n)}</div>`).join("")}</details>`;
+    if (v.knowledge && v.knowledge.calls) h += knowledgeHtml(v.knowledge);
     if (v.finish_summary) h += `<details class="notes"><summary>What the model says it did</summary><div class="note" style="padding:0">${md(v.finish_summary)}</div></details>`;
     for (const p of v.plans || []) h += `<div class="note" style="padding:0">plan ${esc(p.id)} — ${esc(p.status)}${p.checks ? ` · measured ${esc(p.checks.passed)} passed, ${esc(p.checks.failed)} failed` : ""}${(p.failed || []).map((x) => `<div class="bad">${esc(x)}</div>`).join("")}</div>`;
     for (const x of v.values_applied || []) h += `<div class="note ok" style="padding:0">✓ <span class="lnk" data-openparam="${esc(x.name)}" title="Highlight the geometry it controls">${esc(x.name)}</span> = ${esc(x.value)}${x.already ? " (already)" : ""}</div>`;
@@ -1261,7 +1262,7 @@ function agentPanel() {
     <textarea id="ai-instr" placeholder="e.g. Parametrize every view and link the sizes the views share; say in your plan which components appear in more than one view. Or: Change the width of the opening to 2500 mm, keep the middle wall centred and the foundation fixed. Show me anything ambiguous before applying.">${esc(aiDraft)}</textarea>
     ${aiModels && aiModels.models.length > 1 ? `<div class="row2"><span class="muted">Model</span><select id="ai-model" title="Each run uses the model chosen here, at the thinking level shown">${aiModels.models.map((m) => `<option value="${esc(m.id)}" ${(aiOpts.model || aiModels.default) === m.id ? "selected" : ""}>${esc(m.label)}</option>`).join("")}</select></div>` : ""}
     <div class="row2"><button class="run" id="ai-run">▶ Run</button><button class="stop" id="ai-stop" style="display:none">■ Stop</button><button id="ai-continue" style="display:none">Continue</button><button id="ai-apply" style="display:none" title="Apply what is valid now, and say what is not done">Apply what is valid</button><span class="muted" style="font-size:11px">⌘/Ctrl + Enter</span></div>
-    ${fold("ai-opts", "Options and budget", `<div class="note"><label><input type="checkbox" id="ai-confirm" ${aiOpts.confirm ? "checked" : ""}> ask me to confirm a plan before it is applied</label></div>
+    ${fold("ai-opts", "Options and budget", `${libraryChoice()}<div class="note"><label><input type="checkbox" id="ai-confirm" ${aiOpts.confirm ? "checked" : ""}> ask me to confirm a plan before it is applied</label></div>
       <div class="note">pause after <input type="number" id="ai-soft" value="${aiOpts.soft}" min="0" style="width:64px"> turns (0 = never pause; a pause is not a failure: continue goes on) · at most <input type="number" id="ai-max" value="${aiOpts.max}" style="width:70px"> turns in all</div>
       <div class="note">Each run is billed by the model provider; nothing it proposes is kept unless the engine checks it, and everything can be undone.</div>`, null)}
     </div><div id="ai-live"></div>`;
@@ -1316,6 +1317,7 @@ function wireAgent() {
   on("#ai-continue", () => resumeRun({}));
   on("#ai-apply", async () => { const r = await guard(() => api("/api/sheet/ai/apply", { run: run.id }), "Applying what is valid…"); if (r) { take(r); await attachRun(run.id); await afterRun(true); } });
   const md = $("#ai-model"); if (md) md.addEventListener("change", () => { aiOpts.model = md.value; });
+  const dm = $("#ai-domain"); if (dm) dm.addEventListener("change", () => { aiOpts.domain = dm.value; renderAgentLive(); });
   const c = $("#ai-confirm"); if (c) c.addEventListener("change", () => { aiOpts.confirm = c.checked; });
   const so = $("#ai-soft"); if (so) so.addEventListener("change", () => { aiOpts.soft = Math.max(0, +so.value || 0); });
   const mx = $("#ai-max"); if (mx) mx.addEventListener("change", () => { aiOpts.max = Math.max(1, +mx.value || 1000); });
@@ -1328,7 +1330,7 @@ function mergeRun(r) {
 async function startRun() {
   const instruction = aiDraft.trim(); if (!instruction) return say("write an instruction first", "bad");
   if (run && ACTIVE.has(run.status)) return say("the agent is still working: stop it first", "bad");
-  const body = { instruction, scope: scopePayload(), options: { confirm_plan: aiOpts.confirm, ...(aiOpts.model ? { model: aiOpts.model } : {}), budget: { soft_turns: aiOpts.soft, max_turns: aiOpts.max } } };
+  const body = { instruction, scope: scopePayload(), options: { confirm_plan: aiOpts.confirm, ...(aiOpts.model ? { model: aiOpts.model } : {}), ...(chosenDomain() ? { domain: chosenDomain() } : {}), budget: { soft_turns: aiOpts.soft, max_turns: aiOpts.max } } };
   const r = await guard(() => api("/api/sheet/ai/run", body), "Starting…"); if (!r) return;
   run = { id: r.run, events: [], next: 0, status: "queued", usage: {}, can: {}, questions: [], verdict: null, elapsed: 0 };
   for (const k of [...openFolds, ...closedFolds]) if (k.startsWith("turn-")) { openFolds.delete(k); closedFolds.delete(k); }
@@ -1391,6 +1393,29 @@ function wireCost() {
   document.querySelectorAll("#left [data-period]").forEach((b) => b.addEventListener("click", () => { usagePeriod = b.dataset.period; loadUsage(); }));
   const r = $("#cost-refresh"); if (r) r.addEventListener("click", loadUsage);
 }
+// The engineering library (domain knowledge) the agent may retrieve from: a person's choice for the run. The sheet's own printed words
+// suggest one (the server matches them against each skill's cues); nothing is switched on without showing why, and "none" is always there.
+function chosenDomain() {
+  if (!aiLibrary) return aiOpts.domain || "";
+  return aiOpts.domain === null ? (aiLibrary.suggested ? aiLibrary.suggested.domain : "") : aiOpts.domain;
+}
+function knowledgeHtml(k) {
+  const skills = Object.entries(k.skills_loaded || {}).map(([id, secs]) => `<div class="note" style="padding:0">• skill <b>${esc(id)}</b> — ${secs.map(esc).join(", ")}</div>`).join("");
+  const refs = (k.references || []).length ? `<div class="note" style="padding:0">• references read: ${k.references.map((r) => `<code>${esc(r)}</code>`).join(", ")}</div>` : "";
+  const rc = k.rule_checks || {};
+  const checks = (rc.holds || rc.differs) ? `<div class="note" style="padding:0">• documented definitions checked against this drawing (advisory): ${rc.holds} hold, ${rc.differs} differ${(rc.items || []).filter((c) => c.result === "differs").map((c) => ` — <code>${esc(c.rule)}</code> by ${esc(c.difference_mm)} mm`).join("")}</div>` : "";
+  const finds = ((k.findings || {}).items || []).map((f) => `<div class="note" style="padding:0">• <b>${esc(f.kind)}</b>: ${esc(f.text)}${(f.library || []).length ? ` <span class="muted">[${f.library.map(esc).join(", ")}]</span>` : ""}</div>`).join("");
+  return `<details class="notes"><summary>Knowledge used — ${k.calls} library call${k.calls === 1 ? "" : "s"}, ${(k.findings || {}).count || 0} finding${((k.findings || {}).count || 0) === 1 ? "" : "s"}</summary>${skills}${refs}${checks}${finds}<div class="muted" style="font-size:11px">Library content is context, labelled with its review state; every value on this sheet comes from the drawing.</div></details>`;
+}
+function libraryChoice() {
+  if (!aiLibrary || !aiLibrary.domains.length) return "";
+  const sug = aiLibrary.suggested, cur = aiOpts.domain === null ? (sug ? sug.domain : "") : aiOpts.domain;
+  const why = sug && cur === sug.domain ? `<div class="muted" style="font-size:11px">suggested: this sheet prints ${sug.because.map((b) => `“${esc(b)}”`).join(", ")} (matches ${esc(sug.skill)})</div>` : "";
+  return `<div class="note"><label>Domain knowledge <select id="ai-domain" title="Skills, definitions and rules the agent may look up while it works. Context only: every size still comes from the drawing.">
+    <option value="" ${cur === "" ? "selected" : ""}>None — name things from the drawing</option>
+    ${aiLibrary.domains.map((d) => `<option value="${esc(d.name)}" ${cur === d.name ? "selected" : ""}>${esc(d.title)} (${d.skills} skills)</option>`).join("")}</select></label>${why}</div>`;
+}
+async function loadLibrary() { try { aiLibrary = await api("/api/sheet/ai/library"); if (tab === "ai") renderAgentLive(); } catch (e) { /* no library: the agent works from the drawing alone */ } }
 async function loadModels() { try { aiModels = await api("/api/sheet/ai/models"); if (tab === "ai") renderAgentLive(); } catch (e) { /* no picker: the default model runs */ } }
 async function loadRuns() { try { runs = (await api("/api/sheet/ai/runs")).runs; if (tab === "ai") renderAgentLive(); } catch (e) { /* the list is a convenience */ } }
 
@@ -1406,7 +1431,7 @@ async function loadSheet() {
   base = { on: !!(S.prefs && S.prefs.baseline.on), list: [], rev: -1, color: (S.prefs && S.prefs.baseline.color) || "#4f6bff", deviation: null };
   $("#orig").classList.toggle("primary", base.on); $("#origcolor").value = base.color; document.documentElement.style.setProperty("--h-base", base.color);
   if (base.on) loadBaseline();
-  loadStatus(); loadRuns(); loadModels(); if (S.current_run) attachRun(S.current_run);
+  loadStatus(); loadRuns(); loadModels(); loadLibrary(); if (S.current_run) attachRun(S.current_run);
   renderLeft(); renderRight(); fitted = false; resize();
   say(`${S.entities.toLocaleString()} entities · ${S.groups.filter((x) => x.kind === "view").length} views · loaded in ${Math.round(g.ms)} ms`, "ok");
 }

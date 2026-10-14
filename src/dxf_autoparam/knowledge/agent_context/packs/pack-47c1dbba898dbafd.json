@@ -1,0 +1,97 @@
+{
+  "agent_summary": "Task source_evidence for 03838b68a761-p1 (drawing_sheet, family rcc_box). Completeness: limited_ungrounded. Only identity and picture are available. Do not describe views, dimensions or parts for this record. Claims: 0. Candidates: 0. Conflicts: 0. Open questions: 0. Every dimension is a candidate; binding is blocked. CAD binding: unavailable.",
+  "blocked_next_actions": [
+    {
+      "action": "state a value as verified",
+      "reason": "no human verification is recorded in the repository"
+    },
+    {
+      "action": "promote a proposal or an unreviewed entry into accepted knowledge",
+      "reason": "proposals and unreviewed entries are never merged or promoted by this layer"
+    },
+    {
+      "action": "use this pack as training data",
+      "reason": "packs are derived artefacts, not labels or sources"
+    }
+  ],
+  "built_from": {
+    "registry_digest": "4395427d73da1f49797b137de95fca5c02e47a348949116c34504a7c60a0471b"
+  },
+  "candidate_interpretations": [],
+  "claims": [],
+  "completeness": {
+    "capabilities": {
+      "dimension_text": false,
+      "disputes_recorded": 0,
+      "identity": true,
+      "levels": false,
+      "live_cad_binding": false,
+      "parameters": false,
+      "parts": false,
+      "picture": true,
+      "relations": false,
+      "vector_text": false,
+      "verified_values": 0,
+      "views": false
+    },
+    "missing": [
+      "grounding (no views, dimensions, parts or levels filed)"
+    ],
+    "notes": [
+      "No value in this pack is verified by a person; the registry holds no verification record.",
+      "This sheet is not grounded. The pack holds identity and picture only; no views, dimensions or parts are reported for it."
+    ],
+    "status": "limited_ungrounded"
+  },
+  "component_definitions": [],
+  "conflicts": [],
+  "derived": true,
+  "formulas": [],
+  "generator": "agentctx 1.0",
+  "input_hashes": {},
+  "live_cad_binding": {
+    "reason": "no runtime CAD snapshot supplied; PDF primitives and picture coordinates are not CAD entities",
+    "snapshot": null,
+    "status": "unavailable"
+  },
+  "observations": {
+    "texts": [],
+    "views": []
+  },
+  "observations_summary": {},
+  "pack_id": "pack-47c1dbba898dbafd",
+  "pack_kind": "derived_evidence_pack",
+  "pack_version": "1.0",
+  "permitted_next_actions": [
+    "cite evidence ids from this pack in your answer",
+    "report which sections are missing, as listed under completeness"
+  ],
+  "source_fingerprints": {
+    "03838b68a761-p1": "6f7c7be1f7b8b1569e0dec4fbfdb06cb44904685e243f5f616eee3a405a705ce"
+  },
+  "source_references": [
+    {
+      "fingerprint": "6f7c7be1f7b8b1569e0dec4fbfdb06cb44904685e243f5f616eee3a405a705ce",
+      "kind": "drawing_sheet",
+      "record_id": "03838b68a761-p1",
+      "role": "subject",
+      "source_paths": []
+    }
+  ],
+  "subject": {
+    "bridge_ids": [
+      "brg-30ada17b06"
+    ],
+    "family": "rcc_box",
+    "kind": "drawing_sheet",
+    "record_id": "03838b68a761-p1",
+    "source_paths": [],
+    "title": "274-WJR-114-4-1.tif"
+  },
+  "task": {
+    "description": "Find the sources and stored observations for a record, with their trust labels and gaps.",
+    "name": "source_evidence",
+    "requested_scope": {}
+  },
+  "unresolved_questions": []
+}

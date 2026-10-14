@@ -24,6 +24,7 @@ shares, anchors, links and view corrections are transactions with undo / redo.
 
 The agent — ONE instruction, one session (ai/run.py):
     GET  /api/sheet/ai/usage?period=today|all              tokens and cost per model, from the usage ledger
+    GET  /api/sheet/ai/library                             the engineering libraries, and the one this sheet's printed words match
     GET  /api/sheet/ai/models                              the models the picker offers (and the default)
     POST /api/sheet/ai/run {instruction, scope, options}   start a run (options.model: one of those models)
     GET  /api/sheet/ai/progress?run=R1&since=n             its events, state, budget, questions, verdict
@@ -251,6 +252,23 @@ class SheetSession:
                     self.gem_model = cfg.model
         return self.gem
 
+    def library_info(self) -> dict:
+        """The engineering libraries a run may use, and — from this sheet's own printed words — the one whose cues it matches (with the words).
+        A suggestion only: the person's choice goes with the run (options.domain)."""
+        from .ai import domain, library
+
+        out, suggested = [], None
+        texts = library.drawing_texts(self.sm.dr.items) if self.sm is not None else []
+        for name in library.domains():
+            lib = library.open_domain(name)
+            if lib is None or domain.name_of(name) is None:  # a library works with the domain pack of the same name
+                continue
+            out.append({"name": name, "title": lib.title, "skills": len(lib.skills)})
+            top = lib.discover(texts, top=1) if texts else []
+            if top and top[0]["strong"] and suggested is None:
+                suggested = {"domain": name, "skill": top[0]["skill"], "score": top[0]["score"], "because": list(dict.fromkeys(b["printed"] for b in top[0]["because"]))}
+        return {"domains": out, "suggested": suggested}
+
     def models(self) -> dict:
         from .ai.vertex import model_choices
 
@@ -464,6 +482,8 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
                 from .ai.usage import summary
 
                 return handler._json(summary(q.get("period", ["all"])[0])) or True
+            if path == "/api/sheet/ai/library":
+                return handler._json(sheet.library_info()) or True
             if path == "/api/sheet/ai/models":
                 return handler._json(sheet.models()) or True
         if method == "POST" and path == "/api/sheet/ai/stop":

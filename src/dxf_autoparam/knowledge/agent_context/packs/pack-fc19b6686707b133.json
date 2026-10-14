@@ -1,0 +1,1151 @@
+{
+  "agent_summary": "Task dimension_binding for rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1 (rdso_page, family rcc_box). Completeness: page_saved_unverified. Claims: 9. Candidates: 9. Conflicts: 2. Open questions: 8. Every dimension is a candidate; binding is blocked. CAD binding: unavailable.",
+  "binding_policy": "A dimension may set a parameter only when a person has verified the printed text and its unit, the view and component scope is confirmed, and no open dispute covers it. This pack records none of those, so every binding stays blocked.",
+  "blocked_next_actions": [
+    {
+      "action": "state a value as verified",
+      "reason": "no human verification is recorded in the repository"
+    },
+    {
+      "action": "promote a proposal or an unreviewed entry into accepted knowledge",
+      "reason": "proposals and unreviewed entries are never merged or promoted by this layer"
+    },
+    {
+      "action": "use this pack as training data",
+      "reason": "packs are derived artefacts, not labels or sources"
+    },
+    {
+      "action": "bind a dimension to a parameter",
+      "reason": "no human verification and no verified unit in the repository"
+    },
+    {
+      "action": "write a value into a model or a CAD entity",
+      "reason": "no live CAD snapshot binding unless one is supplied"
+    }
+  ],
+  "built_from": {
+    "registry_digest": "4395427d73da1f49797b137de95fca5c02e47a348949116c34504a7c60a0471b"
+  },
+  "candidate_interpretations": [
+    {
+      "binding": {
+        "reasons": [
+          "no_human_verification",
+          "value_text_only_unit_not_structured"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "value_printed": "4.0m FILL HEIGHT",
+        "where": "title, title block"
+      },
+      "evidence_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#parameter:0",
+      "geometry": null,
+      "obs_kind": "rdso_parameter",
+      "raw_text": "fill height",
+      "status": "candidate_only",
+      "view": null
+    },
+    {
+      "binding": {
+        "reasons": [
+          "no_human_verification",
+          "value_text_only_unit_not_structured"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "value_printed": "DOUBLE LINE TRACK CURVED UPTO 10°",
+        "where": "title, title block"
+      },
+      "evidence_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#parameter:1",
+      "geometry": null,
+      "obs_kind": "rdso_parameter",
+      "raw_text": "track",
+      "status": "candidate_only",
+      "view": null
+    },
+    {
+      "binding": {
+        "reasons": [
+          "no_human_verification",
+          "value_text_only_unit_not_structured"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "value_printed": "DFC LOADING (32.5t AXLE LOAD)",
+        "where": "title block"
+      },
+      "evidence_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#parameter:2",
+      "geometry": null,
+      "obs_kind": "rdso_parameter",
+      "raw_text": "loading",
+      "status": "candidate_only",
+      "view": null
+    },
+    {
+      "binding": {
+        "reasons": [
+          "no_human_verification",
+          "value_text_only_unit_not_structured"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "value_printed": "PROVISIONAL",
+        "where": "title block"
+      },
+      "evidence_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#parameter:3",
+      "geometry": null,
+      "obs_kind": "rdso_parameter",
+      "raw_text": "stage",
+      "status": "candidate_only",
+      "view": null
+    },
+    {
+      "binding": {
+        "reasons": [
+          "no_human_verification",
+          "value_text_only_unit_not_structured"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "value_printed": "SBC SHALL NOT BE LESS THAN MAXIMUM FOUNDATION PRESSURE (field test before work starts)",
+        "where": "notes 1"
+      },
+      "evidence_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#parameter:4",
+      "geometry": null,
+      "obs_kind": "rdso_parameter",
+      "raw_text": "SBC",
+      "status": "candidate_only",
+      "view": null
+    },
+    {
+      "binding": {
+        "reasons": [
+          "no_human_verification",
+          "value_text_only_unit_not_structured"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "value_printed": "36 sizes: 2.0mX1.8m to 6.0mX6.0m (table 1 to 5)",
+        "where": "tables 1-5 column headers"
+      },
+      "evidence_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#parameter:5",
+      "geometry": null,
+      "obs_kind": "rdso_parameter",
+      "raw_text": "span x height sizes",
+      "status": "candidate_only",
+      "view": null
+    },
+    {
+      "binding": {
+        "reasons": [
+          "no_human_verification",
+          "value_text_only_unit_not_structured"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "value_printed": "200 kN/m2 to 290 kN/m2 across the 36 sizes",
+        "where": "row 3, tables 1-5"
+      },
+      "evidence_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#parameter:6",
+      "geometry": null,
+      "obs_kind": "rdso_parameter",
+      "raw_text": "max foundation pressure",
+      "status": "candidate_only",
+      "view": null
+    },
+    {
+      "binding": {
+        "reasons": [
+          "no_human_verification",
+          "value_text_only_unit_not_structured"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "value_printed": "35cm to 75cm (top, bottom, side walls equal per size)",
+        "where": "row 2, tables 1-5"
+      },
+      "evidence_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#parameter:7",
+      "geometry": null,
+      "obs_kind": "rdso_parameter",
+      "raw_text": "slab and wall thickness",
+      "status": "candidate_only",
+      "view": null
+    },
+    {
+      "binding": {
+        "reasons": [
+          "no_human_verification",
+          "value_text_only_unit_not_structured"
+        ],
+        "status": "blocked"
+      },
+      "candidate": {
+        "value_printed": null,
+        "where": "not printed on this page"
+      },
+      "evidence_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#parameter:8",
+      "geometry": null,
+      "obs_kind": "rdso_parameter",
+      "raw_text": "concrete grade / cover / steel grade",
+      "status": "candidate_only",
+      "view": null
+    }
+  ],
+  "claims": [
+    {
+      "claim_id": "C1",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+value_text_only_unit_not_structured",
+        "finetune": "blocked:permission_unconfirmed+no_human_label",
+        "retrieval": "eligible:rdso_page_reading_unverified"
+      },
+      "evidence_ids": [
+        "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#parameter:0"
+      ],
+      "kind": "observation",
+      "source_ids": [
+        "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1"
+      ],
+      "statement": "'fill height' on the sheet is read as None (no unit) (agent reading; not verified)",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {
+          "checked_level": "none"
+        },
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "not_verified"
+      }
+    },
+    {
+      "claim_id": "C2",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+value_text_only_unit_not_structured",
+        "finetune": "blocked:permission_unconfirmed+no_human_label",
+        "retrieval": "eligible:rdso_page_reading_unverified"
+      },
+      "evidence_ids": [
+        "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#parameter:1"
+      ],
+      "kind": "observation",
+      "source_ids": [
+        "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1"
+      ],
+      "statement": "'track' on the sheet is read as None (no unit) (agent reading; not verified)",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {
+          "checked_level": "none"
+        },
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "not_verified"
+      }
+    },
+    {
+      "claim_id": "C3",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+value_text_only_unit_not_structured",
+        "finetune": "blocked:permission_unconfirmed+no_human_label",
+        "retrieval": "eligible:rdso_page_reading_unverified"
+      },
+      "evidence_ids": [
+        "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#parameter:2"
+      ],
+      "kind": "observation",
+      "source_ids": [
+        "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1"
+      ],
+      "statement": "'loading' on the sheet is read as None (no unit) (agent reading; not verified)",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {
+          "checked_level": "none"
+        },
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "not_verified"
+      }
+    },
+    {
+      "claim_id": "C4",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+value_text_only_unit_not_structured",
+        "finetune": "blocked:permission_unconfirmed+no_human_label",
+        "retrieval": "eligible:rdso_page_reading_unverified"
+      },
+      "evidence_ids": [
+        "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#parameter:3"
+      ],
+      "kind": "observation",
+      "source_ids": [
+        "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1"
+      ],
+      "statement": "'stage' on the sheet is read as None (no unit) (agent reading; not verified)",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {
+          "checked_level": "none"
+        },
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "not_verified"
+      }
+    },
+    {
+      "claim_id": "C5",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+value_text_only_unit_not_structured",
+        "finetune": "blocked:permission_unconfirmed+no_human_label",
+        "retrieval": "eligible:rdso_page_reading_unverified"
+      },
+      "evidence_ids": [
+        "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#parameter:4"
+      ],
+      "kind": "observation",
+      "source_ids": [
+        "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1"
+      ],
+      "statement": "'SBC' on the sheet is read as None (no unit) (agent reading; not verified)",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {
+          "checked_level": "none"
+        },
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "not_verified"
+      }
+    },
+    {
+      "claim_id": "C6",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+value_text_only_unit_not_structured",
+        "finetune": "blocked:permission_unconfirmed+no_human_label",
+        "retrieval": "eligible:rdso_page_reading_unverified"
+      },
+      "evidence_ids": [
+        "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#parameter:5"
+      ],
+      "kind": "observation",
+      "source_ids": [
+        "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1"
+      ],
+      "statement": "'span x height sizes' on the sheet is read as None (no unit) (agent reading; not verified)",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {
+          "checked_level": "none"
+        },
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "not_verified"
+      }
+    },
+    {
+      "claim_id": "C7",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+value_text_only_unit_not_structured",
+        "finetune": "blocked:permission_unconfirmed+no_human_label",
+        "retrieval": "eligible:rdso_page_reading_unverified"
+      },
+      "evidence_ids": [
+        "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#parameter:6"
+      ],
+      "kind": "observation",
+      "source_ids": [
+        "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1"
+      ],
+      "statement": "'max foundation pressure' on the sheet is read as None (no unit) (agent reading; not verified)",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {
+          "checked_level": "none"
+        },
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "not_verified"
+      }
+    },
+    {
+      "claim_id": "C8",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+value_text_only_unit_not_structured",
+        "finetune": "blocked:permission_unconfirmed+no_human_label",
+        "retrieval": "eligible:rdso_page_reading_unverified"
+      },
+      "evidence_ids": [
+        "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#parameter:7"
+      ],
+      "kind": "observation",
+      "source_ids": [
+        "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1"
+      ],
+      "statement": "'slab and wall thickness' on the sheet is read as None (no unit) (agent reading; not verified)",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {
+          "checked_level": "none"
+        },
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "not_verified"
+      }
+    },
+    {
+      "claim_id": "C9",
+      "eligibility": {
+        "binding": "blocked:no_human_verification+value_text_only_unit_not_structured",
+        "finetune": "blocked:permission_unconfirmed+no_human_label",
+        "retrieval": "eligible:rdso_page_reading_unverified"
+      },
+      "evidence_ids": [
+        "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#parameter:8"
+      ],
+      "kind": "observation",
+      "source_ids": [
+        "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1"
+      ],
+      "statement": "'concrete grade / cover / steel grade' on the sheet is read as None (no unit) (agent reading; not verified)",
+      "trust": {
+        "epistemic": "REFERENCE_OBSERVED",
+        "flags": {
+          "checked_level": "none"
+        },
+        "human_verified": false,
+        "label_source": "vlm",
+        "review_state": "not_verified"
+      }
+    }
+  ],
+  "completeness": {
+    "capabilities": {
+      "dimension_text": false,
+      "disputes_recorded": 0,
+      "identity": true,
+      "levels": false,
+      "live_cad_binding": false,
+      "parameters": true,
+      "parts": false,
+      "picture": false,
+      "relations": false,
+      "vector_text": false,
+      "verified_values": 0,
+      "views": false
+    },
+    "missing": [],
+    "notes": [
+      "No value in this pack is verified by a person; the registry holds no verification record.",
+      "Page reads were made by eye (no OCR). Saved is not the same as checked against the picture."
+    ],
+    "status": "page_saved_unverified"
+  },
+  "component_definitions": [],
+  "conflicts": [
+    {
+      "issue_id": "issue:status_conflict:rdso-extract:RDSO-RCC-BOX-10157-6TO-10157-10",
+      "kind": "status_conflict",
+      "text": "_STATUS_AUDIT.txt (2026-10-09 22:37) says 1 JSON pages; the disk has 2. The disk count is used; the audit is out of date."
+    },
+    {
+      "issue_id": "issue:unverified_claim:rdso-extract:RDSO-RCC-BOX-10157-6TO-10157-10",
+      "kind": "unverified_claim",
+      "text": "scratch ledgers in this folder say values were displayed; the status notes say page 1 values were never read from a displayed image. The ledger is not evidence for those values."
+    }
+  ],
+  "derived": true,
+  "formulas": [
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:proposed_or_disputed+review_state_seed_unreviewed+evidence_disputed+not_marked_for_qa_training+no_training_permission_record",
+        "retrieval": "eligible:proposed_or_disputed_do_not_present_as_accepted"
+      },
+      "executed": false,
+      "expression": null,
+      "id": "kb:kb.formula.cg_val_002",
+      "statement": "girder depth ≥ L/20 (L/20 is a spacing ratio per the secondary source)",
+      "title": "CG-VAL-002",
+      "trust": {
+        "authored": null,
+        "evidence_status": "DISPUTED",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": false,
+          "retrieval": false,
+          "validator": false
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:proposed_or_disputed+review_state_seed_unreviewed+evidence_disputed+not_marked_for_qa_training+no_training_permission_record",
+        "retrieval": "eligible:proposed_or_disputed_do_not_present_as_accepted"
+      },
+      "executed": false,
+      "expression": null,
+      "id": "kb:kb.formula.cg_val_006",
+      "statement": "clearance ≥ 1.0 m confuses clearance (IRBM 312 table) with free board (313)",
+      "title": "CG-VAL-006",
+      "trust": {
+        "authored": null,
+        "evidence_status": "DISPUTED",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": false,
+          "retrieval": false,
+          "validator": false
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+        "retrieval": "eligible:unreviewed_reference"
+      },
+      "executed": false,
+      "expression": {
+        "executed": false,
+        "status": "not_executable_until_validated",
+        "text": "floor_level - slab_bottom_level"
+      },
+      "id": "kb:kb.formula.d_bottom_slab",
+      "statement": "bottom_slab = floor_level - slab_bottom_level",
+      "title": "D-BOTTOM-SLAB",
+      "trust": {
+        "authored": null,
+        "evidence_status": "DERIVED",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": true,
+          "retrieval": false,
+          "validator": true
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+        "retrieval": "eligible:unreviewed_reference"
+      },
+      "executed": false,
+      "expression": {
+        "executed": false,
+        "status": "not_executable_until_validated",
+        "text": "soffit_level - floor_level"
+      },
+      "id": "kb:kb.formula.d_clear_height",
+      "statement": "clear_height = soffit_level - floor_level",
+      "title": "D-CLEAR-HEIGHT",
+      "trust": {
+        "authored": null,
+        "evidence_status": "DERIVED",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": true,
+          "retrieval": false,
+          "validator": true
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+        "retrieval": "eligible:unreviewed_reference"
+      },
+      "executed": false,
+      "expression": {
+        "executed": false,
+        "status": "not_executable_until_validated",
+        "text": "soffit_level - bed_level"
+      },
+      "id": "kb:kb.formula.d_clear_height_from_bed",
+      "statement": "clear_height = soffit_level - bed_level",
+      "title": "D-CLEAR-HEIGHT-FROM-BED",
+      "trust": {
+        "authored": null,
+        "evidence_status": "DERIVED",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": true,
+          "retrieval": false,
+          "validator": true
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+        "retrieval": "eligible:unreviewed_reference"
+      },
+      "executed": false,
+      "expression": {
+        "executed": false,
+        "status": "not_executable_until_validated",
+        "text": "soffit_level - hfl"
+      },
+      "id": "kb:kb.formula.d_clearance",
+      "statement": "clearance = soffit_level - hfl when drawings write CL-/V.C. against the HFL; IRBM 312 measures clearance from the design-discharge water level incl. afflux (KC-6)",
+      "title": "D-CLEARANCE",
+      "trust": {
+        "authored": null,
+        "evidence_status": "COMMON_PRACTICE",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": true,
+          "retrieval": false,
+          "validator": true
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+        "retrieval": "eligible:unreviewed_reference"
+      },
+      "executed": false,
+      "expression": {
+        "executed": false,
+        "status": "not_executable_until_validated",
+        "text": "formation_level - top_slab_level"
+      },
+      "id": "kb:kb.formula.d_cushion",
+      "statement": "cushion = formation_level - top_slab_level when the datum of a standard drawing's 'fill height' (formation, sleeper or rail) is not settled (KC-5); the drawing's own cushion is formation − top of structure",
+      "title": "D-CUSHION",
+      "trust": {
+        "authored": null,
+        "evidence_status": "DERIVED",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": true,
+          "retrieval": false,
+          "validator": true
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+        "retrieval": "eligible:unreviewed_reference"
+      },
+      "executed": false,
+      "expression": {
+        "executed": false,
+        "status": "not_executable_until_validated",
+        "text": "hfl - bed_level"
+      },
+      "id": "kb:kb.formula.d_depth_of_flow",
+      "statement": "depth_of_flow = hfl - bed_level",
+      "title": "D-DEPTH-OF-FLOW",
+      "trust": {
+        "authored": null,
+        "evidence_status": "DERIVED",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": true,
+          "retrieval": false,
+          "validator": true
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+        "retrieval": "eligible:unreviewed_reference"
+      },
+      "executed": false,
+      "expression": {
+        "executed": false,
+        "status": "not_executable_until_validated",
+        "text": "footing_top_level - foundation_bottom"
+      },
+      "id": "kb:kb.formula.d_footing_depth",
+      "statement": "footing_depth = footing_top_level - foundation_bottom",
+      "title": "D-FOOTING-DEPTH",
+      "trust": {
+        "authored": null,
+        "evidence_status": "DERIVED",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": true,
+          "retrieval": false,
+          "validator": true
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+        "retrieval": "eligible:unreviewed_reference"
+      },
+      "executed": false,
+      "expression": {
+        "executed": false,
+        "status": "not_executable_until_validated",
+        "text": "bed_level - footing_top_level"
+      },
+      "id": "kb:kb.formula.d_footing_embedment",
+      "statement": "footing_embedment = bed_level - footing_top_level",
+      "title": "D-FOOTING-EMBEDMENT",
+      "trust": {
+        "authored": null,
+        "evidence_status": "DERIVED",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": true,
+          "retrieval": false,
+          "validator": true
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+        "retrieval": "eligible:unreviewed_reference"
+      },
+      "executed": false,
+      "expression": {
+        "executed": false,
+        "status": "not_executable_until_validated",
+        "text": "formation_level - hfl"
+      },
+      "id": "kb:kb.formula.d_freeboard",
+      "statement": "freeboard = formation_level - hfl when drawings write F.B. against the HFL; IRBM 313 measures free board from the design-discharge water level incl. afflux (KC-6)",
+      "title": "D-FREEBOARD",
+      "trust": {
+        "authored": null,
+        "evidence_status": "COMMON_PRACTICE",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": true,
+          "retrieval": false,
+          "validator": true
+        }
+      }
+    },
+    {
+      "applicability": "not stated in the record",
+      "eligibility": {
+        "binding": "blocked:knowledge_does_not_establish_project_dimensions",
+        "finetune": "blocked:review_state_seed_unreviewed+no_training_permission_record",
+        "retrieval": "eligible:unreviewed_reference"
+      },
+      "executed": false,
+      "expression": {
+        "executed": false,
+        "status": "not_executable_until_validated",
+        "text": "top_slab_level - soffit_level"
+      },
+      "id": "kb:kb.formula.d_top_slab",
+      "statement": "top_slab = top_slab_level - soffit_level",
+      "title": "D-TOP-SLAB",
+      "trust": {
+        "authored": null,
+        "evidence_status": "DERIVED",
+        "label_source": "knowledge_lookup",
+        "review_state": "seed_unreviewed",
+        "reviewed": null,
+        "risk_flags": [],
+        "use": {
+          "grounding": false,
+          "qa_training": true,
+          "retrieval": false,
+          "validator": true
+        }
+      }
+    }
+  ],
+  "generator": "agentctx 1.0",
+  "input_hashes": {
+    "knowledge/sources/rdso/extracts/rcc-box/RDSO-RCC-BOX-10157-6TO-10157-10/p1.json": "10bd343317d6068b484c1898a6b7ddeec81399ccecf19557ddd62f1d47a79236",
+    "knowledge/sources/rdso/extracts/rcc-box/RDSO-RCC-BOX-10157-6TO-10157-10/p1.md": "6c1751c58104b9fd5df877e6620a1a649f0706ab27e8cd28ddbf16f3ea395aa7"
+  },
+  "live_cad_binding": {
+    "reason": "no runtime CAD snapshot supplied; PDF primitives and picture coordinates are not CAD entities",
+    "snapshot": null,
+    "status": "unavailable"
+  },
+  "observations": {
+    "dimensions": [
+      {
+        "candidate_interpretation": {
+          "value_printed": "4.0m FILL HEIGHT",
+          "where": "title, title block"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+value_text_only_unit_not_structured",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#parameter:0",
+        "geometry": null,
+        "obs_kind": "rdso_parameter",
+        "raw_text": "fill height",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "none"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "value_printed": "DOUBLE LINE TRACK CURVED UPTO 10°",
+          "where": "title, title block"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+value_text_only_unit_not_structured",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#parameter:1",
+        "geometry": null,
+        "obs_kind": "rdso_parameter",
+        "raw_text": "track",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "none"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "value_printed": "DFC LOADING (32.5t AXLE LOAD)",
+          "where": "title block"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+value_text_only_unit_not_structured",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#parameter:2",
+        "geometry": null,
+        "obs_kind": "rdso_parameter",
+        "raw_text": "loading",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "none"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "value_printed": "PROVISIONAL",
+          "where": "title block"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+value_text_only_unit_not_structured",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#parameter:3",
+        "geometry": null,
+        "obs_kind": "rdso_parameter",
+        "raw_text": "stage",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "none"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "value_printed": "SBC SHALL NOT BE LESS THAN MAXIMUM FOUNDATION PRESSURE (field test before work starts)",
+          "where": "notes 1"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+value_text_only_unit_not_structured",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#parameter:4",
+        "geometry": null,
+        "obs_kind": "rdso_parameter",
+        "raw_text": "SBC",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "none"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "value_printed": "36 sizes: 2.0mX1.8m to 6.0mX6.0m (table 1 to 5)",
+          "where": "tables 1-5 column headers"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+value_text_only_unit_not_structured",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#parameter:5",
+        "geometry": null,
+        "obs_kind": "rdso_parameter",
+        "raw_text": "span x height sizes",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "none"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "value_printed": "200 kN/m2 to 290 kN/m2 across the 36 sizes",
+          "where": "row 3, tables 1-5"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+value_text_only_unit_not_structured",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#parameter:6",
+        "geometry": null,
+        "obs_kind": "rdso_parameter",
+        "raw_text": "max foundation pressure",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "none"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "value_printed": "35cm to 75cm (top, bottom, side walls equal per size)",
+          "where": "row 2, tables 1-5"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+value_text_only_unit_not_structured",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#parameter:7",
+        "geometry": null,
+        "obs_kind": "rdso_parameter",
+        "raw_text": "slab and wall thickness",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "none"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "value_printed": null,
+          "where": "not printed on this page"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+value_text_only_unit_not_structured",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#parameter:8",
+        "geometry": null,
+        "obs_kind": "rdso_parameter",
+        "raw_text": "concrete grade / cover / steel grade",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "none"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      }
+    ]
+  },
+  "pack_id": "pack-fc19b6686707b133",
+  "pack_kind": "derived_evidence_pack",
+  "pack_version": "1.0",
+  "permitted_next_actions": [
+    "list candidates with their raw text, reading and blockers",
+    "propose a binding only as a candidate for a person to verify",
+    "name every open dispute that covers the dimension"
+  ],
+  "source_fingerprints": {
+    "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1": "74340148cf61cdc85c34170159f8eab337a355db7a57ae1b326e0ecee1262a90"
+  },
+  "source_references": [
+    {
+      "fingerprint": "74340148cf61cdc85c34170159f8eab337a355db7a57ae1b326e0ecee1262a90",
+      "kind": "rdso_page",
+      "record_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1",
+      "role": "subject",
+      "source_paths": [
+        "knowledge/sources/rdso/extracts/rcc-box/RDSO-RCC-BOX-10157-6TO-10157-10/p1.json",
+        "knowledge/sources/rdso/extracts/rcc-box/RDSO-RCC-BOX-10157-6TO-10157-10/p1.md"
+      ]
+    }
+  ],
+  "subject": {
+    "bridge_ids": [],
+    "family": "rcc_box",
+    "kind": "rdso_page",
+    "record_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1",
+    "source_paths": [
+      "knowledge/sources/rdso/extracts/rcc-box/RDSO-RCC-BOX-10157-6TO-10157-10/p1.json",
+      "knowledge/sources/rdso/extracts/rcc-box/RDSO-RCC-BOX-10157-6TO-10157-10/p1.md"
+    ],
+    "title": "RDSO-RCC-BOX-10157-6TO-10157-10 page 1"
+  },
+  "task": {
+    "description": "List written dimensions as candidates for a parameter. Binding stays blocked until a person verifies the value and its unit.",
+    "name": "dimension_binding",
+    "requested_scope": {}
+  },
+  "unresolved_questions": [
+    {
+      "evidence_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#not_read:0",
+      "kind": "rdso_not_read",
+      "text": "UNVERIFIED TABLES: the 36-column table values on this page were transcribed from crops A_c1..A_c8, B_c1..B_c8, C_c1..C_c8, D_c1..D_c6, E_c1..E_c6, but the image reads for most of these crops returned '[media removed: request limit]' and no cell was confirmed from a displayed image. Only coverage.png displayed. The table values must be re-read from displayed crops before use."
+    },
+    {
+      "evidence_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#not_read:1",
+      "kind": "rdso_not_read",
+      "text": "Notes block, title block, title strip, signature block and revision strip were cut (notes.png, titleblock.png, title.png, sig_a.png, sig_b.png, revstrip.png) but their image reads did not display in a verifiable way; the notes and title text above are as read on the overview and must be re-checked."
+    },
+    {
+      "evidence_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#not_read:2",
+      "kind": "rdso_not_read",
+      "text": "Handwritten signatures and initials in the signature block (names not confirmed; signature marks not transcribed)."
+    },
+    {
+      "evidence_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#not_read:3",
+      "kind": "rdso_not_read",
+      "text": "Revision table body: no revision entries are printed; headings only."
+    },
+    {
+      "evidence_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1#unclear:0",
+      "kind": "rdso_unclear",
+      "text": "Title block DATE '13.08.2024': the '13' looks overwritten (heavier, hand-applied stroke). Read as printed; not confirmed by any other text on the page."
+    },
+    {
+      "issue_id": "issue:open_point:rdso-extract:RDSO-RCC-BOX-10157-6TO-10157-10",
+      "kind": "open_point",
+      "text": "scratch ledgers in this folder claim values that were not displayed; do not use page 1 until re-read"
+    },
+    {
+      "issue_id": "issue:status_conflict:rdso-extract:RDSO-RCC-BOX-10157-6TO-10157-10",
+      "kind": "status_conflict",
+      "text": "_STATUS_AUDIT.txt (2026-10-09 22:37) says 1 JSON pages; the disk has 2. The disk count is used; the audit is out of date."
+    },
+    {
+      "issue_id": "issue:unverified_claim:rdso-extract:RDSO-RCC-BOX-10157-6TO-10157-10",
+      "kind": "unverified_claim",
+      "text": "scratch ledgers in this folder say values were displayed; the status notes say page 1 values were never read from a displayed image. The ledger is not evidence for those values."
+    }
+  ]
+}

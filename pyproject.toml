@@ -38,3 +38,5 @@ filterwarnings = ["ignore::DeprecationWarning:ezdxf.*", "ignore::DeprecationWarn
 # here: excepts that hid broken DXF data and unevaluable relations, a NaN test written as v != v, a duplicated branch.
 required-version = ">=0.16,<0.17"
 line-length = 160
+# the migrated source material (knowledge/agent_context) is kept as written: its Python files are provenance, never imported here
+extend-exclude = ["src/dxf_autoparam/knowledge/agent_context"]

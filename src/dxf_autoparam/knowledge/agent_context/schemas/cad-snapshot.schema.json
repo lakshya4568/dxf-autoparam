@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Runtime CAD snapshot (optional input to build_evidence_pack)",
+  "description": "A snapshot of the live editor document, supplied by the caller. agentctx echoes its ids and never creates an entity id. Without a snapshot, live CAD binding is 'unavailable'.",
+  "x-schema-version": "1.0",
+  "type": "object",
+  "required": ["snapshot_id", "document_version", "entities"],
+  "properties": {
+    "snapshot_id": {"type": "string", "minLength": 1},
+    "document_version": {"type": "string", "minLength": 1},
+    "views": {"type": "array", "items": {"type": "object", "required": ["view_id"], "properties": {"view_id": {"type": "string"}, "name": {"type": "string"}}}},
+    "entities": {"type": "array", "items": {"type": "object", "required": ["entity_id", "kind"], "properties": {"entity_id": {"type": "string", "minLength": 1}, "kind": {"type": "string"}, "view_id": {"type": "string"}, "semantic_feature": {"type": ["string", "null"]}, "locked": {"type": "boolean"}}}},
+    "mappings": {"type": "array", "items": {"type": "object", "required": ["evidence_id", "entity_id"], "properties": {"evidence_id": {"type": "string"}, "entity_id": {"type": "string"}}}},
+    "user_locks": {"type": "array", "items": {"type": "object"}}
+  }
+}

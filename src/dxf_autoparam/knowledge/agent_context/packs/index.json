@@ -1,0 +1,60 @@
+{
+  "packs": [
+    {
+      "completeness": "limited_ungrounded",
+      "file": "pack-47c1dbba898dbafd.json",
+      "pack_id": "pack-47c1dbba898dbafd",
+      "record_id": "03838b68a761-p1",
+      "task": "source_evidence"
+    },
+    {
+      "completeness": "grounded_unverified",
+      "file": "pack-4d0e7f899d167904.json",
+      "pack_id": "pack-4d0e7f899d167904",
+      "record_id": "21cc08a32dd8-p1",
+      "task": "dimension_binding"
+    },
+    {
+      "completeness": "vector_text_observed",
+      "file": "pack-6d1e9dc77fc058f4.json",
+      "pack_id": "pack-6d1e9dc77fc058f4",
+      "record_id": "v-993a513ea007-p1",
+      "task": "geometric_relationships"
+    },
+    {
+      "completeness": "partially_grounded",
+      "file": "pack-75189085011d8e38.json",
+      "pack_id": "pack-75189085011d8e38",
+      "record_id": "2da8cb493f51-p1",
+      "task": "geometric_relationships"
+    },
+    {
+      "completeness": "partially_grounded",
+      "file": "pack-7ca8f5fa3cf0b564.json",
+      "pack_id": "pack-7ca8f5fa3cf0b564",
+      "record_id": "418834d8e9df-p1",
+      "task": "component_interpretation"
+    },
+    {
+      "completeness": "page_saved_unverified",
+      "file": "pack-8241a32b11071047.json",
+      "pack_id": "pack-8241a32b11071047",
+      "record_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1",
+      "task": "source_evidence"
+    },
+    {
+      "completeness": "not_saved",
+      "file": "pack-b19831231929ab8d.json",
+      "pack_id": "pack-b19831231929ab8d",
+      "record_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p3",
+      "task": "source_evidence"
+    },
+    {
+      "completeness": "page_saved_unverified",
+      "file": "pack-fc19b6686707b133.json",
+      "pack_id": "pack-fc19b6686707b133",
+      "record_id": "rdso:RDSO-RCC-BOX-10157-6TO-10157-10:p1",
+      "task": "dimension_binding"
+    }
+  ]
+}

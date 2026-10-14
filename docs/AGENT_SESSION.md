@@ -133,3 +133,22 @@ A run is resumable while the server lives; after a restart its history (verdict,
 state is not. One anchor policy per axis and assembly. Dimension lines keep their drawn place. Pictures are drawn by this project's
 renderer (text in one font, hatches as faint fills), not by a CAD viewer. The model's reading is untested live; no accuracy figure for
 the real model exists until the acceptance run is made.
+
+## The engineering library (domain knowledge, on demand)
+
+When a domain pack with a library is on (`options.domain`, `--domain`, `AUTOPARAM_DOMAIN`; the page preselects it when the sheet's own
+printed words match a skill's cues and shows which words), the model also has six read-only tools — `list_skills`, `load_skill`,
+`search_library`, `get_reference`, `check_rule`, `record_finding` — and a paragraph in its system prompt that says how to use them. Nothing
+is preloaded: `inspect_sheet` (and the first overview) carry only the matches; skills load section by section within a budget.
+
+| The model (decides) | The engine (does, deterministically) |
+|---|---|
+| which skill's cues the drawing really shows (confirms them with `zoom_view`), and whether to use it | matches the sheet's printed words against each skill's cues (structure labels dominate; the words that matched are returned) |
+| what to load, search and read | serves bounded, labelled records (category and review state with every item); enforces the run's character budget |
+| which of its own values or levels play the roles of a documented definition (`check_rule` bind: **names**, never numbers) | evaluates the definition on those values, in mm; `holds` / `differs` / `not_evaluable`, advisory |
+| what it applied, assumed, found in conflict, or proposes (`record_finding`) | refuses a cited library id that does not exist; keeps the trace |
+
+The verdict gains `knowledge` (skills and sections loaded, references read, characters retrieved, definitions checked, findings by kind)
+and notes that say the same in words. It never fails a run: the library is context, and where it disagrees with the drawing the drawing
+wins. Full description, trust rules and how to extend it: `docs/KNOWLEDGE_LIBRARY.md` (tests: `tests/test_library.py`,
+`tests/test_library_harness.py`, `tests/test_migration.py`).

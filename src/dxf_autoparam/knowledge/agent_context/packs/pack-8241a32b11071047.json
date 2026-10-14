@@ -1,0 +1,1254 @@
+{
+  "agent_summary": "Task source_evidence for rdso:RDSO-RCC-BOX-10152-R-SERIES:p1 (rdso_page, family rcc_box). Completeness: page_saved_unverified. Claims: 0. Candidates: 0. Conflicts: 0. Open questions: 12. Every dimension is a candidate; binding is blocked. CAD binding: unavailable.",
+  "blocked_next_actions": [
+    {
+      "action": "state a value as verified",
+      "reason": "no human verification is recorded in the repository"
+    },
+    {
+      "action": "promote a proposal or an unreviewed entry into accepted knowledge",
+      "reason": "proposals and unreviewed entries are never merged or promoted by this layer"
+    },
+    {
+      "action": "use this pack as training data",
+      "reason": "packs are derived artefacts, not labels or sources"
+    }
+  ],
+  "built_from": {
+    "registry_digest": "4395427d73da1f49797b137de95fca5c02e47a348949116c34504a7c60a0471b"
+  },
+  "candidate_interpretations": [],
+  "claims": [],
+  "completeness": {
+    "capabilities": {
+      "dimension_text": false,
+      "disputes_recorded": 0,
+      "identity": true,
+      "levels": false,
+      "live_cad_binding": false,
+      "parameters": true,
+      "parts": false,
+      "picture": false,
+      "relations": false,
+      "vector_text": false,
+      "verified_values": 0,
+      "views": false
+    },
+    "missing": [],
+    "notes": [
+      "No value in this pack is verified by a person; the registry holds no verification record.",
+      "Page reads were made by eye (no OCR). Saved is not the same as checked against the picture."
+    ],
+    "status": "page_saved_unverified"
+  },
+  "component_definitions": [],
+  "conflicts": [],
+  "derived": true,
+  "formulas": [],
+  "generator": "agentctx 1.0",
+  "input_hashes": {
+    "knowledge/sources/rdso/extracts/rcc-box/RDSO-RCC-BOX-10152-R-SERIES/p1.json": "eae53023a431fb4e144c08c37e81989a193e933b647cd37eacf4ceb97e274468",
+    "knowledge/sources/rdso/extracts/rcc-box/RDSO-RCC-BOX-10152-R-SERIES/p1.md": "04575aa98104ec7bf9864f165fa34f3576038752fb49b1772f975ef02c44fdea"
+  },
+  "live_cad_binding": {
+    "reason": "no runtime CAD snapshot supplied; PDF primitives and picture coordinates are not CAD entities",
+    "snapshot": null,
+    "status": "unavailable"
+  },
+  "observations": {
+    "texts": [
+      {
+        "candidate_interpretation": {
+          "how_drawn": "cross section: outline with inner and outer lines, hatched wall section; sectional elevation and plan: outline with dash-dot centre line",
+          "what_it_is_as_drawn": "The reinforced concrete box culvert barrel, one cell, drawn as a rectangular section in cross section and as a long barrel in the sectional elevation and plan.",
+          "where": [
+            "CROSS SECTION OF R.C.C BOX",
+            "SECTIONAL ELEVATION AT X-Y",
+            "PLAN"
+          ]
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#component:0",
+        "geometry": null,
+        "obs_kind": "rdso_component",
+        "raw_text": "box barrel (single cell)",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "how_drawn": "cross section: horizontal wall band at the top; typical details A: slab with bar layers and distributors",
+          "what_it_is_as_drawn": "The top slab of the box, with bar layers a2, b, f1 and h and the 150 TH. WEARING COURSE above it.",
+          "where": [
+            "CROSS SECTION OF R.C.C BOX",
+            "TYPICAL DETAILS AT A&B",
+            "SECTIONAL ELEVATION AT X-Y"
+          ]
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#component:1",
+        "geometry": null,
+        "obs_kind": "rdso_component",
+        "raw_text": "top slab",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "how_drawn": "sectional elevation: ellipses on the bed line; plan: ellipses along the return wall",
+          "what_it_is_as_drawn": "Stone pitching with cement grouting on the bed slope at the ends, and on the slope in the sectional elevation.",
+          "where": [
+            "SECTIONAL ELEVATION AT X-Y",
+            "PLAN",
+            "TYPICAL DETAILS AT A&B"
+          ]
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#component:10",
+        "geometry": null,
+        "obs_kind": "rdso_component",
+        "raw_text": "stone pitching",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "how_drawn": "sectional elevation: small wall at each end; plan: short wall lines at the wing ends; section schematic",
+          "what_it_is_as_drawn": "Wall closing each wing end of the barrel; schematic only, to be designed as per site condition.",
+          "where": [
+            "SECTIONAL ELEVATION AT X-Y",
+            "PLAN",
+            "SECTION OF RETURN WALL"
+          ]
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#component:11",
+        "geometry": null,
+        "obs_kind": "rdso_component",
+        "raw_text": "return wall",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "how_drawn": "sectional elevation and plan: vertical wall line with footing; label DROP WALL",
+          "what_it_is_as_drawn": "Wall at the downstream end, DD from the box face.",
+          "where": [
+            "SECTIONAL ELEVATION AT X-Y",
+            "PLAN",
+            "SECTION OF CURTAIN/DROP WALL"
+          ]
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#component:12",
+        "geometry": null,
+        "obs_kind": "rdso_component",
+        "raw_text": "drop wall",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "how_drawn": "sectional elevation and plan: vertical wall line with footing; label CURTAIN WALL",
+          "what_it_is_as_drawn": "Wall at the upstream end, DC from the box face.",
+          "where": [
+            "SECTIONAL ELEVATION AT X-Y",
+            "PLAN",
+            "SECTION OF CURTAIN/DROP WALL"
+          ]
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#component:13",
+        "geometry": null,
+        "obs_kind": "rdso_component",
+        "raw_text": "curtain wall",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "how_drawn": "plan: splayed wall band at 45 degrees; section: tapered stem on footing",
+          "what_it_is_as_drawn": "Wall splayed at 45 degrees from the barrel on the plan; schematic elevation in the wing wall section.",
+          "where": [
+            "PLAN",
+            "WING WALL (TO BE DESIGNED AS PER SITE CONDITION)"
+          ]
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#component:14",
+        "geometry": null,
+        "obs_kind": "rdso_component",
+        "raw_text": "wing wall",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "how_drawn": "sectional elevation: horizontal line with labels BED LEVEL and BED SLOPE",
+          "what_it_is_as_drawn": "The bed on which the box rests, with a fall of 1 in 100 (min.) in the sectional elevation; bed slope is to be adjusted per site condition (note 17).",
+          "where": [
+            "SECTIONAL ELEVATION AT X-Y",
+            "SECTION OF RETURN WALL",
+            "SECTION OF CURTAIN/DROP WALL",
+            "WING WALL"
+          ]
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#component:15",
+        "geometry": null,
+        "obs_kind": "rdso_component",
+        "raw_text": "bed and bed slope",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "how_drawn": "sectional elevation: horizontal formation line with side lines at 2:1",
+          "what_it_is_as_drawn": "Top of the fill (formation) with formation width and the side slopes rising from the box to the walls.",
+          "where": [
+            "SECTIONAL ELEVATION AT X-Y"
+          ]
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#component:16",
+        "geometry": null,
+        "obs_kind": "rdso_component",
+        "raw_text": "formation and side slopes",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "how_drawn": "typical details A and B: short bar marks in the slab",
+          "what_it_is_as_drawn": "Distribution bars labelled DISTRIBUTORS in the typical details at the top and bottom slabs.",
+          "where": [
+            "TYPICAL DETAILS AT A&B"
+          ]
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#component:17",
+        "geometry": null,
+        "obs_kind": "rdso_component",
+        "raw_text": "distributors",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "how_drawn": "cross section: wall band at the bottom; typical details B: slab with key and distributors",
+          "what_it_is_as_drawn": "The bottom slab of the box, with bar layers c, d and g2 and the key at the bottom slab (DK); rests on sand filling and 150mm PCC base course.",
+          "where": [
+            "CROSS SECTION OF R.C.C BOX",
+            "TYPICAL DETAILS AT A&B",
+            "SECTIONAL ELEVATION AT X-Y"
+          ]
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#component:2",
+        "geometry": null,
+        "obs_kind": "rdso_component",
+        "raw_text": "bottom slab",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "how_drawn": "cross section: vertical wall bands on both sides; plan: vertical wall lines at the two ends",
+          "what_it_is_as_drawn": "The two side walls of the box. Bars a1, e, g3 and the vertical wall reinforcement sit in them.",
+          "where": [
+            "CROSS SECTION OF R.C.C BOX",
+            "PLAN"
+          ]
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#component:3",
+        "geometry": null,
+        "obs_kind": "rdso_component",
+        "raw_text": "vertical walls (side walls of box)",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "how_drawn": "cross section: diagonal line at the inner corners; table on sheet",
+          "what_it_is_as_drawn": "A chamfer block at the inside corners of the box, sized by the B X B haunch table against CLS or cht.",
+          "where": [
+            "CROSS SECTION OF R.C.C BOX",
+            "TABLE FOR B X B HAUNCH"
+          ]
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#component:4",
+        "geometry": null,
+        "obs_kind": "rdso_component",
+        "raw_text": "haunch (B X B)",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "how_drawn": "cross section and sectional elevation: label with thickness",
+          "what_it_is_as_drawn": "Surface layer on top of the box; the box height ht includes it.",
+          "where": [
+            "CROSS SECTION OF R.C.C BOX",
+            "SECTIONAL ELEVATION AT X-Y",
+            "TYPICAL DETAILS AT A&B"
+          ]
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#component:5",
+        "geometry": null,
+        "obs_kind": "rdso_component",
+        "raw_text": "wearing course",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "how_drawn": "sectional elevation and cross section: thin band below the box, labelled",
+          "what_it_is_as_drawn": "Blinding layer under the box and the sand filling.",
+          "where": [
+            "SECTIONAL ELEVATION AT X-Y",
+            "CROSS SECTION OF R.C.C BOX",
+            "TYPICAL DETAILS AT A&B"
+          ]
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#component:6",
+        "geometry": null,
+        "obs_kind": "rdso_component",
+        "raw_text": "PCC base course",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "how_drawn": "sectional elevation and typical details: dotted fill",
+          "what_it_is_as_drawn": "Filling under the barrel and beside the bottom slab, shown dotted.",
+          "where": [
+            "SECTIONAL ELEVATION AT X-Y",
+            "TYPICAL DETAILS AT A&B"
+          ]
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#component:7",
+        "geometry": null,
+        "obs_kind": "rdso_component",
+        "raw_text": "sand filling",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "how_drawn": "cross section: area beside outer wall with label and leader",
+          "what_it_is_as_drawn": "Backfill beside the box wall, labelled BACKFILL MATERIAL in the cross section; a red alteration note says backfill to continue up to the vertical wall per note 9.",
+          "where": [
+            "CROSS SECTION OF R.C.C BOX"
+          ]
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#component:8",
+        "geometry": null,
+        "obs_kind": "rdso_component",
+        "raw_text": "backfill material",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "how_drawn": "cross section: outline ellipses along the outer wall faces; labels rotated along the walls",
+          "what_it_is_as_drawn": "Rows of ellipses around the outside of the walls of the box, labelled as minimum 600 mm well hand packed boulders. Red X marks cross out some of them and red text states the alteration.",
+          "where": [
+            "CROSS SECTION OF R.C.C BOX"
+          ]
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#component:9",
+        "geometry": null,
+        "obs_kind": "rdso_component",
+        "raw_text": "boulders (MINIMUM 600 (mm) WELL HAND PACKED BOULDERS)",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "no": "1"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#note:0",
+        "geometry": null,
+        "obs_kind": "rdso_note",
+        "raw_text": "ALL DIMENSIONS ARE IN MILLIMETER UNLESS OTHERWISE SPECIFIED.",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "no": "2"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#note:1",
+        "geometry": null,
+        "obs_kind": "rdso_note",
+        "raw_text": "THIS DRAWING IS SUITABLE FOR SINGLE TRACK ONLY. [TRACK ONLY struck through in black] Red alteration ALT. 3 added: LINE STRAIGHT TRACK ONLY.",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "no": "11"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#note:10",
+        "geometry": null,
+        "obs_kind": "rdso_note",
+        "raw_text": "CLEAR COVER FOR REINFORCING BARS SHOULD BE 50mm.",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "no": "12"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#note:11",
+        "geometry": null,
+        "obs_kind": "rdso_note",
+        "raw_text": "SCHEMATIC WING WALL AND RETURN WALL ARE GIVEN. HOWEVER, WING WALL AND RETURN WALL SHOULD BE DESIGNED SUITABLY BY ZONAL RAILWAYS AS PER SITE CONDITIONS.",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "no": "13"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#note:12",
+        "geometry": null,
+        "obs_kind": "rdso_note",
+        "raw_text": "i). BARREL LENGTH OF BOX CULVERT SHALL BE DECIDED BASED ON FILL HEIGHT ON THE BOX AS PER CROSS SECTION SHOWN. ii). IF BARREL LENGTH IS TO BE CURTAILED DUE TO SOME REASONS, THEN END OF BOX CAN BE PROJECTED UP AS BALLAST RETAINING WALL, DESIGNED SUITABLY.",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "no": "14"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#note:13",
+        "geometry": null,
+        "obs_kind": "rdso_note",
+        "raw_text": "IN CASE OF ERODIBLE SOILS, FLOORING SHALL BE ENCLOSED BY SUITABLY DESIGNED CURTAIN WALL AND DROP WALL (TIED TO THE WING WALLS) . SCHEMATIC CURTAIN/DROP WALL IS GIVEN.",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "no": "15"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#note:14",
+        "geometry": null,
+        "obs_kind": "rdso_note",
+        "raw_text": "TOLERANCE SHALL BE FOLLOWED AS PER IRS CONCRETE BRIDGE CODE.",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "no": "16"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#note:15",
+        "geometry": null,
+        "obs_kind": "rdso_note",
+        "raw_text": "M-35 GRADE CONCRETE SHALL BE USED FOR THE SPAN OR HEIGHT OF THE BOX GREATER THAN OR EQUAL TO 4 METER. M-30 GRADE CONCRETE SHALL BE USED FOR THE SPAN OR HEIGHT OF THE BOX LESS THAN 4 METER.",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "no": "17"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#note:16",
+        "geometry": null,
+        "obs_kind": "rdso_note",
+        "raw_text": "BED SLOPE SHALL BE ADJUSTED AS PER SITE CONDITIONS BY COMPETENT AUTHORITY.",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "no": "18"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#note:17",
+        "geometry": null,
+        "obs_kind": "rdso_note",
+        "raw_text": "FOR INTERMEDIATE SPAN/HEIGHTS, STRUCTURAL DESIGN DETAILS OF IMMEDIATELY HIGHER SPAN/HEIGHTS CONFIGURATION CAN BE ADOPTED.",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "no": "19"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#note:18",
+        "geometry": null,
+        "obs_kind": "rdso_note",
+        "raw_text": "WEEP HOLES SHALL BE OF 75/100 DIA PVC/AC PIPES STAGGERED @ 1000 C/C ABOVE LOW WATER LEVEL IN BOTH WING WALL/RETURN WALL AND EARTH RETAINER OF BOX.",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "no": "20"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#note:19",
+        "geometry": null,
+        "obs_kind": "rdso_note",
+        "raw_text": "BALLAST CUSHION OF 350mm HAS BEEN CONSIDERED IN DESIGN.",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "no": "3"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#note:2",
+        "geometry": null,
+        "obs_kind": "rdso_note",
+        "raw_text": "PREPARATION OF BED BELOW 150mm THICK BASE COURSE SHOULD BE BASED ON ACTUAL SITE CONDITION IN ORDER TO ACHIEVE THE ADEQUATE BEARING CAPACITY REQUIRED TO WITHSTAND THE FOUNDATION PRESSURE GIVEN IN REFERRED DRAWINGS IN TABLE 'X'.",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "no": "21"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#note:20",
+        "geometry": null,
+        "obs_kind": "rdso_note",
+        "raw_text": "DEPTH OF KEY AT BOTTOM SLAB, DK SHOULD BE PROVIDED AS GIVEN BELOW: [table, see tables]",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "no": "22"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#note:21",
+        "geometry": null,
+        "obs_kind": "rdso_note",
+        "raw_text": "THIS DRAWING SUPERSEDES DRAWING NO. RDSO/B-10152.",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "no": "23"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#note:22",
+        "geometry": null,
+        "obs_kind": "rdso_note",
+        "raw_text": "No SKEW ANGLE HAS BEEN CONSIDERED IN THE DESIGN. [red, added by ALT. 3]",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "no": "4"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#note:3",
+        "geometry": null,
+        "obs_kind": "rdso_note",
+        "raw_text": "REINFORCEMENT DETAILS, SLAB THICKNESS DETAILS AND FOUNDATION PRESSURE FOR VARIOUS FILL HEIGHTS HAVE BEEN GIVEN IN REFERRED DRAWINGS AS GIVEN IN TABLE 'X'. THICKNESSES OF TOP SLAB, BOTTOM SLAB AND VERTICAL WALLS HAVE BEEN KEPT UNIFORM.",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "no": "5"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#note:4",
+        "geometry": null,
+        "obs_kind": "rdso_note",
+        "raw_text": "THIS DESIGN IS SUITABLE FOR 25t LOADING-2008.",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "no": "6"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#note:5",
+        "geometry": null,
+        "obs_kind": "rdso_note",
+        "raw_text": "ALL REINFORCEMENT STEEL SHALL BE OF HIGH STRENGTH DEFORMED (HSD)/TMT BARS, Fe415 AND HIGHER GRADE REINFORCEMENT CONFORMING TO IS:1786-2008. FOR SEISMIC ZONES III, IV AND V HYSD STEEL BARS HAVING MINIMUM ELONGATION OF 14.5 PERCENT AND CONFORMING TO OTHER REQUIREMENTS OF IS:1786 SHALL BE USED.",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "no": "7"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#note:6",
+        "geometry": null,
+        "obs_kind": "rdso_note",
+        "raw_text": "DESIGN CRITERIA IS BASED ON FOLLOWING IRS CODES: i) IRS BRIDGE RULES ii) IRS CONCRETE BRIDGE CODE iii) IRS BRIDGE SUBSTRUCTURE & FOUNDATION CODE",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "no": "8"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#note:7",
+        "geometry": null,
+        "obs_kind": "rdso_note",
+        "raw_text": "LAPPING OF BARS SHOULD BE MINIMISED AND STAGGERED WHEREVER NECESSARY. MINIMUM LENGTH OF LAP SHALL BE AS GIVEN IN IRS CONCRETE BRIDGE CODE FOR TOR STEEL.",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "no": "9"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#note:8",
+        "geometry": null,
+        "obs_kind": "rdso_note",
+        "raw_text": "BACK FILL MATERIAL SHOULD BE AS PER CLAUSE 7.5 OF IRS BRIDGE SUBSTRUCTURE & FOUNDATION CODE. [printed in black, struck through in red] Restored in red by ALT. 2 (see revisions). Faded red lines below it are not legible.",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      },
+      {
+        "candidate_interpretation": {
+          "no": "10"
+        },
+        "eligibility": {
+          "binding": "blocked:no_human_verification+not_a_value_observation",
+          "finetune": "blocked:permission_unconfirmed+no_human_label",
+          "retrieval": "eligible:rdso_page_reading_unverified"
+        },
+        "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#note:9",
+        "geometry": null,
+        "obs_kind": "rdso_note",
+        "raw_text": "ALL RCC SURFACES COMING IN CONTACT WITH SOIL SHOULD BE PAINTED WITH BITUMEN OR COALTAR OF APPROVED QUALITY @ 1.464 KG/SQM.",
+        "trust": {
+          "epistemic": "REFERENCE_OBSERVED",
+          "flags": {
+            "checked_level": "view_level"
+          },
+          "human_verified": false,
+          "label_source": "vlm",
+          "review_state": "not_verified"
+        },
+        "view": null
+      }
+    ],
+    "views": []
+  },
+  "observations_summary": {
+    "rdso_component": 18,
+    "rdso_not_read": 3,
+    "rdso_note": 23,
+    "rdso_parameter": 19,
+    "rdso_reinforcement": 15,
+    "rdso_revision": 5,
+    "rdso_table": 5,
+    "rdso_unclear": 8
+  },
+  "pack_id": "pack-8241a32b11071047",
+  "pack_kind": "derived_evidence_pack",
+  "pack_version": "1.0",
+  "permitted_next_actions": [
+    "cite evidence ids from this pack in your answer",
+    "report which sections are missing, as listed under completeness"
+  ],
+  "source_fingerprints": {
+    "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1": "3e53e319cffb4626fa25f4e10942d8a61e461728bdd24c5ebcc4880dba14f42b"
+  },
+  "source_references": [
+    {
+      "fingerprint": "3e53e319cffb4626fa25f4e10942d8a61e461728bdd24c5ebcc4880dba14f42b",
+      "kind": "rdso_page",
+      "record_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1",
+      "role": "subject",
+      "source_paths": [
+        "knowledge/sources/rdso/extracts/rcc-box/RDSO-RCC-BOX-10152-R-SERIES/p1.json",
+        "knowledge/sources/rdso/extracts/rcc-box/RDSO-RCC-BOX-10152-R-SERIES/p1.md"
+      ]
+    }
+  ],
+  "subject": {
+    "bridge_ids": [],
+    "family": "rcc_box",
+    "kind": "rdso_page",
+    "record_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1",
+    "source_paths": [
+      "knowledge/sources/rdso/extracts/rcc-box/RDSO-RCC-BOX-10152-R-SERIES/p1.json",
+      "knowledge/sources/rdso/extracts/rcc-box/RDSO-RCC-BOX-10152-R-SERIES/p1.md"
+    ],
+    "title": "RDSO-RCC-BOX-10152-R-SERIES page 1"
+  },
+  "task": {
+    "description": "Find the sources and stored observations for a record, with their trust labels and gaps.",
+    "name": "source_evidence",
+    "requested_scope": {}
+  },
+  "unresolved_questions": [
+    {
+      "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#not_read:0",
+      "kind": "rdso_not_read",
+      "text": "Faded red text under the restored note 9 (ALT. 2 block): illegible, not transcribed."
+    },
+    {
+      "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#not_read:1",
+      "kind": "rdso_not_read",
+      "text": "The count of ALT. 1 and ALT. 2 circles around the cross section is not tallied, only the labels and text were read."
+    },
+    {
+      "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#not_read:2",
+      "kind": "rdso_not_read",
+      "text": "Scale cell in the title block: blank (recorded as not printed)."
+    },
+    {
+      "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#unclear:0",
+      "kind": "rdso_unclear",
+      "text": "Red struck-through text beside the cross section (top left, ALT. 1 area: 'MIN 600 (mm) WELL HAND PACKED BOULDERS BEHIND VERTICAL WALL IS DELETED. BACKFILL MATERIAL TO BE CONTINUED UP TO VERTICAL WALL AS PER NOTE NO. 9'). Read at low zoom; the last words are not certain."
+    },
+    {
+      "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#unclear:1",
+      "kind": "rdso_unclear",
+      "text": "Faded red lines below note 9 inside the ALT. 2 block: illegible, not transcribed."
+    },
+    {
+      "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#unclear:2",
+      "kind": "rdso_unclear",
+      "text": "Reinforcement table f1 and f2: the √2 terms and sign of the 2(√2+1) part read at overview scale; verify against the tile."
+    },
+    {
+      "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#unclear:3",
+      "kind": "rdso_unclear",
+      "text": "Typical details: the value below 'cht' is printed as '150' but the rotated crop cut the leading digit; only '50' is clearly legible in that crop."
+    },
+    {
+      "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#unclear:4",
+      "kind": "rdso_unclear",
+      "text": "Handwritten initials under SCRUTINISED & RECOMMENDED BY DIRECTOR/B&S/CB-II: not legible as a name."
+    },
+    {
+      "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#unclear:5",
+      "kind": "rdso_unclear",
+      "text": "Handwritten sign-off dates '18.10.17' and '09/10/19' and the approval date '4/8/2015': read at crop scale; verify."
+    },
+    {
+      "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#unclear:6",
+      "kind": "rdso_unclear",
+      "text": "ALT. marks: the numbers inside the circles (1 or 2) around the cross section read from rotated and tile crops; the exact count of ALT. 1 and ALT. 2 circles around the box was not tallied."
+    },
+    {
+      "evidence_id": "rdso:RDSO-RCC-BOX-10152-R-SERIES:p1#unclear:7",
+      "kind": "rdso_unclear",
+      "text": "Note 9 in black: struck through in red; the red text of ALT. 2 above it is clear, but the words beneath are not."
+    },
+    {
+      "issue_id": "issue:open_point:rdso-extract:RDSO-RCC-BOX-10152-R-SERIES",
+      "kind": "open_point",
+      "text": "signature and date on p2 and p5 not confirmed"
+    }
+  ]
+}

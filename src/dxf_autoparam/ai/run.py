@@ -33,7 +33,7 @@ from ..status import parameters_of, sheet_status
 from ..topology import of as topology_of
 from ..viewimg import box_around
 from . import agent as A
-from . import domain
+from . import domain, library
 from .context import SheetScope
 from .loop import AgentLoop, Budget
 from .narrate import STAGE_OF
@@ -228,6 +228,10 @@ class SheetBench:
         self.proposed = False  # a plan for a change was proposed in this run (units opened and closed again keep no memory of it)
         self.finish_summary = ""  # what the model said it did, in its own words, when the engine let it finish
         self.rebase: dict | None = None  # the sheet changed under the run: the person decides whether the edits go on the current sheet
+        lib = library.for_pack(run.pack)
+        # the engineering library for the whole run (the domain pack on has one): one trace, the sheet's own words, the values of any open unit
+        self.lib_session = (library.KnowledgeSession(lib, texts=lambda: library.drawing_texts(self.sm.dr.items), values=self.value_of,
+                                                     budget_chars=int(run.options.get("library_budget_chars") or library.RUN_BUDGET_CHARS)) if lib else None)
 
     # ── units ───────────────────────────────────────────────────────────────────
 
@@ -255,6 +259,7 @@ class SheetBench:
         wb.ledger = self.ledger  # one reading of the instruction for the whole run
         wb.said_fn = lambda: self.said
         wb.plans_anywhere = self.any_plan
+        wb.lib_session = self.lib_session  # one library trace for the run, whichever unit is open
         self.units[uid] = wb
         self.committed[uid] = copy.deepcopy(start) if start else None
         self.active = uid
@@ -321,7 +326,22 @@ class SheetBench:
         a = {k: v for k, v in a.items() if k != "why"}
         if name in SHEET_READ:
             return getattr(self, name)(**a)
+        if name in library.LIBRARY_TOOLS:  # the library needs no open unit
+            if self.lib_session is None:
+                return {"error": "no engineering library is on for this run"}
+            return self.lib_session.call(name, a)
         return self.wb.read(name, a)
+
+    def value_of(self, name: str, unit: str | None = None) -> tuple[float, str] | None:
+        """A named value or level of any unit of the run (the open one first, or `unit`), else a shared value of the sheet."""
+        order = [unit] if unit else ([self.active] if self.active else []) + [u for u in self.units if u != self.active]
+        for uid in order:
+            wb = self.units.get(uid)
+            got = wb.value_of(name) if wb is not None else None
+            if got is not None:
+                return got
+        sp = next((s for s in self.sm.shared.values() if s.name == name), None)
+        return (float(sp.value), sp.unit) if sp is not None else None
 
     def write(self, name: str, a: dict) -> tuple[str, str]:
         if name in SHEET_WRITE:
@@ -573,6 +593,7 @@ class SheetBench:
                 "values_changed_by_a_person": {k: v for k, v in sm.values.items()}, "view_relations": sm.relations[:20],
                 "status": rep["sentence"], "counts": rep["counts"],
                 "pictures": {"note": "pictures carry the revision they show; zoom_view gives a new one"},
+                **({"engineering_library": self.lib_session.hint()} if self.lib_session is not None else {}),
             }
 
     def open_unit(self, unit: str | None = None, view: str | None = None) -> dict:
@@ -860,6 +881,32 @@ class SheetBench:
         untouched = [uid for uid, u in self.sm.units.items() if not parametrized(uid, u)]
         if untouched and self.run.scope.get("kind") == "drawing":
             out.append(f"views never parametrized in this run: {', '.join(untouched)}")
+        return out + self.library_notes()
+
+    def library_notes(self) -> list[str]:
+        """What the run did with the engineering library, as facts the engine recorded — never as a failure: the library is context."""
+        ks = self.lib_session
+        if ks is None:
+            return []
+        s = ks.summary()
+        out = []
+        if not s["calls"]:
+            out.append("engineering library was on and never consulted" + (
+                f" (its cues matched this drawing: {s['matches'][0]['skill']})" if s["matches"] else ""))
+            return out
+        loaded = ", ".join(f"{k} ({len(v)} section{'s' if len(v) != 1 else ''})" for k, v in s["skills_loaded"].items()) or "no skill"
+        out.append(f"engineering library: loaded {loaded}; {len(s['references'])} reference(s) read; {s['chars_read']:,} characters retrieved")
+        rc = s["rule_checks"]
+        if rc["holds"] or rc["differs"]:
+            out.append(f"documented definitions checked against this drawing's values (advisory): {rc['holds']} hold, {rc['differs']} differ"
+                       + ("".join(f"; {c['rule']} differs by {c['difference_mm']} mm" for c in rc["items"] if c["result"] == "differs")[:240]))
+        f = s["findings"]["by_kind"]
+        if f.get("conflict"):
+            out.append(f"{f['conflict']} conflict(s) recorded between the library and this drawing — the drawing was kept")
+        if f.get("proposal"):
+            out.append(f"{f['proposal']} proposal(s) recorded for a person to review (none is merged into the library)")
+        if s["refused_ids"]:
+            out.append("library ids cited that do not exist were refused: " + ", ".join(s["refused_ids"][:5]))
         return out
 
 
@@ -1279,6 +1326,7 @@ class Run:
             headline += f" ({len(notes)} note{'s' if len(notes) != 1 else ''} to read)"
         return {"state": state, "ended_by": ended_by, "criteria": crit, "remaining": remaining, "headline": headline, "plans": plan_rows,
                 "plan": plan, "notes": notes, "given_up": b.given_up, "finish_summary": b.finish_summary,
+                "knowledge": b.lib_session.summary() if b.lib_session is not None else None,
                 "applied": {u: r.get("revision") for u, r in results.items() if r.get("ok") and not r.get("nothing_to_apply")},
                 "values_applied": [x for r in results.values() for x in r.get("values_applied", [])], "values_refused": [x for _u, x in refused_vals],
                 "refused": refused, "unaccounted": gaps, "questions": [{"id": q["id"], "text": q["text"][:200]} for q in qs],
@@ -1318,7 +1366,7 @@ class Run:
         return {"id": self.id, "kind": "run", "instruction": self.instruction[:400], "status": self.status, "label": LABELS[self.status],
                 "scope": self.scope, "started": self.t_started, "finished": self.t_finished, "usage": self.usage(), "units": self.units_touched or
                 (list(self.bench.units) if self.bench else []), "verdict": {k: v.get(k) for k in ("state", "headline", "remaining", "refused", "criteria", "plans", "values_applied", "values_refused", "plan", "notes", "given_up",
-                                                  "finish_summary")}
+                                                  "finish_summary", "knowledge")}
                 if v else None, "reason": self.reason, "reverted": self.reverted,
                 "timeline": [{k: e.get(k) for k in ("kind", "name", "ok", "summary", "said", "why", "text", "to", "t", "turn") if e.get(k) not in (None, "")}
                              for e in self.events if e["kind"] in ("tool", "state", "question", "verdict", "error", "note")][-400:]}

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "agentctx observation (registry/observations.jsonl)",
+  "description": "One stored item from a drawing, an extract page or a vector text layer (category A). raw_text is what is printed; candidate_interpretation is a reading of it and is never authoritative.",
+  "x-schema-version": "1.0",
+  "type": "object",
+  "required": ["evidence_id", "owner_id", "owner_kind", "local_id", "obs_kind", "category", "raw_text", "candidate_interpretation", "fields", "source_id", "source_fingerprint", "trust", "eligibility"],
+  "properties": {
+    "evidence_id": {"type": "string", "pattern": "#"},
+    "owner_id": {"type": "string"},
+    "owner_kind": {"enum": ["drawing_sheet", "vector_sheet", "rdso_page"]},
+    "local_id": {"type": "string"},
+    "obs_kind": {"type": "string"},
+    "category": {"const": "A"},
+    "family": {"type": ["string", "null"]},
+    "view": {"type": ["string", "null"]},
+    "raw_text": {"type": ["string", "null"]},
+    "candidate_interpretation": {"type": ["object", "null"]},
+    "fields": {"type": "object"},
+    "geometry": {"type": ["object", "null"]},
+    "confidence": {"type": ["string", "null"]},
+    "source_id": {"type": "string"},
+    "source_fingerprint": {"type": "string"},
+    "trust": {"type": "object", "required": ["human_verified", "review_state"], "properties": {"human_verified": {"const": false}}},
+    "eligibility": {"type": "object", "required": ["retrieval", "binding", "finetune"]}
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "name": "bridge",
+  "title": "Bridge and culvert General Arrangement Drawings (railway and road)",
+  "sources": [
+    {
+      "kind": "agent_context",
+      "path": "../../agent_context",
+      "label": "Aagento GAD foundation model: agent-context"
+    }
+  ],
+  "skills_dir": "skills",
+  "protocol": "protocol.md",
+  "family_procedure": [
+    "Confirm the cues ON THE DRAWING before relying on this skill: zoom_view the views and read the printed words; a match from list_skills is a lead, not a classification.",
+    "If it applies: name parts with the vocabulary in `components`, look for the levels and relations in `representation`, and keep `failure` and the look-alikes in mind.",
+    "Every size, level and relation still comes from this drawing (inspect tools, find_values); use `check_rule` to compare a documented definition with the values you defined.",
+    "Say what you applied, assumed or found in conflict with record_finding; cite library ids as evidence.",
+    "If the cues contradict each other, or the drawing is a look-alike, do not force the skill: say so and ask_person."
+  ],
+  "family_sections": {
+    "inputs": "The sheet's views (pictures and inspect_sheet), its printed words (title, notes, labels, level texts), the sizes and levels it states. The `representation` section lists the facts a drawing of this kind normally states: compare, do not fill in.",
+    "prerequisites": "The cues in `recognition` are confirmed ON THE DRAWING (zoom_view; the printed words that matched are in list_skills). The look-alikes listed there are excluded, or both are said.",
+    "dependencies": "Recipes read-the-drawing, name-and-bind-sizes, relate-views-and-levels and handle-uncertainty; the records this skill cites (search_library / get_reference); the engine's own checks.",
+    "outputs": "set_structure in the model's own words; parts and values named from the drawing with evidence; the levels and relations the drawing shows; findings (record_finding) that cite this skill and the records used.",
+    "validation": "The engine validates every edit and the finish gate. For the definitions in `rules`, check_rule on the model's own values (advisory). A fact in `representation` the drawing does not state is reported as a gap, never filled."
+  }
+}
