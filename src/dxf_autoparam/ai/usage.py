@@ -67,11 +67,16 @@ def summary(period: str = "all", ledger: Path | None = None, recent: int = 15) -
         r["output"] += out + think
         r["thinking"] += think
         r["seconds"] += float(e.get("seconds") or 0)
+        if e.get("cost_usd") is not None:  # a gateway reports what each call cost: the authority for its models
+            r["reported"] = r.get("reported", 0.0) + float(e["cost_usd"])
+            r["reported_calls"] = r.get("reported_calls", 0) + 1
         last.append({"at": e.get("at"), "model": e["model"], "label": e.get("label"), "input": max(inp - cac, 0), "cached": cac, "output": out + think,
-                     "cost": _cost(price.get(e["model"]), max(inp - cac, 0), cac, out + think)})
+                     "cost": float(e["cost_usd"]) if e.get("cost_usd") is not None else _cost(price.get(e["model"]), max(inp - cac, 0), cac, out + think)})
     models = []
     for r in rows.values():
         p = price.get(r["model"])
-        models.append({**r, "seconds": round(r["seconds"], 1), "cost": _cost(p, r["input"], r["cached"], r["output"]), "price": p})
+        reported = r.pop("reported", None), r.pop("reported_calls", 0)
+        cost = reported[0] if r["calls"] and reported[1] == r["calls"] else _cost(p, r["input"], r["cached"], r["output"])
+        models.append({**r, "seconds": round(r["seconds"], 1), "cost": cost, "price": p, "cost_source": "gateway" if reported[1] else "price table"})
     return {"period": period, "models": sorted(models, key=lambda m: m["model"]), "recent": last[-recent:][::-1],
             "total_cost": sum(m["cost"] for m in models if m["cost"] is not None), "unpriced": [m["model"] for m in models if m["cost"] is None]}

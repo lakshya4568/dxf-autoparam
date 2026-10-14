@@ -55,7 +55,7 @@ try {
   await js("document.querySelector('[data-tab=cost]').click(); 1"); await sleep(600);
   check("the Cost tab lists each model's tokens and cost", /Input \(not cached\)/.test((await js("document.querySelector('#left').innerText")) || "") && !/undefined|NaN|\[object/.test((await js("document.querySelector('#left').innerText")) || ""));
   await js("document.querySelector('[data-tab=ai]').click(); 1"); await sleep(300);
-  check("the model picker offers 3.8 Flash and 4 Argon (high), 3.8 Flash selected", (await js("[...document.querySelectorAll('#ai-model option')].map((o) => o.value + (o.selected ? '*' : '')).join()")) === "gemini-3.8-flash*,gemini-4-argon");
+  check("the model picker offers 3.8 Flash (selected) and 4 Argon", String(await js("[...document.querySelectorAll('#ai-model option')].map((o) => o.value + (o.selected ? '*' : '')).join()")).startsWith("gemini-3.8-flash*,gemini-4-argon"));
   await js("(() => { const m = document.querySelector('#ai-model'); m.value = 'gemini-4-argon'; m.dispatchEvent(new Event('change')); window.__sent = null; const f = window.fetch; window.fetch = (u, o) => { if (String(u).includes('/ai/run')) window.__sent = JSON.parse(o.body); return f(u, o); }; return 1; })()");
   check("the agent's scope follows the open view", /V01/.test((await js("document.querySelector('#ai-scope').selectedOptions[0].textContent")) || ""));
   await js(`(() => { const s = document.querySelector('#ai-soft'); document.querySelector('#ai-opts, [data-fold=ai-opts]').open = true; s.value = 3; s.dispatchEvent(new Event('change')); return 1; })()`);

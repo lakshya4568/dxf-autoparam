@@ -272,6 +272,8 @@ def test_model_choices_and_per_run_config(monkeypatch):
     monkeypatch.setenv("GOOGLE_CLOUD_PROJECT", "p")
     monkeypatch.delenv("VERTEX_MODEL", raising=False)
     monkeypatch.delenv("GEMINI_MODEL", raising=False)
+    monkeypatch.delenv("EXPLABS_API_KEY", raising=False)
+    monkeypatch.setattr(vertex, "load_env_file", lambda *a, **k: None)  # the real .env must not decide this
     got = vertex.model_choices()
     assert got["default"] == "gemini-3.8-flash"
     assert [m["id"] for m in got["models"]] == ["gemini-3.8-flash", "gemini-4-argon"]
@@ -430,3 +432,72 @@ def test_workbench_remove_normalizes_parameter_names_and_guards_work(tmp_path):
     wb.write("remove", {"parameters": ["clear_span", "total_width"]})
     assert not any(p["name"] == "ClearSpan" for p in wb.answer["parameters"])
     assert not any(r["name"] == "TotalWidth" for r in wb.answer["relations"])
+
+
+def test_gateway_translates_the_loops_turns_and_reports_its_cost(tmp_path, monkeypatch):
+    """Gemini-shaped turns go out as chat-completions messages with matching tool-call ids; the answer comes back as a function call; the
+    gateway's own cost is what the ledger and the Cost tab use."""
+    import httpx
+    from google.genai import types
+
+    from dxf_autoparam.ai import gateway, vertex
+    from dxf_autoparam.ai.usage import summary
+
+    monkeypatch.setenv("EXPLABS_API_KEY", "xpl_test")
+    monkeypatch.setattr(vertex, "CACHE", tmp_path)
+    monkeypatch.setattr(gateway, "CACHE", tmp_path)
+    seen = {}
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        seen["auth"], seen["body"] = req.headers["authorization"], json.loads(req.content)
+        return httpx.Response(200, json={"choices": [{"message": {"content": None, "tool_calls": [
+            {"id": "c9", "type": "function", "function": {"name": "finish", "arguments": "{\"summary\": \"done\"}"}}]}, "finish_reason": "tool_calls"}],
+            "usage": {"prompt_tokens": 100, "completion_tokens": 30, "completion_tokens_details": {"reasoning_tokens": 10},
+                      "prompt_tokens_details": {"cached_tokens": 40}, "cost": 0.0123}})
+
+    gw = gateway.Gateway(gateway.GatewayConfig(model="gemini-4-argon"), client=httpx.Client(transport=httpx.MockTransport(handler)))
+    tools = [types.Tool(function_declarations=[types.FunctionDeclaration(name="finish", description="end", parameters_json_schema={"type": "object", "properties": {}})])]
+    history = [types.Content(role="user", parts=[types.Part.from_text(text="task")]),
+               types.Content(role="model", parts=[types.Part(function_call=types.FunctionCall(name="look", args={"a": 1}))]),
+               types.Content(role="user", parts=[types.Part.from_function_response(name="look", response={"result": "ok"})])]
+    content, usage = gw.step("SYS", tools, [], "k", history, "turn 1", "high")
+    msgs = seen["body"]["messages"]
+    assert seen["auth"] == "Bearer xpl_test"
+    assert set(seen["body"]) == {"model", "messages", "tools", "tool_choice", "temperature", "max_tokens", "reasoning_effort"}
+    assert (seen["body"]["reasoning_effort"], seen["body"]["temperature"], seen["body"]["max_tokens"]) == ("high", 0, 16384)
+    assert [m["role"] for m in msgs] == ["system", "user", "assistant", "tool"]
+    assert msgs[2]["tool_calls"][0]["id"] == msgs[3]["tool_call_id"]
+    call = content.parts[0].function_call
+    assert (call.name, dict(call.args)) == ("finish", {"summary": "done"})
+    assert (usage["input_tokens"], usage["output_tokens"], usage["thinking_tokens"], usage["vertex_cached_tokens"]) == (100, 20, 10, 40)
+    row = summary("all", tmp_path / "usage.jsonl")["models"][0]
+    assert row["model"] == "gateway:gemini-4-argon" and row["cost"] == 0.0123 and row["cost_source"] == "gateway"
+    assert "gateway:gemini-4-argon" in [m["id"] for m in vertex.model_choices()["models"]]
+    monkeypatch.delenv("EXPLABS_API_KEY")
+    monkeypatch.setattr(vertex, "load_env_file", lambda *a, **k: None)
+    assert "gateway:gemini-4-argon" not in [m["id"] for m in vertex.model_choices()["models"]]
+
+
+def test_gateway_drops_optional_fields_once_when_a_model_rejects_them(tmp_path, monkeypatch):
+    import httpx
+    from google.genai import types
+
+    from dxf_autoparam.ai import gateway
+
+    monkeypatch.setenv("EXPLABS_API_KEY", "xpl_test")
+    monkeypatch.setattr(gateway, "CACHE", tmp_path)
+    monkeypatch.setattr(gateway.time, "sleep", lambda s: None)
+    bodies = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        b = json.loads(req.content)
+        bodies.append(b)
+        if "reasoning_effort" in b:
+            return httpx.Response(400, json={"error": "unsupported field"})
+        return httpx.Response(200, json={"choices": [{"message": {"content": "hi"}, "finish_reason": "stop"}], "usage": {"prompt_tokens": 5, "completion_tokens": 1}})
+
+    gw = gateway.Gateway(gateway.GatewayConfig(model="m"), client=httpx.Client(transport=httpx.MockTransport(handler)))
+    h = [types.Content(role="user", parts=[types.Part.from_text(text="x")])]
+    _c, usage = gw.step("S", [], [], "k", h, "t", "high", max_out=99999)
+    assert len(bodies) == 2 and bodies[0]["max_tokens"] == 32768 and set(bodies[1]) == {"model", "messages"}
+    assert usage["dropped"] == ["reasoning_effort", "temperature", "max_tokens"]

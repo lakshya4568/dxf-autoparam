@@ -78,11 +78,18 @@ MODEL_CHOICES: list[dict] = [
 ]
 
 
+# A model reached through the gateway (ai/gateway.py): same agent session, another provider. Its id is "gateway:<gateway id>" so the ledger
+# and the Cost tab keep it apart from the same model called on Vertex directly; the gateway reports each call's cost itself.
+MODEL_CHOICES.append({"id": "gateway:gemini-4-argon", "label": "Gemini 4 Argon · high (via gateway)", "thinking": "high", "fallback": "",
+                      "provider": "gateway", "gateway_model": "gemini-4-argon", "explicit_cache": False})
+
+
 def model_choices() -> dict:
     """What the picker offers, and which is the default (the environment's model; it is listed even when it is not in the table)."""
     load_env_file()
     default = os.environ.get("VERTEX_MODEL") or os.environ.get("GEMINI_MODEL") or MODEL_CHOICES[0]["id"]
-    models = [{k: m[k] for k in ("id", "label", "thinking")} for m in MODEL_CHOICES]
+    gateway_ok = bool(os.environ.get("EXPLABS_API_KEY"))  # a gateway model is offered only when its key is set
+    models = [{k: m[k] for k in ("id", "label", "thinking")} for m in MODEL_CHOICES if m.get("provider") != "gateway" or gateway_ok]
     if default not in {m["id"] for m in models}:
         models.insert(0, {"id": default, "label": f"{default} · {os.environ.get('VERTEX_THINKING_LEVEL', 'high')}", "thinking": os.environ.get("VERTEX_THINKING_LEVEL", "high")})
     return {"default": default, "models": models}

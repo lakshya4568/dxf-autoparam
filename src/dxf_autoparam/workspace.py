@@ -237,11 +237,18 @@ class SheetSession:
                 self.gem = self.gem_factory()
                 self.gem_model = target
             else:
-                from .ai.vertex import Gemini, config
+                from .ai.vertex import MODEL_CHOICES, Gemini, config
 
-                cfg = config(target)
-                self.gem = Gemini(cfg)
-                self.gem_model = cfg.model
+                choice = next((m for m in MODEL_CHOICES if m["id"] == target), None)
+                if choice and choice.get("provider") == "gateway":
+                    from .ai.gateway import Gateway, GatewayConfig
+
+                    self.gem = Gateway(GatewayConfig(model=choice["gateway_model"], thinking=choice["thinking"]))
+                    self.gem_model = target
+                else:
+                    cfg = config(target)
+                    self.gem = Gemini(cfg)
+                    self.gem_model = cfg.model
         return self.gem
 
     def models(self) -> dict:
