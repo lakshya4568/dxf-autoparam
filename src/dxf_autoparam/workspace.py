@@ -23,7 +23,9 @@ shares, anchors, links and view corrections are transactions with undo / redo.
     POST /api/sheet/prefs                 what a person chose to see (saved with the project)
 
 The agent — ONE instruction, one session (ai/run.py):
-    POST /api/sheet/ai/run {instruction, scope, options}   start a run
+    GET  /api/sheet/ai/usage?period=today|all              tokens and cost per model, from the usage ledger
+    GET  /api/sheet/ai/models                              the models the picker offers (and the default)
+    POST /api/sheet/ai/run {instruction, scope, options}   start a run (options.model: one of those models)
     GET  /api/sheet/ai/progress?run=R1&since=n             its events, state, budget, questions, verdict
     POST /api/sheet/ai/continue {run, answers, note}       after it asked, or after a budget pause
     POST /api/sheet/ai/stop | apply | revert {run}
@@ -56,6 +58,7 @@ class SheetSession:
         self.shown: set[int] = set()  # entities the page draws changed (the committed state)
         self.opened = 0.0
         self.gem = None  # one Gemini client per sheet: its prompt cache serves the follow-ups
+        self.gem_model: str | None = None  # the model the client was made for
         self.gem_factory = None  # a test (or another provider) supplies the model here
         self.gem_per_run = False
         self.pictures = None
@@ -215,18 +218,27 @@ class SheetSession:
 
         return any(r.status in ACTIVE for r in self.runs.values())
 
-    def get_gem(self):
-        """The model: one client per sheet (its prompt cache serves the follow-ups)."""
+    def get_gem(self, model: str | None = None):
+        """The model: one client per sheet and per chosen model (its prompt cache serves the follow-ups)."""
         if self.gem_factory is not None and self.gem_per_run:
             return self.gem_factory()  # an offline demo: every run gets its own script
+        if self.gem is not None and model and self.gem_model != model:
+            self.gem.close()  # another model was picked: the old client's caches belong to the old model
+            self.gem = None
         if self.gem is None:
             if self.gem_factory is not None:
                 self.gem = self.gem_factory()
             else:
-                from .ai.vertex import Gemini
+                from .ai.vertex import Gemini, config
 
-                self.gem = Gemini()
+                self.gem = Gemini(config(model))
+            self.gem_model = model
         return self.gem
+
+    def models(self) -> dict:
+        from .ai.vertex import model_choices
+
+        return model_choices()
 
     def get_pictures(self):
         from .viewimg import Pictures
@@ -443,6 +455,12 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
                     if png is None:
                         return handler._json({"ok": False, "error": "that picture is no longer kept: ask the agent to look again"}, 404) or True
                     return handler._send(200, png, "image/png", {"Cache-Control": "max-age=3600"}) or True
+                if path == "/api/sheet/ai/usage":
+                    from .ai.usage import summary
+
+                    return handler._json(summary(q.get("period", ["all"])[0])) or True
+                if path == "/api/sheet/ai/models":
+                    return handler._json(sheet.models()) or True
                 if path == "/api/sheet/status":
                     return handler._json(sheet.status()) or True
                 if path == "/api/sheet/delta":

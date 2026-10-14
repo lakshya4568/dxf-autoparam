@@ -1075,7 +1075,7 @@ class Run:
         self.emit({"kind": "run_start", "instruction": self.instruction, "scope": self.scope, "budget": self.budget.to_dict()})
         self.emit({"kind": "stage", "stage": "inspecting", "text": "Inspecting the drawing and the active view"})
         bench = self.bench = SheetBench(self)
-        model = self.model = self.host.get_gem()
+        model = self.model = self.host.get_gem(self.options.get("model"))
         parts, key = self._prefix(bench)
         self.emit({"kind": "stage", "stage": "interpreting", "text": "Ready: the model reads the instruction"})
         task = self._first_message(bench)

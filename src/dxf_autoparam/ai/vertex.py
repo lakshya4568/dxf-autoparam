@@ -66,6 +66,28 @@ def load_env_file(path: str = ".env") -> None:
             os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
 
 
+# The models a person can pick between for a run (the page's model picker). Each is run at the thinking level named here;
+# `fallback` is what takes over when it is out of capacity ("" = none: a model that was chosen on purpose is never swapped
+# for a cheaper one behind the person's back, the run fails visibly instead). The default is the env's model.
+MODEL_CHOICES: list[dict] = [
+    {"id": "gemini-3.8-flash", "label": "Gemini 3.8 Flash · high", "thinking": "high", "fallback": None},  # None = the env's fallback
+    {"id": "gemini-4-argon", "label": "Gemini 4 Argon · high (premium)", "thinking": "high", "fallback": "",
+     "explicit_cache": False,
+     # USD per million tokens, as the owner gave them (introductory, through 2026-11-30; cached ≈ 95% off; implicit caching only)
+     "price": {"input": 2.0, "cached": 0.10, "output": 10.0, "until": "2026-11-30"}},  # Vertex answers 400 "does not support explicit context caching" (probed 2026-10-13)
+]
+
+
+def model_choices() -> dict:
+    """What the picker offers, and which is the default (the environment's model; it is listed even when it is not in the table)."""
+    load_env_file()
+    default = os.environ.get("VERTEX_MODEL") or os.environ.get("GEMINI_MODEL") or MODEL_CHOICES[0]["id"]
+    models = [{k: m[k] for k in ("id", "label", "thinking")} for m in MODEL_CHOICES]
+    if default not in {m["id"] for m in models}:
+        models.insert(0, {"id": default, "label": f"{default} · {os.environ.get('VERTEX_THINKING_LEVEL', 'high')}", "thinking": os.environ.get("VERTEX_THINKING_LEVEL", "high")})
+    return {"default": default, "models": models}
+
+
 class GeminiUnavailable(RuntimeError):
     """Every model in the plan was out of capacity, past its deadline, or gave no usable answer."""
 
@@ -197,7 +219,8 @@ def _log(entry: dict) -> None:
         f.write(json.dumps({**entry, "at": time.strftime("%Y-%m-%d %H:%M:%S")}) + "\n")
 
 
-def config() -> VertexConfig:
+def config(model: str | None = None) -> VertexConfig:
+    """The environment's configuration; `model` (one of MODEL_CHOICES) is the person's pick for this run and brings its own thinking level and fallback."""
     load_env_file()
     project = os.environ.get("GOOGLE_CLOUD_PROJECT") or os.environ.get("GCLOUD_PROJECT") or os.environ.get("GCP_PROJECT")
     if not project:
@@ -207,7 +230,7 @@ def config() -> VertexConfig:
             project = ""
     if not project:
         raise RuntimeError("No Google Cloud project: set GOOGLE_CLOUD_PROJECT in .env or run `gcloud config set project <id>`.")
-    return VertexConfig(
+    cfg = VertexConfig(
         project=project,
         location=os.environ.get("VERTEX_LOCATION") or os.environ.get("GOOGLE_CLOUD_LOCATION") or "global",
         model=os.environ.get("VERTEX_MODEL") or os.environ.get("GEMINI_MODEL") or "gemini-3.8-flash",
@@ -218,6 +241,18 @@ def config() -> VertexConfig:
         cache_ttl_s=int(os.environ.get("VERTEX_CACHE_TTL_S", "1200")),
         max_output_tokens=int(os.environ.get("VERTEX_MAX_OUTPUT_TOKENS", "65536")),
     )
+    if model:
+        choice = next((m for m in MODEL_CHOICES if m["id"] == model), None)
+        if choice is None:
+            raise ValueError(f"unknown model {model!r}: choose one of {[m['id'] for m in MODEL_CHOICES]}")
+        cfg.model, cfg.thinking = choice["id"], choice["thinking"]
+        if choice.get("explicit_cache") is False:
+            cfg.explicit_cache = False
+        if choice["fallback"] is not None:
+            cfg.fallback_model = choice["fallback"]
+        if cfg.fallback_model == cfg.model:
+            cfg.fallback_model = ""
+    return cfg
 
 
 def _transient(exc: Exception) -> bool:

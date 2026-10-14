@@ -52,9 +52,15 @@ try {
   await js("openView('V01', true); 1"); await sleep(500);
   await js("document.querySelector('[data-tab=ai]').click(); 1"); await sleep(300);
   check("there is ONE Run button and no per-stage buttons", (await js("document.querySelectorAll('#left button').length && !document.querySelector('#ai-views, #ai-unit, #ai-shared, #plan-read')")) === true && (await js("document.querySelectorAll('#ai-run').length")) === 1);
+  await js("document.querySelector('[data-tab=cost]').click(); 1"); await sleep(600);
+  check("the Cost tab lists each model's tokens and cost", /Input \(not cached\)/.test((await js("document.querySelector('#left').innerText")) || "") && !/undefined|NaN|\[object/.test((await js("document.querySelector('#left').innerText")) || ""));
+  await js("document.querySelector('[data-tab=ai]').click(); 1"); await sleep(300);
+  check("the model picker offers 3.8 Flash and 4 Argon (high), 3.8 Flash selected", (await js("[...document.querySelectorAll('#ai-model option')].map((o) => o.value + (o.selected ? '*' : '')).join()")) === "gemini-3.8-flash*,gemini-4-argon");
+  await js("(() => { const m = document.querySelector('#ai-model'); m.value = 'gemini-4-argon'; m.dispatchEvent(new Event('change')); window.__sent = null; const f = window.fetch; window.fetch = (u, o) => { if (String(u).includes('/ai/run')) window.__sent = JSON.parse(o.body); return f(u, o); }; return 1; })()");
   check("the agent's scope follows the open view", /V01/.test((await js("document.querySelector('#ai-scope').selectedOptions[0].textContent")) || ""));
   await js(`(() => { const s = document.querySelector('#ai-soft'); document.querySelector('#ai-opts, [data-fold=ai-opts]').open = true; s.value = 3; s.dispatchEvent(new Event('change')); return 1; })()`);
   await js(`(() => { const t = document.querySelector('#ai-instr'); t.value = ${JSON.stringify(INSTR)}; t.dispatchEvent(new Event('input')); document.querySelector('#ai-run').click(); return 1; })()`);
+  check("the chosen model travels with the run", (await js("window.__sent && window.__sent.options.model")) === "gemini-4-argon");
   check("a chunk of work ends in PAUSED, not in success", await until("window.__ws.run && window.__ws.run.status === 'paused'", 15000));
   await sleep(400);
   check("a paused run shows no verdict and offers Continue", (await js("window.__ws.run.verdict")) === null && (await js("getComputedStyle(document.querySelector('#ai-continue')).display")) !== "none" && /Paused/.test(await js("document.querySelector('#ai-live .status .top').textContent")));

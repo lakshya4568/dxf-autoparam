@@ -192,7 +192,7 @@
 </header>
 <main id="main">
   <aside>
-    <div class="tabs"><button data-tab="sheet" class="on" title="The views found on the sheet">Views</button><button data-tab="params" title="The sizes you can change">Sizes</button><button data-tab="ai" title="Tell the agent what to do — one instruction, it decides the steps">Agent</button></div>
+    <div class="tabs"><button data-tab="sheet" class="on" title="The views found on the sheet">Views</button><button data-tab="params" title="The sizes you can change">Sizes</button><button data-tab="ai" title="Tell the agent what to do — one instruction, it decides the steps">Agent</button><button data-tab="cost" title="Tokens and cost of the model calls, per model">Cost</button></div>
     <div class="scroll" id="left"></div>
   </aside>
   <div id="stage">
@@ -736,7 +736,7 @@ function renderLeft() {
   const L = $("#left");
   if (!S) { L.innerHTML = `<div class="note">No drawing open.</div>`; return; }
   const top = L.scrollTop, atEnd = top + L.clientHeight >= L.scrollHeight - 40;
-  L.innerHTML = tab === "params" ? paramList() : tab === "ai" ? agentPanel() : sheetTree();
+  L.innerHTML = tab === "params" ? paramList() : tab === "ai" ? agentPanel() : tab === "cost" ? costPanel() : sheetTree();
   $("#main").classList.toggle("wide", tab === "ai");
   wireLeft(); wireFolds(L);
   L.scrollTop = tab === "ai" && run && ACTIVE.has(run.status) && atEnd ? L.scrollHeight : top;   // a running log follows unless scrolled up
@@ -822,6 +822,7 @@ function wireLeft() {
   const ps = $("#psearch"); if (ps) ps.addEventListener("input", () => { const q = ps.value.toLowerCase(); document.querySelectorAll("#left [data-search]").forEach((r) => r.style.display = r.dataset.search.includes(q) ? "" : "none"); });
   const lp = $("#loadprops"); if (lp) lp.addEventListener("click", loadProposals);
   if (tab === "ai") wireAgent();
+  if (tab === "cost") wireCost();
 }
 function parseNum(s) { const v = Number(String(s).replace(/[, ]/g, "")); return isFinite(v) ? v : null; }
 
@@ -1110,7 +1111,7 @@ async function loadProposals() {
 // The page holds no logic of its own about success: what it shows of a run is what the server reports (state, verdict,
 // questions, budget), and a poll for one run never overwrites another.
 const ACTIVE = new Set(["queued", "running", "stopping"]);
-let run = null, runs = [], runPoll = 0, aiDraft = "", aiScope = "auto", aiOpts = { confirm: false, soft: 0, max: 1000 };
+let run = null, runs = [], runPoll = 0, aiDraft = "", aiScope = "auto", aiOpts = { confirm: false, soft: 0, max: 1000, model: "" }, aiModels = null;
 const dur = (s) => s == null ? "" : s < 60 ? `${s.toFixed(s < 10 ? 1 : 0)} s` : `${Math.floor(s / 60)} min ${String(Math.round(s % 60)).padStart(2, "0")} s`;
 const TOOL_WORDS = { inspect_sheet: "looked at the sheet", open_unit: "opened a view", inspect_regions: "inspected regions", inspect_lines: "inspected lines", inspect_candidates: "inspected candidate sizes",
   inspect_dimensions: "inspected dimensions", resolve_labels: "resolved labels", find_values: "searched for sizes", knowledge: "consulted the knowledge pack", what_moves: "measured what a value moves",
@@ -1258,6 +1259,7 @@ function agentPanel() {
     <div class="muted" style="font-size:11px">One instruction. The agent decides the steps: it looks at the sheet and the view, zooms where it needs to, reads what you wrote, plans, asks when something is yours to decide, and the engine checks everything before it is kept.</div>
     <div class="row2"><span class="muted">Applies to</span><select id="ai-scope"><option value="auto" ${aiScope === "auto" ? "selected" : ""}>Where I am (${esc(choices.find((c) => c.id === cur).label)})</option>${choices.map((c) => `<option value="${c.id}" ${aiScope === c.id ? "selected" : ""} ${c.ok ? "" : "disabled"}>${esc(c.label)}</option>`).join("")}</select></div>
     <textarea id="ai-instr" placeholder="e.g. Parametrize every view and link the sizes the views share; say in your plan which components appear in more than one view. Or: Change the width of the opening to 2500 mm, keep the middle wall centred and the foundation fixed. Show me anything ambiguous before applying.">${esc(aiDraft)}</textarea>
+    ${aiModels && aiModels.models.length > 1 ? `<div class="row2"><span class="muted">Model</span><select id="ai-model" title="Each run uses the model chosen here, at the thinking level shown">${aiModels.models.map((m) => `<option value="${esc(m.id)}" ${(aiOpts.model || aiModels.default) === m.id ? "selected" : ""}>${esc(m.label)}</option>`).join("")}</select></div>` : ""}
     <div class="row2"><button class="run" id="ai-run">▶ Run</button><button class="stop" id="ai-stop" style="display:none">■ Stop</button><button id="ai-continue" style="display:none">Continue</button><button id="ai-apply" style="display:none" title="Apply what is valid now, and say what is not done">Apply what is valid</button><span class="muted" style="font-size:11px">⌘/Ctrl + Enter</span></div>
     ${fold("ai-opts", "Options and budget", `<div class="note"><label><input type="checkbox" id="ai-confirm" ${aiOpts.confirm ? "checked" : ""}> ask me to confirm a plan before it is applied</label></div>
       <div class="note">pause after <input type="number" id="ai-soft" value="${aiOpts.soft}" min="0" style="width:64px"> turns (0 = never pause; a pause is not a failure: continue goes on) · at most <input type="number" id="ai-max" value="${aiOpts.max}" style="width:70px"> turns in all</div>
@@ -1313,6 +1315,7 @@ function wireAgent() {
   on("#ai-stop", () => guard(() => api("/api/sheet/ai/stop", { run: run.id })).then(() => pollRun(true)));
   on("#ai-continue", () => resumeRun({}));
   on("#ai-apply", async () => { const r = await guard(() => api("/api/sheet/ai/apply", { run: run.id }), "Applying what is valid…"); if (r) { take(r); await attachRun(run.id); await afterRun(true); } });
+  const md = $("#ai-model"); if (md) md.addEventListener("change", () => { aiOpts.model = md.value; });
   const c = $("#ai-confirm"); if (c) c.addEventListener("change", () => { aiOpts.confirm = c.checked; });
   const so = $("#ai-soft"); if (so) so.addEventListener("change", () => { aiOpts.soft = Math.max(0, +so.value || 0); });
   const mx = $("#ai-max"); if (mx) mx.addEventListener("change", () => { aiOpts.max = Math.max(1, +mx.value || 1000); });
@@ -1325,7 +1328,7 @@ function mergeRun(r) {
 async function startRun() {
   const instruction = aiDraft.trim(); if (!instruction) return say("write an instruction first", "bad");
   if (run && ACTIVE.has(run.status)) return say("the agent is still working: stop it first", "bad");
-  const body = { instruction, scope: scopePayload(), options: { confirm_plan: aiOpts.confirm, budget: { soft_turns: aiOpts.soft, max_turns: aiOpts.max } } };
+  const body = { instruction, scope: scopePayload(), options: { confirm_plan: aiOpts.confirm, ...(aiOpts.model ? { model: aiOpts.model } : {}), budget: { soft_turns: aiOpts.soft, max_turns: aiOpts.max } } };
   const r = await guard(() => api("/api/sheet/ai/run", body), "Starting…"); if (!r) return;
   run = { id: r.run, events: [], next: 0, status: "queued", usage: {}, can: {}, questions: [], verdict: null, elapsed: 0 };
   for (const k of [...openFolds, ...closedFolds]) if (k.startsWith("turn-")) { openFolds.delete(k); closedFolds.delete(k); }
@@ -1361,6 +1364,34 @@ async function afterRun(final) {   // the sheet may have changed under the run: 
   renderRight(); renderLeftKeep(); draw();
 }
 function renderLeftKeep() { if (tab !== "ai") renderLeft(); }
+let usage = null, usagePeriod = "all";
+const fmtN = (n) => Number(n || 0).toLocaleString("en-US");
+const fmtUsd = (c) => c == null ? "price not set" : "$" + (c < 0.1 ? c.toFixed(4) : c.toFixed(2));
+function costPanel() {
+  if (!usage) return `<div class="muted" style="padding:10px">Loading…</div>`;
+  const pick = (id, l) => `<button data-period="${id}" class="${usagePeriod === id ? "on" : ""}">${l}</button>`;
+  let h = `<div class="agent-box"><div class="row2">${pick("today", "Today")}${pick("all", "All time")}<button id="cost-refresh">↻</button><span class="muted" style="margin-left:auto">total <b>${usage.total_cost ? fmtUsd(usage.total_cost) : "$0"}</b></span></div>`;
+  for (const m of usage.models) {
+    const p = m.price;
+    h += `<div class="note"><b>${esc((aiModels && aiModels.models.find((x) => x.id === m.model) || {}).label || m.model)}</b> <span class="muted">${esc(m.model)}</span>
+      <table style="width:100%;font-size:12px;margin-top:4px"><tr><td>Cost</td><td style="text-align:right"><b>${fmtUsd(m.cost)}</b></td></tr>
+      <tr><td>Calls</td><td style="text-align:right">${fmtN(m.calls)}${m.errors ? ` <span class="muted">(+${m.errors} failed)</span>` : ""}</td></tr>
+      <tr><td>Input (not cached)</td><td style="text-align:right">${fmtN(m.input)}</td></tr>
+      <tr><td>Input (cached)</td><td style="text-align:right">${fmtN(m.cached)}</td></tr>
+      <tr><td>Output (answer + thinking)</td><td style="text-align:right">${fmtN(m.output)} <span class="muted">(thinking ${fmtN(m.thinking)})</span></td></tr>
+      <tr><td>Model time</td><td style="text-align:right">${m.seconds} s</td></tr></table>
+      <div class="muted" style="font-size:11px">${p ? `$${p.input}/M input · $${p.cached ?? p.input}/M cached · $${p.output}/M output${p.until ? ` (to ${esc(p.until)})` : ""}` : "no price set: set VERTEX_PRICES to see an amount"}</div></div>`;
+  }
+  if (!usage.models.length) h += `<div class="muted">No model calls ${usagePeriod === "today" ? "today" : "recorded"}.</div>`;
+  if (usage.recent.length) h += fold("cost-recent", "Latest calls", `<table style="width:100%;font-size:11px">${usage.recent.map((c) => `<tr><td>${esc((c.at || "").slice(5, 16))}</td><td>${esc(c.model.replace("gemini-", ""))}</td><td>${esc(c.label || "")}</td><td style="text-align:right">${fmtN(c.input)}+${fmtN(c.cached)}c → ${fmtN(c.output)}</td><td style="text-align:right">${c.cost == null ? "" : fmtUsd(c.cost)}</td></tr>`).join("")}</table>`);
+  return h + `<div class="muted" style="font-size:11px;margin-top:6px">From this app's usage ledger (calls made here). The cloud console's billing report is the authority for the whole project and lags by hours.</div></div>`;
+}
+async function loadUsage() { try { usage = await api("/api/sheet/ai/usage?period=" + usagePeriod); if (tab === "cost") renderLeft(); } catch (e) { say(e.message, "bad"); } }
+function wireCost() {
+  document.querySelectorAll("#left [data-period]").forEach((b) => b.addEventListener("click", () => { usagePeriod = b.dataset.period; loadUsage(); }));
+  const r = $("#cost-refresh"); if (r) r.addEventListener("click", loadUsage);
+}
+async function loadModels() { try { aiModels = await api("/api/sheet/ai/models"); if (tab === "ai") renderAgentLive(); } catch (e) { /* no picker: the default model runs */ } }
 async function loadRuns() { try { runs = (await api("/api/sheet/ai/runs")).runs; if (tab === "ai") renderAgentLive(); } catch (e) { /* the list is a convenience */ } }
 
 // ── file, tabs, theme ────────────────────────────────────────────────────────
@@ -1375,7 +1406,7 @@ async function loadSheet() {
   base = { on: !!(S.prefs && S.prefs.baseline.on), list: [], rev: -1, color: (S.prefs && S.prefs.baseline.color) || "#4f6bff", deviation: null };
   $("#orig").classList.toggle("primary", base.on); $("#origcolor").value = base.color; document.documentElement.style.setProperty("--h-base", base.color);
   if (base.on) loadBaseline();
-  loadStatus(); loadRuns(); if (S.current_run) attachRun(S.current_run);
+  loadStatus(); loadRuns(); loadModels(); if (S.current_run) attachRun(S.current_run);
   renderLeft(); renderRight(); fitted = false; resize();
   say(`${S.entities.toLocaleString()} entities · ${S.groups.filter((x) => x.kind === "view").length} views · loaded in ${Math.round(g.ms)} ms`, "ok");
 }
@@ -1385,7 +1416,7 @@ async function openFile(f) {
   if (r) await loadSheet();
 }
 function setTab() { document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab)); renderLeft(); }
-document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => { tab = b.dataset.tab; setTab(); }));
+document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => { tab = b.dataset.tab; setTab(); if (tab === "cost") loadUsage(); }));
 $("#open").onclick = $("#open2").onclick = () => $("#pick").click();
 $("#pick").onchange = (e) => { const f = e.target.files[0]; if (f) openFile(f); e.target.value = ""; };
 $("#undo").onclick = undo; $("#redo").onclick = redo; $("#fitall").onclick = () => fit(sheetBox());

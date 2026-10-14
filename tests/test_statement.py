@@ -105,7 +105,7 @@ def test_a_link_is_about_at_least_two_places(two):
 
 
 def test_a_malformed_statement_is_refused_in_words_and_never_crashes_the_run(two):
-    sm, ua, ub = two
+    sm, _ua, _ub = two
     r = apply_plan(sm, "R1", {"summary": 7, "assumptions": ["just words", 3, {"text": "kept"}],
                               "links": ["junk", {"what": "x", "appears_in": ["u", 3, None], "bound_by": "noted_only", "shared_value": 5},
                                         {"what": "y", "appears_in": "nope", "bound_by": "noted_only", "evidence": "text"}]})

@@ -214,3 +214,46 @@ def test_a_run_is_started_asked_answered_and_checked_over_http(tmp_path):
         assert revert[0] == 409  # the sheet moved on since the run: undo step by step, not a blind revert
     finally:
         httpd.shutdown()
+
+
+def test_model_choices_and_per_run_config(monkeypatch):
+    """The picker offers 3.8 Flash and 4 Argon at high thinking; a chosen model is never swapped for a cheaper fallback."""
+    from dxf_autoparam.ai import vertex
+
+    monkeypatch.setenv("GOOGLE_CLOUD_PROJECT", "p")
+    monkeypatch.delenv("VERTEX_MODEL", raising=False)
+    monkeypatch.delenv("GEMINI_MODEL", raising=False)
+    got = vertex.model_choices()
+    assert got["default"] == "gemini-3.8-flash"
+    assert [m["id"] for m in got["models"]] == ["gemini-3.8-flash", "gemini-4-argon"]
+    argon = vertex.config("gemini-4-argon")
+    assert (argon.model, argon.thinking, argon.fallback_model) == ("gemini-4-argon", "high", "")
+    assert argon.explicit_cache is False and vertex.config("gemini-3.8-flash").explicit_cache is True
+    assert vertex.config("gemini-3.8-flash").fallback_model == "gemini-3.7-flash"
+    import pytest
+
+    with pytest.raises(ValueError):
+        vertex.config("gemini-nope")
+
+
+def test_usage_summary_costs_each_model_from_the_ledger(tmp_path, monkeypatch):
+    """Uncached input, cached input and output (answer + thinking) are priced separately; an unpriced model shows tokens and no amount."""
+    import json
+
+    import pytest
+
+    from dxf_autoparam.ai.usage import summary
+
+    monkeypatch.delenv("VERTEX_PRICES", raising=False)
+    rows = [{"model": "gemini-4-argon", "input_tokens": 1_000_000, "vertex_cached_tokens": 400_000, "output_tokens": 50_000, "thinking_tokens": 50_000, "at": "2026-10-13 10:00:00"},
+            {"model": "gemini-4-argon", "error": "429", "at": "2026-10-13 10:01:00"},
+            {"model": "gemini-3.8-flash", "input_tokens": 10, "output_tokens": 5, "at": "2026-10-12 09:00:00"}]
+    ledger = tmp_path / "usage.jsonl"
+    ledger.write_text("\n".join(json.dumps(r) for r in rows) + "\nnot json\n")
+    s = summary("all", ledger)
+    argon = next(m for m in s["models"] if m["model"] == "gemini-4-argon")
+    assert (argon["input"], argon["cached"], argon["output"], argon["calls"], argon["errors"]) == (600_000, 400_000, 100_000, 1, 1)
+    assert argon["cost"] == pytest.approx(0.6 * 2.0 + 0.4 * 0.10 + 0.1 * 10.0)
+    assert next(m for m in s["models"] if m["model"] == "gemini-3.8-flash")["cost"] is None and s["unpriced"] == ["gemini-3.8-flash"]
+    monkeypatch.setenv("VERTEX_PRICES", json.dumps({"gemini-3.8-flash": {"input": 1, "output": 4}}))
+    assert summary("all", ledger)["unpriced"] == []
