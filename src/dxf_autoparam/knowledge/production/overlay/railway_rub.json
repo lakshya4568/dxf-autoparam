@@ -1,0 +1,562 @@
+{
+  "family": "railway_rub",
+  "status": "authored_from_source",
+  "basis": "Read by a person from aagento-bridge road-under-bridge-railway-rule-engine.ts (the registered railway road-under-bridge engine). The box geometry is the same rule engine shape as the RCC box families: every geometry value is added to levels in metres (z_bot = structTopBotSlab - tSB, bed level the finished floor), so parameters and outputs are metres unless noted. The BOQ (bill of quantities) fallback block returns fixed widths and heights in metres for standard sub-components (shear key, retaining walls, curtain walls, aprons, approach slab, crash barrier, expansion joint, ballast retainer): these are constants the engine returns, not read from the model, so they have no parameter of their own \u2014 only outputs.",
+  "parameters": {
+    "project.cells": {
+      "kind": "count",
+      "unit": "-",
+      "label": "number of cells (barrels) across",
+      "component": "box",
+      "evidence": [
+        "road-under-bridge-railway-rule-engine.ts:14"
+      ]
+    },
+    "geometry.clear_w": {
+      "kind": "length",
+      "unit": "m",
+      "label": "clear span of one cell",
+      "component": "cell",
+      "evidence": [
+        "road-under-bridge-railway-rule-engine.ts:15"
+      ]
+    },
+    "geometry.clear_h": {
+      "kind": "length",
+      "unit": "m",
+      "label": "clear height of a cell",
+      "component": "cell",
+      "evidence": [
+        "road-under-bridge-railway-rule-engine.ts:16"
+      ]
+    },
+    "geometry.t_wall_o": {
+      "kind": "length",
+      "unit": "m",
+      "label": "thickness of each outer wall",
+      "component": "outer_wall",
+      "evidence": [
+        "road-under-bridge-railway-rule-engine.ts:17"
+      ]
+    },
+    "geometry.t_wall_i": {
+      "kind": "length",
+      "unit": "m",
+      "label": "thickness of each intermediate wall",
+      "component": "inner_wall",
+      "evidence": [
+        "road-under-bridge-railway-rule-engine.ts:18"
+      ]
+    },
+    "geometry.t_slab_t": {
+      "kind": "length",
+      "unit": "m",
+      "label": "thickness of the top slab",
+      "component": "top_slab",
+      "evidence": [
+        "road-under-bridge-railway-rule-engine.ts:19"
+      ]
+    },
+    "geometry.t_slab_b": {
+      "kind": "length",
+      "unit": "m",
+      "label": "thickness of the bottom slab",
+      "component": "bottom_slab",
+      "evidence": [
+        "road-under-bridge-railway-rule-engine.ts:20"
+      ]
+    },
+    "geometry.haunch_size": {
+      "kind": "length",
+      "unit": "m",
+      "label": "haunch size at the wall-slab junctions",
+      "component": "haunch",
+      "evidence": [
+        "road-under-bridge-railway-rule-engine.ts:57"
+      ]
+    },
+    "deck.wearing_course": {
+      "kind": "length",
+      "unit": "m",
+      "label": "wearing course on the bottom slab (bed level is its top)",
+      "component": "wearing_course",
+      "evidence": [
+        "road-under-bridge-railway-rule-engine.ts:21",
+        "road-under-bridge-railway-rule-engine.ts:37"
+      ]
+    },
+    "deck.embankment_slope": {
+      "kind": "ratio",
+      "unit": "-",
+      "label": "embankment side slope, horizontal per vertical",
+      "component": "embankment",
+      "evidence": [
+        "road-under-bridge-railway-rule-engine.ts:79"
+      ]
+    },
+    "slab.type": {
+      "kind": "text",
+      "unit": "-",
+      "label": "railway or highway slab type label",
+      "component": "slab",
+      "evidence": [
+        "road-under-bridge-railway-rule-engine.ts:74"
+      ]
+    },
+    "slab.width": {
+      "kind": "length",
+      "unit": "m",
+      "label": "slab width",
+      "component": "slab",
+      "evidence": [
+        "road-under-bridge-railway-rule-engine.ts:72"
+      ]
+    },
+    "slab.thickness": {
+      "kind": "length",
+      "unit": "m",
+      "label": "slab thickness",
+      "component": "slab",
+      "evidence": [
+        "road-under-bridge-railway-rule-engine.ts:73"
+      ]
+    },
+    "side.wing_l": {
+      "kind": "length",
+      "unit": "m",
+      "label": "wing wall length",
+      "component": "wing_wall",
+      "evidence": [
+        "road-under-bridge-railway-rule-engine.ts:27"
+      ]
+    },
+    "side.apron_l": {
+      "kind": "length",
+      "unit": "m",
+      "label": "apron length",
+      "component": "apron",
+      "evidence": [
+        "road-under-bridge-railway-rule-engine.ts:28"
+      ]
+    },
+    "foundation.pcc_sub_base": {
+      "kind": "length",
+      "unit": "m",
+      "label": "PCC sub-base thickness under the bottom slab",
+      "component": "foundation",
+      "evidence": [
+        "road-under-bridge-railway-rule-engine.ts:25"
+      ]
+    },
+    "foundation.sand_fill_depth": {
+      "kind": "length",
+      "unit": "m",
+      "label": "sand / granular fill depth under the PCC",
+      "component": "foundation",
+      "evidence": [
+        "road-under-bridge-railway-rule-engine.ts:26"
+      ]
+    },
+    "hydraulics.hfl": {
+      "kind": "level",
+      "unit": "m",
+      "label": "high flood level",
+      "component": "site",
+      "evidence": [
+        "road-under-bridge-railway-rule-engine.ts:23"
+      ]
+    },
+    "hydraulics.bed_lvl": {
+      "kind": "level",
+      "unit": "m",
+      "label": "bed level: the finished floor, top of the wearing course",
+      "component": "cell",
+      "evidence": [
+        "road-under-bridge-railway-rule-engine.ts:22"
+      ]
+    },
+    "hydraulics.soffit_level": {
+      "kind": "level",
+      "unit": "m",
+      "label": "soffit level as entered",
+      "component": "top_slab",
+      "evidence": [
+        "road-under-bridge-railway-rule-engine.ts:24"
+      ]
+    },
+    "options2d.show_wing_wall": {
+      "kind": "flag",
+      "unit": "-",
+      "label": "wing walls are part of the arrangement",
+      "component": "wing_wall",
+      "evidence": [
+        "road-under-bridge-railway-rule-engine.ts:77"
+      ]
+    },
+    "options2d.show_curtain_wall": {
+      "kind": "flag",
+      "unit": "-",
+      "label": "curtain wall is part of the arrangement",
+      "component": "curtain_wall",
+      "evidence": [
+        "road-under-bridge-railway-rule-engine.ts:78"
+      ]
+    },
+    "deck.formation_lvl": {
+      "kind": "level",
+      "unit": "m",
+      "label": "formation level (defaults to the box top level)",
+      "component": "track",
+      "evidence": [
+        "road-under-bridge-railway-rule-engine.ts:44"
+      ]
+    },
+    "deck.rail_level": {
+      "kind": "level",
+      "unit": "m",
+      "label": "rail level as entered (else formation level + the rail/formation offset)",
+      "component": "track",
+      "evidence": [
+        "road-under-bridge-railway-rule-engine.ts:47"
+      ]
+    }
+  },
+  "outputs": {
+    "total_w": {
+      "kind": "length",
+      "unit": "m",
+      "label": "overall width of the box, outer face to outer face"
+    },
+    "total_h": {
+      "kind": "length",
+      "unit": "m",
+      "label": "overall height of the box"
+    },
+    "flow_area": {
+      "kind": "area",
+      "unit": "m2",
+      "label": "clear waterway area of all cells"
+    },
+    "cells": {
+      "kind": "count",
+      "unit": "-",
+      "label": "number of cells"
+    },
+    "cW": {
+      "kind": "length",
+      "unit": "m",
+      "label": "clear span"
+    },
+    "cH": {
+      "kind": "length",
+      "unit": "m",
+      "label": "clear height"
+    },
+    "tOW": {
+      "kind": "length",
+      "unit": "m",
+      "label": "outer wall thickness"
+    },
+    "tIW": {
+      "kind": "length",
+      "unit": "m",
+      "label": "inner wall thickness"
+    },
+    "tST": {
+      "kind": "length",
+      "unit": "m",
+      "label": "top slab thickness"
+    },
+    "tSB": {
+      "kind": "length",
+      "unit": "m",
+      "label": "bottom slab thickness"
+    },
+    "wearC": {
+      "kind": "length",
+      "unit": "m",
+      "label": "wearing course thickness"
+    },
+    "haunch": {
+      "kind": "length",
+      "unit": "m",
+      "label": "haunch size"
+    },
+    "z_bot": {
+      "kind": "level",
+      "unit": "m",
+      "label": "level of the underside of the bottom slab"
+    },
+    "z_top": {
+      "kind": "level",
+      "unit": "m",
+      "label": "level of the top of the top slab"
+    },
+    "soffit": {
+      "kind": "level",
+      "unit": "m",
+      "label": "level of the underside of the top slab"
+    },
+    "bedLvl": {
+      "kind": "level",
+      "unit": "m",
+      "label": "bed level"
+    },
+    "hfl": {
+      "kind": "level",
+      "unit": "m",
+      "label": "high flood level"
+    },
+    "soffit_level": {
+      "kind": "level",
+      "unit": "m",
+      "label": "soffit level as entered"
+    },
+    "roadUnderBridgeTopLvl": {
+      "kind": "level",
+      "unit": "m",
+      "label": "level of the top of the box (matches z_top)"
+    },
+    "formLvl": {
+      "kind": "level",
+      "unit": "m",
+      "label": "formation level used by the drawing"
+    },
+    "railLvl": {
+      "kind": "level",
+      "unit": "m",
+      "label": "rail level used by the drawing"
+    },
+    "pccTop": {
+      "kind": "level",
+      "unit": "m",
+      "label": "level of the top of the PCC sub-base"
+    },
+    "pccBot": {
+      "kind": "level",
+      "unit": "m",
+      "label": "level of the underside of the PCC sub-base"
+    },
+    "granBot": {
+      "kind": "level",
+      "unit": "m",
+      "label": "level of the underside of the sand / granular fill"
+    },
+    "pccB": {
+      "kind": "length",
+      "unit": "m",
+      "label": "PCC sub-base thickness"
+    },
+    "sandFill": {
+      "kind": "length",
+      "unit": "m",
+      "label": "sand fill depth"
+    },
+    "spanLen": {
+      "kind": "length",
+      "unit": "m",
+      "label": "longitudinal span length (3.925 x 2 + 4 x earth cushion)"
+    },
+    "wingL": {
+      "kind": "length",
+      "unit": "m",
+      "label": "wing wall length"
+    },
+    "apronL": {
+      "kind": "length",
+      "unit": "m",
+      "label": "apron length"
+    },
+    "earthCushion": {
+      "kind": "length",
+      "unit": "m",
+      "label": "earth cushion above the box top"
+    },
+    "slabWidth": {
+      "kind": "length",
+      "unit": "m",
+      "label": "slab width"
+    },
+    "slabThick": {
+      "kind": "length",
+      "unit": "m",
+      "label": "slab thickness"
+    },
+    "slope": {
+      "kind": "ratio",
+      "unit": "-",
+      "label": "embankment side slope"
+    },
+    "slabType": {
+      "kind": "text",
+      "unit": "-",
+      "label": "railway or highway slab type label"
+    },
+    "showWingWall": {
+      "kind": "flag",
+      "unit": "-",
+      "label": "wing walls shown"
+    },
+    "showCurtainWall": {
+      "kind": "flag",
+      "unit": "-",
+      "label": "curtain wall shown"
+    },
+    "boq.shearKeyW": {
+      "kind": "length",
+      "unit": "m",
+      "label": "shear key width (constant)"
+    },
+    "boq.shearKeyH": {
+      "kind": "length",
+      "unit": "m",
+      "label": "shear key height (constant)"
+    },
+    "boq.retWallW": {
+      "kind": "length",
+      "unit": "m",
+      "label": "retaining wall width (constant)"
+    },
+    "boq.retWallH": {
+      "kind": "length",
+      "unit": "m",
+      "label": "retaining wall height (constant)"
+    },
+    "boq.toeWallL": {
+      "kind": "length",
+      "unit": "m",
+      "label": "toe wall length (wing wall length + 0.082 m)"
+    },
+    "boq.toeWallW": {
+      "kind": "length",
+      "unit": "m",
+      "label": "toe wall width (constant)"
+    },
+    "boq.toeWallH": {
+      "kind": "length",
+      "unit": "m",
+      "label": "toe wall height (constant)"
+    },
+    "boq.curtainDsL": {
+      "kind": "length",
+      "unit": "m",
+      "label": "downstream curtain wall length (constant)"
+    },
+    "boq.curtainDsW": {
+      "kind": "length",
+      "unit": "m",
+      "label": "downstream curtain wall width (constant)"
+    },
+    "boq.curtainUsL": {
+      "kind": "length",
+      "unit": "m",
+      "label": "upstream curtain wall length (constant)"
+    },
+    "boq.curtainUsW": {
+      "kind": "length",
+      "unit": "m",
+      "label": "upstream curtain wall width (constant)"
+    },
+    "boq.floorApronW": {
+      "kind": "length",
+      "unit": "m",
+      "label": "floor apron width (constant)"
+    },
+    "boq.floorApronH": {
+      "kind": "length",
+      "unit": "m",
+      "label": "floor apron height (constant)"
+    },
+    "boq.flexibleApronL": {
+      "kind": "length",
+      "unit": "m",
+      "label": "flexible apron length (constant)"
+    },
+    "boq.flexibleApronW": {
+      "kind": "length",
+      "unit": "m",
+      "label": "flexible apron width (constant)"
+    },
+    "boq.flexibleApronH": {
+      "kind": "length",
+      "unit": "m",
+      "label": "flexible apron height (constant)"
+    },
+    "boq.appSlabL": {
+      "kind": "length",
+      "unit": "m",
+      "label": "approach slab length (constant)"
+    },
+    "boq.appSlabH": {
+      "kind": "length",
+      "unit": "m",
+      "label": "approach slab height (constant)"
+    },
+    "boq.crashBW": {
+      "kind": "length",
+      "unit": "m",
+      "label": "crash barrier width (constant)"
+    },
+    "boq.crashBH": {
+      "kind": "length",
+      "unit": "m",
+      "label": "crash barrier height (constant)"
+    },
+    "boq.wearH": {
+      "kind": "length",
+      "unit": "m",
+      "label": "wearing coat height (constant)"
+    },
+    "boq.jointW": {
+      "kind": "length",
+      "unit": "m",
+      "label": "expansion joint width (constant)"
+    },
+    "boq.jointH": {
+      "kind": "length",
+      "unit": "m",
+      "label": "expansion joint height (constant)"
+    },
+    "boq.subRetWallStW": {
+      "kind": "length",
+      "unit": "m",
+      "label": "sub-structure retaining wall, straight portion width (constant)"
+    },
+    "boq.subRetWallStH": {
+      "kind": "length",
+      "unit": "m",
+      "label": "sub-structure retaining wall, straight portion height (constant)"
+    },
+    "boq.subRetWallTapW": {
+      "kind": "length",
+      "unit": "m",
+      "label": "sub-structure retaining wall, tapered portion width (constant)"
+    },
+    "boq.subRetWallTapH": {
+      "kind": "length",
+      "unit": "m",
+      "label": "sub-structure retaining wall, tapered portion height (constant)"
+    },
+    "boq.superRetWallW": {
+      "kind": "length",
+      "unit": "m",
+      "label": "super-structure retaining wall width (constant)"
+    },
+    "boq.superRetWallH": {
+      "kind": "length",
+      "unit": "m",
+      "label": "super-structure retaining wall height (constant)"
+    },
+    "boq.ballastRetW": {
+      "kind": "length",
+      "unit": "m",
+      "label": "ballast retainer width (constant)"
+    },
+    "boq.ballastRetH": {
+      "kind": "length",
+      "unit": "m",
+      "label": "ballast retainer height (constant)"
+    }
+  },
+  "findings": []
+}

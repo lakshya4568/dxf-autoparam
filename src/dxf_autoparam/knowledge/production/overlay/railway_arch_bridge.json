@@ -1,0 +1,511 @@
+{
+  "family": "railway_arch_bridge",
+  "status": "authored_from_source",
+  "basis": "Read by a person from aagento-bridge arch-bridge-rule-engine.ts: a railway RCC box with an arch-shaped masonry fill above it (span/rise/archThick/coping), used for the railway arch bridge family. Every geometry value is added to levels in metres (z_bot = bedLvl - wearC - tSB, line 38-39), so parameters and outputs are metres unless noted.",
+  "parameters": {
+    "project.cells": {
+      "kind": "count",
+      "unit": "-",
+      "label": "number of cells (barrels) across",
+      "component": "box",
+      "evidence": [
+        "arch-bridge-rule-engine.ts:15"
+      ]
+    },
+    "geometry.clear_w": {
+      "kind": "length",
+      "unit": "m",
+      "label": "clear span of one cell",
+      "component": "cell",
+      "evidence": [
+        "arch-bridge-rule-engine.ts:16"
+      ]
+    },
+    "geometry.clear_h": {
+      "kind": "length",
+      "unit": "m",
+      "label": "clear height of a cell",
+      "component": "cell",
+      "evidence": [
+        "arch-bridge-rule-engine.ts:17"
+      ]
+    },
+    "geometry.arch_thick": {
+      "kind": "length",
+      "unit": "m",
+      "label": "arch (masonry) thickness above the box",
+      "component": "arch",
+      "evidence": [
+        "arch-bridge-rule-engine.ts:49"
+      ]
+    },
+    "geometry.t_wall_o": {
+      "kind": "length",
+      "unit": "m",
+      "label": "thickness of each outer wall",
+      "component": "outer_wall",
+      "evidence": [
+        "arch-bridge-rule-engine.ts:18"
+      ]
+    },
+    "geometry.t_wall_i": {
+      "kind": "length",
+      "unit": "m",
+      "label": "thickness of each intermediate wall",
+      "component": "inner_wall",
+      "evidence": [
+        "arch-bridge-rule-engine.ts:19"
+      ]
+    },
+    "geometry.t_slab_t": {
+      "kind": "length",
+      "unit": "m",
+      "label": "thickness of the top slab",
+      "component": "top_slab",
+      "evidence": [
+        "arch-bridge-rule-engine.ts:20"
+      ]
+    },
+    "geometry.t_slab_b": {
+      "kind": "length",
+      "unit": "m",
+      "label": "thickness of the bottom slab",
+      "component": "bottom_slab",
+      "evidence": [
+        "arch-bridge-rule-engine.ts:21"
+      ]
+    },
+    "geometry.haunch_size": {
+      "kind": "length",
+      "unit": "m",
+      "label": "haunch size at the wall-slab junctions",
+      "component": "haunch",
+      "evidence": [
+        "arch-bridge-rule-engine.ts:96"
+      ]
+    },
+    "deck.wearing_course": {
+      "kind": "length",
+      "unit": "m",
+      "label": "wearing course on the bottom slab (bed level is its top)",
+      "component": "wearing_course",
+      "evidence": [
+        "arch-bridge-rule-engine.ts:22",
+        "arch-bridge-rule-engine.ts:38"
+      ]
+    },
+    "deck.formation_lvl": {
+      "kind": "level",
+      "unit": "m",
+      "label": "formation level (drives the arch cushion when entered)",
+      "component": "track",
+      "evidence": [
+        "arch-bridge-rule-engine.ts:60"
+      ]
+    },
+    "deck.embankment_slope": {
+      "kind": "ratio",
+      "unit": "-",
+      "label": "embankment side slope, horizontal per vertical",
+      "component": "embankment",
+      "evidence": [
+        "arch-bridge-rule-engine.ts:124"
+      ]
+    },
+    "deck.rail_level": {
+      "kind": "level",
+      "unit": "m",
+      "label": "rail level as entered",
+      "component": "track",
+      "evidence": [
+        "arch-bridge-rule-engine.ts:71"
+      ]
+    },
+    "slab.type": {
+      "kind": "text",
+      "unit": "-",
+      "label": "railway or highway slab type label",
+      "component": "slab",
+      "evidence": [
+        "arch-bridge-rule-engine.ts:118"
+      ]
+    },
+    "slab.width": {
+      "kind": "length",
+      "unit": "m",
+      "label": "slab width",
+      "component": "slab",
+      "evidence": [
+        "arch-bridge-rule-engine.ts:116"
+      ]
+    },
+    "slab.thickness": {
+      "kind": "length",
+      "unit": "m",
+      "label": "slab thickness",
+      "component": "slab",
+      "evidence": [
+        "arch-bridge-rule-engine.ts:117"
+      ]
+    },
+    "side.wing_l": {
+      "kind": "length",
+      "unit": "m",
+      "label": "wing wall length",
+      "component": "wing_wall",
+      "evidence": [
+        "arch-bridge-rule-engine.ts:28"
+      ]
+    },
+    "side.apron_l": {
+      "kind": "length",
+      "unit": "m",
+      "label": "apron length",
+      "component": "apron",
+      "evidence": [
+        "arch-bridge-rule-engine.ts:29"
+      ]
+    },
+    "foundation.pcc_sub_base": {
+      "kind": "length",
+      "unit": "m",
+      "label": "PCC sub-base thickness under the bottom slab",
+      "component": "foundation",
+      "evidence": [
+        "arch-bridge-rule-engine.ts:26",
+        "arch-bridge-rule-engine.ts:85"
+      ]
+    },
+    "foundation.sand_fill_depth": {
+      "kind": "length",
+      "unit": "m",
+      "label": "sand / granular fill depth under the PCC",
+      "component": "foundation",
+      "evidence": [
+        "arch-bridge-rule-engine.ts:27",
+        "arch-bridge-rule-engine.ts:86"
+      ]
+    },
+    "hydraulics.hfl": {
+      "kind": "level",
+      "unit": "m",
+      "label": "high flood level",
+      "component": "site",
+      "evidence": [
+        "arch-bridge-rule-engine.ts:24"
+      ]
+    },
+    "hydraulics.bed_lvl": {
+      "kind": "level",
+      "unit": "m",
+      "label": "bed level: the finished floor, top of the wearing course",
+      "component": "cell",
+      "evidence": [
+        "arch-bridge-rule-engine.ts:23",
+        "arch-bridge-rule-engine.ts:38"
+      ]
+    },
+    "hydraulics.soffit_level": {
+      "kind": "level",
+      "unit": "m",
+      "label": "soffit level as entered",
+      "component": "top_slab",
+      "evidence": [
+        "arch-bridge-rule-engine.ts:25"
+      ]
+    },
+    "options2d.show_wing_wall": {
+      "kind": "flag",
+      "unit": "-",
+      "label": "wing walls are part of the arrangement",
+      "component": "wing_wall",
+      "evidence": [
+        "arch-bridge-rule-engine.ts:121"
+      ]
+    },
+    "options2d.show_curtain_wall": {
+      "kind": "flag",
+      "unit": "-",
+      "label": "curtain wall is part of the arrangement",
+      "component": "curtain_wall",
+      "evidence": [
+        "arch-bridge-rule-engine.ts:122"
+      ]
+    },
+    "options2d.show_return_wall": {
+      "kind": "flag",
+      "unit": "-",
+      "label": "return wall is part of the arrangement",
+      "component": "return_wall",
+      "evidence": [
+        "arch-bridge-rule-engine.ts:123"
+      ]
+    },
+    "geometry.height_above_masonry": {
+      "kind": "length",
+      "unit": "m",
+      "label": "height above the arch masonry as entered (else derived from formation level)",
+      "component": "arch",
+      "evidence": [
+        "arch-bridge-rule-engine.ts:59"
+      ]
+    }
+  },
+  "outputs": {
+    "total_w": {
+      "kind": "length",
+      "unit": "m",
+      "label": "overall width of the box, outer face to outer face"
+    },
+    "total_h": {
+      "kind": "length",
+      "unit": "m",
+      "label": "overall height of the box"
+    },
+    "flow_area": {
+      "kind": "area",
+      "unit": "m2",
+      "label": "clear waterway area of all cells"
+    },
+    "cells": {
+      "kind": "count",
+      "unit": "-",
+      "label": "number of cells"
+    },
+    "cW": {
+      "kind": "length",
+      "unit": "m",
+      "label": "clear span"
+    },
+    "cH": {
+      "kind": "length",
+      "unit": "m",
+      "label": "clear height"
+    },
+    "tOW": {
+      "kind": "length",
+      "unit": "m",
+      "label": "outer wall thickness"
+    },
+    "tIW": {
+      "kind": "length",
+      "unit": "m",
+      "label": "inner wall thickness"
+    },
+    "tST": {
+      "kind": "length",
+      "unit": "m",
+      "label": "top slab thickness"
+    },
+    "tSB": {
+      "kind": "length",
+      "unit": "m",
+      "label": "bottom slab thickness"
+    },
+    "wearC": {
+      "kind": "length",
+      "unit": "m",
+      "label": "wearing course thickness"
+    },
+    "haunch": {
+      "kind": "length",
+      "unit": "m",
+      "label": "haunch size"
+    },
+    "span": {
+      "kind": "length",
+      "unit": "m",
+      "label": "arch span (= clear width)"
+    },
+    "rise": {
+      "kind": "length",
+      "unit": "m",
+      "label": "arch rise (span / 2)"
+    },
+    "archThick": {
+      "kind": "length",
+      "unit": "m",
+      "label": "arch thickness"
+    },
+    "archTopY": {
+      "kind": "length",
+      "unit": "m",
+      "label": "level of the top of the arch above the box soffit"
+    },
+    "heightAboveMasonry": {
+      "kind": "length",
+      "unit": "m",
+      "label": "height above the arch masonry (coping bottom - arch top)"
+    },
+    "copingBotY": {
+      "kind": "length",
+      "unit": "m",
+      "label": "coping bottom, above the box soffit"
+    },
+    "topBlockHeight": {
+      "kind": "length",
+      "unit": "m",
+      "label": "top block height (= height above masonry)"
+    },
+    "copingMidY": {
+      "kind": "length",
+      "unit": "m",
+      "label": "coping mid line, above the box soffit"
+    },
+    "copingTopY": {
+      "kind": "length",
+      "unit": "m",
+      "label": "coping top, above the box soffit"
+    },
+    "dim1Y": {
+      "kind": "length",
+      "unit": "m",
+      "label": "dimension line 1, above the box soffit"
+    },
+    "dim2Y": {
+      "kind": "length",
+      "unit": "m",
+      "label": "dimension line 2, above the box soffit"
+    },
+    "dim3Y": {
+      "kind": "length",
+      "unit": "m",
+      "label": "dimension line 3, above the box soffit"
+    },
+    "z_bot": {
+      "kind": "level",
+      "unit": "m",
+      "label": "level of the underside of the bottom slab"
+    },
+    "z_top": {
+      "kind": "level",
+      "unit": "m",
+      "label": "level of the top of the top slab"
+    },
+    "soffit": {
+      "kind": "level",
+      "unit": "m",
+      "label": "level of the underside of the top slab"
+    },
+    "bedLvl": {
+      "kind": "level",
+      "unit": "m",
+      "label": "bed level"
+    },
+    "hfl": {
+      "kind": "level",
+      "unit": "m",
+      "label": "high flood level"
+    },
+    "soffit_level": {
+      "kind": "level",
+      "unit": "m",
+      "label": "soffit level as entered"
+    },
+    "rccBoxTopLvl": {
+      "kind": "level",
+      "unit": "m",
+      "label": "level of the top of the box (matches z_top)"
+    },
+    "formLvl": {
+      "kind": "level",
+      "unit": "m",
+      "label": "formation level used by the drawing"
+    },
+    "railLvl": {
+      "kind": "level",
+      "unit": "m",
+      "label": "rail level used by the drawing"
+    },
+    "pccTop": {
+      "kind": "level",
+      "unit": "m",
+      "label": "level of the top of the PCC sub-base"
+    },
+    "pccBot": {
+      "kind": "level",
+      "unit": "m",
+      "label": "level of the underside of the PCC sub-base"
+    },
+    "granBot": {
+      "kind": "level",
+      "unit": "m",
+      "label": "level of the underside of the sand / granular fill"
+    },
+    "pccB": {
+      "kind": "length",
+      "unit": "m",
+      "label": "PCC sub-base thickness"
+    },
+    "sandFill": {
+      "kind": "length",
+      "unit": "m",
+      "label": "sand fill depth"
+    },
+    "spanLen": {
+      "kind": "length",
+      "unit": "m",
+      "label": "longitudinal span length (3.925 x 2 + 4 x earth cushion)"
+    },
+    "wingL": {
+      "kind": "length",
+      "unit": "m",
+      "label": "wing wall length"
+    },
+    "apronL": {
+      "kind": "length",
+      "unit": "m",
+      "label": "apron length"
+    },
+    "earthCushion": {
+      "kind": "length",
+      "unit": "m",
+      "label": "earth cushion above the arch masonry"
+    },
+    "slabWidth": {
+      "kind": "length",
+      "unit": "m",
+      "label": "slab width"
+    },
+    "slabThick": {
+      "kind": "length",
+      "unit": "m",
+      "label": "slab thickness"
+    },
+    "slope": {
+      "kind": "ratio",
+      "unit": "-",
+      "label": "embankment side slope"
+    },
+    "slabType": {
+      "kind": "text",
+      "unit": "-",
+      "label": "railway or highway slab type label"
+    },
+    "showWingWall": {
+      "kind": "flag",
+      "unit": "-",
+      "label": "wing walls shown"
+    },
+    "showCurtainWall": {
+      "kind": "flag",
+      "unit": "-",
+      "label": "curtain wall shown"
+    },
+    "showReturnWall": {
+      "kind": "flag",
+      "unit": "-",
+      "label": "return wall shown"
+    }
+  },
+  "findings": [
+    {
+      "kind": "duplicate_copy",
+      "text": "arch-bridge-rule-engine.ts is byte-identical to rcc-slab-2-rule-engine.ts apart from the class name (ArchBridgeRuleEngine vs RccSlab2RuleEngine): railway_arch_bridge and rcc_slab are the same rule engine registered under two family keys.",
+      "evidence": [
+        "arch-bridge-rule-engine.ts:5",
+        "rcc-slab-2-rule-engine.ts:5"
+      ]
+    }
+  ]
+}
