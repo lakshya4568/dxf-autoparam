@@ -187,13 +187,20 @@ TOOL_SPECS = [
     ("propose_plan", ("The plan for the change the person asked for: the value (parameter) and the value asked for, the anchor, "
      "and directives (target = a part, a value, a level or a line; mode; relation for preserve; interface for follow; clause = "
      "the person's words it comes from, empty for your own inference). The engine resolves every reference, predicts, asks "
-     "what only the person can decide, and — when nothing is open — compiles it and measures it."),
-     _schema({"parameter": S, "requested_value": N, "anchor": _schema({"policy": _enum("centered", "start_fixed", "end_fixed", "as_set_out"),
-                                                                       "centre": S, "clause": S}, ["policy"]),
+     "what only the person can decide, and — when nothing is open — compiles it and measures it. "
+     "A change of COUNT (more or fewer instances of a repeated unit) is an `operation` instead of a parameter: {kind: 'set_count', count, "
+     "at: 'end' | 'start' | an index, unit, and — when a production binding states the count — binding and field}; assess_change hands you the "
+     "operation to use. The engine derives the drawing at the new count, carries every name over, validates it (and the production guards at "
+     "the new count) and applies it only if all of it holds."),
+     _schema({"parameter": S, "requested_value": N,
+              "operation": {"type": "object", "description": "a change of count of a repeated unit (see above)",
+                            "properties": {"kind": _enum("set_count"), "count": N, "at": {"anyOf": [{"type": "string"}, {"type": "integer"}]}, "unit": S,
+                                           "repeat": S, "binding": S, "field": S, "nouns": LIST, "drop_plans": B, "detached": _enum("move", "keep")}},
+              "anchor": _schema({"policy": _enum("centered", "start_fixed", "end_fixed", "as_set_out"), "centre": S, "clause": S}, ["policy"]),
               "directives": {"type": "array", "items": _schema({"target": S, "mode": _enum(*MODES), "relation": _enum("thickness", "symmetry", "level", "connection"),
                                                                 "interface": LIST, "clause": S, "why": S}, ["target", "mode"])},
               "questions": {"type": "array", "items": _schema({"text": S, "options": LIST, "why": S}, ["text"])}},
-             ["parameter"])),
+             [])),
     ("account_instruction", ("How you read the person's instruction, clause by clause — all of them in one call. Each item: `quote` = their own "
      "words, exactly as written; `kind` = what it asks (change_value, keep, scope, link_views, parametrize, annotate, process, context); "
      "`meaning` = what you take it to mean on THIS drawing; `handled_by` = plan, parts, values, views, links, question or none (with `why` when none). "
@@ -773,6 +780,10 @@ class Workbench:
         raise KeyError(name)
 
     def _propose(self, a: dict) -> tuple[str, str]:
+        if a.get("operation"):
+            raise KeyError("a change of count is made on the sheet, not in a unit's workbench (open the sheet bench: propose_plan(operation) in a sheet run)")
+        if not a.get("parameter"):
+            raise KeyError("parameter: propose_plan names the value the person's change is about (or an `operation`, for a change of count)")
         name = a.get("parameter", "")
         pid = f"P_{name}"
         item = f"plan:{pid}"

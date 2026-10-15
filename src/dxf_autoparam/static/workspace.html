@@ -896,6 +896,7 @@ async function applyPreview() {
   draw(); renderLeft(); if (focus && focus.kind === "param") openParam(focus.id);
 }
 function take(res) {   // a committed change: the entities it moved (or moved back), as they now stand
+  if (res.reload) { loadSheet(); return; }   // another revision of the drawing (a change of count, or its undo): every entity is new
   if (res.delta) { const fresh = ingest(res.delta); const ents = new Set(fresh.map((o) => o.i));
     P = P.filter((o) => !ents.has(o.i)).concat(fresh); buildIndex(); tidyAll(); if (hl) hl.cache = null; }
   if (res.summary) { S = res.summary; unitCache.clear(); }
