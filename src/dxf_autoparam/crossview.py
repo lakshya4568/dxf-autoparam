@@ -219,6 +219,18 @@ class SheetModel:
         self.domain: list[dict] = []
         # The feature operations that made this revision of the drawing out of an earlier one (feature.py): each names the file it came from.
         self.lineage: list[dict] = []
+        # Semantic decisions accepted on the sheet, each with who made it, why and on which revision: existing / proposed status
+        # (by layer, colour or entities), what an annotation refers to and how it behaves, the names given to values. Undoable,
+        # saved with the project; analyses read them (layers.classify_status, annotations), the agent reuses them instead of
+        # rediscovering them.
+        self.semantics: dict = {"status": [], "annotations": {}, "notes": []}
+        # The agent's working notes (ai.understanding_tools): its checklist and the facts it established, each with its evidence and the
+        # revision it was established on. Saved with the project; not undo state (a checklist is not undone with a value).
+        self.agent_notes: dict = {"checklist": [], "learned": []}
+        # Deterministic results reused while their inputs are unchanged (cache.py) — not state: undo does not touch it.
+        from .cache import Memo
+
+        self.memo = Memo()
         # Bumped by every change of state (an edit, undo, redo): work started on one revision (a Gemini run, an open
         # panel) is refused when it would land on another — it was decided on a sheet that no longer exists.
         self.revision = 0
@@ -286,15 +298,28 @@ class SheetModel:
             self._build(u)
         return u
 
+    def analysis(self, uid: str) -> Analysis:
+        """A unit's analysis (set-out lines, candidates, annotations) without building its program — what reading the sheet
+        needs; the program is built from the same analysis when the unit is parametrized."""
+        if uid not in self.units:
+            raise SheetError(f"no unit {uid}")
+        u = self.units[uid]
+        if u.an is None:
+            self._analyse_unit(u)
+        return u.an
+
+    def _analyse_unit(self, u: Unit) -> None:
+        u.an = analyse(u.sub)
+        self._drop_layout_gaps(u)
+        u.snap = {cid: (c.name, c.accepted, list(c.gaps)) for cid, c in u.an.clusters.items()}
+        u.gap_clusters = {gid: g.cluster for gid, g in u.an.gaps.items()}
+        u.orig_datums = {did: copy.copy(d) for did, d in u.an.datums.items()}
+        u.orig_slot_datum = dict(u.an.slot_datum)
+
     def _build(self, u: Unit) -> None:
         """The unit's program, from its answer (or the geometry alone): the same validated engine as a single view."""
         if u.an is None:
-            u.an = analyse(u.sub)
-            self._drop_layout_gaps(u)
-            u.snap = {cid: (c.name, c.accepted, list(c.gaps)) for cid, c in u.an.clusters.items()}
-            u.gap_clusters = {gid: g.cluster for gid, g in u.an.gaps.items()}
-            u.orig_datums = {did: copy.copy(d) for did, d in u.an.datums.items()}
-            u.orig_slot_datum = dict(u.an.slot_datum)
+            self._analyse_unit(u)
         else:  # apply() renames and splits candidates: start from the analysis as found
             if u.orig_datums is not None:
                 u.an.datums = {did: copy.copy(d) for did, d in u.orig_datums.items()}
@@ -390,7 +415,7 @@ class SheetModel:
         that are built and have values (or are touched) are regenerated; every other entity stays as drawn."""
         changes = changes or {}
         todo = (units or set()) | self._touched(changes)
-        pts, radius, texts = {}, {}, {}
+        pts, radius, texts, turns = {}, {}, {}, {}
         errors, warnings, changed = [], [], []
         by_view: dict[str, int] = {}
         measured: dict[str, dict[str, float]] = {}
@@ -421,6 +446,8 @@ class SheetModel:
                     v = self.layout.item_group.get(s, "")
                     by_view[v] = by_view.get(v, 0) + 1
             moved = set(changed)
+            for k, tn in r.turns.items():
+                turns[u.back[k]] = tn
             for k, rad in r.radius.items():
                 radius[u.back[k]] = rad
                 if abs(rad - (self.dr.items[u.back[k]].radius or 0.0)) > 1e-9 and u.back[k] not in moved:
@@ -456,7 +483,7 @@ class SheetModel:
                     errors.append(f"{name}: {uid} measures {got:.1f} mm, not {want:g} — that view did not follow")
         errors += self._domain_errors(regenerated)
         warnings += self._overlaps(changed, pts)
-        reg = Regenerated(values=dict(changes), datum={}, pts=pts, radius=radius, texts=texts, issues=list(errors))
+        reg = Regenerated(values=dict(changes), datum={}, pts=pts, radius=radius, texts=texts, issues=list(errors), turns=turns)
         return SheetRegen(reg=reg, changed=sorted(changed), by_view=by_view, errors=errors, warnings=warnings, measured=measured)
 
     def _overlaps(self, changed: list[int], pts: dict[int, list]) -> list[str]:
@@ -603,7 +630,7 @@ class SheetModel:
         return {"values": copy.deepcopy(self.values), "shared": copy.deepcopy(self.shared),
                 "answers": {uid: copy.deepcopy(u.answer) for uid, u in self.units.items()}, "unlinked": set(self.unlinked),
                 "groups": copy.deepcopy(self.layout.groups), "accepted": set(self.accepted), "relations": copy.deepcopy(self.relations),
-                "plan": copy.deepcopy(self.stated_plan), "domain": copy.deepcopy(self.domain),
+                "plan": copy.deepcopy(self.stated_plan), "domain": copy.deepcopy(self.domain), "semantics": copy.deepcopy(self.semantics),
                 # the drawing this state belongs to: a feature operation makes a new revision of it, and undo goes back to the old one
                 "revision_of": (self.dr, self.layout, self.import_state), "lineage": copy.deepcopy(self.lineage)}
 
@@ -625,6 +652,7 @@ class SheetModel:
         self.accepted, self.relations = st.get("accepted", set()), st.get("relations", [])
         self.stated_plan = st.get("plan", {})
         self.domain = st.get("domain", [])
+        self.semantics = st.get("semantics") or {"status": [], "annotations": {}, "notes": []}
         self.lineage = st.get("lineage", [])
         self.layout.groups = st["groups"]
         if relayout:
@@ -1329,7 +1357,7 @@ class SheetModel:
                 "answers": {uid: u.answer for uid, u in self.units.items() if u.answer},
                 "shared": [asdict(p) for p in self.shared.values()], "values": self.values, "originals": originals,
                 "accepted": sorted(list(k) for k in self.accepted), "relations": self.relations, "plan": self.stated_plan, "questions": self.questions,
-                "domain": self.domain, "lineage": self.lineage,
+                "domain": self.domain, "lineage": self.lineage, "semantics": self.semantics, "agent_notes": self.agent_notes,
                 "views": views, "prefs": self.prefs, "runs": self.runs[-200:]}
 
     def save(self, path: str) -> None:
@@ -1370,6 +1398,8 @@ class SheetModel:
         sm.stated_plan = d.get("plan") or {}
         sm.domain = list(d.get("domain") or [])
         sm.lineage = list(d.get("lineage") or [])
+        sm.semantics = d.get("semantics") or {"status": [], "annotations": {}, "notes": []}
+        sm.agent_notes = d.get("agent_notes") or {"checklist": [], "learned": []}
         for uid, ans in d.get("answers", {}).items():
             if uid in sm.units:
                 sm.units[uid].answer = ans

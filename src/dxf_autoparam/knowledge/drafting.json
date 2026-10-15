@@ -1,87 +1,213 @@
 {
-  "source": "Drafting conventions of engineering sheets (general arrangement drawings): the words that title a view, name a table or a block of notes, or belong to the title block, and how a scale is written. Nothing here names a structure type or a structure's values; it only tells a view from a table from a note.",
-  "view_types": {
-    "plan": [
-      "PLAN",
-      "LAYOUT",
-      "TOP VIEW",
-      "SITE PLAN",
-      "KEY PLAN"
-    ],
-    "section": [
-      "SECTION",
-      "SECTIONAL",
-      "C/S",
-      "CROSS SECTION",
-      "CROSS-SECTION",
-      "L-SECTION",
-      "X-SECTION"
-    ],
-    "elevation": [
-      "ELEVATION",
-      "ELEV",
-      "FRONT VIEW",
-      "SIDE VIEW",
-      "END VIEW"
-    ],
-    "detail": [
-      "DETAIL",
-      "DETAILS",
-      "TYP",
-      "TYPICAL",
-      "ENLARGED"
-    ],
-    "arrangement": [
-      "ARRANGEMENT"
-    ]
-  },
-  "table_words": [
-    "TABLE",
-    "PARTICULARS",
-    "SCHEDULE",
-    "STATEMENT",
-    "BREAKUP",
-    "BREAK UP",
-    "LEGEND",
-    "ABSTRACT"
+ "source": "Drafting conventions of engineering sheets (general arrangement drawings): the words that title a view, name a table or a block of notes, or belong to the title block, and how a scale is written. Nothing here names a structure type or a structure's values; it only tells a view from a table from a note.",
+ "view_types": {
+  "plan": [
+   "PLAN",
+   "LAYOUT",
+   "TOP VIEW",
+   "SITE PLAN",
+   "KEY PLAN"
   ],
-  "notes_words": [
-    "NOTES",
-    "NOTE",
-    "REFERENCES",
-    "MODUS OPERANDI",
-    "SPECIFICATION",
-    "SPECIFICATIONS",
-    "CODES",
-    "CERTIFICATE",
-    "ARRANGEMENTS",
-    "MANUALS"
+  "section": [
+   "SECTION",
+   "SECTIONAL",
+   "C/S",
+   "CROSS SECTION",
+   "CROSS-SECTION",
+   "L-SECTION",
+   "X-SECTION"
   ],
-  "title_block_words": [
-    "DRAWING NO",
-    "DRG NO",
-    "DRG. NO",
-    "DRAWN",
-    "CHECKED",
-    "APPROVED",
-    "DESIGNED",
-    "SIGNATURE",
-    "REVISION",
-    "CONSULTANT",
-    "CONTRACTOR",
-    "CLIENT",
-    "PREPARED",
-    "SUBMITTED",
-    "RECOMMENDED",
-    "GENERAL ARRANGEMENT",
-    "AUTHORITY",
-    "DIVISION",
-    "SHEET NO"
+  "elevation": [
+   "ELEVATION",
+   "ELEV",
+   "FRONT VIEW",
+   "SIDE VIEW",
+   "END VIEW"
   ],
-  "scale_pattern": "SCALE\\s*[:\\-.]?\\s*1\\s*[:/]\\s*(\\d+(?:\\.\\d+)?)",
-  "not_to_scale": [
-    "NOT TO SCALE",
-    "N.T.S",
-    "NTS"
+  "detail": [
+   "DETAIL",
+   "DETAILS",
+   "TYP",
+   "TYPICAL",
+   "ENLARGED"
+  ],
+  "arrangement": [
+   "ARRANGEMENT"
   ]
+ },
+ "table_words": [
+  "TABLE",
+  "PARTICULARS",
+  "SCHEDULE",
+  "STATEMENT",
+  "BREAKUP",
+  "BREAK UP",
+  "LEGEND",
+  "ABSTRACT"
+ ],
+ "notes_words": [
+  "NOTES",
+  "NOTE",
+  "REFERENCES",
+  "MODUS OPERANDI",
+  "SPECIFICATION",
+  "SPECIFICATIONS",
+  "CODES",
+  "CERTIFICATE",
+  "ARRANGEMENTS",
+  "MANUALS"
+ ],
+ "title_block_words": [
+  "DRAWING NO",
+  "DRG NO",
+  "DRG. NO",
+  "DRAWN",
+  "CHECKED",
+  "APPROVED",
+  "DESIGNED",
+  "SIGNATURE",
+  "REVISION",
+  "CONSULTANT",
+  "CONTRACTOR",
+  "CLIENT",
+  "PREPARED",
+  "SUBMITTED",
+  "RECOMMENDED",
+  "GENERAL ARRANGEMENT",
+  "AUTHORITY",
+  "DIVISION",
+  "SHEET NO"
+ ],
+ "scale_pattern": "SCALE\\s*[:\\-.]?\\s*1\\s*[:/]\\s*(\\d+(?:\\.\\d+)?)",
+ "not_to_scale": [
+  "NOT TO SCALE",
+  "N.T.S",
+  "NTS"
+ ],
+ "annotation_words": {
+  "_about": "Generic drafting words that tell what a note IS (a material with a thickness, an instruction, a status, a tolerance) — never what a structure is or what its values are. Used to classify annotations; a note's meaning still needs the geometry it points at.",
+  "material": [
+   "CONCRETE",
+   "PCC",
+   "RCC",
+   "C.C",
+   "CC",
+   "P.C.C",
+   "R.C.C",
+   "BRICK",
+   "STONE",
+   "BOULDER",
+   "SAND",
+   "GRAVEL",
+   "GRANULAR",
+   "FILLING",
+   "FILL",
+   "SOLING",
+   "BALLAST",
+   "ASPHALT",
+   "BITUMEN",
+   "BITUMINOUS",
+   "STEEL",
+   "MASONRY",
+   "MORTAR",
+   "COURSE",
+   "WEARING",
+   "BACKFILL",
+   "EARTH",
+   "SOIL",
+   "GEOTEXTILE",
+   "MEMBRANE",
+   "BLINDING",
+   "LEAN",
+   "SCREED",
+   "PLASTER",
+   "GROUT",
+   "AGGREGATE",
+   "MURUM",
+   "MOORUM",
+   "BEDDING",
+   "LINING",
+   "PITCHING",
+   "APRON",
+   "WATERPROOFING",
+   "FILTER",
+   "WEEP"
+  ],
+  "thickness": [
+   "THK",
+   "THK.",
+   "THICK",
+   "THICKNESS",
+   "TH."
+  ],
+  "instruction": [
+   "PROVIDE",
+   "PROVIDED",
+   "AS PER",
+   "SHALL",
+   "TO BE",
+   "SUITABLE",
+   "CAST IN SITU",
+   "REQUIRED",
+   "REQUIREMENT",
+   "REQUIREMENTS",
+   "SEE",
+   "REFER",
+   "WHERE",
+   "MINIMUM",
+   "MAXIMUM",
+   "NOT STEEPER",
+   "NOT LESS",
+   "NOT MORE",
+   "APPROX",
+   "SITE"
+  ],
+  "tolerance": [
+   "±",
+   "+/-",
+   "TOLERANCE",
+   "TOL."
+  ],
+  "revision": [
+   "REV",
+   "REV.",
+   "REVISION",
+   "AMENDMENT"
+  ],
+  "section_label_pattern": "^(?:(?:SECTION|SEC\\.?|DETAIL|DET\\.?|VIEW|ELEVATION|ELEV\\.?)\\s*)?[\"'“”]?[A-Z0-9]{1,3}[\"'“”]?\\s*[-–—]\\s*[\"'“”]?[A-Z0-9]{1,3}[\"'“”]?$|^[\"'“”]?[A-Z][\"'“”]?$",
+  "status_existing": [
+   "EXIST",
+   "EXISTING",
+   "EXIST.",
+   "EXG",
+   "EXG.",
+   "EXT.",
+   "OLD"
+  ],
+  "status_proposed": [
+   "PROP",
+   "PROP.",
+   "PROPOSED",
+   "NEW"
+  ],
+  "status_removed": [
+   "DISMANTL",
+   "DISMANTLE",
+   "DISMANTLED",
+   "DEMOLISH",
+   "DEMOLISHED",
+   "TO BE REMOVED",
+   "REMOVED"
+  ],
+  "status_construction": [
+   "CONSTRUCTION LINE",
+   "REFERENCE LINE",
+   "GRID"
+  ],
+  "status_alternative": [
+   "ALTERNATIVE",
+   "ALT.",
+   "OPTION"
+  ]
+ }
 }

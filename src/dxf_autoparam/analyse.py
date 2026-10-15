@@ -633,11 +633,21 @@ def analyse(dr: Drawing, opts: AnalyseOptions | None = None) -> Analysis:
     # annotation / reference / free points follow the nearest structural vertex (both axes from it)
     _attach_free_points(dr, slot_datum, datums)
     stated, level_offset = _stated_levels(dr, dy)
+    # what each note, label and leader refers to, and how it behaves: a leader's tip stays on what it touches and its note
+    # rides with it, a level note follows its line, a title stays with its view, a note that names nothing clearly stays
+    # where it was written (annotations.py) — the nearest-vertex binding above is kept only for what has no association
+    from .annotations import associate, bind
+
+    titles = {it.index for it in items if it.extra.get("view_title")}
+    ann_model = associate(dr, slot_datum, datums, stated, titles=titles)
+    ann_counts = bind(dr, slot_datum, datums, ann_model)
+    if ann_model.annotations:
+        notes.append("annotations: " + ", ".join(f"{v} {k}" for k, v in sorted(ann_counts.items())))
     sym_counts: dict[str, int] = defaultdict(int)
     for g in gap_list:
         if g.sym_axis:
             sym_counts[g.sym_axis] += 1
-    return Analysis(
+    result = Analysis(
         drawing=dr,
         datums=datums,
         slot_datum=slot_datum,
@@ -651,6 +661,8 @@ def analyse(dr: Drawing, opts: AnalyseOptions | None = None) -> Analysis:
         level_offset_mm=level_offset,
         sym_counts=dict(sym_counts),
     )
+    result.cache["annotations"] = ann_model
+    return result
 
 
 def _nice_ratio(r: float) -> bool:
@@ -1014,6 +1026,8 @@ def _attach_free_points(dr: Drawing, slot_datum, datums: dict[str, Datum]) -> No
 
     for it in dr.items:
         if it.role == Role.FIXED or it.anchor is not None:  # symbol content rides on its insertion point
+            continue
+        if it.extra.get("infinite"):  # an XLINE / RAY: a construction line across the sheet, kept as drawn
             continue
         for k, (x, y) in enumerate(it.pts):
             if (it.index, k, "x") in slot_datum and (it.index, k, "y") in slot_datum:

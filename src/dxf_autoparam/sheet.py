@@ -125,20 +125,38 @@ def _bbox(pts) -> tuple[float, float, float, float]:
 
 
 def text_outline(it: Item) -> list[tuple[float, float]]:
-    """A text's footprint: its words' rectangle (rotated), estimated from the height and the longest line."""
+    """A text's footprint: its words' rectangle (rotated), estimated from the height and the longest line, hung from its
+    anchor the way CAD hangs it — an MTEXT by its attachment point (top / middle / bottom × left / centre / right), a
+    TEXT by its alignment (baseline / bottom / middle / top × left / centre / right, aligned and fit across both points)."""
     h = it.text_height or 1.0
     lines = (it.text or "").split("\n") or [""]
     n = len(lines)
-    w = 0.62 * h * max(1, max(len(s) for s in lines))
+    w = 0.62 * h * max(1, max(len(s) for s in lines)) * float(it.extra.get("wf", 1.0) or 1.0)
     a = math.radians(it.extra.get("rotation", 0.0) or 0.0)
-    if it.dxftype == "MTEXT":  # usually attached at its top left
-        local = [(0, -1.6 * h * n + 0.6 * h), (w, -1.6 * h * n + 0.6 * h), (w, h), (0, h)]
-    else:
-        local = [(0, -0.2 * h), (w, -0.2 * h), (w, 1.1 * h), (0, 1.1 * h)]
     ox, oy = it.pts[0]
-    if it.dxftype == "TEXT" and len(it.pts) > 1:  # aligned on its second point (centred / right / middle)
-        ox, oy = it.pts[1]
-        local = [(x - w / 2, y - 0.45 * h) for x, y in local]
+    if it.dxftype == "MTEXT":
+        k = min(max(int(it.extra.get("attach", 1) or 1), 1), 9) - 1
+        col, row = k % 3, k // 3
+        H = h + (n - 1) * 1.667 * h * float(it.extra.get("spacing", 1.0) or 1.0)
+        x0 = (0.0, -w / 2, -w)[col]
+        ylo, yhi = ((-H, 0.0), (-H / 2, H / 2), (0.0, H))[row]
+        local = [(x0, ylo), (x0 + w, ylo), (x0 + w, yhi), (x0, yhi)]
+    else:
+        ha, va = int(it.extra.get("halign", 0) or 0), int(it.extra.get("valign", 0) or 0)
+        if (ha or va) and len(it.pts) > 1:
+            ox, oy = it.pts[1]
+            if ha in (3, 5):  # aligned / fit: the text runs from the insertion point to the alignment point
+                ox, oy = (it.pts[0][0] + it.pts[1][0]) / 2, (it.pts[0][1] + it.pts[1][1]) / 2
+        x0 = -w / 2 if ha in (1, 3, 4, 5) else -w if ha == 2 else 0.0
+        if ha == 4 or va == 2:
+            ylo, yhi = -0.65 * h, 0.65 * h
+        elif va == 3:
+            ylo, yhi = -1.3 * h, 0.0
+        elif va == 1:
+            ylo, yhi = 0.0, 1.3 * h
+        else:
+            ylo, yhi = -0.2 * h, 1.1 * h
+        local = [(x0, ylo), (x0 + w, ylo), (x0 + w, yhi), (x0, yhi)]
     ca, sa = math.cos(a), math.sin(a)
     return [(ox + x * ca - y * sa, oy + x * sa + y * ca) for x, y in local]
 
@@ -819,6 +837,48 @@ def segment(dr: Drawing, grid: int = 800, trace: list | None = None) -> SheetLay
     hs_all = [it.text_height for it in items if it.dxftype in TEXT_TYPES and it.text_height and it.index not in skip]
     med_h = statistics.median(hs_all) if hs_all else 0.0
     annot_reach = max(3 * g0, int(8 * med_h / cell))
+    # The wave above stops at 5% of the sheet; an annotation may stand further off what it marks (eight text heights).
+    # A coarse grid of geometry cells, with each coarse cell's nearest geometry found once (a breadth-first sweep from every
+    # geometry cell at once), lets such an annotation find its nearest geometry in constant time, within its own reach.
+    coarse = 8
+    cnx, cny = g.nx // coarse + 1, g.ny // coarse + 1
+    coarse_cells: dict[int, list[int]] = defaultdict(list)
+    for cidx in np.flatnonzero(atom >= 0).tolist():
+        cyy, cxx = divmod(cidx, g.nx)
+        coarse_cells[(cyy // coarse) * cnx + cxx // coarse].append(cidx)
+    nearest_coarse = np.full(cnx * cny, -1, dtype=np.int64)
+    frontier = deque()
+    for key in coarse_cells:
+        nearest_coarse[key] = key
+        frontier.append(key)
+    while frontier:
+        key = frontier.popleft()
+        ky, kx = divmod(key, cnx)
+        for dy in (-1, 0, 1):
+            for dx in (-1, 0, 1):
+                yy, xx = ky + dy, kx + dx
+                if 0 <= yy < cny and 0 <= xx < cnx and nearest_coarse[yy * cnx + xx] < 0:
+                    nearest_coarse[yy * cnx + xx] = nearest_coarse[key]
+                    frontier.append(yy * cnx + xx)
+
+    def near_atom(points, limit_cells: int) -> tuple[int, int] | None:
+        found = None
+        for pnt in points:
+            c = g.cell_of(pnt)
+            if c is None:
+                continue
+            py, px = divmod(c, g.nx)
+            key = (py // coarse) * cnx + px // coarse
+            src = int(nearest_coarse[key]) if 0 <= key < nearest_coarse.size else -1
+            if src < 0:
+                continue
+            for h_ in coarse_cells[src]:
+                hy, hx = divmod(h_, g.nx)
+                d = max(abs(hx - px), abs(hy - py))
+                if d <= limit_cells and (found is None or d < found[1]):
+                    found = (int(piece_of_atom[int(atom[h_])]), d)
+        return found
+
     loose: list[int] = []
     for it in items:
         if it.index in skip or it.index in geom_cells or not it.pts or it.anchor is not None:
@@ -837,6 +897,8 @@ def segment(dr: Drawing, grid: int = 800, trace: list | None = None) -> SheetLay
                 continue
             if best is None or dist[c] < best[1]:
                 best = (int(piece_of_atom[int(owner[c])]), int(dist[c]))
+        if best is None:  # beyond the wave's reach but within the annotation's: the nearest geometry, found directly
+            best = near_atom(pts, limit)
         if it.index in title_atom:  # a title goes with the view it titles, its underline with it
             best = (int(piece_of_atom[title_atom[it.index]]), 0)
         elif underline.get(it.index) in title_atom:
@@ -923,6 +985,10 @@ def segment(dr: Drawing, grid: int = 800, trace: list | None = None) -> SheetLay
     _title_block(dr, groups)
     _name_ids(groups)
     item_group = {i: gr.id for gr in groups for i in gr.items}
+    for gr in groups:  # a title stays with its view (annotations.py reads this mark on the unit's copy of the item)
+        for t in gr.titles:
+            if 0 <= t < len(dr.items):
+                dr.items[t].extra["view_title"] = gr.id
     lay = SheetLayout(frame=frame, frame_items=frame_items, rules=rules, stray=stray, watermark=watermark, groups=groups, cell=cell,
                       gap=g0 * cell, gaps=[w * cell for w in merges], notes=notes, item_group=item_group)
     _units(dr, lay)
