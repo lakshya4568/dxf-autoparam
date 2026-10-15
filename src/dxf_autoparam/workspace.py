@@ -17,6 +17,18 @@ shares, anchors, links and view corrections are transactions with undo / redo.
     GET  /api/sheet/export                the edited DXF
     GET  /api/sheet/project               the parametric project (JSON); POST it back to restore
     GET  /api/sheet/status                how far each view, part and value really is (derived from the model, never from a message)
+    GET  /api/sheet/coverage              what the DXF held and what of it is read, drawn, editable, exported (by type, by handle)
+    GET  /api/sheet/agent_notes           the agent's checklist and the facts it recorded (stale ones marked)
+    GET  /  (and /app/…)                  the interactive workspace (web/, built into static/app); /legacy the previous page
+    GET  /api/sheet/entity?i=…            one entity: source handle / block / properties, style, view, unit, set-out lines, parameters
+    GET  /api/sheet/resolve?handle=…      a DXF handle → the sheet entities read from it
+    GET  /api/sheet/annotations[?view=]   every annotation: kind, what it refers to (ranked evidence), how it behaves
+    GET  /api/sheet/layers                layers: CAD properties, contents, views, character; existing / proposed counts
+    GET  /api/sheet/statuses              existing / proposed / removed … per entity, with the evidence
+    GET  /api/sheet/duplicates[?view=]    entities drawn twice: exact, restyled, near, overlapping (never merged)
+    GET  /api/sheet/impact?name=…         before an edit: what a step of the value moves, resizes, keeps, updates
+    POST /api/sheet/behaviour {changes}   a change regenerated and checked category by category (nothing committed)
+    POST /api/sheet/decide {kind, …}      a semantic decision (existing / proposed status) — undoable, kept with who and why
     GET  /api/sheet/baseline[?all=1]      the imported geometry of what has changed (or of everything): the dotted comparison layer
     POST /api/sheet/reset_value {name}    one value back to the imported drawing's (regenerated and checked, or refused)
     POST /api/sheet/reset_drawing {confirm}   the imported state; one undoable step
@@ -68,6 +80,10 @@ class SheetSession:
         self.runs: dict = {}
         self.run_n = 0
         self.current_run: str | None = None
+        # The resolved CAD styles the page has been sent (colour, linetype dash pattern, lineweight, alpha, font): each
+        # primitive names one by index, so a 20k-entity sheet sends a handful of styles, not one per line.
+        self.styles: list[dict] = []
+        self._style_ix: dict[tuple, int] = {}
         if path:
             self.open(path)
 
@@ -85,6 +101,7 @@ class SheetSession:
         self.pictures = None
         self.runs, self.current_run, self.run_n = {}, None, 0
         self.shown = set()
+        self.styles, self._style_ix = [], {}
         self.opened = time.perf_counter() - t
         return self.summary()
 
@@ -112,7 +129,7 @@ class SheetSession:
                        for p in sm.shared.values()],
             "values": sm.current(), "can_undo": bool(sm.history), "can_redo": bool(sm.future),
             "relations": sm.relations, "questions": sm.questions, "accepted": sorted(list(k) for k in sm.accepted),
-            "ai_running": self.running(), "current_run": self.current_run, "prefs": sm.prefs,
+            "ai_running": self.running(), "current_run": self.current_run, "prefs": sm.prefs, "revision": sm.revision,
         }
 
     def _prims(self, entities, sr: SheetRegen | None) -> list[dict]:
@@ -129,25 +146,52 @@ class SheetSession:
             pts = sr.reg.pts.get(i, it.pts) if sr else it.pts
             radius = sr.reg.radius.get(i) if sr else None
             text = sr.reg.texts.get(i) if sr else None
-            for p in primitives(it, pts, radius, text, units_of.get(i, sm.dr.units_mm)):
+            turn = sr.reg.turns.get(i, 0.0) if sr else 0.0
+            for p in primitives(it, pts, radius, text, units_of.get(i, sm.dr.units_mm), turn):
                 out.append(self._compact(p, sm.layout.item_group.get(i, "")))
         return out
 
-    @staticmethod
-    def _compact(p: dict, gid: str) -> dict:
+    def _style(self, st: dict) -> int:
+        key = (st.get("color"), st.get("fg"), st.get("alpha"), st.get("lw"), st.get("lt"), tuple(st.get("dash") or ()), st.get("font", ""))
+        ix = self._style_ix.get(key)
+        if ix is None:
+            ix = self._style_ix[key] = len(self.styles)
+            q = {"c": st.get("color", "#ffffff"), "w": st.get("lw", 0.25), "lt": st.get("lt", "CONTINUOUS")}
+            if st.get("fg"):
+                q["fg"] = 1
+            if st.get("alpha", 1.0) < 1.0:
+                q["a"] = st["alpha"]
+            if st.get("dash"):
+                q["d"] = [_r(v) for v in st["dash"]]
+            if st.get("font"):
+                q["f"] = st["font"]
+            self.styles.append(q)
+        return ix
+
+    def _compact(self, p: dict, gid: str) -> dict:
         q = {"i": p["i"], "k": p["k"], "r": p.get("role", ""), "l": p.get("layer", ""), "v": gid}
         if "pts" in p:
             q["p"] = [c for xy in p["pts"] for c in (_r(xy[0]), _r(xy[1]))]
+        if p["k"] == "m":
+            q["m"] = [_r(c) for seg in p["segs"] for c in seg]
         if p.get("closed"):
             q["c"] = 1
         if p.get("dim"):
             q["d"] = 1
+        if p.get("s"):
+            q["s"] = self._style(p["s"])
+        if p.get("tag") in ("arrow", "hatch", "band", "text"):
+            q["tag"] = p["tag"]
+        if p.get("mask"):
+            q["mask"] = 1
+        if p.get("fill"):
+            q["fill"] = p["fill"]
         if p["k"] == "t":
             q["at"] = [_r(p["at"][0]), _r(p["at"][1])]
             q["t"] = p.get("text", "")
             q["h"] = p.get("h")
             q["rot"] = p.get("rot") or 0.0
-            for k in ("ha", "va", "wf", "ls"):
+            for k in ("ha", "va", "wf", "ls", "width", "oblique"):
                 if p.get(k) and p[k] not in ("l", "b"):
                     q[k] = p[k]
         if p.get("pattern"):
@@ -159,7 +203,8 @@ class SheetSession:
         sr = sm.regenerate()
         self.shown = set(sr.changed)
         self.drawing = sm.dr
-        return {"prims": self._prims(range(len(sm.dr.items)), sr), "extent": sm.dr.extent, "frame": sm.layout.frame}
+        prims = self._prims(range(len(sm.dr.items)), sr)
+        return {"prims": prims, "styles": self.styles, "extent": sm.dr.extent, "frame": sm.layout.frame}
 
     def _commit_delta(self) -> dict:
         """After a committed change: the entities that moved, and those that moved back, as they now stand."""
@@ -171,15 +216,16 @@ class SheetSession:
         now = set(sr.changed)
         touched = now | self.shown
         self.shown = now
-        return {"delta": self._prims(touched, sr), "errors": sr.errors}
+        return {"delta": self._prims(touched, sr), "styles": self.styles, "errors": sr.errors}
 
     # ── actions ───────────────────────────────────────────────────────────────
 
     def preview(self, changes: dict) -> dict:
         sm = self._sm()
         sr = sm.preview({k: float(v) for k, v in changes.items()})
+        delta = self._prims(set(sr.changed) | self.shown, sr)
         return {"ok": sr.ok, "errors": sr.errors[:20], "warnings": sr.warnings, "by_view": sr.by_view, "measured": sr.measured,
-                "changed": len(sr.changed), "delta": self._prims(set(sr.changed) | self.shown, sr)}
+                "changed": len(sr.changed), "delta": delta, "styles": self.styles}
 
     def apply(self, changes: dict) -> dict:
         sm = self._sm()
@@ -391,7 +437,89 @@ class SheetSession:
         sm = self._sm()
         sr = sm.regenerate()
         ents = range(len(sm.dr.items)) if everything else sr.changed
-        return {"prims": self._prims(ents, None), "changed": len(sr.changed), "revision": sm.revision, "deviation": sm.deviation()}
+        return {"prims": self._prims(ents, None), "styles": self.styles, "changed": len(sr.changed), "revision": sm.revision, "deviation": sm.deviation()}
+
+    def agent_notes(self) -> dict:
+        """The agent's checklist and the facts it recorded (stale ones marked) — what the agent panel shows."""
+        from .ai.understanding_tools import learned_now, notes_of
+
+        sm = self._sm()
+        return {"checklist": notes_of(sm)["checklist"], "learned": learned_now(sm), "revision": sm.revision}
+
+    def coverage(self) -> dict:
+        """What the file held and what of it is read, drawn, editable and exportable (fidelity.coverage_report)."""
+        sm = self._sm()
+        return {"file": Path(sm.path).name, **sm.dr.coverage}
+
+    def entity(self, i: int) -> dict:
+        from .understanding import entity_record
+
+        return entity_record(self._sm(), i)
+
+    def resolve(self, handle: str) -> dict:
+        from .understanding import resolve_handle
+
+        return {"handle": handle, "entities": resolve_handle(self._sm(), handle)}
+
+    def annotations(self, view: str | None = None) -> dict:
+        from .understanding import sheet_annotations
+
+        rows = sheet_annotations(self._sm())
+        if view:
+            rows = [a for a in rows if a.get("view") == view]
+        kinds: dict[str, int] = {}
+        for a in rows:
+            kinds[a["kind"]] = kinds.get(a["kind"], 0) + 1
+        return {"annotations": rows, "kinds": kinds, "revision": self._sm().revision}
+
+    def layers(self) -> dict:
+        from .understanding import layers, statuses
+
+        st = statuses(self._sm())
+        return {"layers": layers(self._sm()), "status": {"counts": st["counts"], "learned_colours": st["learned_colours"]}}
+
+    def statuses(self) -> dict:
+        from .understanding import statuses
+
+        st = statuses(self._sm())
+        return {"counts": st["counts"], "learned_colours": st["learned_colours"],
+                "entities": {str(i): {"status": v["status"], "evidence": v["evidence"][:3]} for i, v in st["entities"].items()}}
+
+    def duplicates(self, view: str | None = None) -> dict:
+        from .understanding import duplicates
+
+        return duplicates(self._sm(), view)
+
+    def impact(self, name: str, step: float | None = None) -> dict:
+        from .behaviour import impact_plan
+
+        return impact_plan(self._sm(), name, step)
+
+    def behaviour(self, changes: dict) -> dict:
+        from .behaviour import behaviour_report
+
+        return behaviour_report(self._sm(), {k: float(v) for k, v in changes.items()})
+
+    def decide(self, body: dict) -> dict:
+        """A semantic decision a person makes (one undoable step): an existing / proposed status for a layer, a colour or
+        entities — kept with who and why; the analyses read it from then on."""
+        sm = self._sm()
+        kind = body.get("kind")
+        if kind != "status":
+            raise SheetError(f"unknown decision {kind!r} (status)")
+        status = body.get("status")
+        from .layers import STATUS
+
+        if status not in STATUS:
+            raise SheetError(f"status must be one of {', '.join(STATUS)}")
+        dec = {"by": body.get("by", "entities"), "key": body.get("key"), "entities": [int(i) for i in body.get("entities", [])],
+               "status": status, "who": body.get("who", "person"), "why": (body.get("why") or "").strip() or "set in the workspace",
+               "revision": sm.revision}
+        if dec["by"] in ("layer", "colour") and not dec["key"]:
+            raise SheetError("a layer or colour decision names the layer / colour (key)")
+        sm._push()
+        sm.semantics.setdefault("status", []).append(dec)
+        return {"ok": True, "decision": dec, "summary": self.summary()}
 
     def reset_value(self, body: dict) -> dict:
         sm = self._sm()
@@ -481,8 +609,25 @@ def _gzip(handler, body: bytes, ctype: str, extra: dict | None = None) -> None:
 def handle(handler, sheet: SheetSession, method: str, url) -> bool:
     """Serve the workspace page and /api/sheet/*; False for any other path (the classic page's routes)."""
     path = url.path
-    if method == "GET" and path in ("/", "/workspace", "/index.html"):
+    app = STATIC / "app"
+    if method == "GET" and path in ("/", "/workspace", "/index.html", "/app", "/app/"):
+        # the interactive workspace (web/, built into static/app) when it is built; the previous page otherwise and at /legacy
+        if (app / "index.html").exists() and path != "/workspace":
+            handler._send(200, (app / "index.html").read_bytes(), "text/html; charset=utf-8", {"Cache-Control": "no-cache"})
+        else:
+            handler._send(200, (STATIC / "workspace.html").read_bytes(), "text/html; charset=utf-8")
+        return True
+    if method == "GET" and path == "/legacy":
         handler._send(200, (STATIC / "workspace.html").read_bytes(), "text/html; charset=utf-8")
+        return True
+    if method == "GET" and path.startswith("/app/"):
+        target = (app / path[len("/app/"):]).resolve()
+        if not target.is_relative_to(app.resolve()) or not target.is_file():  # nothing outside the built app is served
+            handler._send(404, b"not found", "text/plain")
+            return True
+        ctype = {".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".png": "image/png",
+                 ".woff2": "font/woff2", ".json": "application/json", ".html": "text/html; charset=utf-8"}.get(target.suffix, "application/octet-stream")
+        handler._send(200, target.read_bytes(), ctype, {"Cache-Control": "max-age=31536000, immutable" if "/assets/" in path else "no-cache"})
         return True
     if not path.startswith("/api/sheet"):
         return False
@@ -527,6 +672,25 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
                     return handler._json(sheet.run_list()) or True
                 if path == "/api/sheet/status":
                     return handler._json(sheet.status()) or True
+                if path == "/api/sheet/coverage":
+                    return handler._json(sheet.coverage()) or True
+                if path == "/api/sheet/agent_notes":
+                    return handler._json(sheet.agent_notes()) or True
+                if path == "/api/sheet/entity":
+                    return handler._json(sheet.entity(int(q.get("i", ["-1"])[0]))) or True
+                if path == "/api/sheet/resolve":
+                    return handler._json(sheet.resolve(q.get("handle", [""])[0])) or True
+                if path == "/api/sheet/annotations":
+                    return handler._json(sheet.annotations(q.get("view", [None])[0])) or True
+                if path == "/api/sheet/layers":
+                    return handler._json(sheet.layers()) or True
+                if path == "/api/sheet/statuses":
+                    return handler._json(sheet.statuses()) or True
+                if path == "/api/sheet/duplicates":
+                    return handler._json(sheet.duplicates(q.get("view", [None])[0])) or True
+                if path == "/api/sheet/impact":
+                    step = q.get("step", [None])[0]
+                    return handler._json(sheet.impact(q.get("name", [""])[0], float(step) if step else None)) or True
                 if path == "/api/sheet/delta":
                     return handler._json({"ok": True, **sheet._commit_delta(), "summary": sheet.summary()}) or True
                 if path == "/api/sheet/baseline":
@@ -562,6 +726,10 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
                     return handler._json(sheet.preview(body.get("changes", {}))) or True
                 if path == "/api/sheet/apply":
                     return handler._json(sheet.apply(body.get("changes", {}))) or True
+                if path == "/api/sheet/behaviour":
+                    return handler._json(sheet.behaviour(body.get("changes", {}))) or True
+                if path == "/api/sheet/decide":
+                    return handler._json(sheet.decide(body)) or True
                 if path in ("/api/sheet/undo", "/api/sheet/redo"):
                     return handler._json(sheet.history(path.rsplit("/", 1)[1])) or True
                 if path == "/api/sheet/ai/run":
@@ -600,7 +768,7 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
     except SheetError as exc:
         handler._json({"ok": False, "error": str(exc)}, 409)
         return True
-    except (KeyError, ValueError, TypeError) as exc:  # a malformed request: said, never a crash of the server
+    except (KeyError, ValueError, TypeError, IndexError) as exc:  # a malformed request: said, never a crash of the server
         handler._json({"ok": False, "error": f"{type(exc).__name__}: {exc}"}, 400)
         return True
     handler._json({"ok": False, "error": f"no route {method} {path}"}, 404)

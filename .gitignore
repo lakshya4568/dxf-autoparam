@@ -13,3 +13,5 @@ out/
 .cache/
 .claude/
 .env
+
+web/node_modules/
