@@ -214,6 +214,11 @@ class SheetModel:
         # relate and how that is bound, and what it assumed (ai.sheet_ai.apply_plan). A statement, checked when made and again at the end.
         self.stated_plan: dict = {}
         self.questions: list[str] = []  # what the AI or the engine asks a person to settle
+        # Rules of a production domain bound to units (production.binding): each maps a domain model's fields to a unit's own values and
+        # lines; the outputs that held when it was accepted are GUARDS — every regeneration must keep them holding, or nothing is applied.
+        self.domain: list[dict] = []
+        # The feature operations that made this revision of the drawing out of an earlier one (feature.py): each names the file it came from.
+        self.lineage: list[dict] = []
         # Bumped by every change of state (an edit, undo, redo): work started on one revision (a Gemini run, an open
         # panel) is refused when it would land on another — it was decided on a sheet that no longer exists.
         self.revision = 0
@@ -389,6 +394,7 @@ class SheetModel:
         errors, warnings, changed = [], [], []
         by_view: dict[str, int] = {}
         measured: dict[str, dict[str, float]] = {}
+        regenerated: dict[str, tuple] = {}
         for uid in sorted(todo):
             u = self.unit(uid)
             vals = self._values_for(u, changes)
@@ -398,6 +404,7 @@ class SheetModel:
                 errors.append(f"{uid}: cannot regenerate: {exc}")
                 continue
             errors += [f"{uid}: {i}" for i in r.issues]
+            regenerated[uid] = (u, vals, r.datum)
             plans = [p for p in (u.answer or {}).get("plans", []) if p.get("status") == "accepted"]
             if plans:  # what a person accepted for this unit holds at the values asked for, not only at the ones tested
                 errors += [f"{uid}: {e}" for e in plan_errors_at(u.prog, plans, vals)]
@@ -447,6 +454,7 @@ class SheetModel:
             for uid, got in per.items():
                 if abs(got - want) > max(0.5, 1e-4 * abs(want)):
                     errors.append(f"{name}: {uid} measures {got:.1f} mm, not {want:g} — that view did not follow")
+        errors += self._domain_errors(regenerated)
         warnings += self._overlaps(changed, pts)
         reg = Regenerated(values=dict(changes), datum={}, pts=pts, radius=radius, texts=texts, issues=list(errors))
         return SheetRegen(reg=reg, changed=sorted(changed), by_view=by_view, errors=errors, warnings=warnings, measured=measured)
@@ -489,6 +497,67 @@ class SheetModel:
                     out.append(f"{vid}: the note '{a}' now overlaps '{b}' — move one of them")
             if len(out) >= 20:
                 break
+        return out
+
+    def _domain_state(self, b: dict, regenerated: dict[str, tuple] | None = None):
+        """Every unit a domain binding reads — regenerated where this regeneration touched it, as it stands otherwise."""
+        from .production.binding import SheetState, UnitState
+
+        units = {}
+        wanted = {b["unit"]} | {r["unit"] for r in list(b.get("inputs", {}).values()) + list(b.get("outputs", {}).values())
+                                 if isinstance(r, dict) and isinstance(r.get("unit"), str)}
+        for uid in wanted:
+            if regenerated and uid in regenerated:
+                u, vals, datum = regenerated[uid]
+                units[uid] = UnitState.of(u.prog, vals, datum)
+            elif uid in self.units:
+                u = self.unit(uid)
+                units[uid] = UnitState.of(u.prog, self._values_for(u, {}))
+        return SheetState(default=b["unit"], units=units)
+
+    def _domain_errors(self, regenerated: dict[str, tuple]) -> list[str]:
+        """The guarded relations of every domain binding that reads a regenerated unit, checked on the regenerated sheet (empty when none)."""
+        rows = [b for b in self.domain if (b.get("guards") or b.get("guard_validation")) and (
+            b.get("unit") in regenerated or any(isinstance(r, dict) and r.get("unit") in regenerated
+                                                for r in list(b.get("inputs", {}).values()) + list(b.get("outputs", {}).values())))]
+        if not rows:
+            return []
+        from .production import service
+
+        return [f"{b['unit']}: {e}" for b in rows for e in service.guard_errors(b, self._domain_state(b, regenerated))]
+
+    def bind_domain(self, binding: dict, guard: bool = True) -> dict:
+        """Keep a domain binding (one undoable step): checked and evaluated on the units as they stand; what holds becomes a guard. Refused
+        (SheetError, nothing kept) when it does not resolve. A binding with the same id replaces the old one."""
+        from .production import service
+
+        uid = binding.get("unit") if isinstance(binding, dict) else None
+        if uid not in self.units:
+            raise SheetError(f"no unit {uid!r}: a binding names the unit whose values and lines it reads")
+        try:
+            kept, rep = service.accept(binding, self._domain_state(binding), guard=guard)
+        except service.ProductionRefusal as exc:
+            raise SheetError(f"binding refused, nothing kept: {exc}") from exc
+        self._push()
+        self.domain = [b for b in self.domain if b.get("id") != kept["id"]] + [kept]
+        return rep
+
+    def unbind_domain(self, bid: str) -> None:
+        if not any(b.get("id") == bid for b in self.domain):
+            raise SheetError(f"no domain binding {bid!r}")
+        self._push()
+        self.domain = [b for b in self.domain if b.get("id") != bid]
+
+    def domain_report(self, uid: str | None = None) -> list[dict]:
+        """Every domain binding (of one unit, or all) evaluated on the sheet as it stands."""
+        from .production import service
+
+        out = []
+        for b in self.domain:
+            if uid and b.get("unit") != uid:
+                continue
+            rep = service.report(b, self._domain_state(b))
+            out.append({**rep, "guards": list(b.get("guards") or []), "guard_validation": bool(b.get("guard_validation"))})
         return out
 
     def preview(self, changes: dict[str, float]) -> SheetRegen:
@@ -534,7 +603,9 @@ class SheetModel:
         return {"values": copy.deepcopy(self.values), "shared": copy.deepcopy(self.shared),
                 "answers": {uid: copy.deepcopy(u.answer) for uid, u in self.units.items()}, "unlinked": set(self.unlinked),
                 "groups": copy.deepcopy(self.layout.groups), "accepted": set(self.accepted), "relations": copy.deepcopy(self.relations),
-                "plan": copy.deepcopy(self.stated_plan)}
+                "plan": copy.deepcopy(self.stated_plan), "domain": copy.deepcopy(self.domain),
+                # the drawing this state belongs to: a feature operation makes a new revision of it, and undo goes back to the old one
+                "revision_of": (self.dr, self.layout, self.import_state), "lineage": copy.deepcopy(self.lineage)}
 
     def _push(self) -> None:
         self.history.append(self._state())
@@ -543,11 +614,18 @@ class SheetModel:
         self.revision += 1
 
     def _restore(self, st: dict) -> None:
-        relayout = (st["unlinked"] != self.unlinked or st.get("accepted", set()) != self.accepted
+        swapped = st["revision_of"][0] is not self.dr if st.get("revision_of") else False
+        if swapped:  # another revision of the drawing: its entities are not this one's, so nothing of this one's units is kept
+            self.dr, self.layout, self.import_state = st["revision_of"]
+            self.path = self.dr.path
+            self.units, self.unit_of_view = {}, {}
+        relayout = swapped or (st["unlinked"] != self.unlinked or st.get("accepted", set()) != self.accepted
                     or [(g.id, g.kind, g.items) for g in st["groups"]] != [(g.id, g.kind, g.items) for g in self.layout.groups])
         self.values, self.shared, self.unlinked = st["values"], st["shared"], st["unlinked"]
         self.accepted, self.relations = st.get("accepted", set()), st.get("relations", [])
         self.stated_plan = st.get("plan", {})
+        self.domain = st.get("domain", [])
+        self.lineage = st.get("lineage", [])
         self.layout.groups = st["groups"]
         if relayout:
             self._relayout()
@@ -800,6 +878,47 @@ class SheetModel:
             applied = {"name": key, "value": float(want), "changed": len(r.changed), "by_view": r.by_view}
         checks = next((x for x in self.unit(uid).prog.intent.get("plans", []) if x["id"] == plan["id"]), None)
         return {**res, "plan": plan, "checks": checks, "applied": applied}
+
+    # ── feature operations: a change the regeneration cannot make, as a new revision of the drawing ─────────
+
+    def plan_feature(self, uid: str, request: dict) -> dict:
+        """What a change of COUNT (add / remove instances of a repeated unit) would do on a unit, and whether it can be done faithfully: the whole
+        chain is run (the derived drawing, its re-import, the parametrization carried over, the production guards at the new count) and thrown away.
+        `status` ready | refused | needs_decision — with the reasons. The sheet is not touched."""
+        from . import feature
+
+        return feature.plan_count(self, uid, request)
+
+    def apply_feature(self, uid: str, request: dict, expected_revision: int | None = None, plan_id: str | None = None, out_dir: str | None = None) -> dict:
+        """Make a feature operation real — or nothing. The plan is built again from the request (never taken on trust); only a plan that is ready
+        is applied; the derived drawing becomes the sheet's next REVISION with every name carried over, and one undo takes it back. Refused:
+        SheetError with the reasons, the sheet exactly as it was (and no file left behind)."""
+        from . import feature
+
+        if expected_revision is not None and expected_revision != self.revision:
+            raise SheetError(f"stale: the sheet changed since this plan was made (revision {expected_revision} → {self.revision}); plan again")
+        cand = feature.build_candidate(self, uid, request, Path(out_dir) if out_dir else feature.default_dir(self))
+        plan = cand.plan
+        if plan_id is not None and plan_id != plan.get("id"):
+            feature.discard(cand)
+            raise SheetError(f"the plan {plan_id} is not the plan this sheet would make now ({plan.get('id')}): plan again")
+        if cand.new is None:
+            raise SheetError("refused, nothing changed: " + "; ".join(plan.get("refusals") or [q["text"] for q in plan.get("questions", [])] or [plan.get("status", "")]))
+        came_from = self.path
+        self._push()
+        self._adopt(cand.new)
+        self.lineage = [*self.lineage, {"plan": plan["id"], "from": came_from, "to": self.path, "request": plan.get("request"),
+                                        "from_count": plan.get("from_count"), "to_count": plan.get("to_count")}]
+        return {"plan": plan, "path": self.path, "revision": self.revision, "from": came_from}
+
+    def _adopt(self, new: SheetModel) -> None:
+        """Another revision of the drawing becomes this sheet (history and runs are kept; the step was pushed by the caller)."""
+        self.dr, self.path, self.layout, self.links = new.dr, new.path, new.layout, new.links
+        self.unlinked, self.accepted = new.unlinked, new.accepted
+        self.units, self.unit_of_view = new.units, new.unit_of_view
+        self.shared, self.values, self.domain = new.shared, new.values, new.domain
+        self.relations, self.stated_plan, self.questions = new.relations, new.stated_plan, new.questions
+        self.import_state = new.import_state
 
     def _key(self, uid: str, local: str) -> str:
         """The name a person changes a unit's value by: its shared name, else unit.local."""
@@ -1210,6 +1329,7 @@ class SheetModel:
                 "answers": {uid: u.answer for uid, u in self.units.items() if u.answer},
                 "shared": [asdict(p) for p in self.shared.values()], "values": self.values, "originals": originals,
                 "accepted": sorted(list(k) for k in self.accepted), "relations": self.relations, "plan": self.stated_plan, "questions": self.questions,
+                "domain": self.domain, "lineage": self.lineage,
                 "views": views, "prefs": self.prefs, "runs": self.runs[-200:]}
 
     def save(self, path: str) -> None:
@@ -1248,6 +1368,8 @@ class SheetModel:
                 sm._group_units(sm.units)
         sm.relations, sm.questions = d.get("relations", []), d.get("questions", [])
         sm.stated_plan = d.get("plan") or {}
+        sm.domain = list(d.get("domain") or [])
+        sm.lineage = list(d.get("lineage") or [])
         for uid, ans in d.get("answers", {}).items():
             if uid in sm.units:
                 sm.units[uid].answer = ans

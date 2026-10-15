@@ -7,6 +7,8 @@
     dxf-autoparam serve    [drawing.dxf] [--domain bridge] [--port 8765]
     dxf-autoparam plan-bench / agent-eval   free benchmarks of the plan engine and (scripted, or --live --yes-spend) of the agent, per category
     dxf-autoparam library  list | search WORDS | show ID [--section S] | discover drawing.dxf   the engineering library (read-only, no model)
+    dxf-autoparam production build | extract [--family F] | status | families | show FAMILY [--section S] | discover drawing.dxf | bench
+                                       the production bridge rule engines: bundle, knowledge manifests, freshness, a benchmark (no model)
 
 Sizes on the command line are millimetres; levels are metres.
 """
@@ -80,6 +82,77 @@ def _library(a) -> int:
     return 0
 
 
+def _production(a) -> int:
+    """`production …`: the aagento-bridge rule engines as this project uses them — bundled, extracted into knowledge, checked for freshness."""
+    from .production import build as PB
+    from .production import manifest as PM
+    from .production.bridge import RuleBridge, default_bridge
+
+    if a.action == "build":
+        try:
+            info = PB.build()
+        except PB.BuildError as exc:
+            print(f"build failed: {exc}", file=sys.stderr)
+            return 2
+        print(f"built {PB.cache_dir() / PB.BUNDLE} from aagento-bridge {info['aagento_bridge']['commit'][:10]}"
+              f"{' (DIRTY: ' + ', '.join(info['aagento_bridge']['dirty_files'][:3]) + ')' if info['aagento_bridge']['dirty_files'] else ''}; "
+              f"{len(info['sources'])} source files fingerprinted, {len(info['families'])} families")
+        return 0
+    if a.action == "extract":
+        from .production import extract as PE
+
+        idx = PE.extract_all(a.family or None, br=RuleBridge(), render=not a.no_render)
+        for f in idx["families"]:
+            print(f"  {f['family']:<24} {f['parameters']:>4} params {f['outputs']:>5} outputs {f['formulas_verified']:>3} formulas verified "
+                  f"{f['views']:>3} views  {'units authored' if f['overlay'] else ''}")
+        print(f"wrote {PE.knowledge_dir() / 'index.json'}")
+        return 0
+    pk = PM.knowledge()
+    if a.action == "status":
+        st = default_bridge().status()
+        print(f"knowledge: {pk.dir} ({len(pk.family_keys())} families, extracted from aagento-bridge {(pk.index['source'].get('commit') or '?')[:10]})")
+        print(f"bridge: {'runs here' if st['available'] else 'unavailable — ' + st['reason']}")
+        for key in pk.family_keys():
+            fam = pk.family(key)
+            if not fam.supported:
+                print(f"  {key:<24} no rule engine")
+                continue
+            fr = pk.freshness(key)
+            extra = f" changed: {', '.join(fr.get('changed_files', [])[:2])}" if fr.get("changed_files") else ""
+            print(f"  {key:<24} knowledge {fr['state']:<12} checkout {fr['checkout']:<7} bundle {fr['bundle']}{extra}")
+        return 0
+    if a.action == "families":
+        for f in pk.index["families"]:
+            print(f"  {f['family']:<24} {f['title']:<32} compute {'yes' if f['has_compute'] else 'no ':<3} validate {'yes' if f['has_validate'] else 'no ':<3} "
+                  f"{f['formulas_verified']:>3} formulas verified")
+        return 0
+    if a.action == "show":
+        if not a.arg:
+            print("production show FAMILY [--section parameters|outputs|views|operations|validation|findings]", file=sys.stderr)
+            return 2
+        from .ai.production import ProductionSession
+
+        ses = ProductionSession(pk, bench=None)
+        print(json.dumps(ses._production_knowledge(a.arg, sections=a.section or None, query=a.query or "", limit=a.limit), indent=1, ensure_ascii=False, default=str))
+        return 0
+    if a.action == "discover":
+        from .ai import library as L
+        from .crossview import SheetModel
+
+        sm = SheetModel.open(a.arg)
+        for m in pk.discover(L.drawing_texts(sm.dr.items)):
+            print(f"  {m['family']:<24} score {m['score']:>6}  {'(close call) ' if m.get('close_call') else ''}words: {', '.join(m['matched_words'])}")
+        return 0
+    if a.action == "bench":
+        from .production import bench as PBn
+
+        rep = PBn.run(out_path=a.out)
+        print(PBn.table(rep))
+        print(f"wrote {a.out}")
+        return 0 if rep["summary"]["false_acceptances"] == 0 else 1
+    return 2
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="dxf-autoparam", description="Existing DXF → parametric model → regenerated DXF")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -140,6 +213,15 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--category", action="append", default=[], help="search: B reference, C vocabulary, D proposed or disputed, E operational")
     p.add_argument("--topic", action="append", default=[], help="search: formula, rule, component, level_chain, conflict …")
     p.add_argument("--limit", type=int, default=12)
+    p = sub.add_parser("production", help="the production bridge rule engines: bundle, knowledge, freshness, benchmark (no model, no cost)")
+    p.add_argument("action", choices=["build", "extract", "status", "families", "show", "discover", "bench"])
+    p.add_argument("arg", nargs="?", default=None, help="show: a family · discover: a DXF")
+    p.add_argument("--family", action="append", default=[], help="extract: only these families (repeat)")
+    p.add_argument("--no-render", action="store_true", help="extract: skip the headless view renders (faster; no view effects)")
+    p.add_argument("--section", action="append", default=[], help="show: summary, parameters, outputs, views, operations, validation, findings")
+    p.add_argument("--query", default="", help="show: words to filter by")
+    p.add_argument("--limit", type=int, default=40)
+    p.add_argument("--out", default="production_bench.json")
     p = sub.add_parser("plan-bench", help="free, no AI: instruction-guided assembly edits on generated drawings with known intent, scored")
     p.add_argument("--out", default="plan_bench.json")
     p = sub.add_parser("agent-eval", help="score the agent per category (reading, parts, values, anchor, plan, geometry …) on a drawing whose intended result is known")
@@ -155,6 +237,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if a.cmd == "library":
         return _library(a)
+    if a.cmd == "production":
+        return _production(a)
     if a.cmd == "check":
         from .robustness import check_all
 

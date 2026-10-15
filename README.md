@@ -52,6 +52,7 @@ uv run dxf-autoparam json my.dxf --split out/my_json -o my_cad.json   # the CAD 
 uv run dxf-autoparam learn my.dxf my_edited.dxf  # what an edit changed, what grew / stayed, what the program cannot explain
 uv run dxf-autoparam views my_sheet.dxf          # list the views on a sheet; then --view N or --region x0,y0,x1,y1
 uv run dxf-autoparam bench                       # intent recovery on 17 independent structure families
+uv run dxf-autoparam production bench            # the production rule integration on generated drawings (needs node + `production build`)
 uv run pytest -q                                 # 99 tests, no AI calls (Vertex faked; agent scripted; a real answer replayed)
 uv run ruff check src tests tools                # ruff 0.16 rules, pinned
 ```
@@ -64,6 +65,7 @@ How it works, results, limitations and the plan for aagento-bridge: **[docs/AUTO
 | `sheet.py`, `crossview.py`, `workspace.py`, `ai/sheet_ai.py`, `static/workspace.html` | a whole sheet: views found and named, views drawn in projection analysed as one unit, sizes shared across views, the canvas workspace and its API — see `docs/MULTIVIEW.md`. **The agent is one session** (`ai/run.py`, `ai/loop.py`, `viewimg.py`, `baseline.py`, `status.py`): one instruction, the model decides the stages, the engine checks and measures — see `docs/AGENT_SESSION.md` |
 | `src/dxf_autoparam/domains/` | optional semantic packs (`bridge.py`: site levels, names) — the only domain vocabulary |
 | `ai/library.py`, `knowledge/library/`, `knowledge/agent_context/` | the **engineering library**: skills, definitions and rules the agent retrieves on demand when a domain pack is on (migrated, hash-verified source knowledge + authored recipes) — see `docs/KNOWLEDGE_LIBRARY.md`; `dxf-autoparam library list \| search \| show \| discover` |
+| `production/`, `ai/production.py`, `tools/production/bridge_rules.ts`, `knowledge/production/` | the **production bridge rule engines**: aagento-bridge's `BRIDGE_REGISTRY` bundled and run through one boundary, its knowledge extracted (verified formulas, measured dependencies, views, findings) with provenance and freshness, bound to a drawing's own values and guarding every change — see `docs/PRODUCTION_RULES.md`; `dxf-autoparam production build \| extract \| status \| show \| bench` |
 | `examples/` | drawings to try (box sections, RCC box half-section GAD, girder deck, deck slab, pier, retaining wall, well, a 3-cell box drawn as loose lines) |
 | `fixtures/library/` | 17 kernel families as DXF + their single-parameter ground-truth variants |
 | `tools/` | fixture/example generators (`export_library_oracle.ts` reads the aagento kernel read-only) |

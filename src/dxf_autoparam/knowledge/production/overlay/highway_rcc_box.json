@@ -1,0 +1,44 @@
+{
+  "family": "highway_rcc_box",
+  "status": "authored_from_source",
+  "basis": "Read by a person from aagento-bridge highway-rcc-box-rule-engine.ts and highway-rcc-box.defaults.ts. Units: geometry values are added to levels in metres (z_bot = bedLvl - tSB, line 33), so they are metres. Unlike the railway box, bed level here is the top of the bottom slab: the wearing course is not in the level chain.",
+  "parameters": {
+    "project.cells": {"kind": "count", "unit": "-", "label": "number of cells (read after project.cellCount)", "component": "box", "evidence": ["highway-rcc-box-rule-engine.ts:11"]},
+    "project.cellCount": {"kind": "count", "unit": "-", "label": "number of cells (read first)", "component": "box", "evidence": ["highway-rcc-box-rule-engine.ts:11"]},
+    "geometry.clear_w": {"kind": "length", "unit": "m", "label": "clear span of one cell", "component": "cell", "evidence": ["highway-rcc-box-rule-engine.ts:12"]},
+    "geometry.clear_h": {"kind": "length", "unit": "m", "label": "clear height of a cell", "component": "cell", "evidence": ["highway-rcc-box-rule-engine.ts:13"]},
+    "geometry.t_wall_o": {"kind": "length", "unit": "m", "label": "thickness of each outer wall", "component": "outer_wall", "evidence": ["highway-rcc-box-rule-engine.ts:14"]},
+    "geometry.t_wall_i": {"kind": "length", "unit": "m", "label": "thickness of each intermediate wall", "component": "inner_wall", "evidence": ["highway-rcc-box-rule-engine.ts:15"]},
+    "geometry.t_slab_t": {"kind": "length", "unit": "m", "label": "thickness of the top slab", "component": "top_slab", "evidence": ["highway-rcc-box-rule-engine.ts:16"]},
+    "geometry.t_slab_b": {"kind": "length", "unit": "m", "label": "thickness of the bottom slab", "component": "bottom_slab", "evidence": ["highway-rcc-box-rule-engine.ts:17"]},
+    "geometry.haunch_size": {"kind": "length", "unit": "m", "label": "haunch size", "component": "haunch", "evidence": ["highway-rcc-box-rule-engine.ts:52"]},
+    "deck.wearing_course": {"kind": "length", "unit": "m", "label": "wearing course above the top slab (only in the earth cushion)", "component": "wearing_course", "evidence": ["highway-rcc-box-rule-engine.ts:18", "highway-rcc-box-rule-engine.ts:40"]},
+    "deck.road_level": {"kind": "level", "unit": "m", "label": "road level", "component": "road", "evidence": ["highway-rcc-box-rule-engine.ts:39"]},
+    "hydraulics.bed_lvl": {"kind": "level", "unit": "m", "label": "bed level: top of the bottom slab", "component": "cell", "evidence": ["highway-rcc-box-rule-engine.ts:19", "highway-rcc-box-rule-engine.ts:33"]},
+    "hydraulics.hfl": {"kind": "level", "unit": "m", "label": "high flood level", "component": "site", "evidence": ["highway-rcc-box-rule-engine.ts:20"]},
+    "hydraulics.soffit_level": {"kind": "level", "unit": "m", "label": "soffit level as entered", "component": "top_slab", "evidence": ["highway-rcc-box-rule-engine.ts:21"]},
+    "foundation.pcc_sub_base": {"kind": "length", "unit": "m", "label": "PCC sub-base thickness", "component": "foundation", "evidence": ["highway-rcc-box-rule-engine.ts:22"]},
+    "foundation.sand_fill_depth": {"kind": "length", "unit": "m", "label": "sand fill depth", "component": "foundation", "evidence": ["highway-rcc-box-rule-engine.ts:23"]},
+    "side.wing_l": {"kind": "length", "unit": "m", "label": "wing wall length", "component": "wing_wall", "evidence": ["highway-rcc-box-rule-engine.ts:24"]},
+    "side.apron_l": {"kind": "length", "unit": "m", "label": "apron length", "component": "apron", "evidence": ["highway-rcc-box-rule-engine.ts:25"]},
+    "deck.carriageway_width": {"kind": "length", "unit": "m", "label": "carriageway width", "component": "road", "evidence": ["highway-rcc-box-rule-engine.ts:67"]},
+    "deck.embankment_slope": {"kind": "ratio", "unit": "-", "label": "embankment side slope", "component": "embankment", "evidence": ["highway-rcc-box-rule-engine.ts:77"]}
+  },
+  "outputs": {
+    "total_w": {"kind": "length", "unit": "m", "label": "overall width of the box, outer face to outer face"},
+    "total_h": {"kind": "length", "unit": "m", "label": "overall height of the box"},
+    "flow_area": {"kind": "area", "unit": "m2", "label": "clear waterway area"},
+    "z_bot": {"kind": "level", "unit": "m", "label": "level of the underside of the bottom slab"},
+    "z_top": {"kind": "level", "unit": "m", "label": "level of the top of the top slab"},
+    "soffit": {"kind": "level", "unit": "m", "label": "level of the underside of the top slab"},
+    "rccBoxTopLvl": {"kind": "level", "unit": "m", "label": "level of the top of the box"},
+    "pccTop": {"kind": "level", "unit": "m"}, "pccBot": {"kind": "level", "unit": "m"}, "granBot": {"kind": "level", "unit": "m"},
+    "roadLvl": {"kind": "level", "unit": "m"}, "earthCushion": {"kind": "length", "unit": "m"}, "spanLen": {"kind": "length", "unit": "m"},
+    "cells": {"kind": "count", "unit": "-"}, "cW": {"kind": "length", "unit": "m"}, "cH": {"kind": "length", "unit": "m"},
+    "tOW": {"kind": "length", "unit": "m"}, "tIW": {"kind": "length", "unit": "m"}, "tST": {"kind": "length", "unit": "m"}, "tSB": {"kind": "length", "unit": "m"},
+    "wearC": {"kind": "length", "unit": "m"}, "haunch": {"kind": "length", "unit": "m"}, "bedLvl": {"kind": "level", "unit": "m"}, "hfl": {"kind": "level", "unit": "m"}
+  },
+  "findings": [
+    {"kind": "convention_difference", "text": "the highway box sets bed level at the top of the bottom slab (z_bot = bedLvl − tSB) while the railway box sets it at the top of the wearing course (z_bot = bedLvl − wearC − tSB): the same drawn levels bind differently in the two families.", "evidence": ["highway-rcc-box-rule-engine.ts:33", "rcc-box-rule-engine.ts:40"]}
+  ]
+}

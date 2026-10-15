@@ -1,0 +1,2762 @@
+{
+ "format": "dxf-autoparam/production-knowledge-1",
+ "extractor_version": 1,
+ "knowledge_id": "aagento-bridge:rcc_slab_legacy",
+ "family": "rcc_slab_legacy",
+ "title": "RCC SLAB (LEGACY)",
+ "source": {
+  "repository": "aagento-bridge",
+  "commit": "ca0b17ec2ccd82b81c246e2c02f8c4dc6fece565",
+  "branch": "cad_agent_dxf",
+  "dirty_files": [],
+  "registry": "src/app/features/bridges/models/bridge-registry.ts",
+  "modules": {
+   "defaults": {
+    "symbol": "RCC_SLAB_DEFAULTS",
+    "path": "src/app/features/bridges/models/rcc-slab.defaults.ts"
+   },
+   "ruleEngine": {
+    "symbol": "RccSlabRuleEngine",
+    "path": "src/app/features/bridges/utils/rcc-slab/rcc-slab-rule-engine.ts"
+   },
+   "sceneRenderer": {
+    "symbol": "RccSlabDraw2D",
+    "path": "src/app/features/bridges/utils/rcc-slab/rcc-slab-draw-2d.ts"
+   },
+   "workspaceMapper": {
+    "symbol": "rccSlabWorkspaceMapper",
+    "path": "src/app/features/bridges/utils/rcc-slab/rcc-slab-mapper.ts"
+   },
+   "versionPayloadMapper": {
+    "symbol": "rccSlabVersionPayloadMapper",
+    "path": "src/app/features/bridges/utils/rcc-slab/rcc-slab-mapper.ts"
+   },
+   "computedLevelsMapper": {
+    "symbol": "rccSlabComputedLevelsMapper",
+    "path": "src/app/features/bridges/utils/rcc-slab/rcc-slab-mapper.ts"
+   },
+   "initial2DScaleAndPan": {
+    "symbol": "rccSlabInitial2DScaleAndPan",
+    "path": "src/app/features/bridges/utils/rcc-slab/rcc-slab-mapper.ts"
+   },
+   "viewButtons": {
+    "symbol": "rccSlabViewButtons",
+    "path": "src/app/features/bridges/utils/rcc-slab/rcc-slab-mapper.ts"
+   },
+   "canvasBasePoint": {
+    "symbol": "rccSlabCanvasBasePoint",
+    "path": "src/app/features/bridges/utils/rcc-slab/rcc-slab-mapper.ts"
+   }
+  },
+  "sources": {
+   "src/app/core/auth/auth.models.ts": "83edf39da84bff6a30ca947cd34776054e6b9f87d6b558806b8b0a4902b94928",
+   "src/app/features/bridges/models/bridge-meta.models.ts": "66b74b60165005af9c34674461cc52247b6c17b08f01b836d4826f7578f26bfa",
+   "src/app/features/bridges/models/bridge-registry.ts": "4ad1cd4ab16a2f9e3b72cc5784eba7ce9326cb365c879ebb7ceb82c57c0215bf",
+   "src/app/features/bridges/models/bridge.models.ts": "3f80944515b45a05d31d989573f505b758d96f6dd1aa502b2a4c063d8047fc79",
+   "src/app/features/bridges/models/engineering.models.ts": "9b07e27edbe1320fb4f1841fc032f9b01cfadd8918784bb4072d3b8ecd6b9dc9",
+   "src/app/features/bridges/models/rcc-slab.defaults.ts": "607b02ac19a00f7631ba0f1a0fb6c8286ea9d7538d9b79f09480152cff1a0826",
+   "src/app/features/bridges/utils/rcc-slab/rcc-slab-draw-2d.ts": "de46ecde7fe63ae7e0686171982069f3f4ef021c52506dabdb843e4aca12b855",
+   "src/app/features/bridges/utils/rcc-slab/rcc-slab-mapper.ts": "2e3bdd60511431ed38e4d45f1df0bb74e3297add141b2eb4a322776c7e6758ae",
+   "src/app/features/bridges/utils/rcc-slab/rcc-slab-rule-engine.ts": "a34d6ab924e914e331c6aa40649de3794a0d5aa534afab19a7901e1261854880",
+   "src/app/features/projects/models/project.models.ts": "a6cb84994827c3ee2b3739308cbf3d9b7c7ecb2fd0a8615e3732f7ea4ac8d9d5"
+  },
+  "sources_digest": "1f03a0b48302e736f90fd15055d196da476166f8127f0b4ada3c7f6c70d26b6f"
+ },
+ "capabilities": {
+  "has_compute": true,
+  "has_validate": false,
+  "has_levels": true,
+  "has_views": true,
+  "has_renderer": true,
+  "has_defaults": true
+ },
+ "overlay": {
+  "present": false,
+  "status": null,
+  "basis": null
+ },
+ "validation": {
+  "available": false,
+  "reason": "the rule engine registered for 'rcc_slab_legacy' has no validate()",
+  "messages_at_defaults": []
+ },
+ "levels_mapper": {
+  "available": true,
+  "levels_at_defaults": {
+   "railLevel": 18.848,
+   "formationLevel": 18.315,
+   "hfl": 16.5,
+   "bedLevel": 16.434,
+   "floorLevel": 16.434
+  }
+ },
+ "views": {
+  "available": true,
+  "decided_by": [
+   "abutment",
+   "draftingOptions",
+   "options2d",
+   "return_wall",
+   "showReturnWall",
+   "showWingWall",
+   "show_return_wall",
+   "show_wing_wall",
+   "wing_wall"
+  ],
+  "views": [
+   {
+    "mode": "sec",
+    "labels": [
+     "SIDE ELEVATION"
+    ],
+    "conditions": [
+     "always"
+    ],
+    "renders": true,
+    "draws": 2642,
+    "deterministic": true,
+    "reads": [
+     "abutmentBatter",
+     "abutmentStepCount",
+     "abutmentStepHeight",
+     "abutmentStepWidth",
+     "abutmentTopWidth",
+     "abutmentType",
+     "bearingSeatWidth",
+     "bedLevel",
+     "bedLevelAbove",
+     "copingHeight",
+     "copingWidth",
+     "elevationType",
+     "formationLevel",
+     "formationWidth",
+     "foundationDepth",
+     "hfl",
+     "noOfTracks",
+     "numberOfPiers",
+     "pierLength",
+     "pierThickness",
+     "railLevel",
+     "returnWallWidth",
+     "slabThickness",
+     "spanSize",
+     "wingWallLength"
+    ],
+    "code_fallbacks": [
+     "abutment",
+     "ballastCushion",
+     "bridgeTitle",
+     "centerLineTitle",
+     "customTitle",
+     "draftingOptions",
+     "leanConcreteThickness",
+     "options2d",
+     "pccThickness",
+     "pierFoundationWidth",
+     "showReturnWall",
+     "show_return_wall",
+     "trackLineName",
+     "viewTitle",
+     "wingWallSlope"
+    ],
+    "affected_by": [
+     "abutmentTopWidth",
+     "bearingSeatWidth",
+     "bedLevel",
+     "bedLevelAbove",
+     "copingHeight",
+     "copingWidth",
+     "formationLevel",
+     "foundationDepth",
+     "hfl",
+     "noOfTracks",
+     "numberOfPiers",
+     "pierThickness",
+     "railLevel",
+     "returnWallWidth",
+     "slabThickness",
+     "spanSize"
+    ],
+    "inputs_tried": 23
+   },
+   {
+    "mode": "elv",
+    "labels": [
+     "LONGITUDINAL SECTION"
+    ],
+    "conditions": [
+     "always"
+    ],
+    "renders": true,
+    "draws": 3056,
+    "deterministic": true,
+    "reads": [
+     "abutmentLength",
+     "abutmentTopWidth",
+     "bedLevel",
+     "bedLevelAbove",
+     "copingHeight",
+     "copingWidth",
+     "formationLevel",
+     "formationWidth",
+     "foundationDepth",
+     "hfl",
+     "noOfTracks",
+     "numberOfPiers",
+     "pierLength",
+     "pierThickness",
+     "railLevel",
+     "returnWallLength",
+     "slabSpecificationText",
+     "slabThickness",
+     "spanSize",
+     "trackSpacing",
+     "wingWallLength",
+     "wingWallStepCount",
+     "wingWallStepRiser",
+     "wingWallStepTread"
+    ],
+    "code_fallbacks": [
+     "abutment",
+     "ballastCushion",
+     "ballastRetainerHeight",
+     "ballastRetainerWidth",
+     "bridgeStatus",
+     "clearSpan",
+     "customSlabText",
+     "customTitle",
+     "draftingOptions",
+     "kerbHeight",
+     "kerbWidth",
+     "longitudinalTitle",
+     "options2d",
+     "project",
+     "showReturnWall",
+     "show_return_wall",
+     "slabNote",
+     "trackLineName",
+     "viewTitle",
+     "wingWallSlope",
+     "wingWallStep1Riser",
+     "wingWallStep1Tread",
+     "wingWallStep2Riser",
+     "wingWallStep2Tread",
+     "wingWallStep3Riser",
+     "wingWallStep3Tread",
+     "wingWallSteps"
+    ],
+    "affected_by": [
+     "abutmentTopWidth",
+     "bedLevel",
+     "bedLevelAbove",
+     "copingHeight",
+     "copingWidth",
+     "formationLevel",
+     "hfl",
+     "noOfTracks",
+     "railLevel",
+     "returnWallLength",
+     "slabThickness",
+     "wingWallStepCount",
+     "wingWallStepRiser",
+     "wingWallStepTread"
+    ],
+    "inputs_tried": 23
+   },
+   {
+    "mode": "plan",
+    "labels": [
+     "PLAN TOP"
+    ],
+    "conditions": [
+     "always"
+    ],
+    "renders": true,
+    "draws": 890,
+    "deterministic": true,
+    "reads": [
+     "abutmentLength",
+     "abutmentTopWidth",
+     "barrelLength",
+     "bearingSeatWidth",
+     "bedLevel",
+     "bedLevelAbove",
+     "flowDirection",
+     "formationLevel",
+     "formationWidth",
+     "foundationDepth",
+     "hfl",
+     "noOfTracks",
+     "numberOfPiers",
+     "pierLength",
+     "pierThickness",
+     "railLevel",
+     "returnWallLength",
+     "slabThickness",
+     "spanSize",
+     "trackSpacing",
+     "wingWallLength"
+    ],
+    "code_fallbacks": [
+     "abutment",
+     "clearSpan",
+     "draftingOptions",
+     "geometry",
+     "hydraulics",
+     "levels",
+     "options2d",
+     "returnWallType",
+     "showReturnWall",
+     "show_return_wall",
+     "side",
+     "wingWallAngle",
+     "wingWallSlope",
+     "wingWallType"
+    ],
+    "affected_by": [
+     "abutmentLength",
+     "abutmentTopWidth",
+     "barrelLength",
+     "bearingSeatWidth",
+     "bedLevel",
+     "formationLevel",
+     "noOfTracks",
+     "numberOfPiers",
+     "pierLength",
+     "pierThickness",
+     "returnWallLength",
+     "spanSize"
+    ],
+    "inputs_tried": 20
+   },
+   {
+    "mode": "rw",
+    "labels": [
+     "SEC OF RETURN WALL"
+    ],
+    "conditions": [
+     {
+      "when": {
+       "path": "showReturnWall",
+       "value": true
+      },
+      "added": true
+     },
+     {
+      "when": {
+       "path": "show_return_wall",
+       "value": true
+      },
+      "added": true
+     }
+    ],
+    "renders": true,
+    "draws": 639,
+    "deterministic": true,
+    "reads": [
+     "abutmentBatter",
+     "abutmentHeight",
+     "abutmentLength",
+     "abutmentStepCount",
+     "abutmentStepHeight",
+     "abutmentStepWidth",
+     "abutmentTopWidth",
+     "abutmentType",
+     "barrelLength",
+     "bearingSeatWidth",
+     "bedLevel",
+     "bedLevelAbove",
+     "cells",
+     "clearHeight",
+     "copingHeight",
+     "copingWidth",
+     "elevationType",
+     "flowDirection",
+     "formationLevel",
+     "formationWidth",
+     "foundationDepth",
+     "hfl",
+     "noOfTracks",
+     "numberOfPiers",
+     "pierLength",
+     "pierThickness",
+     "railLevel",
+     "returnWallBatterWidth",
+     "returnWallBoulderThick",
+     "returnWallHeight",
+     "returnWallLeanThick",
+     "returnWallLength",
+     "returnWallPccProj",
+     "returnWallStemBot",
+     "returnWallStepCount",
+     "returnWallStepRiser",
+     "returnWallStepTread",
+     "returnWallStepWidth",
+     "returnWallWidth",
+     "slabSpecificationText",
+     "slabThickness",
+     "spanSize",
+     "trackSpacing",
+     "wingWallBatter",
+     "wingWallBoulderThick",
+     "wingWallFootingStepHeight",
+     "wingWallFootingStepOffset",
+     "wingWallFootingWidth",
+     "wingWallHeight",
+     "wingWallLeanGrade",
+     "wingWallLeanThick",
+     "wingWallLength",
+     "wingWallMccGrade",
+     "wingWallReinfNote",
+     "wingWallStemBot",
+     "wingWallStemHeight",
+     "wingWallStemTop",
+     "wingWallStepCount",
+     "wingWallStepRiser",
+     "wingWallStepTread"
+    ],
+    "code_fallbacks": [
+     "abutment",
+     "deck",
+     "foundation",
+     "foundationBottomLevel",
+     "geometry",
+     "hydraulics",
+     "options2d",
+     "returnWallType"
+    ],
+    "affected_by": [
+     "bedLevel",
+     "formationLevel",
+     "foundationDepth",
+     "returnWallStemBot",
+     "returnWallWidth"
+    ],
+    "inputs_tried": 53
+   },
+   {
+    "mode": "wing_wall",
+    "labels": [
+     "SEC OF WING WALL"
+    ],
+    "conditions": [
+     {
+      "when": {
+       "path": "showWingWall",
+       "value": true
+      },
+      "added": true
+     },
+     {
+      "when": {
+       "path": "show_wing_wall",
+       "value": true
+      },
+      "added": true
+     }
+    ],
+    "renders": true,
+    "draws": 2054,
+    "deterministic": true,
+    "reads": [
+     "bedLevel",
+     "copingHeight",
+     "formationLevel",
+     "formationWidth",
+     "foundationDepth",
+     "hfl",
+     "numberOfPiers",
+     "pierLength",
+     "pierThickness",
+     "railLevel",
+     "slabThickness",
+     "spanSize",
+     "wingWallBoulderThick",
+     "wingWallStemBot",
+     "wingWallStemTop",
+     "wingWallStepCount",
+     "wingWallStepRiser",
+     "wingWallStepTread"
+    ],
+    "code_fallbacks": [
+     "abutment",
+     "foundation",
+     "foundationBottomLevel",
+     "geometry",
+     "options2d",
+     "wingWallStep1Riser",
+     "wingWallStep1Tread",
+     "wingWallStep2Riser",
+     "wingWallStep2Tread",
+     "wingWallStep3Riser",
+     "wingWallStep3Tread",
+     "wingWallSteps",
+     "wingWallType",
+     "wing_wall_steps"
+    ],
+    "affected_by": [
+     "bedLevel",
+     "copingHeight",
+     "formationLevel",
+     "foundationDepth",
+     "wingWallBoulderThick",
+     "wingWallStemBot",
+     "wingWallStemTop",
+     "wingWallStepCount",
+     "wingWallStepRiser",
+     "wingWallStepTread"
+    ],
+    "inputs_tried": 18
+   }
+  ]
+ },
+ "operations": [
+  {
+   "op": "set_value",
+   "path": "spanSize",
+   "outputs": [
+    "span"
+   ],
+   "views": [
+    "sec",
+    "plan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "numberOfPiers",
+   "outputs": [
+    "numberOfPiers",
+    "cells"
+   ],
+   "views": [
+    "sec",
+    "plan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "slabThickness",
+   "outputs": [
+    "clearHeight",
+    "slabThickness"
+   ],
+   "views": [
+    "sec",
+    "elv"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "foundationDepth",
+   "outputs": [
+    "foundationDepth",
+    "flBase",
+    "totalHeight",
+    "foundationThickness"
+   ],
+   "views": [
+    "sec",
+    "rw",
+    "wing_wall"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "abutmentLength",
+   "outputs": [],
+   "views": [
+    "plan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "barrelLength",
+   "outputs": [],
+   "views": [
+    "plan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "abutmentTopWidth",
+   "outputs": [],
+   "views": [
+    "sec",
+    "elv",
+    "plan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "bearingSeatWidth",
+   "outputs": [],
+   "views": [
+    "sec",
+    "plan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "copingWidth",
+   "outputs": [],
+   "views": [
+    "sec",
+    "elv"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "copingHeight",
+   "outputs": [],
+   "views": [
+    "sec",
+    "elv",
+    "wing_wall"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "wingWallStemBot",
+   "outputs": [],
+   "views": [
+    "wing_wall"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "returnWallLength",
+   "outputs": [],
+   "views": [
+    "elv",
+    "plan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "bedLevelAbove",
+   "outputs": [],
+   "views": [
+    "sec",
+    "elv"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "returnWallWidth",
+   "outputs": [],
+   "views": [
+    "sec",
+    "rw"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "returnWallStemBot",
+   "outputs": [],
+   "views": [
+    "rw"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "noOfTracks",
+   "outputs": [],
+   "views": [
+    "sec",
+    "elv",
+    "plan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "formationWidth",
+   "outputs": [
+    "formationWidth"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "pierThickness",
+   "outputs": [
+    "pierThickness"
+   ],
+   "views": [
+    "sec",
+    "plan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "pierLength",
+   "outputs": [
+    "pierLength"
+   ],
+   "views": [
+    "plan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "railLevel",
+   "outputs": [
+    "rl",
+    "totalHeight",
+    "abutmentHeight",
+    "steps.0.yTop",
+    "steps.0.yBottom",
+    "steps.1.yTop",
+    "steps.1.yBottom",
+    "steps.2.yTop",
+    "steps.2.yBottom",
+    "steps.3.yTop",
+    "steps.3.yBottom",
+    "steps.4.yTop",
+    "steps.4.yBottom",
+    "steps.5.yTop",
+    "steps.5.yBottom"
+   ],
+   "views": [
+    "sec",
+    "elv"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "formationLevel",
+   "outputs": [
+    "clearHeight",
+    "fl",
+    "abutmentHeight",
+    "steps.0.yTop",
+    "steps.0.yBottom",
+    "steps.1.yTop",
+    "steps.1.yBottom",
+    "steps.2.yTop",
+    "steps.2.yBottom",
+    "steps.3.yTop",
+    "steps.3.yBottom",
+    "steps.4.yTop",
+    "steps.4.yBottom",
+    "steps.5.yTop",
+    "steps.5.yBottom"
+   ],
+   "views": [
+    "sec",
+    "elv",
+    "plan",
+    "rw",
+    "wing_wall"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "hfl",
+   "outputs": [
+    "hfl"
+   ],
+   "views": [
+    "sec",
+    "elv"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "bedLevel",
+   "outputs": [
+    "clearHeight",
+    "bl",
+    "flBase",
+    "totalHeight",
+    "abutmentHeight",
+    "steps.0.yTop",
+    "steps.0.yBottom",
+    "steps.1.yTop",
+    "steps.1.yBottom",
+    "steps.2.yTop",
+    "steps.2.yBottom",
+    "steps.3.yTop",
+    "steps.3.yBottom",
+    "steps.4.yTop",
+    "steps.4.yBottom",
+    "steps.5.yTop",
+    "steps.5.yBottom"
+   ],
+   "views": [
+    "sec",
+    "elv",
+    "plan",
+    "rw",
+    "wing_wall"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "wingWallStemTop",
+   "outputs": [],
+   "views": [
+    "wing_wall"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "wingWallBoulderThick",
+   "outputs": [],
+   "views": [
+    "wing_wall"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "wingWallStepRiser",
+   "outputs": [],
+   "views": [
+    "elv",
+    "wing_wall"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "wingWallStepTread",
+   "outputs": [],
+   "views": [
+    "elv",
+    "wing_wall"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "wingWallStepCount",
+   "outputs": [],
+   "views": [
+    "elv",
+    "wing_wall"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "toggle",
+   "path": "showReturnWall",
+   "value": true,
+   "view": "rw",
+   "effect": "adds the view",
+   "on_existing_drawing": "topology_change: a component and its views appear or disappear \u2014 needs geometry the drawing may not hold"
+  },
+  {
+   "op": "toggle",
+   "path": "show_return_wall",
+   "value": true,
+   "view": "rw",
+   "effect": "adds the view",
+   "on_existing_drawing": "topology_change: a component and its views appear or disappear \u2014 needs geometry the drawing may not hold"
+  },
+  {
+   "op": "toggle",
+   "path": "showWingWall",
+   "value": true,
+   "view": "wing_wall",
+   "effect": "adds the view",
+   "on_existing_drawing": "topology_change: a component and its views appear or disappear \u2014 needs geometry the drawing may not hold"
+  },
+  {
+   "op": "toggle",
+   "path": "show_wing_wall",
+   "value": true,
+   "view": "wing_wall",
+   "effect": "adds the view",
+   "on_existing_drawing": "topology_change: a component and its views appear or disappear \u2014 needs geometry the drawing may not hold"
+  }
+ ],
+ "findings": [],
+ "parameters": [
+  {
+   "path": "spanSize",
+   "default": 1.219,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_outputs": [
+    "span"
+   ],
+   "affects_views": [
+    "sec",
+    "plan"
+   ]
+  },
+  {
+   "path": "clearHeight",
+   "default": 1.5,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "cells",
+   "default": 2,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "numberOfPiers",
+   "default": 1,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_outputs": [
+    "numberOfPiers",
+    "cells"
+   ],
+   "affects_views": [
+    "sec",
+    "plan"
+   ]
+  },
+  {
+   "path": "slabThickness",
+   "default": 0.254,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_outputs": [
+    "clearHeight",
+    "slabThickness"
+   ],
+   "affects_views": [
+    "sec",
+    "elv"
+   ]
+  },
+  {
+   "path": "foundationDepth",
+   "default": 1.219,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_outputs": [
+    "foundationDepth",
+    "flBase",
+    "totalHeight",
+    "foundationThickness"
+   ],
+   "affects_views": [
+    "sec",
+    "rw",
+    "wing_wall"
+   ]
+  },
+  {
+   "path": "abutmentHeight",
+   "default": 2.294,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "abutmentLength",
+   "default": 4.7,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "plan"
+   ]
+  },
+  {
+   "path": "barrelLength",
+   "default": 4.7,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "plan"
+   ]
+  },
+  {
+   "path": "abutmentTopWidth",
+   "default": 0.649,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "sec",
+    "elv",
+    "plan"
+   ]
+  },
+  {
+   "path": "abutmentType",
+   "default": "rectangular",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "abutmentStepCount",
+   "default": 3,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "abutmentStepWidth",
+   "default": 0.127,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "abutmentStepHeight",
+   "default": 0.3,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "abutmentBatter",
+   "default": 12,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "bearingSeatWidth",
+   "default": 0.38,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "sec",
+    "plan"
+   ]
+  },
+  {
+   "path": "copingWidth",
+   "default": 0.749,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "sec",
+    "elv"
+   ]
+  },
+  {
+   "path": "copingHeight",
+   "default": 0.12,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "sec",
+    "elv",
+    "wing_wall"
+   ]
+  },
+  {
+   "path": "wingWallLength",
+   "default": 2.562,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "wingWallHeight",
+   "default": 0.6,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "wingWallStemBot",
+   "default": 0.8,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "wing_wall"
+   ]
+  },
+  {
+   "path": "returnWallLength",
+   "default": 1.2,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "elv",
+    "plan"
+   ]
+  },
+  {
+   "path": "returnWallHeight",
+   "default": 0.6,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "bedLevelAbove",
+   "default": 0.6,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "sec",
+    "elv"
+   ]
+  },
+  {
+   "path": "returnWallWidth",
+   "default": 0.3,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "sec",
+    "rw"
+   ]
+  },
+  {
+   "path": "returnWallStemBot",
+   "default": 0.934,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "rw"
+   ]
+  },
+  {
+   "path": "returnWallBatterWidth",
+   "default": 0.634,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "returnWallStepCount",
+   "default": 3,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "returnWallStepWidth",
+   "default": 0.3,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "returnWallStepRiser",
+   "default": 0.3,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "returnWallStepTread",
+   "default": 0.3,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "returnWallBoulderThick",
+   "default": 0.6,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "returnWallLeanThick",
+   "default": 0.15,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "returnWallPccProj",
+   "default": 0.15,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "noOfTracks",
+   "default": 1,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "sec",
+    "elv",
+    "plan"
+   ]
+  },
+  {
+   "path": "formationWidth",
+   "default": 7.85,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_outputs": [
+    "formationWidth"
+   ]
+  },
+  {
+   "path": "pierThickness",
+   "default": 0.5,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_outputs": [
+    "pierThickness"
+   ],
+   "affects_views": [
+    "sec",
+    "plan"
+   ]
+  },
+  {
+   "path": "pierLength",
+   "default": 4.7,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_outputs": [
+    "pierLength"
+   ],
+   "affects_views": [
+    "plan"
+   ]
+  },
+  {
+   "path": "railLevel",
+   "default": 18.848,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_outputs": [
+    "rl",
+    "totalHeight",
+    "abutmentHeight",
+    "steps.0.yTop",
+    "steps.0.yBottom",
+    "steps.1.yTop",
+    "steps.1.yBottom",
+    "steps.2.yTop",
+    "steps.2.yBottom",
+    "steps.3.yTop",
+    "steps.3.yBottom",
+    "steps.4.yTop",
+    "steps.4.yBottom",
+    "steps.5.yTop",
+    "steps.5.yBottom"
+   ],
+   "affects_views": [
+    "sec",
+    "elv"
+   ]
+  },
+  {
+   "path": "formationLevel",
+   "default": 18.315,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_outputs": [
+    "clearHeight",
+    "fl",
+    "abutmentHeight",
+    "steps.0.yTop",
+    "steps.0.yBottom",
+    "steps.1.yTop",
+    "steps.1.yBottom",
+    "steps.2.yTop",
+    "steps.2.yBottom",
+    "steps.3.yTop",
+    "steps.3.yBottom",
+    "steps.4.yTop",
+    "steps.4.yBottom",
+    "steps.5.yTop",
+    "steps.5.yBottom"
+   ],
+   "affects_views": [
+    "sec",
+    "elv",
+    "plan",
+    "rw",
+    "wing_wall"
+   ]
+  },
+  {
+   "path": "hfl",
+   "default": 16.5,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_outputs": [
+    "hfl"
+   ],
+   "affects_views": [
+    "sec",
+    "elv"
+   ]
+  },
+  {
+   "path": "bedLevel",
+   "default": 16.434,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_outputs": [
+    "clearHeight",
+    "bl",
+    "flBase",
+    "totalHeight",
+    "abutmentHeight",
+    "steps.0.yTop",
+    "steps.0.yBottom",
+    "steps.1.yTop",
+    "steps.1.yBottom",
+    "steps.2.yTop",
+    "steps.2.yBottom",
+    "steps.3.yTop",
+    "steps.3.yBottom",
+    "steps.4.yTop",
+    "steps.4.yBottom",
+    "steps.5.yTop",
+    "steps.5.yBottom"
+   ],
+   "affects_views": [
+    "sec",
+    "elv",
+    "plan",
+    "rw",
+    "wing_wall"
+   ]
+  },
+  {
+   "path": "trackSpacing",
+   "default": 5.3,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "trackGaps.0",
+   "default": 5.3,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "trackGaps.1",
+   "default": 5.3,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "trackGaps.2",
+   "default": 5.3,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "wingWallStemHeight",
+   "default": 3,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "wingWallStemTop",
+   "default": 0.3,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "wing_wall"
+   ]
+  },
+  {
+   "path": "wingWallBatter",
+   "default": 6,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "wingWallBoulderThick",
+   "default": 0.6,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "wing_wall"
+   ]
+  },
+  {
+   "path": "wingWallFootingWidth",
+   "default": 2.4,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "wingWallFootingStepHeight",
+   "default": 0.3,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "wingWallFootingStepOffset",
+   "default": 0.3,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "wingWallStepRiser",
+   "default": 0.3,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "elv",
+    "wing_wall"
+   ]
+  },
+  {
+   "path": "wingWallStepTread",
+   "default": 0.3,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "elv",
+    "wing_wall"
+   ]
+  },
+  {
+   "path": "wingWallStepCount",
+   "default": 3,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "elv",
+    "wing_wall"
+   ]
+  },
+  {
+   "path": "wingWallLeanThick",
+   "default": 0.1,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "wingWallMccGrade",
+   "default": "M-25",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "wingWallLeanGrade",
+   "default": "1:3:6",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "wingWallReinfNote",
+   "default": "8 TOR @ 200 C/C BOTH WAY",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "slabSpecificationText",
+   "default": "",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "elevationType",
+   "default": "type1",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "flowDirection",
+   "default": "L2R",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  }
+ ],
+ "outputs": [
+  {
+   "name": "span",
+   "value_at_defaults": 1219,
+   "depends_on": [
+    "spanSize"
+   ],
+   "partials": {
+    "spanSize": {
+     "slope": 1002.949852507,
+     "affine": false
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "uses 'parseToMm', which is not a number this reader knows"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "clearHeight",
+   "value_at_defaults": 1627,
+   "depends_on": [
+    "bedLevel",
+    "formationLevel",
+    "slabThickness"
+   ],
+   "partials": {
+    "slabThickness": {
+     "slope": -997.442455243,
+     "affine": false
+    },
+    "formationLevel": {
+     "slope": 999.891610666,
+     "affine": false
+    },
+    "bedLevel": {
+     "slope": -800.796572325,
+     "affine": false
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "uses fl, which was not read (uses 'b?.formationLevel', which is not a number this reader knows)"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "slabThickness",
+   "value_at_defaults": 254,
+   "depends_on": [
+    "slabThickness"
+   ],
+   "partials": {
+    "slabThickness": {
+     "slope": 997.442455243,
+     "affine": false
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "declared with let (it may be reassigned)"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "pierThickness",
+   "value_at_defaults": 500,
+   "depends_on": [
+    "pierThickness"
+   ],
+   "partials": {
+    "pierThickness": {
+     "slope": 1004.709576138,
+     "affine": false
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "uses 'parseToMm', which is not a number this reader knows"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "pierLength",
+   "value_at_defaults": 4700,
+   "depends_on": [
+    "pierLength"
+   ],
+   "partials": {
+    "pierLength": {
+     "slope": 1000.620219144,
+     "affine": false
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "uses 'parseToMm', which is not a number this reader knows"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "foundationDepth",
+   "value_at_defaults": 1219,
+   "depends_on": [
+    "foundationDepth"
+   ],
+   "partials": {
+    "foundationDepth": {
+     "slope": 1002.949852507,
+     "affine": false
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "uses 'parseToMm', which is not a number this reader knows"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "numberOfPiers",
+   "value_at_defaults": 1,
+   "depends_on": [
+    "numberOfPiers"
+   ],
+   "partials": {
+    "numberOfPiers": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "declared with let (it may be reassigned)"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "cells",
+   "value_at_defaults": 2,
+   "depends_on": [
+    "numberOfPiers"
+   ],
+   "partials": {
+    "numberOfPiers": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "uses numberOfPiers, which was not read (declared with let (it may be reassigned))"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "formationWidth",
+   "value_at_defaults": 7850,
+   "depends_on": [
+    "formationWidth"
+   ],
+   "partials": {
+    "formationWidth": {
+     "slope": 1000.375610367,
+     "affine": false
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "uses 'parseToMm', which is not a number this reader knows"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "rl",
+   "value_at_defaults": 18.848,
+   "depends_on": [
+    "railLevel"
+   ],
+   "partials": {
+    "railLevel": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "uses 'b?.railLevel', which is not a number this reader knows"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "fl",
+   "value_at_defaults": 18.315,
+   "depends_on": [
+    "formationLevel"
+   ],
+   "partials": {
+    "formationLevel": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "uses 'b?.formationLevel', which is not a number this reader knows"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "hfl",
+   "value_at_defaults": 16.5,
+   "depends_on": [
+    "hfl"
+   ],
+   "partials": {
+    "hfl": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "uses 'b?.hfl', which is not a number this reader knows"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "bl",
+   "value_at_defaults": 16.434,
+   "depends_on": [
+    "bedLevel"
+   ],
+   "partials": {
+    "bedLevel": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "uses 'b?.bedLevel', which is not a number this reader knows"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "flBase",
+   "value_at_defaults": 15.215000000000002,
+   "depends_on": [
+    "bedLevel",
+    "foundationDepth"
+   ],
+   "partials": {
+    "foundationDepth": {
+     "slope": -1.002949853,
+     "affine": false
+    },
+    "bedLevel": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "uses bl, which was not read (uses 'b?.bedLevel', which is not a number this reader knows)"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "totalHeight",
+   "value_at_defaults": 3.6329999999999973,
+   "depends_on": [
+    "bedLevel",
+    "foundationDepth",
+    "railLevel"
+   ],
+   "partials": {
+    "foundationDepth": {
+     "slope": 1.002949853,
+     "affine": false
+    },
+    "railLevel": {
+     "slope": 1.0,
+     "affine": true
+    },
+    "bedLevel": {
+     "slope": -1.0,
+     "affine": true
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "uses rl, which was not read (uses 'b?.railLevel', which is not a number this reader knows)"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "abutmentHeight",
+   "value_at_defaults": 2.414,
+   "depends_on": [
+    "bedLevel",
+    "formationLevel",
+    "railLevel"
+   ],
+   "partials": {
+    "railLevel": {
+     "slope": 0.999736634,
+     "affine": false
+    },
+    "formationLevel": {
+     "slope": 0.873618036,
+     "affine": false
+    },
+    "bedLevel": {
+     "slope": -0.800796572,
+     "affine": false
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "uses abutmentHeightMm, which was not read (uses clearHeight, which was not read (uses fl, which was not read (uses 'b?.formationLevel', which is not a number this reader knows)))"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "foundationThickness",
+   "value_at_defaults": 1.219,
+   "depends_on": [
+    "foundationDepth"
+   ],
+   "partials": {
+    "foundationDepth": {
+     "slope": 1.002949853,
+     "affine": false
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "uses foundationDepth, which was not read (uses 'parseToMm', which is not a number this reader knows)"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "innerBatter",
+   "value_at_defaults": 0.08333333333333333,
+   "depends_on": [],
+   "partials": {},
+   "formula": {
+    "expr": "(1 / 12)",
+    "line": 117,
+    "inputs": {},
+    "display": "innerBatter = 1 / 12",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "constant_verified"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "wingWallBatter",
+   "value_at_defaults": 0.125,
+   "depends_on": [],
+   "partials": {},
+   "formula": {
+    "expr": "(1 / 8)",
+    "line": 118,
+    "inputs": {},
+    "display": "wingWallBatter = 1 / 8",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "constant_verified"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "topAbutmentWidth",
+   "value_at_defaults": 381,
+   "depends_on": [],
+   "partials": {},
+   "formula": {
+    "expr": "(381)",
+    "line": 128,
+    "inputs": {},
+    "display": "topAbutmentWidth = 381",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "constant_verified"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "stepHeight",
+   "value_at_defaults": 381,
+   "depends_on": [],
+   "partials": {},
+   "formula": {
+    "expr": "381",
+    "line": 178,
+    "inputs": {},
+    "display": "stepHeight = 381",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "constant_verified"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "steps.0.yTop",
+   "value_at_defaults": 18848.000000000004,
+   "depends_on": [
+    "bedLevel",
+    "formationLevel",
+    "railLevel"
+   ],
+   "partials": {
+    "railLevel": {
+     "slope": 999.736634185,
+     "affine": false
+    },
+    "formationLevel": {
+     "slope": 873.618035985,
+     "affine": false
+    },
+    "bedLevel": {
+     "slope": 199.203427675,
+     "affine": false
+    }
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "steps.0.yBottom",
+   "value_at_defaults": 18467.000000000004,
+   "depends_on": [
+    "bedLevel",
+    "formationLevel",
+    "railLevel"
+   ],
+   "partials": {
+    "railLevel": {
+     "slope": 999.736634185,
+     "affine": false
+    },
+    "formationLevel": {
+     "slope": 873.618035985,
+     "affine": false
+    },
+    "bedLevel": {
+     "slope": 199.203427675,
+     "affine": false
+    }
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "steps.0.height",
+   "value_at_defaults": 381,
+   "depends_on": [],
+   "partials": {},
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "steps.0.topWidth",
+   "value_at_defaults": 381,
+   "depends_on": [],
+   "partials": {},
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "steps.0.bottomWidth",
+   "value_at_defaults": 539.75,
+   "depends_on": [],
+   "partials": {},
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "steps.1.yTop",
+   "value_at_defaults": 18467.000000000004,
+   "depends_on": [
+    "bedLevel",
+    "formationLevel",
+    "railLevel"
+   ],
+   "partials": {
+    "railLevel": {
+     "slope": 999.736634185,
+     "affine": false
+    },
+    "formationLevel": {
+     "slope": 873.618035985,
+     "affine": false
+    },
+    "bedLevel": {
+     "slope": 199.203427675,
+     "affine": false
+    }
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "steps.1.yBottom",
+   "value_at_defaults": 18086.000000000004,
+   "depends_on": [
+    "bedLevel",
+    "formationLevel",
+    "railLevel"
+   ],
+   "partials": {
+    "railLevel": {
+     "slope": 999.736634185,
+     "affine": false
+    },
+    "formationLevel": {
+     "slope": 873.618035985,
+     "affine": false
+    },
+    "bedLevel": {
+     "slope": 199.203427675,
+     "affine": false
+    }
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "steps.1.height",
+   "value_at_defaults": 381,
+   "depends_on": [],
+   "partials": {},
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "steps.1.topWidth",
+   "value_at_defaults": 539.75,
+   "depends_on": [],
+   "partials": {},
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "steps.1.bottomWidth",
+   "value_at_defaults": 850.5,
+   "depends_on": [],
+   "partials": {},
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "steps.2.yTop",
+   "value_at_defaults": 18086.000000000004,
+   "depends_on": [
+    "bedLevel",
+    "formationLevel",
+    "railLevel"
+   ],
+   "partials": {
+    "railLevel": {
+     "slope": 999.736634185,
+     "affine": false
+    },
+    "formationLevel": {
+     "slope": 873.618035985,
+     "affine": false
+    },
+    "bedLevel": {
+     "slope": 199.203427675,
+     "affine": false
+    }
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "steps.2.yBottom",
+   "value_at_defaults": 17705.000000000004,
+   "depends_on": [
+    "bedLevel",
+    "formationLevel",
+    "railLevel"
+   ],
+   "partials": {
+    "railLevel": {
+     "slope": 999.736634185,
+     "affine": false
+    },
+    "formationLevel": {
+     "slope": 873.618035985,
+     "affine": false
+    },
+    "bedLevel": {
+     "slope": 199.203427675,
+     "affine": false
+    }
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "steps.2.height",
+   "value_at_defaults": 381,
+   "depends_on": [],
+   "partials": {},
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "steps.2.topWidth",
+   "value_at_defaults": 850.5,
+   "depends_on": [],
+   "partials": {},
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "steps.2.bottomWidth",
+   "value_at_defaults": 1161.25,
+   "depends_on": [],
+   "partials": {},
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "steps.3.yTop",
+   "value_at_defaults": 17705.000000000004,
+   "depends_on": [
+    "bedLevel",
+    "formationLevel",
+    "railLevel"
+   ],
+   "partials": {
+    "railLevel": {
+     "slope": 999.736634185,
+     "affine": false
+    },
+    "formationLevel": {
+     "slope": 873.618035985,
+     "affine": false
+    },
+    "bedLevel": {
+     "slope": 199.203427675,
+     "affine": false
+    }
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "steps.3.yBottom",
+   "value_at_defaults": 17324.000000000004,
+   "depends_on": [
+    "bedLevel",
+    "formationLevel",
+    "railLevel"
+   ],
+   "partials": {
+    "railLevel": {
+     "slope": 999.736634185,
+     "affine": false
+    },
+    "formationLevel": {
+     "slope": 873.618035985,
+     "affine": false
+    },
+    "bedLevel": {
+     "slope": 199.203427675,
+     "affine": false
+    }
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "steps.3.height",
+   "value_at_defaults": 381,
+   "depends_on": [],
+   "partials": {},
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "steps.3.topWidth",
+   "value_at_defaults": 1161.25,
+   "depends_on": [],
+   "partials": {},
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "steps.3.bottomWidth",
+   "value_at_defaults": 1472,
+   "depends_on": [],
+   "partials": {},
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "steps.4.yTop",
+   "value_at_defaults": 17324.000000000004,
+   "depends_on": [
+    "bedLevel",
+    "formationLevel",
+    "railLevel"
+   ],
+   "partials": {
+    "railLevel": {
+     "slope": 999.736634185,
+     "affine": false
+    },
+    "formationLevel": {
+     "slope": 873.618035985,
+     "affine": false
+    },
+    "bedLevel": {
+     "slope": 199.203427675,
+     "affine": false
+    }
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "steps.4.yBottom",
+   "value_at_defaults": 16867.000000000004,
+   "depends_on": [
+    "bedLevel",
+    "formationLevel",
+    "railLevel"
+   ],
+   "partials": {
+    "railLevel": {
+     "slope": 999.736634185,
+     "affine": false
+    },
+    "formationLevel": {
+     "slope": 873.618035985,
+     "affine": false
+    },
+    "bedLevel": {
+     "slope": 199.203427675,
+     "affine": false
+    }
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "steps.4.height",
+   "value_at_defaults": 457,
+   "depends_on": [],
+   "partials": {},
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "steps.4.topWidth",
+   "value_at_defaults": 1472,
+   "depends_on": [],
+   "partials": {},
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "steps.4.bottomWidth",
+   "value_at_defaults": 1789.0833333333333,
+   "depends_on": [],
+   "partials": {},
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "steps.5.yTop",
+   "value_at_defaults": 16867.000000000004,
+   "depends_on": [
+    "bedLevel",
+    "formationLevel",
+    "railLevel"
+   ],
+   "partials": {
+    "railLevel": {
+     "slope": 999.736634185,
+     "affine": false
+    },
+    "formationLevel": {
+     "slope": 873.618035985,
+     "affine": false
+    },
+    "bedLevel": {
+     "slope": 199.203427675,
+     "affine": false
+    }
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "steps.5.yBottom",
+   "value_at_defaults": 16524.000000000004,
+   "depends_on": [
+    "bedLevel",
+    "formationLevel",
+    "railLevel"
+   ],
+   "partials": {
+    "railLevel": {
+     "slope": 999.736634185,
+     "affine": false
+    },
+    "formationLevel": {
+     "slope": 873.618035985,
+     "affine": false
+    },
+    "bedLevel": {
+     "slope": 199.203427675,
+     "affine": false
+    }
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "steps.5.height",
+   "value_at_defaults": 343,
+   "depends_on": [],
+   "partials": {},
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "steps.5.topWidth",
+   "value_at_defaults": 1789.0833333333333,
+   "depends_on": [],
+   "partials": {},
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "steps.5.bottomWidth",
+   "value_at_defaults": 2096.6666666666665,
+   "depends_on": [],
+   "partials": {},
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "foundationWidth",
+   "value_at_defaults": 4012,
+   "depends_on": [],
+   "partials": {},
+   "formula": {
+    "expr": "(4012)",
+    "line": 155,
+    "inputs": {},
+    "display": "foundationWidth = 4012",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "constant_verified"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  }
+ ],
+ "formulas_summary": {
+  "extracted": 5,
+  "verified": 0,
+  "constants": 5,
+  "differs": [],
+  "opaque": [
+   "abutmentHeight",
+   "bl",
+   "cells",
+   "clearHeight",
+   "fl",
+   "flBase",
+   "formationWidth",
+   "foundationDepth",
+   "foundationThickness",
+   "hfl",
+   "numberOfPiers",
+   "pierLength",
+   "pierThickness",
+   "rl",
+   "slabThickness",
+   "span",
+   "totalHeight"
+  ]
+ },
+ "defaults": {
+  "spanSize": 1.219,
+  "clearHeight": 1.5,
+  "cells": 2,
+  "numberOfPiers": 1,
+  "slabThickness": 0.254,
+  "foundationDepth": 1.219,
+  "abutmentHeight": 2.294,
+  "abutmentLength": 4.7,
+  "barrelLength": 4.7,
+  "abutmentTopWidth": 0.649,
+  "abutmentType": "rectangular",
+  "abutmentStepCount": 3,
+  "abutmentStepWidth": 0.127,
+  "abutmentStepHeight": 0.3,
+  "abutmentBatter": 12,
+  "bearingSeatWidth": 0.38,
+  "copingWidth": 0.749,
+  "copingHeight": 0.12,
+  "wingWallLength": 2.562,
+  "wingWallHeight": 0.6,
+  "wingWallStemBot": 0.8,
+  "returnWallLength": 1.2,
+  "returnWallHeight": 0.6,
+  "bedLevelAbove": 0.6,
+  "returnWallWidth": 0.3,
+  "returnWallStemBot": 0.934,
+  "returnWallBatterWidth": 0.634,
+  "returnWallStepCount": 3,
+  "returnWallStepWidth": 0.3,
+  "returnWallStepRiser": 0.3,
+  "returnWallStepTread": 0.3,
+  "returnWallBoulderThick": 0.6,
+  "returnWallLeanThick": 0.15,
+  "returnWallPccProj": 0.15,
+  "noOfTracks": 1,
+  "formationWidth": 7.85,
+  "pierThickness": 0.5,
+  "pierLength": 4.7,
+  "railLevel": 18.848,
+  "formationLevel": 18.315,
+  "hfl": 16.5,
+  "bedLevel": 16.434,
+  "trackSpacing": 5.3,
+  "trackGaps": [
+   5.3,
+   5.3,
+   5.3
+  ],
+  "wingWallStemHeight": 3,
+  "wingWallStemTop": 0.3,
+  "wingWallBatter": 6,
+  "wingWallBoulderThick": 0.6,
+  "wingWallFootingWidth": 2.4,
+  "wingWallFootingStepHeight": 0.3,
+  "wingWallFootingStepOffset": 0.3,
+  "wingWallStepRiser": 0.3,
+  "wingWallStepTread": 0.3,
+  "wingWallStepCount": 3,
+  "wingWallLeanThick": 0.1,
+  "wingWallMccGrade": "M-25",
+  "wingWallLeanGrade": "1:3:6",
+  "wingWallReinfNote": "8 TOR @ 200 C/C BOTH WAY",
+  "slabSpecificationText": "",
+  "elevationType": "type1",
+  "flowDirection": "L2R"
+ },
+ "characterization": {
+  "samples_per_formula": 16,
+  "defaults_digest": "d2527575f090ad6e918d325632345a203cc46cbfbc81623eaf7fbe5ace32b752",
+  "derived_digest": "89584199bfd553e91a321f308af60426805e7191e73cd2866a44c8646c89cc74"
+ }
+}

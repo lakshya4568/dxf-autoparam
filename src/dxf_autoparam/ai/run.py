@@ -26,6 +26,7 @@ import re
 import threading
 import time
 import traceback
+from pathlib import Path
 
 from ..cadjson import entity_id, entity_index
 from ..crossview import SheetError
@@ -33,7 +34,7 @@ from ..status import parameters_of, sheet_status
 from ..topology import of as topology_of
 from ..viewimg import box_around
 from . import agent as A
-from . import domain, library
+from . import domain, library, production
 from .context import SheetScope
 from .loop import AgentLoop, Budget
 from .narrate import STAGE_OF
@@ -164,12 +165,15 @@ UNIFIED_SYSTEM = SESSION + A.AGENT_SYSTEM.replace("Aim to finish in about 10 tur
 
 
 def unified_tools(pack: dict | None = None):
-    return A.tools(extra=SHEET_TOOL_SPECS, pack=pack)
+    """The session's tools; the production rule engines' tools only when the pack on declares production knowledge."""
+    return A.tools(extra=SHEET_TOOL_SPECS + production.tool_specs(pack), pack=pack)
 
 
 def unified_system(pack: dict | None = None) -> str:
-    """The session's system prompt; a domain pack's guide is added only when a person switched one on for the run (options.domain)."""
-    return UNIFIED_SYSTEM + ("\n" + domain.guide(pack) if pack else "")
+    """The session's system prompt; a domain pack's guide is added only when a person switched one on for the run (options.domain), and the
+    production protocol only when that pack declares production knowledge."""
+    prod = production.protocol(pack) if pack else ""
+    return UNIFIED_SYSTEM + ("\n" + domain.guide(pack) if pack else "") + (("\n" + prod + "\n") if prod else "")
 
 
 # ── the run ──────────────────────────────────────────────────────────────────────
@@ -225,6 +229,9 @@ class SheetBench:
         self.given_up: list[dict] = []  # refused edits left out on purpose (removed by the model; said in the plan to be only noted): said in the verdict
         self.looked: set[str] = set()  # groups that are not views which the model looked at or described
         self.described = 0  # what describe_views applied in this run
+        self.pending_feature: dict | None = None  # a change of count the person has to approve before the sheet changes
+        self.features: list[dict] = []  # the changes of count this run applied
+        self.decisions: dict[str, str] = {}  # the person's answers about a change of count
         self.proposed = False  # a plan for a change was proposed in this run (units opened and closed again keep no memory of it)
         self.finish_summary = ""  # what the model said it did, in its own words, when the engine let it finish
         self.rebase: dict | None = None  # the sheet changed under the run: the person decides whether the edits go on the current sheet
@@ -232,6 +239,10 @@ class SheetBench:
         # the engineering library for the whole run (the domain pack on has one): one trace, the sheet's own words, the values of any open unit
         self.lib_session = (library.KnowledgeSession(lib, texts=lambda: library.drawing_texts(self.sm.dr.items), values=self.value_of,
                                                      budget_chars=int(run.options.get("library_budget_chars") or library.RUN_BUDGET_CHARS)) if lib else None)
+        # the production rule engines (the pack's library declares their knowledge): retrieval, checks on the drawing's values, bindings kept on
+        # the sheet with their guards — one session for the whole run
+        pk = production.production_for(run.pack)
+        self.prod = production.ProductionSession(pk, self) if pk is not None else None
 
     # ── units ───────────────────────────────────────────────────────────────────
 
@@ -311,7 +322,7 @@ class SheetBench:
     # ── the loop's protocol ──────────────────────────────────────────────────────
 
     def is_read(self, name: str) -> bool:
-        return name in A.READ_TOOLS or name in SHEET_READ
+        return name in A.READ_TOOLS or name in SHEET_READ or name in production.PRODUCTION_READ
 
     def single_of(self, name: str):
         return A.BATCH.get(name)
@@ -330,6 +341,10 @@ class SheetBench:
             if self.lib_session is None:
                 return {"error": "no engineering library is on for this run"}
             return self.lib_session.call(name, a)
+        if name in production.PRODUCTION_READ:
+            if self.prod is None:
+                return {"error": "no production rule engines are on for this run"}
+            return self.prod.call(name, a)
         return self.wb.read(name, a)
 
     def value_of(self, name: str, unit: str | None = None) -> tuple[float, str] | None:
@@ -346,8 +361,12 @@ class SheetBench:
     def write(self, name: str, a: dict) -> tuple[str, str]:
         if name in SHEET_WRITE:
             return getattr(self, "_" + name)(a)
+        if name in production.PRODUCTION_WRITE:
+            return self._bind_production(a)
         if name == "account_clause":
             return self._account(a)
+        if name == "propose_plan" and a.get("operation"):
+            return self._propose_operation(a)
         out = self.wb.write(name, a)
         if name == "propose_plan":
             self.proposed = True
@@ -395,7 +414,7 @@ class SheetBench:
         return self.wb.verdict(item, kind) if self.active is not None else {"ok": True}
 
     def decorate(self, name: str, item: str, v: dict) -> None:
-        if name in SHEET_WRITE:  # a sheet tool keeps its own refusals, item by item (_record_sheet)
+        if name in SHEET_WRITE or name in production.PRODUCTION_WRITE or item.startswith("feature:"):  # a sheet tool keeps its own refusals, item by item
             return
         if self.active is not None:
             self.wb.decorate(name, item, v)
@@ -473,13 +492,19 @@ class SheetBench:
         out = []
         for uid, w in self.units.items():
             out += [{**q, "id": f"{uid}:{q['id']}", "unit": uid} for q in w.person_questions()]
+        if self.pending_feature:
+            pf = self.pending_feature["plan"]
+            out.append({"id": "F:approve", "about": "feature", "options": ["apply", "do not apply"], "recommended": "apply", "source": "the engine",
+                        "text": f"Apply this change of count? {pf.get('from_count')} → {pf.get('to_count')} instances (the view grows by {pf.get('grows_mm')} mm; "
+                                f"{pf.get('effects')}). The sheet is not changed until you say so.",
+                        "why": "A change of count makes a new revision of the drawing: one undo takes it back.", "unit": None})
         if self.rebase:
             out.append({"id": "R:rebase", "about": "rebase", "text": self.rebase["text"], "options": ["apply on the current sheet", "discard these edits"],
                         "recommended": None, "why": "Nothing was applied: a change made while the agent worked is not silently overwritten.", "source": "the sheet", "unit": None})
         return out
 
     def wants_person(self) -> bool:
-        return any(w.wants_person() for w in self.units.values()) or bool(self.rebase)
+        return any(w.wants_person() for w in self.units.values()) or bool(self.rebase) or bool(self.pending_feature)
 
     def record_answers(self, answers: dict[str, str]) -> list[str]:
         lines = []
@@ -492,6 +517,16 @@ class SheetBench:
             mine = {k.split(":", 1)[1]: v for k, v in answers.items() if k.startswith(f"{uid}:")}
             if mine:
                 lines += w.record_answers(mine)
+        if self.pending_feature and answers.get("F:approve"):
+            pf, self.pending_feature = self.pending_feature, None
+            choice = str(answers["F:approve"]).strip()
+            self.decisions[f"approve:{pf['plan']['id']}"] = "apply" if choice.startswith("apply") else "decline"
+            if choice.startswith("apply"):
+                done = self._apply_operation(pf["uid"], pf["op"], pf["plan"], pf["item"])
+                lines.append(f"- the change of count {done or 'was refused: ' + '; '.join(self.sheet_results[pf['item']].get('rejected', []))[:200]}")
+            else:
+                self.sheet_results[pf["item"]] = {"ok": False, "rejected": ["the person chose not to apply this change of count"]}
+                lines.append("- the change of count was declined: the sheet is as it was")
         if self.rebase and answers.get("R:rebase"):
             choice = str(answers["R:rebase"]).strip()
             if choice.startswith("apply"):
@@ -805,6 +840,80 @@ class SheetBench:
         self.sheet_results[item] = self._sheet_verdict(res, {"links_in_plan": res["links"], "not_yet_in_the_plan": gap_lines(res["gaps"])})
         return item, f"{len(res['applied'])} kept, {len(res['refused'])} refused"
 
+    # ── a change of count: a feature operation on the sheet (feature.py) ────────────
+
+    def _propose_operation(self, a: dict) -> tuple[str, str]:
+        """propose_plan(operation): the change of count is planned on the sheet through the whole chain (the derived drawing, the parametrization
+        carried over, the production guards at the new count) and applied only if it all holds — or waits for the person when they asked to approve
+        plans. Nothing changes otherwise."""
+        op = dict(a["operation"])
+        uid = op.get("unit") or self.active
+        item = f"feature:{uid}:{op.get('count')}"
+        self.proposed = True
+        if uid is None:
+            self.sheet_results[item] = {"ok": False, "rejected": ["operation.unit: name the unit whose repeated unit changes (inspect_sheet lists them)"]}
+            return item, ""
+        committed = {u: self.commit(u) for u in list(self.units)}  # the plan points at what the sheet holds: pending edits are applied first
+        bad = {u: r for u, r in committed.items() if not r["ok"]}
+        if bad:
+            self.sheet_results[item] = {"ok": False, "rejected": [f"{u}: its edits could not be applied first — {r['error'][:200]}" for u, r in bad.items()]}
+            return item, ""
+        with self._lock():
+            try:
+                plan = self.sm.plan_feature(uid, {**op, "kind": op.get("kind", "set_count")})
+            except (SheetError, KeyError, ValueError) as exc:
+                self.sheet_results[item] = {"ok": False, "rejected": [str(exc)[:300]]}
+                return item, ""
+        brief = {k: plan[k] for k in ("id", "from_count", "to_count", "grows_mm", "pitch_mm", "effects", "notes_rewritten") if k in plan}
+        if plan["status"] != "ready":
+            ask = [q["text"] + " " + "; ".join(q.get("options") or []) for q in plan.get("questions", [])]
+            self.sheet_results[item] = {"ok": False, "rejected": [*(plan.get("refusals") or ask or [plan["status"]])][:6], "plan": plan["status"], **brief,
+                                        "note": "nothing was changed" + (": pass operation.repeat with the id of the one the count is about" if ask else "")}
+            return item, ""
+        approve = f"approve:{plan['id']}"
+        if self.run.options.get("confirm_plan") and self.decisions.get(approve) != "apply":
+            if self.decisions.get(approve):
+                self.sheet_results[item] = {"ok": False, "rejected": ["the person chose not to apply this change of count"], **brief}
+                return item, ""
+            self.pending_feature = {"uid": uid, "op": {**op, "kind": op.get("kind", "set_count")}, "plan": plan, "item": item}
+            self.sheet_results[item] = {"ok": True, "plan": "waits for the person", **brief, "warnings": plan.get("warnings", [])[:4],
+                                        "note": "the sheet is not changed until the person approves: call ask_person (or finish) and the run asks them"}
+            return item, "plan ready: the person approves it before anything changes"
+        return item, self._apply_operation(uid, {**op, "kind": op.get("kind", "set_count")}, plan, item)
+
+    def _apply_operation(self, uid: str, op: dict, plan: dict, item: str) -> str:
+        brief = {k: plan[k] for k in ("id", "from_count", "to_count", "grows_mm", "pitch_mm", "effects", "notes_rewritten") if k in plan}
+        with self._lock():
+            try:
+                res = self.sm.apply_feature(uid, op, expected_revision=self.own_revision, plan_id=plan["id"])
+            except SheetError as exc:
+                self.sheet_results[item] = {"ok": False, "rejected": [str(exc)[:500]], **brief, "note": "nothing was changed"}
+                self.refusals[(None, item)] = {"unit": None, "item": item, "kind": "propose_plan", "why": str(exc)[:240]}
+                return ""
+            self.sync_revision()
+            self.run.emit({"kind": "applied", "unit": uid, "revision": self.sm.revision, "feature": plan["id"]})
+            self.host.pictures, self.host.shown = None, set()  # the pictures and the page's marks are of the drawing as it was
+            for u in list(self.units):  # the units are those of the new drawing: a workbench starts again from the sheet
+                self.units.pop(u)
+                self.committed.pop(u, None)
+            self.active = None
+        self.refusals.pop((None, item), None)
+        self.features.append({"plan": plan["id"], "unit": uid, "from_count": plan.get("from_count"), "to_count": plan.get("to_count"), "path": res["path"]})
+        self.sheet_results[item] = {"ok": True, "plan": "accepted and applied", **brief, "warnings": plan.get("warnings", [])[:6], "revision": res["revision"],
+                                    "drawing": Path(res["path"]).name,
+                                    "note": "the drawing is a new revision (one undo takes it back); the units are those of the new drawing — open_unit again"}
+        return f"{plan.get('from_count')} → {plan.get('to_count')} instances"
+
+    def _bind_production(self, a: dict) -> tuple[str, str]:
+        """bind_production_model: kept on the sheet (undoable) with its guards, or refused with the reason and nothing kept."""
+        item = f"production:{a.get('family')}@{a.get('unit') or self.active}"
+        if self.prod is None:
+            self.sheet_results[item] = {"ok": False, "rejected": ["no production rule engines are on for this run"]}
+            return item, ""
+        res = self.prod.bind({k: v for k, v in a.items() if k != "why"})
+        self.sheet_results[item] = res
+        return item, (f"kept {res.get('kept')}: {len(res.get('guards') or [])} guard(s)" if res.get("ok") else "")
+
     def _acknowledge_noted(self) -> None:
         """A link the plan says is only noted, for a size the sheet refused to share, is left out on purpose and said so: the person reads it
         in the plan as something the model does not enforce, instead of finding a refusal nobody answered."""
@@ -881,7 +990,7 @@ class SheetBench:
         untouched = [uid for uid, u in self.sm.units.items() if not parametrized(uid, u)]
         if untouched and self.run.scope.get("kind") == "drawing":
             out.append(f"views never parametrized in this run: {', '.join(untouched)}")
-        return out + self.library_notes()
+        return out + self.library_notes() + (self.prod.notes() if self.prod is not None else [])
 
     def library_notes(self) -> list[str]:
         """What the run did with the engineering library, as facts the engine recorded — never as a failure: the library is context."""
@@ -1290,9 +1399,12 @@ class Run:
             if not ok:
                 bad_plans.append(f"{p.get('id')} is {p.get('status')}" + (f" with {len(failed)} failed check(s)" if failed else ""))
         change_asked = any(i.get("kind") in ("change_value", "keep") and i.get("handled_by") == "plan" for i in b.ledger)
-        if change_asked and not plans:
+        for f in b.features:  # a change of count: planned, derived, validated and applied in one step, or refused with nothing changed
+            plan_rows.append({"id": f["plan"], "unit": f["unit"], "status": "applied", "ok": True, "checks": f"{f['from_count']} → {f['to_count']} instances",
+                              "failed": []})
+        if change_asked and not plans and not b.features:
             bad_plans.append("you asked for a change but no plan was made")
-        add("plans_measured", not bad_plans, (f"{sum(1 for r in plan_rows if r['ok'])} plan(s) accepted and every promise measured" if plans else "no plan was needed")
+        add("plans_measured", not bad_plans, (f"{sum(1 for r in plan_rows if r['ok'])} plan(s) accepted and every promise measured" if plan_rows else "no plan was needed")
             if not bad_plans else "; ".join(bad_plans))
         refused_vals = [(u, x) for u, r in results.items() for x in r.get("values_refused", [])]
         wanted = [(uid, p) for uid, p in plans if p.get("status") == "accepted" and (p.get("driver") or {}).get("requested_value") is not None]
@@ -1315,6 +1427,11 @@ class Run:
             bad_links = [x for x in plan["links"] if not x["holds"]]
             add("plan_holds", not bad_links, f"{len(plan['links'])} link(s) stated in the plan, each holds on the sheet" if not bad_links else
                 "; ".join(f"{x['what']}: {x['why'][:120]}" for x in bad_links[:3]))
+        prod_summary = b.prod.summary() if b.prod is not None else None
+        if prod_summary and prod_summary["at_the_end"]:  # what the production rules guard must hold on the sheet the run leaves
+            broken = [f"{r['id']}: {r['status']}" for r in prod_summary["at_the_end"]
+                      if r.get("guards") and r.get("status") in ("differs", "unavailable", "error", "stale")]
+            add("production_guards_hold", not broken, "every production relation the run guarded still holds on the sheet" if not broken else "; ".join(broken[:3]))
         notes = b.notes()
         failed = [c for c in crit if not c["ok"]]
         applied_any = any(r.get("ok") and not r.get("nothing_to_apply") for r in results.values())
@@ -1327,6 +1444,7 @@ class Run:
         return {"state": state, "ended_by": ended_by, "criteria": crit, "remaining": remaining, "headline": headline, "plans": plan_rows,
                 "plan": plan, "notes": notes, "given_up": b.given_up, "finish_summary": b.finish_summary,
                 "knowledge": b.lib_session.summary() if b.lib_session is not None else None,
+                "production": prod_summary,
                 "applied": {u: r.get("revision") for u, r in results.items() if r.get("ok") and not r.get("nothing_to_apply")},
                 "values_applied": [x for r in results.values() for x in r.get("values_applied", [])], "values_refused": [x for _u, x in refused_vals],
                 "refused": refused, "unaccounted": gaps, "questions": [{"id": q["id"], "text": q["text"][:200]} for q in qs],

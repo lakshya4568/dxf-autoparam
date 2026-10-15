@@ -1,0 +1,4380 @@
+{
+ "format": "dxf-autoparam/production-knowledge-1",
+ "extractor_version": 1,
+ "knowledge_id": "aagento-bridge:highway_arch_bridge",
+ "family": "highway_arch_bridge",
+ "title": "HIGHWAY ARCH BRIDGE RCC BOX",
+ "source": {
+  "repository": "aagento-bridge",
+  "commit": "ca0b17ec2ccd82b81c246e2c02f8c4dc6fece565",
+  "branch": "cad_agent_dxf",
+  "dirty_files": [],
+  "registry": "src/app/features/bridges/models/bridge-registry.ts",
+  "modules": {
+   "defaults": {
+    "symbol": "HIGHWAY_ARCH_BRIDGE_DEFAULTS",
+    "path": "src/app/features/bridges/models/highway-arch-bridge.defaults.ts"
+   },
+   "ruleEngine": {
+    "symbol": "HighwayArchBridgeRuleEngine",
+    "path": "src/app/features/bridges/utils/highway-arch-bridge/highway-arch-bridge-rule-engine.ts"
+   },
+   "sceneRenderer": {
+    "symbol": "HighwayArchBridgeSceneRenderer",
+    "path": "src/app/features/bridges/utils/highway-arch-bridge/highway-arch-bridge-scene-renderer.ts"
+   },
+   "workspaceMapper": {
+    "symbol": "highwayArchBridgeWorkspaceMapper",
+    "path": "src/app/features/bridges/utils/highway-arch-bridge/highway-arch-bridge-mapper.ts"
+   },
+   "versionPayloadMapper": {
+    "symbol": "highwayArchBridgeVersionPayloadMapper",
+    "path": "src/app/features/bridges/utils/highway-arch-bridge/highway-arch-bridge-mapper.ts"
+   },
+   "computedLevelsMapper": {
+    "symbol": "highwayArchBridgeComputedLevelsMapper",
+    "path": "src/app/features/bridges/utils/highway-arch-bridge/highway-arch-bridge-mapper.ts"
+   },
+   "initial2DScaleAndPan": {
+    "symbol": "highwayArchBridgeInitial2DScaleAndPan",
+    "path": "src/app/features/bridges/utils/highway-arch-bridge/highway-arch-bridge-mapper.ts"
+   },
+   "viewButtons": {
+    "symbol": "highwayArchBridgeViewButtons",
+    "path": "src/app/features/bridges/utils/highway-arch-bridge/highway-arch-bridge-mapper.ts"
+   },
+   "canvasBasePoint": {
+    "symbol": "highwayArchBridgeCanvasBasePoint",
+    "path": "src/app/features/bridges/utils/highway-arch-bridge/highway-arch-bridge-mapper.ts"
+   }
+  },
+  "sources": {
+   "src/app/features/bridges/models/bridge-registry.ts": "4ad1cd4ab16a2f9e3b72cc5784eba7ce9326cb365c879ebb7ceb82c57c0215bf",
+   "src/app/features/bridges/models/highway-arch-bridge.defaults.ts": "e019abfabc2333357d564859a5b62f0131f6f48b9bfaf6a8b1c29525bb304233",
+   "src/app/features/bridges/utils/highway-arch-bridge/highway-arch-bridge-mapper.ts": "dbb163f29673a225c74ed96d7ef73b4fcbe7bd5abe0828eace1944f9ac239833",
+   "src/app/features/bridges/utils/highway-arch-bridge/highway-arch-bridge-rule-engine.ts": "44f73f20b23cb681bc456175954bd97916bbff303496f26375317a5e39128650",
+   "src/app/features/bridges/utils/highway-arch-bridge/highway-arch-bridge-scene-renderer.ts": "9c53b8bd9386436db28a74f79ec716f52828976d8ee6b9c1dd7d1b2f59e5ea01",
+   "src/app/features/projects/components/project-detail/project-detail.constants.ts": "296737c40b421a7b234578beaa9fd1138f5b1c8569abb32ef3eda63c16efcf22"
+  },
+  "sources_digest": "7e0a44dd25f23c4a2d3d98a2ec019602d4b05c199f59318d40db6b899e0281fa"
+ },
+ "capabilities": {
+  "has_compute": true,
+  "has_validate": true,
+  "has_levels": true,
+  "has_views": true,
+  "has_renderer": true,
+  "has_defaults": true
+ },
+ "overlay": {
+  "present": true,
+  "status": "authored_from_source",
+  "basis": "Read by a person from aagento-bridge highway-arch-bridge-rule-engine.ts: a highway RCC box with an arch-shaped masonry fill above it. Unlike the railway arch/slab engine it has no spanLen output or return-wall option, formation level defaults straight to the box top level, and the arch height-above-masonry clears at least 7.5 m or 0.8 m over the arch top. Every geometry value is added to levels in metres, so parameters and outputs are metres unless noted."
+ },
+ "validation": {
+  "available": true,
+  "messages_at_defaults": [
+   {
+    "sev": "ok",
+    "msg": "Outer wall thickness \u2265 0.3m \u2713"
+   },
+   {
+    "sev": "ok",
+    "msg": "Top slab thickness \u2265 0.3m \u2713"
+   },
+   {
+    "sev": "ok",
+    "msg": "Clear height \u2265 1.0m \u2713"
+   },
+   {
+    "sev": "ok",
+    "msg": "HFL clearance valid \u2713"
+   },
+   {
+    "sev": "ok",
+    "msg": "HFL below soffit \u2713"
+   },
+   {
+    "sev": "warn",
+    "msg": "Computed soffit (97.367m) \u2260 input (97.517m)"
+   },
+   {
+    "sev": "ok",
+    "msg": "Earth cushion \u2265 75mm \u2713"
+   },
+   {
+    "sev": "ok",
+    "msg": "Haunch size \u2265 300mm \u2713"
+   },
+   {
+    "sev": "warn",
+    "msg": "Slab narrower than box width"
+   }
+  ]
+ },
+ "levels_mapper": {
+  "available": true,
+  "levels_at_defaults": {
+   "formation": 98.617,
+   "slabTop": 97.717,
+   "slabBottom": 95.817,
+   "foundationBottom": 94.96699999999998,
+   "hflClearanceMm": 367.00000000000443
+  }
+ },
+ "views": {
+  "available": true,
+  "decided_by": [
+   "options2d.show_bore_log",
+   "options2d.show_curtain_wall",
+   "options2d.show_toe_wall",
+   "options2d.show_wing_wall"
+  ],
+  "views": [
+   {
+    "mode": "sec2",
+    "labels": [
+     "SECTIONAL ELEVATION"
+    ],
+    "conditions": [
+     "always"
+    ],
+    "renders": true,
+    "draws": 985,
+    "deterministic": true,
+    "reads": [
+     "deck.embankment_slope",
+     "deck.formation_lvl",
+     "deck.rail_level",
+     "deck.wearing_course",
+     "foundation.pcc_sub_base",
+     "foundation.sand_fill_depth",
+     "geometry.arch_thick",
+     "geometry.clear_h",
+     "geometry.clear_w",
+     "geometry.haunch_size",
+     "geometry.t_slab_b",
+     "geometry.t_slab_t",
+     "geometry.t_wall_i",
+     "geometry.t_wall_o",
+     "hydraulics.bed_lvl",
+     "hydraulics.hfl",
+     "hydraulics.soffit_level",
+     "options2d.show_curtain_wall",
+     "options2d.show_wing_wall",
+     "project.cells",
+     "side.apron_l",
+     "side.wing_l",
+     "slab.thickness",
+     "slab.type",
+     "slab.width"
+    ],
+    "code_fallbacks": [
+     "geometry.height_above_masonry",
+     "hydraulics.springing_level",
+     "levels",
+     "project.bridge_type",
+     "project.springing_level",
+     "project.type"
+    ],
+    "affected_by": [
+     "deck.rail_level",
+     "geometry.arch_thick",
+     "geometry.clear_h",
+     "geometry.clear_w",
+     "hydraulics.bed_lvl",
+     "project.cells"
+    ],
+    "inputs_tried": 22
+   },
+   {
+    "mode": "sec",
+    "labels": [
+     "CROSS SECTION"
+    ],
+    "conditions": [
+     "always"
+    ],
+    "renders": true,
+    "draws": 230,
+    "deterministic": true,
+    "reads": [
+     "deck.embankment_slope",
+     "deck.formation_lvl",
+     "deck.rail_level",
+     "deck.wearing_course",
+     "foundation.pcc_sub_base",
+     "foundation.sand_fill_depth",
+     "geometry.arch_thick",
+     "geometry.clear_h",
+     "geometry.clear_w",
+     "geometry.haunch_size",
+     "geometry.t_slab_b",
+     "geometry.t_slab_t",
+     "geometry.t_wall_i",
+     "geometry.t_wall_o",
+     "hydraulics.bed_lvl",
+     "hydraulics.hfl",
+     "hydraulics.soffit_level",
+     "options2d.show_curtain_wall",
+     "options2d.show_wing_wall",
+     "project.cells",
+     "side.apron_l",
+     "side.wing_l",
+     "slab.thickness",
+     "slab.type",
+     "slab.width"
+    ],
+    "code_fallbacks": [
+     "geometry.height_above_masonry",
+     "hydraulics.springing_level",
+     "levels",
+     "project.bridge_type",
+     "project.springing_level",
+     "project.type"
+    ],
+    "affected_by": [
+     "deck.rail_level",
+     "geometry.arch_thick",
+     "geometry.clear_h",
+     "geometry.clear_w",
+     "hydraulics.bed_lvl"
+    ],
+    "inputs_tried": 22
+   },
+   {
+    "mode": "abut",
+    "labels": [
+     "ABUTMENT SECTION"
+    ],
+    "conditions": [
+     "always"
+    ],
+    "renders": true,
+    "draws": 230,
+    "deterministic": true,
+    "reads": [
+     "deck.embankment_slope",
+     "deck.formation_lvl",
+     "deck.rail_level",
+     "deck.wearing_course",
+     "foundation.pcc_sub_base",
+     "foundation.sand_fill_depth",
+     "geometry.arch_thick",
+     "geometry.clear_h",
+     "geometry.clear_w",
+     "geometry.haunch_size",
+     "geometry.t_slab_b",
+     "geometry.t_slab_t",
+     "geometry.t_wall_i",
+     "geometry.t_wall_o",
+     "hydraulics.bed_lvl",
+     "hydraulics.hfl",
+     "hydraulics.soffit_level",
+     "options2d.show_curtain_wall",
+     "options2d.show_wing_wall",
+     "project.cells",
+     "side.apron_l",
+     "side.wing_l",
+     "slab.thickness",
+     "slab.type",
+     "slab.width"
+    ],
+    "code_fallbacks": [
+     "geometry.height_above_masonry",
+     "hydraulics.springing_level",
+     "levels",
+     "project.bridge_type",
+     "project.springing_level",
+     "project.type"
+    ],
+    "affected_by": [
+     "deck.rail_level",
+     "geometry.arch_thick",
+     "geometry.clear_h",
+     "geometry.clear_w",
+     "hydraulics.bed_lvl"
+    ],
+    "inputs_tried": 22
+   },
+   {
+    "mode": "elv",
+    "labels": [
+     "LONGITUDINAL ELEVATION"
+    ],
+    "conditions": [
+     "always"
+    ],
+    "renders": true,
+    "draws": 872,
+    "deterministic": true,
+    "reads": [
+     "deck.embankment_slope",
+     "deck.formation_lvl",
+     "deck.rail_level",
+     "deck.wearing_course",
+     "foundation.pcc_sub_base",
+     "foundation.sand_fill_depth",
+     "geometry.arch_thick",
+     "geometry.clear_h",
+     "geometry.clear_w",
+     "geometry.haunch_size",
+     "geometry.t_slab_b",
+     "geometry.t_slab_t",
+     "geometry.t_wall_i",
+     "geometry.t_wall_o",
+     "hydraulics.bed_lvl",
+     "hydraulics.hfl",
+     "hydraulics.soffit_level",
+     "options2d.show_curtain_wall",
+     "options2d.show_wing_wall",
+     "project.cells",
+     "side.apron_l",
+     "side.wing_l",
+     "slab.thickness",
+     "slab.type",
+     "slab.width"
+    ],
+    "code_fallbacks": [
+     "deck.ballast_cushion",
+     "deck.ballast_thickness",
+     "foundation.bottom_lvl",
+     "foundation.flooring_thick",
+     "foundation.footing_proj_right",
+     "foundation.found_lvl",
+     "foundation.found_thickness",
+     "foundation.pcc_proj",
+     "foundation.step1_h",
+     "geometry.barrel_length_left",
+     "geometry.barrel_length_right",
+     "geometry.coping_h",
+     "geometry.coping_height",
+     "geometry.coping_thick",
+     "geometry.height_above_masonry",
+     "geometry.no_of_tracks",
+     "geometry.parapet_box_h",
+     "geometry.parapet_box_height",
+     "geometry.parapet_h",
+     "geometry.parapet_height",
+     "geometry.parapet_t",
+     "geometry.track_spacing",
+     "geometry.tracks",
+     "hydraulics.scour_lvl",
+     "options2d.clear_height_layers",
+     "options2d.double_track",
+     "options2d.track_spacing",
+     "project.bridge_type",
+     "project.status",
+     "project.type",
+     "substructure"
+    ],
+    "affected_by": [
+     "deck.embankment_slope",
+     "deck.formation_lvl",
+     "deck.rail_level",
+     "geometry.arch_thick",
+     "geometry.clear_h",
+     "hydraulics.bed_lvl",
+     "hydraulics.hfl"
+    ],
+    "inputs_tried": 22
+   },
+   {
+    "mode": "plan",
+    "labels": [
+     "PLAN TOP"
+    ],
+    "conditions": [
+     "always"
+    ],
+    "renders": true,
+    "draws": 273,
+    "deterministic": true,
+    "reads": [
+     "deck.embankment_slope",
+     "deck.formation_lvl",
+     "deck.rail_level",
+     "deck.wearing_course",
+     "foundation.pcc_sub_base",
+     "foundation.sand_fill_depth",
+     "geometry.arch_thick",
+     "geometry.clear_h",
+     "geometry.clear_w",
+     "geometry.haunch_size",
+     "geometry.t_slab_b",
+     "geometry.t_slab_t",
+     "geometry.t_wall_i",
+     "geometry.t_wall_o",
+     "hydraulics.bed_lvl",
+     "hydraulics.hfl",
+     "hydraulics.soffit_level",
+     "options2d.show_curtain_wall",
+     "options2d.show_wing_wall",
+     "project.cells",
+     "side.apron_l",
+     "side.wing_l",
+     "slab.thickness",
+     "slab.type",
+     "slab.width"
+    ],
+    "code_fallbacks": [
+     "geometry.abutment_t",
+     "geometry.carriageway_w",
+     "geometry.height_above_masonry",
+     "geometry.overall_w",
+     "geometry.pier_t",
+     "project.bridge_type",
+     "project.status",
+     "project.type"
+    ],
+    "affected_by": [
+     "geometry.clear_w",
+     "project.cells"
+    ],
+    "inputs_tried": 22
+   },
+   {
+    "mode": "rw",
+    "labels": [
+     "C/S RETURN WALL",
+     "C/S OF WING WALL"
+    ],
+    "conditions": [
+     "always"
+    ],
+    "renders": true,
+    "draws": 1244,
+    "deterministic": true,
+    "reads": [
+     "deck.embankment_slope",
+     "deck.formation_lvl",
+     "deck.rail_level",
+     "deck.wearing_course",
+     "foundation.pcc_sub_base",
+     "foundation.sand_fill_depth",
+     "geometry.arch_thick",
+     "geometry.clear_h",
+     "geometry.clear_w",
+     "geometry.haunch_size",
+     "geometry.t_slab_b",
+     "geometry.t_slab_t",
+     "geometry.t_wall_i",
+     "geometry.t_wall_o",
+     "hydraulics.bed_lvl",
+     "hydraulics.hfl",
+     "hydraulics.soffit_level",
+     "options2d.show_curtain_wall",
+     "options2d.show_wing_wall",
+     "project.cells",
+     "side.apron_l",
+     "side.wing_l",
+     "slab.thickness",
+     "slab.type",
+     "slab.width"
+    ],
+    "code_fallbacks": [
+     "abutment",
+     "geometry.height_above_masonry",
+     "geometry.rw_depth",
+     "geometry.rw_depth_sec",
+     "geometry.rw_heel_width",
+     "geometry.rw_stem_thick",
+     "geometry.rw_toe_width",
+     "geometry.rw_type",
+     "hydraulics.scour_lvl",
+     "project.bridge_type",
+     "project.type"
+    ],
+    "affected_by": [
+     "deck.wearing_course",
+     "geometry.clear_h",
+     "geometry.t_slab_b",
+     "geometry.t_slab_t",
+     "hydraulics.bed_lvl"
+    ],
+    "inputs_tried": 22
+   },
+   {
+    "mode": "cw",
+    "labels": [
+     "CURTAIN/DROP WALL"
+    ],
+    "conditions": [
+     "always",
+     {
+      "when": {
+       "path": "options2d.show_curtain_wall",
+       "value": false
+      },
+      "removed": true
+     }
+    ],
+    "renders": true,
+    "draws": 478,
+    "deterministic": false,
+    "reads": [
+     "deck.embankment_slope",
+     "deck.formation_lvl",
+     "deck.rail_level",
+     "deck.wearing_course",
+     "foundation.pcc_sub_base",
+     "foundation.sand_fill_depth",
+     "geometry.arch_thick",
+     "geometry.clear_h",
+     "geometry.clear_w",
+     "geometry.haunch_size",
+     "geometry.t_slab_b",
+     "geometry.t_slab_t",
+     "geometry.t_wall_i",
+     "geometry.t_wall_o",
+     "hydraulics.bed_lvl",
+     "hydraulics.hfl",
+     "hydraulics.soffit_level",
+     "options2d.show_curtain_wall",
+     "options2d.show_wing_wall",
+     "project.cells",
+     "side.apron_l",
+     "side.wing_l",
+     "slab.thickness",
+     "slab.type",
+     "slab.width"
+    ],
+    "code_fallbacks": [
+     "curtain_wall",
+     "geometry.curtain_wall_thickness",
+     "geometry.cw_type",
+     "geometry.height_above_masonry",
+     "hydraulics.scour_lvl",
+     "project.bridge_type",
+     "project.type",
+     "side.curtain_wall_thickness"
+    ]
+   },
+   {
+    "mode": "rw2",
+    "labels": [
+     "C/S RETURN WALL"
+    ],
+    "conditions": [
+     {
+      "when": {
+       "path": "options2d.show_wing_wall",
+       "value": true
+      },
+      "added": true
+     }
+    ],
+    "renders": true,
+    "draws": 1244,
+    "deterministic": true,
+    "reads": [
+     "bridge_name",
+     "deck.earth_cushion",
+     "deck.embankment_slope",
+     "deck.formation_lvl",
+     "deck.rail_level",
+     "deck.wearing_course",
+     "foundation.found_d",
+     "foundation.pcc_sub_base",
+     "foundation.sand_fill_depth",
+     "foundation.soil_lvl",
+     "geometry.arch_thick",
+     "geometry.clear_h",
+     "geometry.clear_w",
+     "geometry.gap_between_boxes",
+     "geometry.haunch_size",
+     "geometry.open_joint",
+     "geometry.t_slab_b",
+     "geometry.t_slab_t",
+     "geometry.t_wall_i",
+     "geometry.t_wall_o",
+     "hydraulics.bed_lvl",
+     "hydraulics.hfl",
+     "hydraulics.soffit_level",
+     "layers.APRON.color",
+     "layers.APRON.role",
+     "layers.APRON.visible",
+     "layers.BOX_STRUCTURE.color",
+     "layers.BOX_STRUCTURE.role",
+     "layers.BOX_STRUCTURE.visible",
+     "layers.CURTAIN_WALL.color",
+     "layers.CURTAIN_WALL.role",
+     "layers.CURTAIN_WALL.visible",
+     "layers.GROUND.color",
+     "layers.GROUND.role",
+     "layers.GROUND.visible",
+     "layers.SLAB.color",
+     "layers.SLAB.role",
+     "layers.SLAB.visible",
+     "layers.WATER.color",
+     "layers.WATER.role",
+     "layers.WATER.visible",
+     "layers.WING_WALL.color",
+     "layers.WING_WALL.role",
+     "layers.WING_WALL.visible",
+     "materials.lean_concrete",
+     "materials.pcc_grade",
+     "materials.rcc_grade",
+     "options2d.pin_pockets",
+     "options2d.shear_key",
+     "options2d.show_curtain_wall",
+     "options2d.show_wing_wall",
+     "project.bridge_no",
+     "project.cells",
+     "project.chainage",
+     "project.degree_of_curve",
+     "project.skew_angle",
+     "project.span_length",
+     "side.apron_l",
+     "side.apron_t",
+     "side.boulder_pitching_w",
+     "side.curtain_d",
+     "side.weep_hole_dia",
+     "side.weep_hole_spacing",
+     "side.wing_angle",
+     "side.wing_l",
+     "slab.pcc_thickness",
+     "slab.sand_filling",
+     "slab.thickness",
+     "slab.type",
+     "slab.width"
+    ],
+    "code_fallbacks": [
+     "deck.toJSON",
+     "foundation.toJSON",
+     "geometry.height_above_masonry",
+     "geometry.toJSON",
+     "hydraulics.toJSON",
+     "layers.APRON.toJSON",
+     "layers.BOX_STRUCTURE.toJSON",
+     "layers.CURTAIN_WALL.toJSON",
+     "layers.GROUND.toJSON",
+     "layers.SLAB.toJSON",
+     "layers.WATER.toJSON",
+     "layers.WING_WALL.toJSON",
+     "layers.toJSON",
+     "materials.toJSON",
+     "options2d.toJSON",
+     "project.bridge_type",
+     "project.toJSON",
+     "project.type",
+     "side.toJSON",
+     "slab.toJSON",
+     "toJSON"
+    ],
+    "affected_by": [
+     "deck.wearing_course",
+     "geometry.clear_h",
+     "geometry.t_slab_b",
+     "geometry.t_slab_t",
+     "hydraulics.bed_lvl"
+    ],
+    "inputs_tried": 38
+   },
+   {
+    "mode": "borelog",
+    "labels": [
+     "BORE LOG"
+    ],
+    "conditions": [
+     {
+      "when": {
+       "path": "options2d.show_bore_log",
+       "value": true
+      },
+      "added": true
+     }
+    ],
+    "renders": true,
+    "draws": 118,
+    "deterministic": true,
+    "reads": [
+     "deck.embankment_slope",
+     "deck.formation_lvl",
+     "deck.rail_level",
+     "deck.wearing_course",
+     "foundation.pcc_sub_base",
+     "foundation.sand_fill_depth",
+     "geometry.arch_thick",
+     "geometry.clear_h",
+     "geometry.clear_w",
+     "geometry.haunch_size",
+     "geometry.t_slab_b",
+     "geometry.t_slab_t",
+     "geometry.t_wall_i",
+     "geometry.t_wall_o",
+     "hydraulics.bed_lvl",
+     "hydraulics.hfl",
+     "hydraulics.soffit_level",
+     "options2d.show_curtain_wall",
+     "options2d.show_wing_wall",
+     "project.cells",
+     "side.apron_l",
+     "side.wing_l",
+     "slab.thickness",
+     "slab.type",
+     "slab.width"
+    ],
+    "code_fallbacks": [
+     "foundation.bottom_lvl",
+     "foundation.rw_bottom_lvl",
+     "foundation.sbc_box",
+     "foundation.sbc_rw",
+     "geometry.height_above_masonry",
+     "hydraulics.scour_lvl",
+     "options2d.bore_layers",
+     "options2d.bore_log_interval",
+     "project.bridge_type",
+     "project.type"
+    ],
+    "affected_by": [
+     "hydraulics.bed_lvl"
+    ],
+    "inputs_tried": 22
+   },
+   {
+    "mode": "tw",
+    "labels": [
+     "TOE WALL"
+    ],
+    "conditions": [
+     {
+      "when": {
+       "path": "options2d.show_toe_wall",
+       "value": true
+      },
+      "added": true
+     }
+    ],
+    "renders": true,
+    "draws": 515,
+    "deterministic": true,
+    "reads": [
+     "deck.embankment_slope",
+     "deck.formation_lvl",
+     "deck.rail_level",
+     "deck.wearing_course",
+     "foundation.pcc_sub_base",
+     "foundation.sand_fill_depth",
+     "geometry.arch_thick",
+     "geometry.clear_h",
+     "geometry.clear_w",
+     "geometry.haunch_size",
+     "geometry.t_slab_b",
+     "geometry.t_slab_t",
+     "geometry.t_wall_i",
+     "geometry.t_wall_o",
+     "hydraulics.bed_lvl",
+     "hydraulics.hfl",
+     "hydraulics.soffit_level",
+     "options2d.show_curtain_wall",
+     "options2d.show_wing_wall",
+     "project.cells",
+     "side.apron_l",
+     "side.wing_l",
+     "slab.thickness",
+     "slab.type",
+     "slab.width"
+    ],
+    "code_fallbacks": [
+     "geometry.height_above_masonry",
+     "geometry.toe_wall_h",
+     "geometry.toe_wall_stem_bot",
+     "geometry.toe_wall_stem_top",
+     "geometry.tw_type",
+     "project.bridge_type",
+     "project.type",
+     "toe_wall"
+    ],
+    "affected_by": [
+     "hydraulics.bed_lvl"
+    ],
+    "inputs_tried": 22
+   }
+  ]
+ },
+ "operations": [
+  {
+   "op": "set_count",
+   "path": "project.cells",
+   "outputs": [
+    "total_w",
+    "flow_area",
+    "cells"
+   ],
+   "views": [
+    "sec2",
+    "plan"
+   ],
+   "on_existing_drawing": "topology_change: adds or removes repeated members (and their dimensions) \u2014 not a change of value"
+  },
+  {
+   "op": "set_value",
+   "path": "geometry.clear_w",
+   "outputs": [
+    "total_w",
+    "flow_area",
+    "cW",
+    "span",
+    "rise"
+   ],
+   "views": [
+    "sec2",
+    "sec",
+    "abut",
+    "plan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "geometry.clear_h",
+   "outputs": [
+    "total_h",
+    "flow_area",
+    "cH",
+    "archTopY",
+    "heightAboveMasonry",
+    "topBlockHeight",
+    "dim1Y",
+    "dim2Y",
+    "z_top",
+    "soffit",
+    "rccBoxTopLvl",
+    "spanLen",
+    "earthCushion"
+   ],
+   "views": [
+    "sec2",
+    "sec",
+    "abut",
+    "elv",
+    "rw",
+    "rw2"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "geometry.arch_thick",
+   "outputs": [
+    "archThick",
+    "archTopY",
+    "heightAboveMasonry",
+    "topBlockHeight",
+    "dim2Y"
+   ],
+   "views": [
+    "sec2",
+    "sec",
+    "abut",
+    "elv"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "geometry.t_wall_o",
+   "outputs": [
+    "total_w",
+    "tOW"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "geometry.t_wall_i",
+   "outputs": [
+    "total_w",
+    "tIW"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "geometry.t_slab_t",
+   "outputs": [
+    "total_h",
+    "tST",
+    "z_top",
+    "rccBoxTopLvl",
+    "spanLen",
+    "earthCushion"
+   ],
+   "views": [
+    "rw",
+    "rw2"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "geometry.t_slab_b",
+   "outputs": [
+    "total_h",
+    "tSB",
+    "z_bot",
+    "pccTop",
+    "pccBot",
+    "granBot"
+   ],
+   "views": [
+    "rw",
+    "rw2"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "geometry.haunch_size",
+   "outputs": [
+    "haunch"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "deck.wearing_course",
+   "outputs": [
+    "wearC",
+    "z_bot",
+    "z_top",
+    "soffit",
+    "rccBoxTopLvl",
+    "pccTop",
+    "pccBot",
+    "granBot",
+    "spanLen",
+    "earthCushion"
+   ],
+   "views": [
+    "rw",
+    "rw2"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "deck.formation_lvl",
+   "outputs": [
+    "formLvl",
+    "spanLen",
+    "earthCushion"
+   ],
+   "views": [
+    "elv"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "deck.embankment_slope",
+   "outputs": [
+    "slope"
+   ],
+   "views": [
+    "elv"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "deck.rail_level",
+   "outputs": [
+    "railLvl"
+   ],
+   "views": [
+    "sec2",
+    "sec",
+    "abut",
+    "elv"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "slab.width",
+   "outputs": [
+    "slabWidth"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "slab.thickness",
+   "outputs": [
+    "slabThick"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "side.wing_l",
+   "outputs": [
+    "wingL"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "side.apron_l",
+   "outputs": [
+    "apronL"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "foundation.pcc_sub_base",
+   "outputs": [
+    "pccBot",
+    "granBot",
+    "pccB"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "foundation.sand_fill_depth",
+   "outputs": [
+    "granBot",
+    "sandFill"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "hydraulics.hfl",
+   "outputs": [
+    "hfl"
+   ],
+   "views": [
+    "elv"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "hydraulics.bed_lvl",
+   "outputs": [
+    "z_bot",
+    "z_top",
+    "soffit",
+    "bedLvl",
+    "rccBoxTopLvl",
+    "pccTop",
+    "pccBot",
+    "granBot",
+    "spanLen",
+    "earthCushion"
+   ],
+   "views": [
+    "sec2",
+    "sec",
+    "abut",
+    "elv",
+    "rw",
+    "rw2",
+    "borelog",
+    "tw"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "hydraulics.soffit_level",
+   "outputs": [
+    "soffit_level"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "toggle",
+   "path": "options2d.show_curtain_wall",
+   "value": false,
+   "view": "cw",
+   "effect": "removes the view",
+   "on_existing_drawing": "topology_change: a component and its views appear or disappear \u2014 needs geometry the drawing may not hold"
+  },
+  {
+   "op": "toggle",
+   "path": "options2d.show_wing_wall",
+   "value": true,
+   "view": "rw2",
+   "effect": "adds the view",
+   "on_existing_drawing": "topology_change: a component and its views appear or disappear \u2014 needs geometry the drawing may not hold"
+  },
+  {
+   "op": "toggle",
+   "path": "options2d.show_bore_log",
+   "value": true,
+   "view": "borelog",
+   "effect": "adds the view",
+   "on_existing_drawing": "topology_change: a component and its views appear or disappear \u2014 needs geometry the drawing may not hold"
+  },
+  {
+   "op": "toggle",
+   "path": "options2d.show_toe_wall",
+   "value": true,
+   "view": "tw",
+   "effect": "adds the view",
+   "on_existing_drawing": "topology_change: a component and its views appear or disappear \u2014 needs geometry the drawing may not hold"
+  }
+ ],
+ "findings": [
+  {
+   "kind": "code_fallbacks",
+   "text": "compute() reads fields the family defaults do not hold; the code then uses its own constants: geometry.height_above_masonry \u2192 None",
+   "paths": [
+    "geometry.height_above_masonry"
+   ]
+  }
+ ],
+ "parameters": [
+  {
+   "path": "bridge_name",
+   "default": "Highway_Arch_Bridge",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "project.span_length",
+   "default": 6.78,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "project.cells",
+   "default": 2,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "project.cells"
+    ],
+    "op": "||",
+    "fallback": 2.0,
+    "line": 15
+   },
+   "kind": "count",
+   "unit": "-",
+   "label": "number of cells (barrels) across",
+   "component": "box",
+   "unit_status": "authored",
+   "evidence": [
+    "highway-arch-bridge-rule-engine.ts:15"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "total_w",
+    "flow_area",
+    "cells"
+   ],
+   "affects_views": [
+    "sec2",
+    "plan"
+   ]
+  },
+  {
+   "path": "project.degree_of_curve",
+   "default": 0,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "project.skew_angle",
+   "default": 0,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "project.bridge_no",
+   "default": "BR.NO: 5",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "project.chainage",
+   "default": "6+700",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "geometry.clear_w",
+   "default": 5,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "geometry.clear_w"
+    ],
+    "op": "||",
+    "fallback": 5.0,
+    "line": 16
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "clear span of one cell",
+   "component": "cell",
+   "unit_status": "authored",
+   "evidence": [
+    "highway-arch-bridge-rule-engine.ts:16"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "total_w",
+    "flow_area",
+    "cW",
+    "span",
+    "rise"
+   ],
+   "affects_views": [
+    "sec2",
+    "sec",
+    "abut",
+    "plan"
+   ]
+  },
+  {
+   "path": "geometry.clear_h",
+   "default": 1.2,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "geometry.clear_h"
+    ],
+    "op": "||",
+    "fallback": 3.331,
+    "line": 17
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "clear height of a cell",
+   "component": "cell",
+   "unit_status": "authored",
+   "evidence": [
+    "highway-arch-bridge-rule-engine.ts:17"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "total_h",
+    "flow_area",
+    "cH",
+    "archTopY",
+    "heightAboveMasonry",
+    "topBlockHeight",
+    "dim1Y",
+    "dim2Y",
+    "z_top",
+    "soffit",
+    "rccBoxTopLvl",
+    "spanLen",
+    "earthCushion"
+   ],
+   "affects_views": [
+    "sec2",
+    "sec",
+    "abut",
+    "elv",
+    "rw",
+    "rw2"
+   ]
+  },
+  {
+   "path": "geometry.arch_thick",
+   "default": 0.4,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "geometry.arch_thick"
+    ],
+    "op": "??",
+    "fallback": 0.61,
+    "line": 57
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "arch (masonry) thickness above the box",
+   "component": "arch",
+   "unit_status": "authored",
+   "evidence": [
+    "highway-arch-bridge-rule-engine.ts:57"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "archThick",
+    "archTopY",
+    "heightAboveMasonry",
+    "topBlockHeight",
+    "dim2Y"
+   ],
+   "affects_views": [
+    "sec2",
+    "sec",
+    "abut",
+    "elv"
+   ]
+  },
+  {
+   "path": "geometry.t_wall_o",
+   "default": 0.35,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "geometry.t_wall_o"
+    ],
+    "op": "||",
+    "fallback": 0.35,
+    "line": 18
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "thickness of each outer wall",
+   "component": "outer_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "highway-arch-bridge-rule-engine.ts:18"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "total_w",
+    "tOW"
+   ]
+  },
+  {
+   "path": "geometry.t_wall_i",
+   "default": 0.35,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "geometry.t_wall_i"
+    ],
+    "op": "||",
+    "fallback": 0.35,
+    "line": 19
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "thickness of each intermediate wall",
+   "component": "inner_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "highway-arch-bridge-rule-engine.ts:19"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "total_w",
+    "tIW"
+   ]
+  },
+  {
+   "path": "geometry.t_slab_t",
+   "default": 0.35,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "geometry.t_slab_t"
+    ],
+    "op": "||",
+    "fallback": 0.35,
+    "line": 20
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "thickness of the top slab",
+   "component": "top_slab",
+   "unit_status": "authored",
+   "evidence": [
+    "highway-arch-bridge-rule-engine.ts:20"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "total_h",
+    "tST",
+    "z_top",
+    "rccBoxTopLvl",
+    "spanLen",
+    "earthCushion"
+   ],
+   "affects_views": [
+    "rw",
+    "rw2"
+   ]
+  },
+  {
+   "path": "geometry.t_slab_b",
+   "default": 0.35,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "geometry.t_slab_b"
+    ],
+    "op": "||",
+    "fallback": 0.35,
+    "line": 21
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "thickness of the bottom slab",
+   "component": "bottom_slab",
+   "unit_status": "authored",
+   "evidence": [
+    "highway-arch-bridge-rule-engine.ts:21"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "total_h",
+    "tSB",
+    "z_bot",
+    "pccTop",
+    "pccBot",
+    "granBot"
+   ],
+   "affects_views": [
+    "rw",
+    "rw2"
+   ]
+  },
+  {
+   "path": "geometry.haunch_size",
+   "default": 0.5,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "geometry.haunch_size"
+    ],
+    "op": "??",
+    "fallback": 0.5,
+    "line": 72
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "haunch size at the wall-slab junctions",
+   "component": "haunch",
+   "unit_status": "authored",
+   "evidence": [
+    "highway-arch-bridge-rule-engine.ts:72"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "haunch"
+   ]
+  },
+  {
+   "path": "geometry.open_joint",
+   "default": 0.012,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "geometry.gap_between_boxes",
+   "default": 0.02,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "deck.wearing_course",
+   "default": 0.15,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "deck.wearing_course"
+    ],
+    "op": "??",
+    "fallback": 0.15,
+    "line": 22
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "wearing course on the bottom slab (bed level is its top)",
+   "component": "wearing_course",
+   "unit_status": "authored",
+   "evidence": [
+    "highway-arch-bridge-rule-engine.ts:22",
+    "highway-arch-bridge-rule-engine.ts:37"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "wearC",
+    "z_bot",
+    "z_top",
+    "soffit",
+    "rccBoxTopLvl",
+    "pccTop",
+    "pccBot",
+    "granBot",
+    "spanLen",
+    "earthCushion"
+   ],
+   "affects_views": [
+    "rw",
+    "rw2"
+   ]
+  },
+  {
+   "path": "deck.formation_lvl",
+   "default": 98.617,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "level",
+   "unit": "m",
+   "label": "formation level (defaults to the box top level)",
+   "component": "road",
+   "unit_status": "authored",
+   "evidence": [
+    "highway-arch-bridge-rule-engine.ts:45"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "formLvl",
+    "spanLen",
+    "earthCushion"
+   ],
+   "affects_views": [
+    "elv"
+   ]
+  },
+  {
+   "path": "deck.embankment_slope",
+   "default": 2,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "deck.embankment_slope"
+    ],
+    "op": "??",
+    "fallback": 2.0,
+    "line": 99
+   },
+   "kind": "ratio",
+   "unit": "-",
+   "label": "embankment side slope, horizontal per vertical",
+   "component": "embankment",
+   "unit_status": "authored",
+   "evidence": [
+    "highway-arch-bridge-rule-engine.ts:99"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "slope"
+   ],
+   "affects_views": [
+    "elv"
+   ]
+  },
+  {
+   "path": "deck.earth_cushion",
+   "default": 0.7,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "deck.rail_level",
+   "default": 99.379,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "level",
+   "unit": "m",
+   "label": "rail level as entered (else formation level + the rail/formation offset)",
+   "component": "track",
+   "unit_status": "authored",
+   "evidence": [
+    "highway-arch-bridge-rule-engine.ts:48"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "railLvl"
+   ],
+   "affects_views": [
+    "sec2",
+    "sec",
+    "abut",
+    "elv"
+   ]
+  },
+  {
+   "path": "slab.type",
+   "default": "highway",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "label": "railway or highway slab type label",
+   "component": "slab",
+   "unit_status": "authored",
+   "evidence": [
+    "highway-arch-bridge-rule-engine.ts:94"
+   ],
+   "evidence_check": "checked"
+  },
+  {
+   "path": "slab.width",
+   "default": 6.85,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "slab.width"
+    ],
+    "op": "??",
+    "fallback": 6.85,
+    "line": 92
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "slab width",
+   "component": "slab",
+   "unit_status": "authored",
+   "evidence": [
+    "highway-arch-bridge-rule-engine.ts:92"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "slabWidth"
+   ]
+  },
+  {
+   "path": "slab.thickness",
+   "default": 0.5,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "slab.thickness"
+    ],
+    "op": "??",
+    "fallback": 0.5,
+    "line": 93
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "slab thickness",
+   "component": "slab",
+   "unit_status": "authored",
+   "evidence": [
+    "highway-arch-bridge-rule-engine.ts:93"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "slabThick"
+   ]
+  },
+  {
+   "path": "slab.pcc_thickness",
+   "default": 0.15,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "slab.sand_filling",
+   "default": 0.7,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "side.wing_l",
+   "default": 5.884,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "side.wing_l"
+    ],
+    "op": "??",
+    "fallback": 5.884,
+    "line": 28
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "wing wall length",
+   "component": "wing_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "highway-arch-bridge-rule-engine.ts:28"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "wingL"
+   ]
+  },
+  {
+   "path": "side.wing_angle",
+   "default": 45,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "side.curtain_d",
+   "default": 1.5,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "side.apron_l",
+   "default": 3,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "side.apron_l"
+    ],
+    "op": "??",
+    "fallback": 3.0,
+    "line": 29
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "apron length",
+   "component": "apron",
+   "unit_status": "authored",
+   "evidence": [
+    "highway-arch-bridge-rule-engine.ts:29"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "apronL"
+   ]
+  },
+  {
+   "path": "side.apron_t",
+   "default": 0.3,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "side.boulder_pitching_w",
+   "default": 6,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "side.weep_hole_dia",
+   "default": 75,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "side.weep_hole_spacing",
+   "default": 1,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "foundation.soil_lvl",
+   "default": 96.317,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "foundation.found_d",
+   "default": 0.85,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "foundation.pcc_sub_base",
+   "default": 0.15,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "foundation.pcc_sub_base"
+    ],
+    "op": "??",
+    "fallback": 0.15,
+    "line": 26
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "PCC sub-base thickness under the bottom slab",
+   "component": "foundation",
+   "unit_status": "authored",
+   "evidence": [
+    "highway-arch-bridge-rule-engine.ts:26",
+    "highway-arch-bridge-rule-engine.ts:51"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "pccBot",
+    "granBot",
+    "pccB"
+   ]
+  },
+  {
+   "path": "foundation.sand_fill_depth",
+   "default": 0.7,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "foundation.sand_fill_depth"
+    ],
+    "op": "??",
+    "fallback": 0.7,
+    "line": 27
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "sand / granular fill depth under the PCC",
+   "component": "foundation",
+   "unit_status": "authored",
+   "evidence": [
+    "highway-arch-bridge-rule-engine.ts:27",
+    "highway-arch-bridge-rule-engine.ts:52"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "granBot",
+    "sandFill"
+   ]
+  },
+  {
+   "path": "hydraulics.hfl",
+   "default": 97,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "hydraulics.hfl"
+    ],
+    "op": "??",
+    "fallback": 97.0,
+    "line": 24
+   },
+   "kind": "level",
+   "unit": "m",
+   "label": "high flood level",
+   "component": "site",
+   "unit_status": "authored",
+   "evidence": [
+    "highway-arch-bridge-rule-engine.ts:24"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "hfl"
+   ],
+   "affects_views": [
+    "elv"
+   ]
+  },
+  {
+   "path": "hydraulics.bed_lvl",
+   "default": 96.317,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "hydraulics.bed_lvl"
+    ],
+    "op": "??",
+    "fallback": 96.317,
+    "line": 23
+   },
+   "kind": "level",
+   "unit": "m",
+   "label": "bed level: the finished floor, top of the wearing course",
+   "component": "cell",
+   "unit_status": "authored",
+   "evidence": [
+    "highway-arch-bridge-rule-engine.ts:23"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "z_bot",
+    "z_top",
+    "soffit",
+    "bedLvl",
+    "rccBoxTopLvl",
+    "pccTop",
+    "pccBot",
+    "granBot",
+    "spanLen",
+    "earthCushion"
+   ],
+   "affects_views": [
+    "sec2",
+    "sec",
+    "abut",
+    "elv",
+    "rw",
+    "rw2",
+    "borelog",
+    "tw"
+   ]
+  },
+  {
+   "path": "hydraulics.soffit_level",
+   "default": 97.517,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "hydraulics.soffit_level"
+    ],
+    "op": "??",
+    "fallback": 99.648,
+    "line": 25
+   },
+   "kind": "level",
+   "unit": "m",
+   "label": "soffit level as entered",
+   "component": "top_slab",
+   "unit_status": "authored",
+   "evidence": [
+    "highway-arch-bridge-rule-engine.ts:25"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "soffit_level"
+   ]
+  },
+  {
+   "path": "materials.rcc_grade",
+   "default": "M25",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "materials.pcc_grade",
+   "default": "M15",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "materials.lean_concrete",
+   "default": "M10",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "options2d.shear_key",
+   "default": false,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "options2d.pin_pockets",
+   "default": false,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "options2d.show_wing_wall",
+   "default": false,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "flag",
+   "unit": "-",
+   "label": "wing walls are part of the arrangement",
+   "component": "wing_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "highway-arch-bridge-rule-engine.ts:97"
+   ],
+   "evidence_check": "checked"
+  },
+  {
+   "path": "options2d.show_curtain_wall",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "flag",
+   "unit": "-",
+   "label": "curtain wall is part of the arrangement",
+   "component": "curtain_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "highway-arch-bridge-rule-engine.ts:98"
+   ],
+   "evidence_check": "checked"
+  },
+  {
+   "path": "layers.BOX_STRUCTURE.visible",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.BOX_STRUCTURE.color",
+   "default": "#6b7280",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.BOX_STRUCTURE.role",
+   "default": "box",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.WING_WALL.visible",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.WING_WALL.color",
+   "default": "#8b5cf6",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.WING_WALL.role",
+   "default": "wing",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.CURTAIN_WALL.visible",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.CURTAIN_WALL.color",
+   "default": "#475569",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.CURTAIN_WALL.role",
+   "default": "curtain",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.APRON.visible",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.APRON.color",
+   "default": "#f59e0b",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.APRON.role",
+   "default": "apron",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.GROUND.visible",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.GROUND.color",
+   "default": "#78350f",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.GROUND.role",
+   "default": "soil",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.WATER.visible",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.WATER.color",
+   "default": "#3b82f6",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.WATER.role",
+   "default": "water",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.SLAB.visible",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.SLAB.color",
+   "default": "#94a3b8",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.SLAB.role",
+   "default": "slab",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "geometry.height_above_masonry",
+   "default": null,
+   "type": "unknown",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": true,
+   "kind": "length",
+   "unit": "m",
+   "label": "height above the arch masonry as entered (else at least 7.5 m clearance or 0.8 m over the arch top)",
+   "component": "arch",
+   "unit_status": "authored",
+   "evidence": [
+    "highway-arch-bridge-rule-engine.ts:59"
+   ],
+   "evidence_check": "checked"
+  }
+ ],
+ "outputs": [
+  {
+   "name": "total_w",
+   "value_at_defaults": 11.049999999999999,
+   "depends_on": [
+    "geometry.clear_w",
+    "geometry.t_wall_i",
+    "geometry.t_wall_o",
+    "project.cells"
+   ],
+   "partials": {
+    "project.cells": {
+     "slope": 5.35,
+     "affine": false
+    },
+    "geometry.clear_w": {
+     "slope": 2.0,
+     "affine": true
+    },
+    "geometry.t_wall_o": {
+     "slope": 2.0,
+     "affine": true
+    },
+    "geometry.t_wall_i": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "overall width of the box, outer face to outer face",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "(( cW * cells ) + ( tOW * 2 ) + ( tIW * ( cells - 1 ) ))",
+    "line": 32,
+    "inputs": {
+     "tOW": {
+      "chain": [
+       "geometry.t_wall_o"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 18
+     },
+     "cW": {
+      "chain": [
+       "geometry.clear_w"
+      ],
+      "op": "||",
+      "default": 5.0,
+      "line": 16
+     },
+     "tIW": {
+      "chain": [
+       "geometry.t_wall_i"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 19
+     },
+     "cells": {
+      "chain": [
+       "project.cells"
+      ],
+      "op": "||",
+      "default": 2.0,
+      "line": 15
+     }
+    },
+    "display": "total_w = ( cW * cells ) + ( tOW * 2 ) + ( tIW * ( cells - 1 ) )",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "total_h",
+   "value_at_defaults": 1.9,
+   "depends_on": [
+    "geometry.clear_h",
+    "geometry.t_slab_b",
+    "geometry.t_slab_t"
+   ],
+   "partials": {
+    "geometry.clear_h": {
+     "slope": 1.0,
+     "affine": true
+    },
+    "geometry.t_slab_t": {
+     "slope": 1.0,
+     "affine": true
+    },
+    "geometry.t_slab_b": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "overall height of the box",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "(cH + tST + tSB)",
+    "line": 33,
+    "inputs": {
+     "tSB": {
+      "chain": [
+       "geometry.t_slab_b"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 21
+     },
+     "tST": {
+      "chain": [
+       "geometry.t_slab_t"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 20
+     },
+     "cH": {
+      "chain": [
+       "geometry.clear_h"
+      ],
+      "op": "||",
+      "default": 3.331,
+      "line": 17
+     }
+    },
+    "display": "total_h = cH + tST + tSB",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "flow_area",
+   "value_at_defaults": 12,
+   "depends_on": [
+    "geometry.clear_h",
+    "geometry.clear_w",
+    "project.cells"
+   ],
+   "partials": {
+    "project.cells": {
+     "slope": 6.0,
+     "affine": false
+    },
+    "geometry.clear_w": {
+     "slope": 2.4,
+     "affine": false
+    },
+    "geometry.clear_h": {
+     "slope": 10.0,
+     "affine": false
+    }
+   },
+   "kind": "area",
+   "unit": "m2",
+   "label": "clear waterway area of all cells",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "(cW * cH * cells)",
+    "line": 34,
+    "inputs": {
+     "cW": {
+      "chain": [
+       "geometry.clear_w"
+      ],
+      "op": "||",
+      "default": 5.0,
+      "line": 16
+     },
+     "cells": {
+      "chain": [
+       "project.cells"
+      ],
+      "op": "||",
+      "default": 2.0,
+      "line": 15
+     },
+     "cH": {
+      "chain": [
+       "geometry.clear_h"
+      ],
+      "op": "||",
+      "default": 3.331,
+      "line": 17
+     }
+    },
+    "display": "flow_area = cW * cH * cells",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "cells",
+   "value_at_defaults": 2,
+   "depends_on": [
+    "project.cells"
+   ],
+   "partials": {
+    "project.cells": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "count",
+   "unit": "-",
+   "label": "number of cells",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "cells",
+    "line": 15,
+    "inputs": {
+     "cells": {
+      "chain": [
+       "project.cells"
+      ],
+      "op": "||",
+      "default": 2.0,
+      "line": 15
+     }
+    },
+    "display": "cells = cells",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "cW",
+   "value_at_defaults": 5,
+   "depends_on": [
+    "geometry.clear_w"
+   ],
+   "partials": {
+    "geometry.clear_w": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "clear span",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "cW",
+    "line": 16,
+    "inputs": {
+     "cW": {
+      "chain": [
+       "geometry.clear_w"
+      ],
+      "op": "||",
+      "default": 5.0,
+      "line": 16
+     }
+    },
+    "display": "cW = cW",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "cH",
+   "value_at_defaults": 1.2,
+   "depends_on": [
+    "geometry.clear_h"
+   ],
+   "partials": {
+    "geometry.clear_h": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "clear height",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "cH",
+    "line": 17,
+    "inputs": {
+     "cH": {
+      "chain": [
+       "geometry.clear_h"
+      ],
+      "op": "||",
+      "default": 3.331,
+      "line": 17
+     }
+    },
+    "display": "cH = cH",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "tOW",
+   "value_at_defaults": 0.35,
+   "depends_on": [
+    "geometry.t_wall_o"
+   ],
+   "partials": {
+    "geometry.t_wall_o": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "outer wall thickness",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "tOW",
+    "line": 18,
+    "inputs": {
+     "tOW": {
+      "chain": [
+       "geometry.t_wall_o"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 18
+     }
+    },
+    "display": "tOW = tOW",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "tIW",
+   "value_at_defaults": 0.35,
+   "depends_on": [
+    "geometry.t_wall_i"
+   ],
+   "partials": {
+    "geometry.t_wall_i": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "inner wall thickness",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "tIW",
+    "line": 19,
+    "inputs": {
+     "tIW": {
+      "chain": [
+       "geometry.t_wall_i"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 19
+     }
+    },
+    "display": "tIW = tIW",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "tST",
+   "value_at_defaults": 0.35,
+   "depends_on": [
+    "geometry.t_slab_t"
+   ],
+   "partials": {
+    "geometry.t_slab_t": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "top slab thickness",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "tST",
+    "line": 20,
+    "inputs": {
+     "tST": {
+      "chain": [
+       "geometry.t_slab_t"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 20
+     }
+    },
+    "display": "tST = tST",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "tSB",
+   "value_at_defaults": 0.35,
+   "depends_on": [
+    "geometry.t_slab_b"
+   ],
+   "partials": {
+    "geometry.t_slab_b": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "bottom slab thickness",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "tSB",
+    "line": 21,
+    "inputs": {
+     "tSB": {
+      "chain": [
+       "geometry.t_slab_b"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 21
+     }
+    },
+    "display": "tSB = tSB",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "wearC",
+   "value_at_defaults": 0.15,
+   "depends_on": [
+    "deck.wearing_course"
+   ],
+   "partials": {
+    "deck.wearing_course": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "wearing course thickness",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "wearC",
+    "line": 22,
+    "inputs": {
+     "wearC": {
+      "chain": [
+       "deck.wearing_course"
+      ],
+      "op": "??",
+      "default": 0.15,
+      "line": 22
+     }
+    },
+    "display": "wearC = wearC",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "haunch",
+   "value_at_defaults": 0.5,
+   "depends_on": [
+    "geometry.haunch_size"
+   ],
+   "partials": {
+    "geometry.haunch_size": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "haunch size",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "in4_haunch_size",
+    "line": 72,
+    "inputs": {
+     "in4_haunch_size": {
+      "chain": [
+       "geometry.haunch_size"
+      ],
+      "op": "??",
+      "default": 0.5,
+      "line": 72
+     }
+    },
+    "display": "haunch = in4_haunch_size",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "span",
+   "value_at_defaults": 5,
+   "depends_on": [
+    "geometry.clear_w"
+   ],
+   "partials": {
+    "geometry.clear_w": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "arch span (= clear width)",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "span",
+    "line": 55,
+    "inputs": {
+     "span": {
+      "chain": [
+       "geometry.clear_w"
+      ],
+      "op": "??",
+      "default": 6.1,
+      "line": 55
+     }
+    },
+    "display": "span = span",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "rise",
+   "value_at_defaults": 2.5,
+   "depends_on": [
+    "geometry.clear_w"
+   ],
+   "partials": {
+    "geometry.clear_w": {
+     "slope": 0.5,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "arch rise (span / 2)",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "(span / 2)",
+    "line": 56,
+    "inputs": {
+     "span": {
+      "chain": [
+       "geometry.clear_w"
+      ],
+      "op": "??",
+      "default": 6.1,
+      "line": 55
+     }
+    },
+    "display": "rise = span / 2",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "archThick",
+   "value_at_defaults": 0.4,
+   "depends_on": [
+    "geometry.arch_thick"
+   ],
+   "partials": {
+    "geometry.arch_thick": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "arch thickness",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "archThick",
+    "line": 57,
+    "inputs": {
+     "archThick": {
+      "chain": [
+       "geometry.arch_thick"
+      ],
+      "op": "??",
+      "default": 0.61,
+      "line": 57
+     }
+    },
+    "display": "archThick = archThick",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "archTopY",
+   "value_at_defaults": 1.6,
+   "depends_on": [
+    "geometry.arch_thick",
+    "geometry.clear_h"
+   ],
+   "partials": {
+    "geometry.clear_h": {
+     "slope": 1.0,
+     "affine": true
+    },
+    "geometry.arch_thick": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "level of the top of the arch above the box soffit",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "(cH + archThick)",
+    "line": 58,
+    "inputs": {
+     "archThick": {
+      "chain": [
+       "geometry.arch_thick"
+      ],
+      "op": "??",
+      "default": 0.61,
+      "line": 57
+     },
+     "cH": {
+      "chain": [
+       "geometry.clear_h"
+      ],
+      "op": "||",
+      "default": 3.331,
+      "line": 17
+     }
+    },
+    "display": "archTopY = cH + archThick",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "heightAboveMasonry",
+   "value_at_defaults": 5.9,
+   "depends_on": [
+    "geometry.arch_thick",
+    "geometry.clear_h"
+   ],
+   "partials": {
+    "geometry.clear_h": {
+     "slope": -1.0,
+     "affine": true
+    },
+    "geometry.arch_thick": {
+     "slope": -1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "height above the arch masonry (coping bottom - arch top)",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "'?': not arithmetic (conditional, comparison, string or call)"
+   }
+  },
+  {
+   "name": "copingBotY",
+   "value_at_defaults": 7.5,
+   "depends_on": [],
+   "partials": {},
+   "kind": "length",
+   "unit": "m",
+   "label": "coping bottom, above the box soffit",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "uses heightAboveMasonry, which was not read ('?': not arithmetic (conditional, comparison, string or call))"
+   }
+  },
+  {
+   "name": "topBlockHeight",
+   "value_at_defaults": 5.9,
+   "depends_on": [
+    "geometry.arch_thick",
+    "geometry.clear_h"
+   ],
+   "partials": {
+    "geometry.clear_h": {
+     "slope": -1.0,
+     "affine": true
+    },
+    "geometry.arch_thick": {
+     "slope": -1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "top block height (= height above masonry)",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "uses copingBotY, which was not read (uses heightAboveMasonry, which was not read ('?': not arithmetic (conditional, comparison, string or call)))"
+   }
+  },
+  {
+   "name": "copingMidY",
+   "value_at_defaults": 7.7,
+   "depends_on": [],
+   "partials": {},
+   "kind": "length",
+   "unit": "m",
+   "label": "coping mid line, above the box soffit",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "uses copingBotY, which was not read (uses heightAboveMasonry, which was not read ('?': not arithmetic (conditional, comparison, string or call)))"
+   }
+  },
+  {
+   "name": "copingTopY",
+   "value_at_defaults": 7.8,
+   "depends_on": [],
+   "partials": {},
+   "kind": "length",
+   "unit": "m",
+   "label": "coping top, above the box soffit",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "uses copingMidY, which was not read (uses copingBotY, which was not read (uses heightAboveMasonry, which was not read ('?': not arithmetic (conditional, comparison, string or call))))"
+   }
+  },
+  {
+   "name": "dim1Y",
+   "value_at_defaults": 1.2,
+   "depends_on": [
+    "geometry.clear_h"
+   ],
+   "partials": {
+    "geometry.clear_h": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "dimension line 1, above the box soffit",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "(cH)",
+    "line": 64,
+    "inputs": {
+     "cH": {
+      "chain": [
+       "geometry.clear_h"
+      ],
+      "op": "||",
+      "default": 3.331,
+      "line": 17
+     }
+    },
+    "display": "dim1Y = cH",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "dim2Y",
+   "value_at_defaults": 1.6,
+   "depends_on": [
+    "geometry.arch_thick",
+    "geometry.clear_h"
+   ],
+   "partials": {
+    "geometry.clear_h": {
+     "slope": 1.0,
+     "affine": true
+    },
+    "geometry.arch_thick": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "dimension line 2, above the box soffit",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "((cH) + archThick)",
+    "line": 65,
+    "inputs": {
+     "archThick": {
+      "chain": [
+       "geometry.arch_thick"
+      ],
+      "op": "??",
+      "default": 0.61,
+      "line": 57
+     },
+     "cH": {
+      "chain": [
+       "geometry.clear_h"
+      ],
+      "op": "||",
+      "default": 3.331,
+      "line": 17
+     }
+    },
+    "display": "dim2Y = dim1Y + archThick",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "dim3Y",
+   "value_at_defaults": 7.5,
+   "depends_on": [],
+   "partials": {},
+   "kind": "length",
+   "unit": "m",
+   "label": "dimension line 3, above the box soffit",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "uses topBlockHeight, which was not read (uses copingBotY, which was not read (uses heightAboveMasonry, which was not read ('?': not arithmetic (conditional, comparison, string or call))))"
+   }
+  },
+  {
+   "name": "z_bot",
+   "value_at_defaults": 95.817,
+   "depends_on": [
+    "deck.wearing_course",
+    "geometry.t_slab_b",
+    "hydraulics.bed_lvl"
+   ],
+   "partials": {
+    "geometry.t_slab_b": {
+     "slope": -1.0,
+     "affine": true
+    },
+    "deck.wearing_course": {
+     "slope": -1.0,
+     "affine": true
+    },
+    "hydraulics.bed_lvl": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "level",
+   "unit": "m",
+   "label": "level of the underside of the bottom slab",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "((bedLvl - wearC) - tSB)",
+    "line": 39,
+    "inputs": {
+     "tSB": {
+      "chain": [
+       "geometry.t_slab_b"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 21
+     },
+     "wearC": {
+      "chain": [
+       "deck.wearing_course"
+      ],
+      "op": "??",
+      "default": 0.15,
+      "line": 22
+     },
+     "bedLvl": {
+      "chain": [
+       "hydraulics.bed_lvl"
+      ],
+      "op": "??",
+      "default": 96.317,
+      "line": 23
+     }
+    },
+    "display": "z_bot = structTopBotSlab - tSB",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "z_top",
+   "value_at_defaults": 97.717,
+   "depends_on": [
+    "deck.wearing_course",
+    "geometry.clear_h",
+    "geometry.t_slab_t",
+    "hydraulics.bed_lvl"
+   ],
+   "partials": {
+    "geometry.clear_h": {
+     "slope": 1.0,
+     "affine": true
+    },
+    "geometry.t_slab_t": {
+     "slope": 1.0,
+     "affine": true
+    },
+    "deck.wearing_course": {
+     "slope": -1.0,
+     "affine": true
+    },
+    "hydraulics.bed_lvl": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "level",
+   "unit": "m",
+   "label": "level of the top of the top slab",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "(((bedLvl - wearC) - tSB) + (cH + tST + tSB))",
+    "line": 40,
+    "inputs": {
+     "tSB": {
+      "chain": [
+       "geometry.t_slab_b"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 21
+     },
+     "wearC": {
+      "chain": [
+       "deck.wearing_course"
+      ],
+      "op": "??",
+      "default": 0.15,
+      "line": 22
+     },
+     "cH": {
+      "chain": [
+       "geometry.clear_h"
+      ],
+      "op": "||",
+      "default": 3.331,
+      "line": 17
+     },
+     "bedLvl": {
+      "chain": [
+       "hydraulics.bed_lvl"
+      ],
+      "op": "??",
+      "default": 96.317,
+      "line": 23
+     },
+     "tST": {
+      "chain": [
+       "geometry.t_slab_t"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 20
+     }
+    },
+    "display": "z_top = z_bot + total_h",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "soffit",
+   "value_at_defaults": 97.367,
+   "depends_on": [
+    "deck.wearing_course",
+    "geometry.clear_h",
+    "hydraulics.bed_lvl"
+   ],
+   "partials": {
+    "geometry.clear_h": {
+     "slope": 1.0,
+     "affine": true
+    },
+    "deck.wearing_course": {
+     "slope": -1.0,
+     "affine": true
+    },
+    "hydraulics.bed_lvl": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "level",
+   "unit": "m",
+   "label": "level of the underside of the top slab",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "((((bedLvl - wearC) - tSB) + (cH + tST + tSB)) - tST)",
+    "line": 41,
+    "inputs": {
+     "tSB": {
+      "chain": [
+       "geometry.t_slab_b"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 21
+     },
+     "wearC": {
+      "chain": [
+       "deck.wearing_course"
+      ],
+      "op": "??",
+      "default": 0.15,
+      "line": 22
+     },
+     "cH": {
+      "chain": [
+       "geometry.clear_h"
+      ],
+      "op": "||",
+      "default": 3.331,
+      "line": 17
+     },
+     "bedLvl": {
+      "chain": [
+       "hydraulics.bed_lvl"
+      ],
+      "op": "??",
+      "default": 96.317,
+      "line": 23
+     },
+     "tST": {
+      "chain": [
+       "geometry.t_slab_t"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 20
+     }
+    },
+    "display": "soffit = z_top - tST",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "bedLvl",
+   "value_at_defaults": 96.317,
+   "depends_on": [
+    "hydraulics.bed_lvl"
+   ],
+   "partials": {
+    "hydraulics.bed_lvl": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "level",
+   "unit": "m",
+   "label": "bed level",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "bedLvl",
+    "line": 23,
+    "inputs": {
+     "bedLvl": {
+      "chain": [
+       "hydraulics.bed_lvl"
+      ],
+      "op": "??",
+      "default": 96.317,
+      "line": 23
+     }
+    },
+    "display": "bedLvl = bedLvl",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "hfl",
+   "value_at_defaults": 97,
+   "depends_on": [
+    "hydraulics.hfl"
+   ],
+   "partials": {
+    "hydraulics.hfl": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "level",
+   "unit": "m",
+   "label": "high flood level",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "hfl",
+    "line": 24,
+    "inputs": {
+     "hfl": {
+      "chain": [
+       "hydraulics.hfl"
+      ],
+      "op": "??",
+      "default": 97.0,
+      "line": 24
+     }
+    },
+    "display": "hfl = hfl",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "soffit_level",
+   "value_at_defaults": 97.517,
+   "depends_on": [
+    "hydraulics.soffit_level"
+   ],
+   "partials": {
+    "hydraulics.soffit_level": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "level",
+   "unit": "m",
+   "label": "soffit level as entered",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "soffit_level",
+    "line": 25,
+    "inputs": {
+     "soffit_level": {
+      "chain": [
+       "hydraulics.soffit_level"
+      ],
+      "op": "??",
+      "default": 99.648,
+      "line": 25
+     }
+    },
+    "display": "soffit_level = soffit_level",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "rccBoxTopLvl",
+   "value_at_defaults": 97.71699999999998,
+   "depends_on": [
+    "deck.wearing_course",
+    "geometry.clear_h",
+    "geometry.t_slab_t",
+    "hydraulics.bed_lvl"
+   ],
+   "partials": {
+    "geometry.clear_h": {
+     "slope": 1.0,
+     "affine": true
+    },
+    "geometry.t_slab_t": {
+     "slope": 1.0,
+     "affine": true
+    },
+    "deck.wearing_course": {
+     "slope": -1.0,
+     "affine": true
+    },
+    "hydraulics.bed_lvl": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "level",
+   "unit": "m",
+   "label": "level of the top of the box",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "((bedLvl - wearC) + cH + tST)",
+    "line": 44,
+    "inputs": {
+     "bedLvl": {
+      "chain": [
+       "hydraulics.bed_lvl"
+      ],
+      "op": "??",
+      "default": 96.317,
+      "line": 23
+     },
+     "wearC": {
+      "chain": [
+       "deck.wearing_course"
+      ],
+      "op": "??",
+      "default": 0.15,
+      "line": 22
+     },
+     "tST": {
+      "chain": [
+       "geometry.t_slab_t"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 20
+     },
+     "cH": {
+      "chain": [
+       "geometry.clear_h"
+      ],
+      "op": "||",
+      "default": 3.331,
+      "line": 17
+     }
+    },
+    "display": "rccBoxTopLvl = structTopBotSlab + cH + tST",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "formLvl",
+   "value_at_defaults": 98.617,
+   "depends_on": [
+    "deck.formation_lvl"
+   ],
+   "partials": {
+    "deck.formation_lvl": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "level",
+   "unit": "m",
+   "label": "formation level used by the drawing",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "'?': not arithmetic (conditional, comparison, string or call)"
+   }
+  },
+  {
+   "name": "railLvl",
+   "value_at_defaults": 99.379,
+   "depends_on": [
+    "deck.rail_level"
+   ],
+   "partials": {
+    "deck.rail_level": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "level",
+   "unit": "m",
+   "label": "rail level used by the drawing",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "'?': not arithmetic (conditional, comparison, string or call)"
+   }
+  },
+  {
+   "name": "pccTop",
+   "value_at_defaults": 95.817,
+   "depends_on": [
+    "deck.wearing_course",
+    "geometry.t_slab_b",
+    "hydraulics.bed_lvl"
+   ],
+   "partials": {
+    "geometry.t_slab_b": {
+     "slope": -1.0,
+     "affine": true
+    },
+    "deck.wearing_course": {
+     "slope": -1.0,
+     "affine": true
+    },
+    "hydraulics.bed_lvl": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "level",
+   "unit": "m",
+   "label": "level of the top of the PCC sub-base",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "(((bedLvl - wearC) - tSB))",
+    "line": 50,
+    "inputs": {
+     "tSB": {
+      "chain": [
+       "geometry.t_slab_b"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 21
+     },
+     "wearC": {
+      "chain": [
+       "deck.wearing_course"
+      ],
+      "op": "??",
+      "default": 0.15,
+      "line": 22
+     },
+     "bedLvl": {
+      "chain": [
+       "hydraulics.bed_lvl"
+      ],
+      "op": "??",
+      "default": 96.317,
+      "line": 23
+     }
+    },
+    "display": "pccTop = z_bot",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "pccBot",
+   "value_at_defaults": 95.66699999999999,
+   "depends_on": [
+    "deck.wearing_course",
+    "foundation.pcc_sub_base",
+    "geometry.t_slab_b",
+    "hydraulics.bed_lvl"
+   ],
+   "partials": {
+    "geometry.t_slab_b": {
+     "slope": -1.0,
+     "affine": true
+    },
+    "deck.wearing_course": {
+     "slope": -1.0,
+     "affine": true
+    },
+    "foundation.pcc_sub_base": {
+     "slope": -1.0,
+     "affine": true
+    },
+    "hydraulics.bed_lvl": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "level",
+   "unit": "m",
+   "label": "level of the underside of the PCC sub-base",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "(((bedLvl - wearC) - tSB) - pccB)",
+    "line": 51,
+    "inputs": {
+     "tSB": {
+      "chain": [
+       "geometry.t_slab_b"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 21
+     },
+     "wearC": {
+      "chain": [
+       "deck.wearing_course"
+      ],
+      "op": "??",
+      "default": 0.15,
+      "line": 22
+     },
+     "pccB": {
+      "chain": [
+       "foundation.pcc_sub_base"
+      ],
+      "op": "??",
+      "default": 0.15,
+      "line": 26
+     },
+     "bedLvl": {
+      "chain": [
+       "hydraulics.bed_lvl"
+      ],
+      "op": "??",
+      "default": 96.317,
+      "line": 23
+     }
+    },
+    "display": "pccBot = z_bot - pccB",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "granBot",
+   "value_at_defaults": 94.96699999999998,
+   "depends_on": [
+    "deck.wearing_course",
+    "foundation.pcc_sub_base",
+    "foundation.sand_fill_depth",
+    "geometry.t_slab_b",
+    "hydraulics.bed_lvl"
+   ],
+   "partials": {
+    "geometry.t_slab_b": {
+     "slope": -1.0,
+     "affine": true
+    },
+    "deck.wearing_course": {
+     "slope": -1.0,
+     "affine": true
+    },
+    "foundation.pcc_sub_base": {
+     "slope": -1.0,
+     "affine": true
+    },
+    "foundation.sand_fill_depth": {
+     "slope": -1.0,
+     "affine": true
+    },
+    "hydraulics.bed_lvl": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "level",
+   "unit": "m",
+   "label": "level of the underside of the sand / granular fill",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "((((bedLvl - wearC) - tSB) - pccB) - sandFill)",
+    "line": 52,
+    "inputs": {
+     "tSB": {
+      "chain": [
+       "geometry.t_slab_b"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 21
+     },
+     "wearC": {
+      "chain": [
+       "deck.wearing_course"
+      ],
+      "op": "??",
+      "default": 0.15,
+      "line": 22
+     },
+     "pccB": {
+      "chain": [
+       "foundation.pcc_sub_base"
+      ],
+      "op": "??",
+      "default": 0.15,
+      "line": 26
+     },
+     "bedLvl": {
+      "chain": [
+       "hydraulics.bed_lvl"
+      ],
+      "op": "??",
+      "default": 96.317,
+      "line": 23
+     },
+     "sandFill": {
+      "chain": [
+       "foundation.sand_fill_depth"
+      ],
+      "op": "??",
+      "default": 0.7,
+      "line": 27
+     }
+    },
+    "display": "granBot = pccBot - sandFill",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "pccB",
+   "value_at_defaults": 0.15,
+   "depends_on": [
+    "foundation.pcc_sub_base"
+   ],
+   "partials": {
+    "foundation.pcc_sub_base": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "PCC sub-base thickness",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "pccB",
+    "line": 26,
+    "inputs": {
+     "pccB": {
+      "chain": [
+       "foundation.pcc_sub_base"
+      ],
+      "op": "??",
+      "default": 0.15,
+      "line": 26
+     }
+    },
+    "display": "pccB = pccB",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "sandFill",
+   "value_at_defaults": 0.7,
+   "depends_on": [
+    "foundation.sand_fill_depth"
+   ],
+   "partials": {
+    "foundation.sand_fill_depth": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "sand fill depth",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "sandFill",
+    "line": 27,
+    "inputs": {
+     "sandFill": {
+      "chain": [
+       "foundation.sand_fill_depth"
+      ],
+      "op": "??",
+      "default": 0.7,
+      "line": 27
+     }
+    },
+    "display": "sandFill = sandFill",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "spanLen",
+   "value_at_defaults": 11.45000000000008,
+   "depends_on": [
+    "deck.formation_lvl",
+    "deck.wearing_course",
+    "geometry.clear_h",
+    "geometry.t_slab_t",
+    "hydraulics.bed_lvl"
+   ],
+   "partials": {
+    "geometry.clear_h": {
+     "slope": -4.0,
+     "affine": true
+    },
+    "geometry.t_slab_t": {
+     "slope": -4.0,
+     "affine": true
+    },
+    "deck.wearing_course": {
+     "slope": 4.0,
+     "affine": true
+    },
+    "deck.formation_lvl": {
+     "slope": 4.0,
+     "affine": false
+    },
+    "hydraulics.bed_lvl": {
+     "slope": -0.37323491,
+     "affine": false
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "longitudinal span length (3.925 x 2 + 4 x earth cushion)",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "uses earthCushion, which was not read (uses formLvl, which was not read ('?': not arithmetic (conditional, comparison, string or call)))"
+   }
+  },
+  {
+   "name": "wingL",
+   "value_at_defaults": 5.884,
+   "depends_on": [
+    "side.wing_l"
+   ],
+   "partials": {
+    "side.wing_l": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "wing wall length",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "wingL",
+    "line": 28,
+    "inputs": {
+     "wingL": {
+      "chain": [
+       "side.wing_l"
+      ],
+      "op": "??",
+      "default": 5.884,
+      "line": 28
+     }
+    },
+    "display": "wingL = wingL",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "apronL",
+   "value_at_defaults": 3,
+   "depends_on": [
+    "side.apron_l"
+   ],
+   "partials": {
+    "side.apron_l": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "apron length",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "apronL",
+    "line": 29,
+    "inputs": {
+     "apronL": {
+      "chain": [
+       "side.apron_l"
+      ],
+      "op": "??",
+      "default": 3.0,
+      "line": 29
+     }
+    },
+    "display": "apronL = apronL",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "earthCushion",
+   "value_at_defaults": 0.9000000000000199,
+   "depends_on": [
+    "deck.formation_lvl",
+    "deck.wearing_course",
+    "geometry.clear_h",
+    "geometry.t_slab_t",
+    "hydraulics.bed_lvl"
+   ],
+   "partials": {
+    "geometry.clear_h": {
+     "slope": -1.0,
+     "affine": true
+    },
+    "geometry.t_slab_t": {
+     "slope": -1.0,
+     "affine": true
+    },
+    "deck.wearing_course": {
+     "slope": 1.0,
+     "affine": true
+    },
+    "deck.formation_lvl": {
+     "slope": 1.0,
+     "affine": false
+    },
+    "hydraulics.bed_lvl": {
+     "slope": -0.093308727,
+     "affine": false
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "earth cushion above the arch masonry",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "uses formLvl, which was not read ('?': not arithmetic (conditional, comparison, string or call))"
+   }
+  },
+  {
+   "name": "slabWidth",
+   "value_at_defaults": 6.85,
+   "depends_on": [
+    "slab.width"
+   ],
+   "partials": {
+    "slab.width": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "slab width",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "in5_width",
+    "line": 92,
+    "inputs": {
+     "in5_width": {
+      "chain": [
+       "slab.width"
+      ],
+      "op": "??",
+      "default": 6.85,
+      "line": 92
+     }
+    },
+    "display": "slabWidth = in5_width",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "slabThick",
+   "value_at_defaults": 0.5,
+   "depends_on": [
+    "slab.thickness"
+   ],
+   "partials": {
+    "slab.thickness": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "slab thickness",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "in6_thickness",
+    "line": 93,
+    "inputs": {
+     "in6_thickness": {
+      "chain": [
+       "slab.thickness"
+      ],
+      "op": "??",
+      "default": 0.5,
+      "line": 93
+     }
+    },
+    "display": "slabThick = in6_thickness",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "slope",
+   "value_at_defaults": 2,
+   "depends_on": [
+    "deck.embankment_slope"
+   ],
+   "partials": {
+    "deck.embankment_slope": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "ratio",
+   "unit": "-",
+   "label": "embankment side slope",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "in10_embankment_slope",
+    "line": 99,
+    "inputs": {
+     "in10_embankment_slope": {
+      "chain": [
+       "deck.embankment_slope"
+      ],
+      "op": "??",
+      "default": 2.0,
+      "line": 99
+     }
+    },
+    "display": "slope = in10_embankment_slope",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "slabType",
+   "value_at_defaults": "highway",
+   "kind": "text",
+   "unit": "-",
+   "depends_on": []
+  },
+  {
+   "name": "showWingWall",
+   "value_at_defaults": false,
+   "kind": "flag",
+   "unit": "-",
+   "depends_on": []
+  },
+  {
+   "name": "showCurtainWall",
+   "value_at_defaults": true,
+   "kind": "flag",
+   "unit": "-",
+   "depends_on": []
+  }
+ ],
+ "formulas_summary": {
+  "extracted": 35,
+  "verified": 35,
+  "constants": 0,
+  "differs": [],
+  "opaque": [
+   "copingBotY",
+   "copingMidY",
+   "copingTopY",
+   "dim3Y",
+   "earthCushion",
+   "formLvl",
+   "heightAboveMasonry",
+   "railLvl",
+   "showCurtainWall",
+   "showWingWall",
+   "slabType",
+   "spanLen",
+   "topBlockHeight"
+  ]
+ },
+ "defaults": {
+  "bridge_name": "Highway_Arch_Bridge",
+  "project": {
+   "span_length": 6.78,
+   "cells": 2,
+   "degree_of_curve": 0,
+   "skew_angle": 0,
+   "bridge_no": "BR.NO: 5",
+   "chainage": "6+700"
+  },
+  "geometry": {
+   "clear_w": 5,
+   "clear_h": 1.2,
+   "arch_thick": 0.4,
+   "t_wall_o": 0.35,
+   "t_wall_i": 0.35,
+   "t_slab_t": 0.35,
+   "t_slab_b": 0.35,
+   "haunch_size": 0.5,
+   "open_joint": 0.012,
+   "gap_between_boxes": 0.02
+  },
+  "deck": {
+   "wearing_course": 0.15,
+   "formation_lvl": 98.617,
+   "embankment_slope": 2,
+   "earth_cushion": 0.7,
+   "rail_level": 99.379
+  },
+  "slab": {
+   "type": "highway",
+   "width": 6.85,
+   "thickness": 0.5,
+   "pcc_thickness": 0.15,
+   "sand_filling": 0.7
+  },
+  "side": {
+   "wing_l": 5.884,
+   "wing_angle": 45,
+   "curtain_d": 1.5,
+   "apron_l": 3,
+   "apron_t": 0.3,
+   "boulder_pitching_w": 6,
+   "weep_hole_dia": 75,
+   "weep_hole_spacing": 1
+  },
+  "foundation": {
+   "soil_lvl": 96.317,
+   "found_d": 0.85,
+   "pcc_sub_base": 0.15,
+   "sand_fill_depth": 0.7
+  },
+  "hydraulics": {
+   "hfl": 97,
+   "bed_lvl": 96.317,
+   "soffit_level": 97.517
+  },
+  "materials": {
+   "rcc_grade": "M25",
+   "pcc_grade": "M15",
+   "lean_concrete": "M10"
+  },
+  "options2d": {
+   "shear_key": false,
+   "pin_pockets": false,
+   "show_wing_wall": false,
+   "show_curtain_wall": true
+  },
+  "layers": {
+   "BOX_STRUCTURE": {
+    "visible": true,
+    "color": "#6b7280",
+    "role": "box"
+   },
+   "WING_WALL": {
+    "visible": true,
+    "color": "#8b5cf6",
+    "role": "wing"
+   },
+   "CURTAIN_WALL": {
+    "visible": true,
+    "color": "#475569",
+    "role": "curtain"
+   },
+   "APRON": {
+    "visible": true,
+    "color": "#f59e0b",
+    "role": "apron"
+   },
+   "GROUND": {
+    "visible": true,
+    "color": "#78350f",
+    "role": "soil"
+   },
+   "WATER": {
+    "visible": true,
+    "color": "#3b82f6",
+    "role": "water"
+   },
+   "SLAB": {
+    "visible": true,
+    "color": "#94a3b8",
+    "role": "slab"
+   }
+  }
+ },
+ "characterization": {
+  "samples_per_formula": 16,
+  "defaults_digest": "a904d7c40f6cd18a9df96d51f78dada328b70c0874ad95342abee584370ae145",
+  "derived_digest": "ce8645c700d4cb7b0564fc9aa56bde42d4c268a2e7cbaf770637137e30431178"
+ }
+}

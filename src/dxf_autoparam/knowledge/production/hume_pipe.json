@@ -1,0 +1,6084 @@
+{
+ "format": "dxf-autoparam/production-knowledge-1",
+ "extractor_version": 1,
+ "knowledge_id": "aagento-bridge:hume_pipe",
+ "family": "hume_pipe",
+ "title": "HUME PIPE",
+ "source": {
+  "repository": "aagento-bridge",
+  "commit": "ca0b17ec2ccd82b81c246e2c02f8c4dc6fece565",
+  "branch": "cad_agent_dxf",
+  "dirty_files": [],
+  "registry": "src/app/features/bridges/models/bridge-registry.ts",
+  "modules": {
+   "defaults": {
+    "symbol": "HUME_PIPE_DEFAULTS",
+    "path": "src/app/features/bridges/models/hume-pipe.defaults.ts"
+   },
+   "ruleEngine": {
+    "inline_object": {
+     "compute": {
+      "symbol": "evaluateHumePipeRules",
+      "path": "src/app/features/bridges/utils/hume-pipe/hume-pipe-rule-engine.ts"
+     },
+     "validate": {
+      "symbol": "validateHumePipeRules",
+      "path": "src/app/features/bridges/utils/hume-pipe/hume-pipe-rule-engine.ts"
+     }
+    }
+   },
+   "sceneRenderer": {
+    "symbol": "HumePipeDraw2D",
+    "path": "src/app/features/bridges/utils/hume-pipe/hume-pipe-draw-2d.ts"
+   },
+   "workspaceMapper": {
+    "symbol": "humePipeWorkspaceMapper",
+    "path": "src/app/features/bridges/utils/hume-pipe/hume-pipe-mapper.ts"
+   },
+   "versionPayloadMapper": {
+    "symbol": "humePipeVersionPayloadMapper",
+    "path": "src/app/features/bridges/utils/hume-pipe/hume-pipe-mapper.ts"
+   },
+   "computedLevelsMapper": {
+    "symbol": "humePipeComputedLevelsMapper",
+    "path": "src/app/features/bridges/utils/hume-pipe/hume-pipe-mapper.ts"
+   },
+   "initial2DScaleAndPan": {
+    "symbol": "humePipeInitial2DScaleAndPan",
+    "path": "src/app/features/bridges/utils/hume-pipe/hume-pipe-mapper.ts"
+   },
+   "viewButtons": {
+    "symbol": "humePipeViewButtons",
+    "path": "src/app/features/bridges/utils/hume-pipe/hume-pipe-mapper.ts"
+   },
+   "canvasBasePoint": {
+    "symbol": "humePipeCanvasBasePoint",
+    "path": "src/app/features/bridges/utils/hume-pipe/hume-pipe-mapper.ts"
+   }
+  },
+  "sources": {
+   "src/app/core/auth/auth.models.ts": "83edf39da84bff6a30ca947cd34776054e6b9f87d6b558806b8b0a4902b94928",
+   "src/app/features/bridges/models/bridge-meta.models.ts": "66b74b60165005af9c34674461cc52247b6c17b08f01b836d4826f7578f26bfa",
+   "src/app/features/bridges/models/bridge-registry.ts": "4ad1cd4ab16a2f9e3b72cc5784eba7ce9326cb365c879ebb7ceb82c57c0215bf",
+   "src/app/features/bridges/models/bridge.models.ts": "3f80944515b45a05d31d989573f505b758d96f6dd1aa502b2a4c063d8047fc79",
+   "src/app/features/bridges/models/engineering.models.ts": "9b07e27edbe1320fb4f1841fc032f9b01cfadd8918784bb4072d3b8ecd6b9dc9",
+   "src/app/features/bridges/models/hume-pipe.defaults.ts": "dd9a2e7c05f9d78c8364e092ec192f2ca4c5e4b260ebd98b17980aafc607c7e2",
+   "src/app/features/bridges/utils/hume-pipe/hume-pipe-draw-2d.ts": "95e14f75f894ae1c1abee59f987e4abff6948c6293fe5fd69a6c315b1e750824",
+   "src/app/features/bridges/utils/hume-pipe/hume-pipe-mapper.ts": "a4a2eed6c369e91d9d062b07cf7ddd70f214d7f1560722ed7273ebbbef99b875",
+   "src/app/features/bridges/utils/hume-pipe/hume-pipe-rule-engine.ts": "e8d3f1b57912d9d6e17d05661e50ada63abb095f4181ef9785c17f7cf33cacf4",
+   "src/app/features/projects/models/project.models.ts": "a6cb84994827c3ee2b3739308cbf3d9b7c7ecb2fd0a8615e3732f7ea4ac8d9d5"
+  },
+  "sources_digest": "be7960967732cebdf23edf15cccda5727c244e05e8914c1af367bd1faf6b5009"
+ },
+ "capabilities": {
+  "has_compute": true,
+  "has_validate": true,
+  "has_levels": true,
+  "has_views": true,
+  "has_renderer": true,
+  "has_defaults": true
+ },
+ "overlay": {
+  "present": true,
+  "status": "authored_from_source",
+  "basis": "Read by a person from aagento-bridge hume-pipe-rule-engine.ts (HumePipeRules interface, lines 3-103, documents mm vs m per field in comments) and hume-pipe.defaults.ts. Levels (rl/fl/hfl/bl/scourLevel/floorLevel and their inputs) are in metres; most construction sizes (wall, bedding, curtain/toe/face wall, graded gravel) are in millimetres; formation widths, wing wall length, barrel length, cushion height and founding depth are in metres, matching the interface comments."
+ },
+ "validation": {
+  "available": true,
+  "messages_at_defaults": [
+   {
+    "sev": "ok",
+    "msg": "Rail Level (18.848m) > Formation Level (18.315m)"
+   },
+   {
+    "sev": "ok",
+    "msg": "Pipe Flow Area: 1.13 m\u00b2"
+   }
+  ]
+ },
+ "levels_mapper": {
+  "available": true,
+  "levels_at_defaults": {
+   "railLevel": 18.848,
+   "formationLevel": 18.315,
+   "hfl": 16.5,
+   "bedLevel": 15.852,
+   "scourLevel": 14.102,
+   "floorLevel": 15.852
+  }
+ },
+ "views": {
+  "available": true,
+  "decided_by": [],
+  "views": [
+   {
+    "mode": "sec",
+    "labels": [
+     "SECTIONAL ELEVATION"
+    ],
+    "conditions": [
+     "always"
+    ],
+    "renders": true,
+    "draws": 1868,
+    "deterministic": false,
+    "reads": [
+     "bedLevel",
+     "beddingThickness",
+     "cradleConcreteThk",
+     "curtainWallBeddingProjLeft",
+     "curtainWallBeddingProjRight",
+     "curtainWallBeddingThk",
+     "curtainWallDepth",
+     "curtainWallFootingThk",
+     "curtainWallProjectionLeft",
+     "curtainWallProjectionRight",
+     "curtainWallThickness",
+     "dropWallDepth",
+     "faceWallBaseWidth",
+     "faceWallBeddingProj",
+     "faceWallBeddingThk",
+     "faceWallFoundThk",
+     "faceWallHeelProj",
+     "faceWallRubbleThk",
+     "faceWallStemAboveGL",
+     "faceWallStemBelowGL",
+     "faceWallStemBotW",
+     "faceWallStemTopW",
+     "faceWallTier1Width",
+     "faceWallToeProj",
+     "floorLevel",
+     "formationLevel",
+     "formationWidth",
+     "formationWidthLeft",
+     "formationWidthRight",
+     "foundingDepthBelowScour",
+     "gradedGravelGap",
+     "gradedGravelHatch",
+     "gradedGravelLength",
+     "gradedGravelText",
+     "hfl",
+     "levelingCourse",
+     "numPipes",
+     "pipeSpacing",
+     "railLevel",
+     "rubbleSoling",
+     "scourLevel",
+     "showCradleConcrete",
+     "showGradedGravel",
+     "showLeftSteps",
+     "showRightSteps",
+     "spanSize",
+     "stoneFlooringSide",
+     "stonePitchingThk",
+     "toeWallAboveGL",
+     "wallThickness",
+     "wearingCourseThk",
+     "wingWallHeight",
+     "wingWallLength"
+    ],
+    "code_fallbacks": [
+     "cushionHeight",
+     "faceWallShelfDrop",
+     "faceWallShelfProj",
+     "flowDirection",
+     "flow_dir",
+     "foundation_layers",
+     "gradedGravelDepth",
+     "hydraulics",
+     "options2d",
+     "project",
+     "sectionalElevationTitle",
+     "showLabels",
+     "showSectionalLabels",
+     "toeWallBeddingProj",
+     "toeWallBeddingThk",
+     "toeWallProjection",
+     "toeWallStemBotW",
+     "toeWallStemH",
+     "toeWallStemTopW",
+     "toeWallUpperFootingThk",
+     "trackStatus",
+     "viewTitle"
+    ]
+   },
+   {
+    "mode": "elv",
+    "labels": [
+     "LONGITUDINAL SECTION"
+    ],
+    "conditions": [
+     "always"
+    ],
+    "renders": true,
+    "draws": 1302,
+    "deterministic": false,
+    "reads": [
+     "bedLevel",
+     "beddingThickness",
+     "cradleConcreteThk",
+     "curtainWallBeddingProjLeft",
+     "curtainWallBeddingProjRight",
+     "curtainWallBeddingThk",
+     "curtainWallDepth",
+     "curtainWallFootingThk",
+     "curtainWallProjectionLeft",
+     "curtainWallProjectionRight",
+     "curtainWallThickness",
+     "dropWallDepth",
+     "faceWallBaseWidth",
+     "faceWallBeddingProj",
+     "faceWallBeddingThk",
+     "faceWallFoundThk",
+     "faceWallHeelProj",
+     "faceWallRubbleThk",
+     "faceWallStemAboveGL",
+     "faceWallStemBelowGL",
+     "faceWallStemBotW",
+     "faceWallStemTopW",
+     "faceWallTier1Width",
+     "faceWallToeProj",
+     "floorLevel",
+     "formationLevel",
+     "formationWidth",
+     "formationWidthLeft",
+     "formationWidthRight",
+     "foundingDepthBelowScour",
+     "gradedGravelGap",
+     "gradedGravelHatch",
+     "gradedGravelLength",
+     "gradedGravelText",
+     "hfl",
+     "levelingCourse",
+     "numPipes",
+     "pipeSpacing",
+     "railLevel",
+     "rubbleSoling",
+     "scourLevel",
+     "showCradleConcrete",
+     "showFaceWall",
+     "showGradedGravel",
+     "showLeftWingWall",
+     "showRightWingWall",
+     "showToeWall",
+     "spanSize",
+     "stoneFlooringSide",
+     "stonePitchingThk",
+     "toeWallAboveGL",
+     "wallThickness",
+     "wearingCourseThk",
+     "wingWallHeight",
+     "wingWallLength"
+    ],
+    "code_fallbacks": [
+     "cradleConcrete",
+     "faceWallShelfDrop",
+     "faceWallShelfProj",
+     "flowDirection",
+     "flow_dir",
+     "foundation_layers",
+     "gradedGravelDepth",
+     "hydraulics",
+     "longitudinalSectionTitle",
+     "longitudinalTitle",
+     "options2d",
+     "project",
+     "showLabels",
+     "showSectionalLabels",
+     "toeWallBeddingProj",
+     "toeWallBeddingThk",
+     "toeWallProjection",
+     "toeWallStemBotW",
+     "toeWallStemH",
+     "toeWallStemTopW",
+     "toeWallUpperFootingThk",
+     "trackStatus",
+     "viewTitle"
+    ]
+   },
+   {
+    "mode": "plan",
+    "labels": [
+     "PLAN TOP"
+    ],
+    "conditions": [
+     "always"
+    ],
+    "renders": true,
+    "draws": 625,
+    "deterministic": true,
+    "reads": [
+     "bedLevel",
+     "beddingThickness",
+     "cradleConcreteThk",
+     "curtainWallBeddingProjLeft",
+     "curtainWallBeddingProjRight",
+     "curtainWallBeddingThk",
+     "curtainWallDepth",
+     "curtainWallFootingThk",
+     "curtainWallProjectionLeft",
+     "curtainWallProjectionRight",
+     "curtainWallThickness",
+     "dropWallDepth",
+     "faceWallBaseWidth",
+     "faceWallBeddingProj",
+     "faceWallBeddingThk",
+     "faceWallFoundThk",
+     "faceWallHeelProj",
+     "faceWallRubbleThk",
+     "faceWallStemAboveGL",
+     "faceWallStemBelowGL",
+     "faceWallStemBotW",
+     "faceWallStemTopW",
+     "faceWallTier1Width",
+     "faceWallToeProj",
+     "floorLevel",
+     "formationLevel",
+     "formationWidth",
+     "formationWidthLeft",
+     "formationWidthRight",
+     "foundingDepthBelowScour",
+     "gradedGravelGap",
+     "gradedGravelHatch",
+     "gradedGravelLength",
+     "gradedGravelText",
+     "hfl",
+     "levelingCourse",
+     "numPipes",
+     "pipeSpacing",
+     "railLevel",
+     "rubbleSoling",
+     "scourLevel",
+     "showCradleConcrete",
+     "showGradedGravel",
+     "showLeftSteps",
+     "showLeftWingWall",
+     "showRightSteps",
+     "showRightWingWall",
+     "spanSize",
+     "stoneFlooringSide",
+     "stonePitchingThk",
+     "toeWallAboveGL",
+     "wallThickness",
+     "wearingCourseThk",
+     "wingWallHeight",
+     "wingWallLength"
+    ],
+    "code_fallbacks": [
+     "faceWallShelfDrop",
+     "faceWallShelfProj",
+     "faceWallTiers",
+     "flowDirection",
+     "flow_dir",
+     "gradedGravelDepth",
+     "hydraulics",
+     "options2d",
+     "planTitle",
+     "planTopTitle",
+     "project",
+     "showLabels",
+     "showSectionalLabels",
+     "stairsOffset",
+     "stepWidth",
+     "toeWallBeddingProj",
+     "toeWallBeddingThk",
+     "toeWallProjection",
+     "toeWallStemBotW",
+     "toeWallStemH",
+     "toeWallStemTopW",
+     "toeWallUpperFootingThk",
+     "trackStatus",
+     "viewTitle"
+    ],
+    "affected_by": [
+     "bedLevel",
+     "curtainWallProjectionLeft",
+     "curtainWallThickness",
+     "faceWallBeddingProj",
+     "faceWallHeelProj",
+     "faceWallStemBotW",
+     "faceWallStemTopW",
+     "faceWallToeProj",
+     "formationLevel",
+     "formationWidthLeft",
+     "formationWidthRight",
+     "numPipes",
+     "spanSize",
+     "wallThickness",
+     "wingWallHeight",
+     "wingWallLength"
+    ],
+    "inputs_tried": 46
+   },
+   {
+    "mode": "tw",
+    "labels": [
+     "TOE WALL"
+    ],
+    "conditions": [
+     "always"
+    ],
+    "renders": true,
+    "draws": 305,
+    "deterministic": true,
+    "reads": [
+     "bedLevel",
+     "beddingThickness",
+     "cradleConcreteThk",
+     "curtainWallBeddingProjLeft",
+     "curtainWallBeddingProjRight",
+     "curtainWallBeddingThk",
+     "curtainWallDepth",
+     "curtainWallFootingThk",
+     "curtainWallProjectionLeft",
+     "curtainWallProjectionRight",
+     "curtainWallThickness",
+     "dropWallDepth",
+     "faceWallBaseWidth",
+     "faceWallBeddingProj",
+     "faceWallBeddingThk",
+     "faceWallFoundThk",
+     "faceWallHeelProj",
+     "faceWallRubbleThk",
+     "faceWallStemAboveGL",
+     "faceWallStemBelowGL",
+     "faceWallStemBotW",
+     "faceWallStemTopW",
+     "faceWallTier1Width",
+     "faceWallToeProj",
+     "floorLevel",
+     "formationLevel",
+     "formationWidth",
+     "formationWidthLeft",
+     "formationWidthRight",
+     "foundingDepthBelowScour",
+     "gradedGravelGap",
+     "gradedGravelHatch",
+     "gradedGravelLength",
+     "gradedGravelText",
+     "hfl",
+     "levelingCourse",
+     "numPipes",
+     "pipeSpacing",
+     "railLevel",
+     "rubbleSoling",
+     "scourLevel",
+     "showCradleConcrete",
+     "showGradedGravel",
+     "spanSize",
+     "stoneFlooringSide",
+     "stonePitchingThk",
+     "toeWallAboveGL",
+     "wallThickness",
+     "wearingCourseThk",
+     "wingWallHeight",
+     "wingWallLength"
+    ],
+    "code_fallbacks": [
+     "faceWallShelfDrop",
+     "faceWallShelfProj",
+     "flowDirection",
+     "flow_dir",
+     "gradedGravelDepth",
+     "hydraulics",
+     "showLabels",
+     "showSectionalLabels",
+     "toeWallBeddingProj",
+     "toeWallBeddingThk",
+     "toeWallProjection",
+     "toeWallStemBotW",
+     "toeWallStemH",
+     "toeWallStemTopW",
+     "toeWallUpperFootingThk"
+    ],
+    "affected_by": [
+     "bedLevel",
+     "beddingThickness",
+     "levelingCourse",
+     "rubbleSoling",
+     "scourLevel",
+     "toeWallAboveGL"
+    ],
+    "inputs_tried": 46
+   },
+   {
+    "mode": "cw",
+    "labels": [
+     "DROP/CURTAIN WALL"
+    ],
+    "conditions": [
+     "always"
+    ],
+    "renders": true,
+    "draws": 3488,
+    "deterministic": false,
+    "reads": [
+     "bedLevel",
+     "beddingThickness",
+     "cradleConcreteThk",
+     "curtainWallBeddingProjLeft",
+     "curtainWallBeddingProjRight",
+     "curtainWallBeddingThk",
+     "curtainWallDepth",
+     "curtainWallFootingThk",
+     "curtainWallProjectionLeft",
+     "curtainWallProjectionRight",
+     "curtainWallThickness",
+     "dropWallDepth",
+     "faceWallBaseWidth",
+     "faceWallBeddingProj",
+     "faceWallBeddingThk",
+     "faceWallFoundThk",
+     "faceWallHeelProj",
+     "faceWallRubbleThk",
+     "faceWallStemAboveGL",
+     "faceWallStemBelowGL",
+     "faceWallStemBotW",
+     "faceWallStemTopW",
+     "faceWallTier1Width",
+     "faceWallToeProj",
+     "floorLevel",
+     "formationLevel",
+     "formationWidth",
+     "formationWidthLeft",
+     "formationWidthRight",
+     "foundingDepthBelowScour",
+     "gradedGravelGap",
+     "gradedGravelHatch",
+     "gradedGravelLength",
+     "gradedGravelText",
+     "hfl",
+     "levelingCourse",
+     "numPipes",
+     "pipeSpacing",
+     "railLevel",
+     "rubbleSoling",
+     "scourLevel",
+     "showCradleConcrete",
+     "showGradedGravel",
+     "spanSize",
+     "stoneFlooringSide",
+     "stonePitchingThk",
+     "toeWallAboveGL",
+     "wallThickness",
+     "wearingCourseThk",
+     "wingWallHeight",
+     "wingWallLength"
+    ],
+    "code_fallbacks": [
+     "curtainWallViewMode",
+     "faceWallShelfDrop",
+     "faceWallShelfProj",
+     "flowDirection",
+     "flow_dir",
+     "gradedGravelDepth",
+     "hydraulics",
+     "showLabels",
+     "showSectionalLabels",
+     "toeWallBeddingProj",
+     "toeWallBeddingThk",
+     "toeWallProjection",
+     "toeWallStemBotW",
+     "toeWallStemH",
+     "toeWallStemTopW",
+     "toeWallUpperFootingThk"
+    ]
+   },
+   {
+    "mode": "fw",
+    "labels": [
+     "FACE WALL"
+    ],
+    "conditions": [
+     "always"
+    ],
+    "renders": true,
+    "draws": 179,
+    "deterministic": true,
+    "reads": [
+     "bedLevel",
+     "beddingThickness",
+     "cradleConcreteThk",
+     "curtainWallBeddingProjLeft",
+     "curtainWallBeddingProjRight",
+     "curtainWallBeddingThk",
+     "curtainWallDepth",
+     "curtainWallFootingThk",
+     "curtainWallProjectionLeft",
+     "curtainWallProjectionRight",
+     "curtainWallThickness",
+     "dropWallDepth",
+     "faceWallBaseWidth",
+     "faceWallBeddingProj",
+     "faceWallBeddingThk",
+     "faceWallFoundThk",
+     "faceWallHeelProj",
+     "faceWallRubbleThk",
+     "faceWallStemAboveGL",
+     "faceWallStemBelowGL",
+     "faceWallStemBotW",
+     "faceWallStemTopW",
+     "faceWallTier1Width",
+     "faceWallToeProj",
+     "floorLevel",
+     "formationLevel",
+     "formationWidth",
+     "formationWidthLeft",
+     "formationWidthRight",
+     "foundingDepthBelowScour",
+     "gradedGravelGap",
+     "gradedGravelHatch",
+     "gradedGravelLength",
+     "gradedGravelText",
+     "hfl",
+     "levelingCourse",
+     "numPipes",
+     "pipeSpacing",
+     "railLevel",
+     "rubbleSoling",
+     "scourLevel",
+     "showCradleConcrete",
+     "showGradedGravel",
+     "spanSize",
+     "stoneFlooringSide",
+     "stonePitchingThk",
+     "toeWallAboveGL",
+     "wallThickness",
+     "wearingCourseThk",
+     "wingWallHeight",
+     "wingWallLength"
+    ],
+    "code_fallbacks": [
+     "faceWallShelfDrop",
+     "faceWallShelfProj",
+     "faceWallTiers",
+     "flowDirection",
+     "flow_dir",
+     "gradedGravelDepth",
+     "hydraulics",
+     "showLabels",
+     "showSectionalLabels",
+     "toeWallBeddingProj",
+     "toeWallBeddingThk",
+     "toeWallProjection",
+     "toeWallStemBotW",
+     "toeWallStemH",
+     "toeWallStemTopW",
+     "toeWallUpperFootingThk"
+    ],
+    "affected_by": [
+     "bedLevel",
+     "faceWallBeddingProj",
+     "faceWallBeddingThk",
+     "faceWallFoundThk",
+     "faceWallHeelProj",
+     "faceWallRubbleThk",
+     "faceWallStemAboveGL",
+     "faceWallStemBelowGL",
+     "faceWallStemBotW",
+     "faceWallStemTopW",
+     "faceWallToeProj",
+     "scourLevel"
+    ],
+    "inputs_tried": 46
+   }
+  ]
+ },
+ "operations": [
+  {
+   "op": "set_value",
+   "path": "spanSize",
+   "outputs": [
+    "span",
+    "pipeDiameterMeter",
+    "barrelLength",
+    "cushionHeight",
+    "total_w",
+    "flowArea"
+   ],
+   "views": [
+    "plan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_count",
+   "path": "numPipes",
+   "outputs": [
+    "numPipes",
+    "total_w",
+    "flowArea"
+   ],
+   "views": [
+    "plan"
+   ],
+   "on_existing_drawing": "topology_change: adds or removes repeated members (and their dimensions) \u2014 not a change of value"
+  },
+  {
+   "op": "set_value",
+   "path": "wallThickness",
+   "outputs": [
+    "wallThickness",
+    "pipeWallThickness",
+    "barrelLength",
+    "cushionHeight",
+    "total_w"
+   ],
+   "views": [
+    "plan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "formationWidthLeft",
+   "outputs": [
+    "barrelLength",
+    "formationWidth",
+    "formationWidthLeft"
+   ],
+   "views": [
+    "plan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "formationWidthRight",
+   "outputs": [
+    "barrelLength",
+    "formationWidth",
+    "formationWidthRight"
+   ],
+   "views": [
+    "plan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "pipeSpacing",
+   "outputs": [
+    "pipeSpacing"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "wearingCourseThk",
+   "outputs": [
+    "wearingCourseThk"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "beddingThickness",
+   "outputs": [
+    "beddingThickness",
+    "levelingBotM",
+    "foundBotM"
+   ],
+   "views": [
+    "tw"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "levelingCourse",
+   "outputs": [
+    "levelingCourse",
+    "levelingBotM",
+    "foundBotM"
+   ],
+   "views": [
+    "tw"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "rubbleSoling",
+   "outputs": [
+    "rubbleSoling",
+    "rubbleThk",
+    "foundBotM"
+   ],
+   "views": [
+    "tw"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "dropWallDepth",
+   "outputs": [
+    "dropWallDepth"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "curtainWallDepth",
+   "outputs": [
+    "curtainWallDepth"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "curtainWallThickness",
+   "outputs": [
+    "curtainWallThickness",
+    "dropWallThickness"
+   ],
+   "views": [
+    "plan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "curtainWallProjectionLeft",
+   "outputs": [
+    "curtainWallProjectionLeft"
+   ],
+   "views": [
+    "plan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "curtainWallProjectionRight",
+   "outputs": [
+    "curtainWallProjectionRight"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "curtainWallFootingThk",
+   "outputs": [
+    "curtainWallFootingThk"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "curtainWallBeddingProjLeft",
+   "outputs": [
+    "curtainWallBeddingProjLeft"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "curtainWallBeddingProjRight",
+   "outputs": [
+    "curtainWallBeddingProjRight"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "curtainWallBeddingThk",
+   "outputs": [
+    "curtainWallBeddingThk"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "stonePitchingThk",
+   "outputs": [
+    "stonePitchingThk"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "foundingDepthBelowScour",
+   "outputs": [
+    "foundingDepthBelowScour",
+    "foundingLevel"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "wingWallLength",
+   "outputs": [
+    "wingWallLength"
+   ],
+   "views": [
+    "plan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "wingWallHeight",
+   "outputs": [],
+   "views": [
+    "plan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "railLevel",
+   "outputs": [
+    "rl",
+    "total_h",
+    "totalHeight",
+    "abutmentHeight"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "formationLevel",
+   "outputs": [
+    "barrelLength",
+    "cushionHeight",
+    "fl",
+    "soffit_level"
+   ],
+   "views": [
+    "plan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "hfl",
+   "outputs": [
+    "hfl"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "bedLevel",
+   "outputs": [
+    "barrelLength",
+    "cushionHeight",
+    "headwallTopM",
+    "levelingBotM",
+    "foundBotM",
+    "bl",
+    "scourLevel",
+    "foundingLevel",
+    "flBase",
+    "total_h",
+    "totalHeight",
+    "abutmentHeight"
+   ],
+   "views": [
+    "plan",
+    "tw",
+    "fw"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "scourLevel",
+   "outputs": [
+    "scourLevel",
+    "foundingLevel"
+   ],
+   "views": [
+    "tw",
+    "fw"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "floorLevel",
+   "outputs": [
+    "floorLevel"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "toeWallAboveGL",
+   "outputs": [
+    "toeWallAboveGL"
+   ],
+   "views": [
+    "tw"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "faceWallStemAboveGL",
+   "outputs": [
+    "faceWallStemAboveGL",
+    "headwallTopM"
+   ],
+   "views": [
+    "fw"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "faceWallStemBelowGL",
+   "outputs": [
+    "faceWallStemBelowGL"
+   ],
+   "views": [
+    "fw"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "faceWallStemTopW",
+   "outputs": [
+    "faceWallStemTopW"
+   ],
+   "views": [
+    "plan",
+    "fw"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "faceWallStemBotW",
+   "outputs": [
+    "faceWallStemBotW"
+   ],
+   "views": [
+    "plan",
+    "fw"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "faceWallHeelProj",
+   "outputs": [
+    "faceWallHeelProj"
+   ],
+   "views": [
+    "plan",
+    "fw"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "faceWallToeProj",
+   "outputs": [
+    "faceWallToeProj"
+   ],
+   "views": [
+    "plan",
+    "fw"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "faceWallFoundThk",
+   "outputs": [
+    "faceWallFoundThk"
+   ],
+   "views": [
+    "fw"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "faceWallBeddingThk",
+   "outputs": [
+    "faceWallBeddingThk"
+   ],
+   "views": [
+    "fw"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "faceWallBeddingProj",
+   "outputs": [
+    "faceWallBeddingProj"
+   ],
+   "views": [
+    "plan",
+    "fw"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "faceWallRubbleThk",
+   "outputs": [
+    "faceWallRubbleThk"
+   ],
+   "views": [
+    "fw"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "gradedGravelLength",
+   "outputs": [
+    "gradedGravelLength",
+    "gradedGravelDepth"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "gradedGravelGap",
+   "outputs": [
+    "gradedGravelGap"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "cradleConcreteThk",
+   "outputs": [
+    "cradleConcreteThk"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "faceWallTier1Width",
+   "outputs": [
+    "faceWallTier1Width"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "faceWallBaseWidth",
+   "outputs": [
+    "faceWallBaseWidth"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "faceWallShelfDrop",
+   "outputs": [
+    "faceWallShelfDrop"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "faceWallShelfProj",
+   "outputs": [
+    "faceWallShelfProj"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "gradedGravelDepth",
+   "outputs": [
+    "gradedGravelDepth"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "toeWallBeddingProj",
+   "outputs": [
+    "toeWallBeddingProj"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "toeWallBeddingThk",
+   "outputs": [
+    "toeWallBeddingThk"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "toeWallProjection",
+   "outputs": [
+    "toeWallProjection"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "toeWallStemBotW",
+   "outputs": [
+    "toeWallStemBotW"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "toeWallStemH",
+   "outputs": [
+    "toeWallStemH"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "toeWallStemTopW",
+   "outputs": [
+    "toeWallStemTopW"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "toeWallUpperFootingThk",
+   "outputs": [
+    "toeWallUpperFootingThk"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  }
+ ],
+ "findings": [
+  {
+   "kind": "defaults_inconsistency",
+   "text": "the family defaults store faceWallTier1Width as 1.360 and faceWallBaseWidth as 1.760 (metres-scale numbers) while the rule engine treats both as millimetres and falls back to 1360 / 1760 only when the field is absent: because 1.36 and 1.76 are truthy, the stored defaults are used AS mm, making the defaulted face wall tiers about 1000x too narrow.",
+   "evidence": [
+    "hume-pipe.defaults.ts:67",
+    "hume-pipe.defaults.ts:68",
+    "hume-pipe-rule-engine.ts:264",
+    "hume-pipe-rule-engine.ts:265"
+   ]
+  },
+  {
+   "kind": "code_fallbacks",
+   "text": "compute() reads fields the family defaults do not hold; the code then uses its own constants: faceWallShelfDrop \u2192 200.0, faceWallShelfProj \u2192 250.0, flowDirection \u2192 None, flow_dir \u2192 None, gradedGravelDepth \u2192 1200.0, hydraulics \u2192 None, toeWallBeddingProj \u2192 150.0, toeWallBeddingThk \u2192 150.0, toeWallProjection \u2192 500.0, toeWallStemBotW \u2192 300.0, toeWallStemH \u2192 1700.0, toeWallStemTopW \u2192 250.0",
+   "paths": [
+    "faceWallShelfDrop",
+    "faceWallShelfProj",
+    "flowDirection",
+    "flow_dir",
+    "gradedGravelDepth",
+    "hydraulics",
+    "toeWallBeddingProj",
+    "toeWallBeddingThk",
+    "toeWallProjection",
+    "toeWallStemBotW",
+    "toeWallStemH",
+    "toeWallStemTopW",
+    "toeWallUpperFootingThk"
+   ]
+  }
+ ],
+ "parameters": [
+  {
+   "path": "spanSize",
+   "default": 1.2,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "length",
+   "unit": "m",
+   "label": "pipe internal diameter (span) as entered",
+   "component": "pipe",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:125"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "span",
+    "pipeDiameterMeter",
+    "barrelLength",
+    "cushionHeight",
+    "total_w",
+    "flowArea"
+   ],
+   "affects_views": [
+    "plan"
+   ]
+  },
+  {
+   "path": "pipeDiameter",
+   "default": 1.2,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "numPipes",
+   "default": 1,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "numPipes",
+     "numberOfPipes"
+    ],
+    "op": "||",
+    "fallback": 1.0,
+    "line": 136
+   },
+   "kind": "count",
+   "unit": "-",
+   "label": "number of barrels across",
+   "component": "pipe",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:136"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "numPipes",
+    "total_w",
+    "flowArea"
+   ],
+   "affects_views": [
+    "plan"
+   ]
+  },
+  {
+   "path": "numberOfPipes",
+   "default": 1,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "read_as": {
+    "chain": [
+     "numPipes",
+     "numberOfPipes"
+    ],
+    "op": "||",
+    "fallback": 1.0,
+    "line": 136
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "wallThickness",
+   "default": 180,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "wallThickness",
+     "pipeWallThickness"
+    ],
+    "op": "||",
+    "fallback": 180.0,
+    "line": 137
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "pipe wall thickness",
+   "component": "pipe",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:7",
+    "hume-pipe-rule-engine.ts:137"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "wallThickness",
+    "pipeWallThickness",
+    "barrelLength",
+    "cushionHeight",
+    "total_w"
+   ],
+   "affects_views": [
+    "plan"
+   ]
+  },
+  {
+   "path": "pipeWallThickness",
+   "default": 180,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "read_as": {
+    "chain": [
+     "wallThickness",
+     "pipeWallThickness"
+    ],
+    "op": "||",
+    "fallback": 180.0,
+    "line": 137
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "formationWidth",
+   "default": 7.85,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "length",
+   "unit": "m",
+   "label": "formation width (left + right of centre line)",
+   "component": "formation",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:183"
+   ],
+   "evidence_check": "checked"
+  },
+  {
+   "path": "formationWidthLeft",
+   "default": 3.925,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "length",
+   "unit": "m",
+   "label": "formation width, left of centre line",
+   "component": "formation",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:189"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "barrelLength",
+    "formationWidth",
+    "formationWidthLeft"
+   ],
+   "affects_views": [
+    "plan"
+   ]
+  },
+  {
+   "path": "formationWidthRight",
+   "default": 3.925,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "length",
+   "unit": "m",
+   "label": "formation width, right of centre line",
+   "component": "formation",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:190"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "barrelLength",
+    "formationWidth",
+    "formationWidthRight"
+   ],
+   "affects_views": [
+    "plan"
+   ]
+  },
+  {
+   "path": "barrelLength",
+   "default": 7.85,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "pipeSpacing",
+   "default": 180,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "pipeSpacing"
+    ],
+    "op": "||",
+    "fallback": 180.0,
+    "line": 211
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "clear spacing between adjacent pipe barrels",
+   "component": "pipe",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:14",
+    "hume-pipe-rule-engine.ts:211"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "pipeSpacing"
+   ]
+  },
+  {
+   "path": "wearingCourseThk",
+   "default": 100,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "wearingCourseThk"
+    ],
+    "op": "??",
+    "fallback": 100.0,
+    "line": 212
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "wearing course thickness in the earth cushion",
+   "component": "wearing_course",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:41",
+    "hume-pipe-rule-engine.ts:212"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "wearingCourseThk"
+   ]
+  },
+  {
+   "path": "beddingThickness",
+   "default": 300,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "beddingThickness"
+    ],
+    "op": "||",
+    "fallback": 300.0,
+    "line": 213
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "concrete bedding thickness under the pipes",
+   "component": "bedding",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:15",
+    "hume-pipe-rule-engine.ts:213"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "beddingThickness",
+    "levelingBotM",
+    "foundBotM"
+   ],
+   "affects_views": [
+    "tw"
+   ]
+  },
+  {
+   "path": "levelingCourse",
+   "default": 150,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "levelingCourse"
+    ],
+    "op": "||",
+    "fallback": 150.0,
+    "line": 214
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "leveling course thickness under the bedding",
+   "component": "bedding",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:16",
+    "hume-pipe-rule-engine.ts:214"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "levelingCourse",
+    "levelingBotM",
+    "foundBotM"
+   ],
+   "affects_views": [
+    "tw"
+   ]
+  },
+  {
+   "path": "rubbleSoling",
+   "default": 300,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "rubbleSoling",
+     "rubbleThk"
+    ],
+    "op": "||",
+    "fallback": 300.0,
+    "line": 215
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "rubble soling thickness under the leveling course",
+   "component": "bedding",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:17",
+    "hume-pipe-rule-engine.ts:215"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "rubbleSoling",
+    "rubbleThk",
+    "foundBotM"
+   ],
+   "affects_views": [
+    "tw"
+   ]
+  },
+  {
+   "path": "rubbleThk",
+   "default": 300,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "read_as": {
+    "chain": [
+     "rubbleSoling",
+     "rubbleThk"
+    ],
+    "op": "||",
+    "fallback": 300.0,
+    "line": 215
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "dropWallDepth",
+   "default": 1750,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "dropWallDepth"
+    ],
+    "op": "??",
+    "fallback": 1750.0,
+    "line": 217
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "drop wall (upstream) depth below bed level",
+   "component": "drop_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:19",
+    "hume-pipe-rule-engine.ts:217"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "dropWallDepth"
+   ]
+  },
+  {
+   "path": "curtainWallDepth",
+   "default": 1200,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "curtainWallDepth"
+    ],
+    "op": "??",
+    "fallback": 1200.0,
+    "line": 218
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall (downstream) depth below bed level",
+   "component": "curtain_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:20",
+    "hume-pipe-rule-engine.ts:218"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "curtainWallDepth"
+   ]
+  },
+  {
+   "path": "curtainWallThickness",
+   "default": 300,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "curtainWallThickness",
+     "dropWallThickness",
+     "toeWallStemBotW"
+    ],
+    "op": "??",
+    "fallback": 300.0,
+    "line": 219
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall thickness",
+   "component": "curtain_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:21",
+    "hume-pipe-rule-engine.ts:219"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "curtainWallThickness",
+    "dropWallThickness"
+   ],
+   "affects_views": [
+    "plan"
+   ]
+  },
+  {
+   "path": "curtainWallProjectionLeft",
+   "default": 250,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "curtainWallProjectionLeft",
+     "toeWallProjectionLeft",
+     "curtainWallProjection",
+     "toeWallProjection"
+    ],
+    "op": "??",
+    "fallback": 250.0,
+    "line": 220
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall projection, left side",
+   "component": "curtain_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:23",
+    "hume-pipe-rule-engine.ts:220"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "curtainWallProjectionLeft"
+   ],
+   "affects_views": [
+    "plan"
+   ]
+  },
+  {
+   "path": "curtainWallProjectionRight",
+   "default": 250,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "curtainWallProjectionRight",
+     "toeWallProjectionRight",
+     "curtainWallProjection",
+     "toeWallProjection"
+    ],
+    "op": "??",
+    "fallback": 250.0,
+    "line": 221
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall projection, right side",
+   "component": "curtain_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:24",
+    "hume-pipe-rule-engine.ts:221"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "curtainWallProjectionRight"
+   ]
+  },
+  {
+   "path": "curtainWallFootingThk",
+   "default": 300,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "curtainWallFootingThk",
+     "toeWallUpperFootingThk"
+    ],
+    "op": "??",
+    "fallback": 300.0,
+    "line": 222
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall footing thickness",
+   "component": "curtain_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:25",
+    "hume-pipe-rule-engine.ts:222"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "curtainWallFootingThk"
+   ]
+  },
+  {
+   "path": "curtainWallBeddingProjLeft",
+   "default": 150,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "curtainWallBeddingProjLeft",
+     "toeWallBeddingProjLeft",
+     "curtainWallBeddingProj",
+     "toeWallBeddingProj"
+    ],
+    "op": "??",
+    "fallback": 150.0,
+    "line": 223
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall bedding projection, left side",
+   "component": "curtain_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:26",
+    "hume-pipe-rule-engine.ts:223"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "curtainWallBeddingProjLeft"
+   ]
+  },
+  {
+   "path": "curtainWallBeddingProjRight",
+   "default": 150,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "curtainWallBeddingProjRight",
+     "toeWallBeddingProjRight",
+     "curtainWallBeddingProj",
+     "toeWallBeddingProj"
+    ],
+    "op": "??",
+    "fallback": 150.0,
+    "line": 224
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall bedding projection, right side",
+   "component": "curtain_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:27",
+    "hume-pipe-rule-engine.ts:224"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "curtainWallBeddingProjRight"
+   ]
+  },
+  {
+   "path": "curtainWallBeddingThk",
+   "default": 150,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "curtainWallBeddingThk",
+     "toeWallBeddingThk"
+    ],
+    "op": "??",
+    "fallback": 150.0,
+    "line": 225
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall bedding thickness",
+   "component": "curtain_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:28",
+    "hume-pipe-rule-engine.ts:225"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "curtainWallBeddingThk"
+   ]
+  },
+  {
+   "path": "stonePitchingThk",
+   "default": 300,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "stonePitchingThk",
+     "rubbleSoling"
+    ],
+    "op": "??",
+    "fallback": 300.0,
+    "line": 226
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "stone pitching thickness",
+   "component": "pitching",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:29",
+    "hume-pipe-rule-engine.ts:226"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "stonePitchingThk"
+   ]
+  },
+  {
+   "path": "stoneFlooringSide",
+   "default": "left",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "label": "side the stone floor pitching is shown on",
+   "component": "pitching",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:30",
+    "hume-pipe-rule-engine.ts:300"
+   ],
+   "evidence_check": "checked"
+  },
+  {
+   "path": "foundingDepthBelowScour",
+   "default": 1.75,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "foundingDepthBelowScour"
+    ],
+    "op": "??",
+    "fallback": 1.75,
+    "line": 173
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "founding depth below the scour level",
+   "component": "foundation",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:78",
+    "hume-pipe-rule-engine.ts:173"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "foundingDepthBelowScour",
+    "foundingLevel"
+   ]
+  },
+  {
+   "path": "wingWallLength",
+   "default": 4.5,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "wingWallLength"
+    ],
+    "op": "||",
+    "fallback": 4.5,
+    "line": 227
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "wing wall length",
+   "component": "wing_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:39",
+    "hume-pipe-rule-engine.ts:227"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "wingWallLength"
+   ],
+   "affects_views": [
+    "plan"
+   ]
+  },
+  {
+   "path": "wingWallHeight",
+   "default": 2.5,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "wingWallHeight"
+    ],
+    "op": "||",
+    "fallback": 2.5,
+    "line": 228
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "plan"
+   ]
+  },
+  {
+   "path": "railLevel",
+   "default": 18.848,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "level",
+   "unit": "m",
+   "label": "rail level (an input; the engine falls back to formation level + 0.762 m)",
+   "component": "track",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:157"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "rl",
+    "total_h",
+    "totalHeight",
+    "abutmentHeight"
+   ]
+  },
+  {
+   "path": "formationLevel",
+   "default": 18.315,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "level",
+   "unit": "m",
+   "label": "formation level",
+   "component": "track",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:152"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "barrelLength",
+    "cushionHeight",
+    "fl",
+    "soffit_level"
+   ],
+   "affects_views": [
+    "plan"
+   ]
+  },
+  {
+   "path": "hfl",
+   "default": 16.5,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "level",
+   "unit": "m",
+   "label": "high flood level",
+   "component": "site",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:75",
+    "hume-pipe-rule-engine.ts:162"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "hfl"
+   ]
+  },
+  {
+   "path": "bedLevel",
+   "default": 15.852,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "level",
+   "unit": "m",
+   "label": "bed level: invert level the pipes are laid at",
+   "component": "pipe",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:165"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "barrelLength",
+    "cushionHeight",
+    "headwallTopM",
+    "levelingBotM",
+    "foundBotM",
+    "bl",
+    "scourLevel",
+    "foundingLevel",
+    "flBase",
+    "total_h",
+    "totalHeight",
+    "abutmentHeight"
+   ],
+   "affects_views": [
+    "plan",
+    "tw",
+    "fw"
+   ]
+  },
+  {
+   "path": "scourLevel",
+   "default": 14.102,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "level",
+   "unit": "m",
+   "label": "scour level as entered (the engine recomputes legacy defaults)",
+   "component": "foundation",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:77",
+    "hume-pipe-rule-engine.ts:111"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "scourLevel",
+    "foundingLevel"
+   ],
+   "affects_views": [
+    "tw",
+    "fw"
+   ]
+  },
+  {
+   "path": "floorLevel",
+   "default": 15.852,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "level",
+   "unit": "m",
+   "label": "floor level (defaults to bed level)",
+   "component": "pipe",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:80",
+    "hume-pipe-rule-engine.ts:170"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "floorLevel"
+   ]
+  },
+  {
+   "path": "show460Line",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "showLeftSteps",
+   "default": false,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "showRightSteps",
+   "default": false,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "showLeftWingWall",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "showRightWingWall",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "showLeftHeadwall",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "showRightHeadwall",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "showLeftAbutment",
+   "default": false,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "showRightAbutment",
+   "default": false,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "showToeWall",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "toeWallAboveGL",
+   "default": 600,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "toeWallAboveGL"
+    ],
+    "op": "||",
+    "fallback": 600.0,
+    "line": 145
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall height above ground level",
+   "component": "toe_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:47",
+    "hume-pipe-rule-engine.ts:145"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "toeWallAboveGL"
+   ],
+   "affects_views": [
+    "tw"
+   ]
+  },
+  {
+   "path": "showFaceWall",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "faceWallStemAboveGL",
+   "default": 1530,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall (headwall) stem height above ground level",
+   "component": "face_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:56",
+    "hume-pipe-rule-engine.ts:252"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "faceWallStemAboveGL",
+    "headwallTopM"
+   ],
+   "affects_views": [
+    "fw"
+   ]
+  },
+  {
+   "path": "faceWallStemBelowGL",
+   "default": 875,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "faceWallStemBelowGL"
+    ],
+    "op": "||",
+    "fallback": 875.0,
+    "line": 255
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall stem depth below ground level",
+   "component": "face_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:57",
+    "hume-pipe-rule-engine.ts:255"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "faceWallStemBelowGL"
+   ],
+   "affects_views": [
+    "fw"
+   ]
+  },
+  {
+   "path": "faceWallStemTopW",
+   "default": 450,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "faceWallStemTopW"
+    ],
+    "op": "||",
+    "fallback": 450.0,
+    "line": 249
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall stem width at top",
+   "component": "face_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:54",
+    "hume-pipe-rule-engine.ts:249"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "faceWallStemTopW"
+   ],
+   "affects_views": [
+    "plan",
+    "fw"
+   ]
+  },
+  {
+   "path": "faceWallStemBotW",
+   "default": 610,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "faceWallStemBotW"
+    ],
+    "op": "||",
+    "fallback": 610.0,
+    "line": 250
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall stem width at bottom",
+   "component": "face_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:55",
+    "hume-pipe-rule-engine.ts:250"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "faceWallStemBotW"
+   ],
+   "affects_views": [
+    "plan",
+    "fw"
+   ]
+  },
+  {
+   "path": "faceWallHeelProj",
+   "default": 500,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "faceWallHeelProj"
+    ],
+    "op": "||",
+    "fallback": 500.0,
+    "line": 256
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall footing heel projection",
+   "component": "face_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:58",
+    "hume-pipe-rule-engine.ts:256"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "faceWallHeelProj"
+   ],
+   "affects_views": [
+    "plan",
+    "fw"
+   ]
+  },
+  {
+   "path": "faceWallToeProj",
+   "default": 250,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "faceWallToeProj"
+    ],
+    "op": "||",
+    "fallback": 250.0,
+    "line": 257
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall footing toe projection",
+   "component": "face_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:59",
+    "hume-pipe-rule-engine.ts:257"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "faceWallToeProj"
+   ],
+   "affects_views": [
+    "plan",
+    "fw"
+   ]
+  },
+  {
+   "path": "faceWallFoundThk",
+   "default": 350,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "faceWallFoundThk"
+    ],
+    "op": "||",
+    "fallback": 350.0,
+    "line": 258
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall footing thickness",
+   "component": "face_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:60",
+    "hume-pipe-rule-engine.ts:258"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "faceWallFoundThk"
+   ],
+   "affects_views": [
+    "fw"
+   ]
+  },
+  {
+   "path": "faceWallBeddingThk",
+   "default": 150,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "faceWallBeddingThk",
+     "levelingCourse"
+    ],
+    "op": "||",
+    "fallback": 150.0,
+    "line": 259
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall bedding thickness",
+   "component": "face_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:61",
+    "hume-pipe-rule-engine.ts:259"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "faceWallBeddingThk"
+   ],
+   "affects_views": [
+    "fw"
+   ]
+  },
+  {
+   "path": "faceWallBeddingProj",
+   "default": 200,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "faceWallBeddingProj"
+    ],
+    "op": "||",
+    "fallback": 200.0,
+    "line": 260
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall bedding projection",
+   "component": "face_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:62",
+    "hume-pipe-rule-engine.ts:260"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "faceWallBeddingProj"
+   ],
+   "affects_views": [
+    "plan",
+    "fw"
+   ]
+  },
+  {
+   "path": "faceWallRubbleThk",
+   "default": 300,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "faceWallRubbleThk",
+     "rubbleSoling",
+     "rubbleThk"
+    ],
+    "op": "||",
+    "fallback": 300.0,
+    "line": 261
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall rubble soling thickness",
+   "component": "face_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:63",
+    "hume-pipe-rule-engine.ts:261"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "faceWallRubbleThk"
+   ],
+   "affects_views": [
+    "fw"
+   ]
+  },
+  {
+   "path": "showGradedGravel",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "flag",
+   "unit": "-",
+   "label": "graded gravel filter is part of the arrangement",
+   "component": "graded_gravel",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:35",
+    "hume-pipe-rule-engine.ts:305"
+   ],
+   "evidence_check": "checked"
+  },
+  {
+   "path": "gradedGravelHatch",
+   "default": "GRAVEL",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "label": "graded gravel hatch pattern name",
+   "component": "graded_gravel",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:36",
+    "hume-pipe-rule-engine.ts:306"
+   ],
+   "evidence_check": "checked"
+  },
+  {
+   "path": "gradedGravelLength",
+   "default": 1200,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "gradedGravelLength",
+     "gradedGravelDepth"
+    ],
+    "op": "??",
+    "fallback": 1200.0,
+    "line": 301
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "graded gravel filter length",
+   "component": "graded_gravel",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:31",
+    "hume-pipe-rule-engine.ts:301"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "gradedGravelLength",
+    "gradedGravelDepth"
+   ]
+  },
+  {
+   "path": "gradedGravelGap",
+   "default": 1632,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "gradedGravelGap"
+    ],
+    "op": "??",
+    "fallback": 1632.0,
+    "line": 303
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "vertical gap from the foundation bottom to the top of the graded gravel",
+   "component": "graded_gravel",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:33",
+    "hume-pipe-rule-engine.ts:303"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "gradedGravelGap"
+   ]
+  },
+  {
+   "path": "gradedGravelText",
+   "default": "GRADED GRAVEL",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "label": "graded gravel callout text",
+   "component": "graded_gravel",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:34",
+    "hume-pipe-rule-engine.ts:304"
+   ],
+   "evidence_check": "checked"
+  },
+  {
+   "path": "showCradleConcrete",
+   "default": false,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "flag",
+   "unit": "-",
+   "label": "cradle concrete under the pipe is part of the arrangement",
+   "component": "cradle_concrete",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:37",
+    "hume-pipe-rule-engine.ts:307"
+   ],
+   "evidence_check": "checked"
+  },
+  {
+   "path": "cradleConcreteThk",
+   "default": 150,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "cradleConcreteThk"
+    ],
+    "op": "??",
+    "fallback": 150.0,
+    "line": 308
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "cradle concrete thickness",
+   "component": "cradle_concrete",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:38",
+    "hume-pipe-rule-engine.ts:308"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "cradleConcreteThk"
+   ]
+  },
+  {
+   "path": "faceWallTier1Width",
+   "default": 1.36,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall first tier width (stem width + heel + toe projection)",
+   "component": "face_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:66",
+    "hume-pipe-rule-engine.ts:264"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "faceWallTier1Width"
+   ]
+  },
+  {
+   "path": "faceWallBaseWidth",
+   "default": 1.76,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall base width (tier-1 width + 2 x bedding projection)",
+   "component": "face_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:67",
+    "hume-pipe-rule-engine.ts:265"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "faceWallBaseWidth"
+   ]
+  },
+  {
+   "path": "curtainWallBeddingProj",
+   "default": 150.0,
+   "type": "number",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": false,
+   "read_as": {
+    "chain": [
+     "curtainWallBeddingProjLeft",
+     "toeWallBeddingProjLeft",
+     "curtainWallBeddingProj",
+     "toeWallBeddingProj"
+    ],
+    "op": "??",
+    "fallback": 150.0,
+    "line": 223
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "curtainWallProjection",
+   "default": 250.0,
+   "type": "number",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": false,
+   "read_as": {
+    "chain": [
+     "curtainWallProjectionLeft",
+     "toeWallProjectionLeft",
+     "curtainWallProjection",
+     "toeWallProjection"
+    ],
+    "op": "??",
+    "fallback": 250.0,
+    "line": 220
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "dropWallThickness",
+   "default": 300.0,
+   "type": "number",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": false,
+   "read_as": {
+    "chain": [
+     "curtainWallThickness",
+     "dropWallThickness",
+     "toeWallStemBotW"
+    ],
+    "op": "??",
+    "fallback": 300.0,
+    "line": 219
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "faceWallShelfDrop",
+   "default": 200.0,
+   "type": "number",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "faceWallShelfDrop"
+    ],
+    "op": "||",
+    "fallback": 200.0,
+    "line": 263
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall shelf drop",
+   "component": "face_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:65",
+    "hume-pipe-rule-engine.ts:263"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "faceWallShelfDrop"
+   ]
+  },
+  {
+   "path": "faceWallShelfProj",
+   "default": 250.0,
+   "type": "number",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "faceWallShelfProj"
+    ],
+    "op": "||",
+    "fallback": 250.0,
+    "line": 262
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall shelf projection",
+   "component": "face_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:64",
+    "hume-pipe-rule-engine.ts:262"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "faceWallShelfProj"
+   ]
+  },
+  {
+   "path": "flowDirection",
+   "default": null,
+   "type": "unknown",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "label": "flow direction (left-to-right or right-to-left)",
+   "component": "pipe",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:102",
+    "hume-pipe-rule-engine.ts:106"
+   ],
+   "evidence_check": "checked"
+  },
+  {
+   "path": "flow_dir",
+   "default": null,
+   "type": "unknown",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "label": "flow direction, alternate key",
+   "component": "pipe",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:101",
+    "hume-pipe-rule-engine.ts:106"
+   ],
+   "evidence_check": "checked"
+  },
+  {
+   "path": "gradedGravelDepth",
+   "default": 1200.0,
+   "type": "number",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "gradedGravelLength",
+     "gradedGravelDepth"
+    ],
+    "op": "??",
+    "fallback": 1200.0,
+    "line": 301
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "graded gravel filter depth (alias of its length)",
+   "component": "graded_gravel",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:32",
+    "hume-pipe-rule-engine.ts:302"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "gradedGravelDepth"
+   ]
+  },
+  {
+   "path": "hydraulics",
+   "default": null,
+   "type": "unknown",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "toeWallBeddingProj",
+   "default": 150.0,
+   "type": "number",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "toeWallBeddingProj"
+    ],
+    "op": "||",
+    "fallback": 150.0,
+    "line": 149
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall bedding projection",
+   "component": "toe_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:51",
+    "hume-pipe-rule-engine.ts:149"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "toeWallBeddingProj"
+   ]
+  },
+  {
+   "path": "toeWallBeddingProjLeft",
+   "default": 150.0,
+   "type": "number",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": false,
+   "read_as": {
+    "chain": [
+     "curtainWallBeddingProjLeft",
+     "toeWallBeddingProjLeft",
+     "curtainWallBeddingProj",
+     "toeWallBeddingProj"
+    ],
+    "op": "??",
+    "fallback": 150.0,
+    "line": 223
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "toeWallBeddingProjRight",
+   "default": 150.0,
+   "type": "number",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": false,
+   "read_as": {
+    "chain": [
+     "curtainWallBeddingProjRight",
+     "toeWallBeddingProjRight",
+     "curtainWallBeddingProj",
+     "toeWallBeddingProj"
+    ],
+    "op": "??",
+    "fallback": 150.0,
+    "line": 224
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "toeWallBeddingThk",
+   "default": 150.0,
+   "type": "number",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "toeWallBeddingThk"
+    ],
+    "op": "||",
+    "fallback": 150.0,
+    "line": 148
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall bedding thickness",
+   "component": "toe_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:50",
+    "hume-pipe-rule-engine.ts:148"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "toeWallBeddingThk"
+   ]
+  },
+  {
+   "path": "toeWallProjection",
+   "default": 500.0,
+   "type": "number",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "toeWallProjection"
+    ],
+    "op": "||",
+    "fallback": 500.0,
+    "line": 146
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall footing projection",
+   "component": "toe_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:48",
+    "hume-pipe-rule-engine.ts:146"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "toeWallProjection"
+   ]
+  },
+  {
+   "path": "toeWallProjectionLeft",
+   "default": 250.0,
+   "type": "number",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": false,
+   "read_as": {
+    "chain": [
+     "curtainWallProjectionLeft",
+     "toeWallProjectionLeft",
+     "curtainWallProjection",
+     "toeWallProjection"
+    ],
+    "op": "??",
+    "fallback": 250.0,
+    "line": 220
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "toeWallProjectionRight",
+   "default": 250.0,
+   "type": "number",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": false,
+   "read_as": {
+    "chain": [
+     "curtainWallProjectionRight",
+     "toeWallProjectionRight",
+     "curtainWallProjection",
+     "toeWallProjection"
+    ],
+    "op": "??",
+    "fallback": 250.0,
+    "line": 221
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "toeWallStemBotW",
+   "default": 300.0,
+   "type": "number",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "toeWallStemBotW"
+    ],
+    "op": "||",
+    "fallback": 300.0,
+    "line": 142
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall stem width at bottom",
+   "component": "toe_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:45",
+    "hume-pipe-rule-engine.ts:142"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "toeWallStemBotW"
+   ]
+  },
+  {
+   "path": "toeWallStemH",
+   "default": 1700.0,
+   "type": "number",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "toeWallStemH"
+    ],
+    "op": "||",
+    "fallback": 1700.0,
+    "line": 144
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall stem height",
+   "component": "toe_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:46",
+    "hume-pipe-rule-engine.ts:144"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "toeWallStemH"
+   ]
+  },
+  {
+   "path": "toeWallStemTopW",
+   "default": 250.0,
+   "type": "number",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "toeWallStemTopW"
+    ],
+    "op": "||",
+    "fallback": 250.0,
+    "line": 141
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall stem width at top",
+   "component": "toe_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:44",
+    "hume-pipe-rule-engine.ts:141"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "toeWallStemTopW"
+   ]
+  },
+  {
+   "path": "toeWallUpperFootingThk",
+   "default": 300.0,
+   "type": "number",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "toeWallUpperFootingThk"
+    ],
+    "op": "||",
+    "fallback": 300.0,
+    "line": 147
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall upper footing thickness",
+   "component": "toe_wall",
+   "unit_status": "authored",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:49",
+    "hume-pipe-rule-engine.ts:147"
+   ],
+   "evidence_check": "checked",
+   "affects_outputs": [
+    "toeWallUpperFootingThk"
+   ]
+  }
+ ],
+ "outputs": [
+  {
+   "name": "span",
+   "value_at_defaults": 1200,
+   "depends_on": [
+    "spanSize"
+   ],
+   "partials": {
+    "spanSize": {
+     "slope": 1000.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "pipe internal diameter converted to mm",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "uses spanVal, which was not read (declared with let (it may be reassigned))"
+   }
+  },
+  {
+   "name": "pipeDiameterMeter",
+   "value_at_defaults": 1.2,
+   "depends_on": [
+    "spanSize"
+   ],
+   "partials": {
+    "spanSize": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "pipe internal diameter in metres",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "declared with let (it may be reassigned)"
+   }
+  },
+  {
+   "name": "numPipes",
+   "value_at_defaults": 1,
+   "depends_on": [
+    "numPipes"
+   ],
+   "partials": {
+    "numPipes": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "count",
+   "unit": "-",
+   "label": "number of barrels",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "(max ( 1 , in1_numPipes ))",
+    "line": 136,
+    "inputs": {
+     "in1_numPipes": {
+      "chain": [
+       "numPipes",
+       "numberOfPipes"
+      ],
+      "op": "||",
+      "default": 1.0,
+      "line": 136
+     }
+    },
+    "display": "numPipes = max ( 1 , in1_numPipes )",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "wallThickness",
+   "value_at_defaults": 180,
+   "depends_on": [
+    "wallThickness"
+   ],
+   "partials": {
+    "wallThickness": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "pipe wall thickness",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "wallThickness",
+    "line": 137,
+    "inputs": {
+     "wallThickness": {
+      "chain": [
+       "wallThickness",
+       "pipeWallThickness"
+      ],
+      "op": "||",
+      "default": 180.0,
+      "line": 137,
+      "coerced": true
+     }
+    },
+    "display": "wallThickness = wallThickness",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "pipeWallThickness",
+   "value_at_defaults": 180,
+   "depends_on": [
+    "wallThickness"
+   ],
+   "partials": {
+    "wallThickness": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "pipe wall thickness (alias)",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "(wallThickness)",
+    "line": 138,
+    "inputs": {
+     "wallThickness": {
+      "chain": [
+       "wallThickness",
+       "pipeWallThickness"
+      ],
+      "op": "||",
+      "default": 180.0,
+      "line": 137,
+      "coerced": true
+     }
+    },
+    "display": "pipeWallThickness = wallThickness",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "barrelLength",
+   "value_at_defaults": 12.182000000000007,
+   "depends_on": [
+    "bedLevel",
+    "formationLevel",
+    "formationWidthLeft",
+    "formationWidthRight",
+    "spanSize",
+    "wallThickness"
+   ],
+   "partials": {
+    "spanSize": {
+     "slope": -4.0,
+     "affine": true
+    },
+    "wallThickness": {
+     "slope": -0.004,
+     "affine": true
+    },
+    "formationWidthLeft": {
+     "slope": 1.0,
+     "affine": true
+    },
+    "formationWidthRight": {
+     "slope": 1.0,
+     "affine": true
+    },
+    "formationLevel": {
+     "slope": 4.0,
+     "affine": true
+    },
+    "bedLevel": {
+     "slope": -2.709362687,
+     "affine": false
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "total barrel length (formation width + 4 x cushion height)",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "uses formationWidth, which was not read (uses formLeft, which was not read (declared with let (it may be reassigned)))"
+   }
+  },
+  {
+   "name": "cushionHeight",
+   "value_at_defaults": 1.083000000000002,
+   "depends_on": [
+    "bedLevel",
+    "formationLevel",
+    "spanSize",
+    "wallThickness"
+   ],
+   "partials": {
+    "spanSize": {
+     "slope": -1.0,
+     "affine": true
+    },
+    "wallThickness": {
+     "slope": -0.001,
+     "affine": true
+    },
+    "formationLevel": {
+     "slope": 1.0,
+     "affine": true
+    },
+    "bedLevel": {
+     "slope": -0.677340672,
+     "affine": false
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "earth cushion height above the pipe crown",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "uses derivedCushionM, which was not read (uses fl, which was not read ('!': not arithmetic (conditional, comparison, string or call)))"
+   }
+  },
+  {
+   "name": "pipeSpacing",
+   "value_at_defaults": 180,
+   "depends_on": [
+    "pipeSpacing"
+   ],
+   "partials": {
+    "pipeSpacing": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "clear spacing between adjacent barrels",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "pipeSpacing",
+    "line": 211,
+    "inputs": {
+     "pipeSpacing": {
+      "chain": [
+       "pipeSpacing"
+      ],
+      "op": "||",
+      "default": 180.0,
+      "line": 211,
+      "coerced": true
+     }
+    },
+    "display": "pipeSpacing = pipeSpacing",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "beddingThickness",
+   "value_at_defaults": 300,
+   "depends_on": [
+    "beddingThickness"
+   ],
+   "partials": {
+    "beddingThickness": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "concrete bedding thickness",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "beddingThickness",
+    "line": 213,
+    "inputs": {
+     "beddingThickness": {
+      "chain": [
+       "beddingThickness"
+      ],
+      "op": "||",
+      "default": 300.0,
+      "line": 213,
+      "coerced": true
+     }
+    },
+    "display": "beddingThickness = beddingThickness",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "levelingCourse",
+   "value_at_defaults": 150,
+   "depends_on": [
+    "levelingCourse"
+   ],
+   "partials": {
+    "levelingCourse": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "leveling course thickness",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "levelingCourse",
+    "line": 214,
+    "inputs": {
+     "levelingCourse": {
+      "chain": [
+       "levelingCourse"
+      ],
+      "op": "||",
+      "default": 150.0,
+      "line": 214,
+      "coerced": true
+     }
+    },
+    "display": "levelingCourse = levelingCourse",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "rubbleSoling",
+   "value_at_defaults": 300,
+   "depends_on": [
+    "rubbleSoling"
+   ],
+   "partials": {
+    "rubbleSoling": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "rubble soling thickness",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "rubbleSoling",
+    "line": 215,
+    "inputs": {
+     "rubbleSoling": {
+      "chain": [
+       "rubbleSoling",
+       "rubbleThk"
+      ],
+      "op": "||",
+      "default": 300.0,
+      "line": 215,
+      "coerced": true
+     }
+    },
+    "display": "rubbleSoling = rubbleSoling",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "rubbleThk",
+   "value_at_defaults": 300,
+   "depends_on": [
+    "rubbleSoling"
+   ],
+   "partials": {
+    "rubbleSoling": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "rubble soling thickness (alias)",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "(rubbleSoling)",
+    "line": 216,
+    "inputs": {
+     "rubbleSoling": {
+      "chain": [
+       "rubbleSoling",
+       "rubbleThk"
+      ],
+      "op": "||",
+      "default": 300.0,
+      "line": 215,
+      "coerced": true
+     }
+    },
+    "display": "rubbleThk = rubbleSoling",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "dropWallDepth",
+   "value_at_defaults": 1750,
+   "depends_on": [
+    "dropWallDepth"
+   ],
+   "partials": {
+    "dropWallDepth": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "drop wall depth below bed level",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "(max ( 0 , in7_dropWallDepth ))",
+    "line": 217,
+    "inputs": {
+     "in7_dropWallDepth": {
+      "chain": [
+       "dropWallDepth"
+      ],
+      "op": "??",
+      "default": 1750.0,
+      "line": 217
+     }
+    },
+    "display": "dropWallDepth = max ( 0 , in7_dropWallDepth )",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "curtainWallDepth",
+   "value_at_defaults": 1200,
+   "depends_on": [
+    "curtainWallDepth"
+   ],
+   "partials": {
+    "curtainWallDepth": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall depth below bed level",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "(max ( 0 , in8_curtainWallDepth ))",
+    "line": 218,
+    "inputs": {
+     "in8_curtainWallDepth": {
+      "chain": [
+       "curtainWallDepth"
+      ],
+      "op": "??",
+      "default": 1200.0,
+      "line": 218
+     }
+    },
+    "display": "curtainWallDepth = max ( 0 , in8_curtainWallDepth )",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "curtainWallThickness",
+   "value_at_defaults": 300,
+   "depends_on": [
+    "curtainWallThickness"
+   ],
+   "partials": {
+    "curtainWallThickness": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall thickness",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "curtainWallThickness",
+    "line": 219,
+    "inputs": {
+     "curtainWallThickness": {
+      "chain": [
+       "curtainWallThickness",
+       "dropWallThickness",
+       "toeWallStemBotW"
+      ],
+      "op": "??",
+      "default": 300.0,
+      "line": 219,
+      "coerced": true
+     }
+    },
+    "display": "curtainWallThickness = curtainWallThickness",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "dropWallThickness",
+   "value_at_defaults": 300,
+   "depends_on": [
+    "curtainWallThickness"
+   ],
+   "partials": {
+    "curtainWallThickness": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "drop/curtain wall thickness (alias)",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "curtainWallThickness",
+    "line": 219,
+    "inputs": {
+     "curtainWallThickness": {
+      "chain": [
+       "curtainWallThickness",
+       "dropWallThickness",
+       "toeWallStemBotW"
+      ],
+      "op": "??",
+      "default": 300.0,
+      "line": 219,
+      "coerced": true
+     }
+    },
+    "display": "dropWallThickness = curtainWallThickness",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "curtainWallProjectionLeft",
+   "value_at_defaults": 250,
+   "depends_on": [
+    "curtainWallProjectionLeft"
+   ],
+   "partials": {
+    "curtainWallProjectionLeft": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall projection, left",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "curtainWallProjectionLeft",
+    "line": 220,
+    "inputs": {
+     "curtainWallProjectionLeft": {
+      "chain": [
+       "curtainWallProjectionLeft",
+       "toeWallProjectionLeft",
+       "curtainWallProjection",
+       "toeWallProjection"
+      ],
+      "op": "??",
+      "default": 250.0,
+      "line": 220,
+      "coerced": true
+     }
+    },
+    "display": "curtainWallProjectionLeft = curtainWallProjectionLeft",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "curtainWallProjectionRight",
+   "value_at_defaults": 250,
+   "depends_on": [
+    "curtainWallProjectionRight"
+   ],
+   "partials": {
+    "curtainWallProjectionRight": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall projection, right",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "curtainWallProjectionRight",
+    "line": 221,
+    "inputs": {
+     "curtainWallProjectionRight": {
+      "chain": [
+       "curtainWallProjectionRight",
+       "toeWallProjectionRight",
+       "curtainWallProjection",
+       "toeWallProjection"
+      ],
+      "op": "??",
+      "default": 250.0,
+      "line": 221,
+      "coerced": true
+     }
+    },
+    "display": "curtainWallProjectionRight = curtainWallProjectionRight",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "curtainWallFootingThk",
+   "value_at_defaults": 300,
+   "depends_on": [
+    "curtainWallFootingThk"
+   ],
+   "partials": {
+    "curtainWallFootingThk": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall footing thickness",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "curtainWallFootingThk",
+    "line": 222,
+    "inputs": {
+     "curtainWallFootingThk": {
+      "chain": [
+       "curtainWallFootingThk",
+       "toeWallUpperFootingThk"
+      ],
+      "op": "??",
+      "default": 300.0,
+      "line": 222,
+      "coerced": true
+     }
+    },
+    "display": "curtainWallFootingThk = curtainWallFootingThk",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "curtainWallBeddingProjLeft",
+   "value_at_defaults": 150,
+   "depends_on": [
+    "curtainWallBeddingProjLeft"
+   ],
+   "partials": {
+    "curtainWallBeddingProjLeft": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall bedding projection, left",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "curtainWallBeddingProjLeft",
+    "line": 223,
+    "inputs": {
+     "curtainWallBeddingProjLeft": {
+      "chain": [
+       "curtainWallBeddingProjLeft",
+       "toeWallBeddingProjLeft",
+       "curtainWallBeddingProj",
+       "toeWallBeddingProj"
+      ],
+      "op": "??",
+      "default": 150.0,
+      "line": 223,
+      "coerced": true
+     }
+    },
+    "display": "curtainWallBeddingProjLeft = curtainWallBeddingProjLeft",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "curtainWallBeddingProjRight",
+   "value_at_defaults": 150,
+   "depends_on": [
+    "curtainWallBeddingProjRight"
+   ],
+   "partials": {
+    "curtainWallBeddingProjRight": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall bedding projection, right",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "curtainWallBeddingProjRight",
+    "line": 224,
+    "inputs": {
+     "curtainWallBeddingProjRight": {
+      "chain": [
+       "curtainWallBeddingProjRight",
+       "toeWallBeddingProjRight",
+       "curtainWallBeddingProj",
+       "toeWallBeddingProj"
+      ],
+      "op": "??",
+      "default": 150.0,
+      "line": 224,
+      "coerced": true
+     }
+    },
+    "display": "curtainWallBeddingProjRight = curtainWallBeddingProjRight",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "curtainWallBeddingThk",
+   "value_at_defaults": 150,
+   "depends_on": [
+    "curtainWallBeddingThk"
+   ],
+   "partials": {
+    "curtainWallBeddingThk": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall bedding thickness",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "curtainWallBeddingThk",
+    "line": 225,
+    "inputs": {
+     "curtainWallBeddingThk": {
+      "chain": [
+       "curtainWallBeddingThk",
+       "toeWallBeddingThk"
+      ],
+      "op": "??",
+      "default": 150.0,
+      "line": 225,
+      "coerced": true
+     }
+    },
+    "display": "curtainWallBeddingThk = curtainWallBeddingThk",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "stonePitchingThk",
+   "value_at_defaults": 300,
+   "depends_on": [
+    "stonePitchingThk"
+   ],
+   "partials": {
+    "stonePitchingThk": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "stone pitching thickness",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "stonePitchingThk",
+    "line": 226,
+    "inputs": {
+     "stonePitchingThk": {
+      "chain": [
+       "stonePitchingThk",
+       "rubbleSoling"
+      ],
+      "op": "??",
+      "default": 300.0,
+      "line": 226,
+      "coerced": true
+     }
+    },
+    "display": "stonePitchingThk = stonePitchingThk",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "gradedGravelLength",
+   "value_at_defaults": 1200,
+   "depends_on": [
+    "gradedGravelLength"
+   ],
+   "partials": {
+    "gradedGravelLength": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "graded gravel filter length",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "in13_gradedGravelLength",
+    "line": 301,
+    "inputs": {
+     "in13_gradedGravelLength": {
+      "chain": [
+       "gradedGravelLength",
+       "gradedGravelDepth"
+      ],
+      "op": "??",
+      "default": 1200.0,
+      "line": 301,
+      "coerced": true
+     }
+    },
+    "display": "gradedGravelLength = in13_gradedGravelLength",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "gradedGravelDepth",
+   "value_at_defaults": 1200,
+   "depends_on": [
+    "gradedGravelDepth",
+    "gradedGravelLength"
+   ],
+   "partials": {
+    "gradedGravelLength": {
+     "slope": 1.0,
+     "affine": false
+    },
+    "gradedGravelDepth": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "graded gravel filter depth",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "in14_gradedGravelDepth",
+    "line": 302,
+    "inputs": {
+     "in14_gradedGravelDepth": {
+      "chain": [
+       "gradedGravelDepth",
+       "gradedGravelLength"
+      ],
+      "op": "??",
+      "default": 1200.0,
+      "line": 302,
+      "coerced": true
+     }
+    },
+    "display": "gradedGravelDepth = in14_gradedGravelDepth",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution",
+    "note": "depends (measured) also on ['gradedGravelLength'], read through the fallbacks"
+   }
+  },
+  {
+   "name": "gradedGravelGap",
+   "value_at_defaults": 1632,
+   "depends_on": [
+    "gradedGravelGap"
+   ],
+   "partials": {
+    "gradedGravelGap": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "gap from foundation bottom to graded gravel top",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "in15_gradedGravelGap",
+    "line": 303,
+    "inputs": {
+     "in15_gradedGravelGap": {
+      "chain": [
+       "gradedGravelGap"
+      ],
+      "op": "??",
+      "default": 1632.0,
+      "line": 303,
+      "coerced": true
+     }
+    },
+    "display": "gradedGravelGap = in15_gradedGravelGap",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "cradleConcreteThk",
+   "value_at_defaults": 150,
+   "depends_on": [
+    "cradleConcreteThk"
+   ],
+   "partials": {
+    "cradleConcreteThk": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "cradle concrete thickness",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "in20_cradleConcreteThk",
+    "line": 308,
+    "inputs": {
+     "in20_cradleConcreteThk": {
+      "chain": [
+       "cradleConcreteThk"
+      ],
+      "op": "??",
+      "default": 150.0,
+      "line": 308,
+      "coerced": true
+     }
+    },
+    "display": "cradleConcreteThk = in20_cradleConcreteThk",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "wingWallLength",
+   "value_at_defaults": 4.5,
+   "depends_on": [
+    "wingWallLength"
+   ],
+   "partials": {
+    "wingWallLength": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "wing wall length",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "wingWallLength",
+    "line": 227,
+    "inputs": {
+     "wingWallLength": {
+      "chain": [
+       "wingWallLength"
+      ],
+      "op": "||",
+      "default": 4.5,
+      "line": 227,
+      "coerced": true
+     }
+    },
+    "display": "wingWallLength = wingWallLength",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "slabThickness",
+   "value_at_defaults": 305,
+   "depends_on": [],
+   "partials": {},
+   "kind": "length",
+   "unit": "mm",
+   "label": "approach slab thickness (constant)",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "(305)",
+    "line": 135,
+    "inputs": {},
+    "display": "slabThickness = 305",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "constant_verified"
+   }
+  },
+  {
+   "name": "toeWallStemTopW",
+   "value_at_defaults": 250,
+   "depends_on": [
+    "toeWallStemTopW"
+   ],
+   "partials": {
+    "toeWallStemTopW": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall stem width at top",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "toeWallStemTopW",
+    "line": 141,
+    "inputs": {
+     "toeWallStemTopW": {
+      "chain": [
+       "toeWallStemTopW"
+      ],
+      "op": "||",
+      "default": 250.0,
+      "line": 141,
+      "coerced": true
+     }
+    },
+    "display": "toeWallStemTopW = toeWallStemTopW",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "toeWallStemBotW",
+   "value_at_defaults": 300,
+   "depends_on": [
+    "toeWallStemBotW"
+   ],
+   "partials": {
+    "toeWallStemBotW": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall stem width at bottom",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "(max ( toeWallStemTopW , rawToeWallBotW ))",
+    "line": 143,
+    "inputs": {
+     "toeWallStemTopW": {
+      "chain": [
+       "toeWallStemTopW"
+      ],
+      "op": "||",
+      "default": 250.0,
+      "line": 141,
+      "coerced": true
+     },
+     "rawToeWallBotW": {
+      "chain": [
+       "toeWallStemBotW"
+      ],
+      "op": "||",
+      "default": 300.0,
+      "line": 142,
+      "coerced": true
+     }
+    },
+    "display": "toeWallStemBotW = max ( toeWallStemTopW , rawToeWallBotW )",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "toeWallStemH",
+   "value_at_defaults": 1700,
+   "depends_on": [
+    "toeWallStemH"
+   ],
+   "partials": {
+    "toeWallStemH": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall stem height",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "toeWallStemH",
+    "line": 144,
+    "inputs": {
+     "toeWallStemH": {
+      "chain": [
+       "toeWallStemH"
+      ],
+      "op": "||",
+      "default": 1700.0,
+      "line": 144,
+      "coerced": true
+     }
+    },
+    "display": "toeWallStemH = toeWallStemH",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "toeWallAboveGL",
+   "value_at_defaults": 600,
+   "depends_on": [
+    "toeWallAboveGL"
+   ],
+   "partials": {
+    "toeWallAboveGL": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall height above ground level",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "toeWallAboveGL",
+    "line": 145,
+    "inputs": {
+     "toeWallAboveGL": {
+      "chain": [
+       "toeWallAboveGL"
+      ],
+      "op": "||",
+      "default": 600.0,
+      "line": 145,
+      "coerced": true
+     }
+    },
+    "display": "toeWallAboveGL = toeWallAboveGL",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "toeWallProjection",
+   "value_at_defaults": 500,
+   "depends_on": [
+    "toeWallProjection"
+   ],
+   "partials": {
+    "toeWallProjection": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall footing projection",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "toeWallProjection",
+    "line": 146,
+    "inputs": {
+     "toeWallProjection": {
+      "chain": [
+       "toeWallProjection"
+      ],
+      "op": "||",
+      "default": 500.0,
+      "line": 146,
+      "coerced": true
+     }
+    },
+    "display": "toeWallProjection = toeWallProjection",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "toeWallUpperFootingThk",
+   "value_at_defaults": 300,
+   "depends_on": [
+    "toeWallUpperFootingThk"
+   ],
+   "partials": {
+    "toeWallUpperFootingThk": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall upper footing thickness",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "toeWallUpperFootingThk",
+    "line": 147,
+    "inputs": {
+     "toeWallUpperFootingThk": {
+      "chain": [
+       "toeWallUpperFootingThk"
+      ],
+      "op": "||",
+      "default": 300.0,
+      "line": 147,
+      "coerced": true
+     }
+    },
+    "display": "toeWallUpperFootingThk = toeWallUpperFootingThk",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "toeWallBeddingThk",
+   "value_at_defaults": 150,
+   "depends_on": [
+    "toeWallBeddingThk"
+   ],
+   "partials": {
+    "toeWallBeddingThk": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall bedding thickness",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "toeWallBeddingThk",
+    "line": 148,
+    "inputs": {
+     "toeWallBeddingThk": {
+      "chain": [
+       "toeWallBeddingThk"
+      ],
+      "op": "||",
+      "default": 150.0,
+      "line": 148,
+      "coerced": true
+     }
+    },
+    "display": "toeWallBeddingThk = toeWallBeddingThk",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "toeWallBeddingProj",
+   "value_at_defaults": 150,
+   "depends_on": [
+    "toeWallBeddingProj"
+   ],
+   "partials": {
+    "toeWallBeddingProj": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall bedding projection",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "toeWallBeddingProj",
+    "line": 149,
+    "inputs": {
+     "toeWallBeddingProj": {
+      "chain": [
+       "toeWallBeddingProj"
+      ],
+      "op": "||",
+      "default": 150.0,
+      "line": 149,
+      "coerced": true
+     }
+    },
+    "display": "toeWallBeddingProj = toeWallBeddingProj",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "faceWallStemTopW",
+   "value_at_defaults": 450,
+   "depends_on": [
+    "faceWallStemTopW"
+   ],
+   "partials": {
+    "faceWallStemTopW": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall stem width at top",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "faceWallStemTopW",
+    "line": 249,
+    "inputs": {
+     "faceWallStemTopW": {
+      "chain": [
+       "faceWallStemTopW"
+      ],
+      "op": "||",
+      "default": 450.0,
+      "line": 249,
+      "coerced": true
+     }
+    },
+    "display": "faceWallStemTopW = faceWallStemTopW",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "faceWallStemBotW",
+   "value_at_defaults": 610,
+   "depends_on": [
+    "faceWallStemBotW"
+   ],
+   "partials": {
+    "faceWallStemBotW": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall stem width at bottom",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "faceWallStemBotW",
+    "line": 250,
+    "inputs": {
+     "faceWallStemBotW": {
+      "chain": [
+       "faceWallStemBotW"
+      ],
+      "op": "||",
+      "default": 610.0,
+      "line": 250,
+      "coerced": true
+     }
+    },
+    "display": "faceWallStemBotW = faceWallStemBotW",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "faceWallStemAboveGL",
+   "value_at_defaults": 1530,
+   "depends_on": [
+    "faceWallStemAboveGL"
+   ],
+   "partials": {
+    "faceWallStemAboveGL": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall stem height above ground level",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "'!': not arithmetic (conditional, comparison, string or call)"
+   }
+  },
+  {
+   "name": "faceWallStemBelowGL",
+   "value_at_defaults": 875,
+   "depends_on": [
+    "faceWallStemBelowGL"
+   ],
+   "partials": {
+    "faceWallStemBelowGL": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall stem depth below ground level",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "faceWallStemBelowGL",
+    "line": 255,
+    "inputs": {
+     "faceWallStemBelowGL": {
+      "chain": [
+       "faceWallStemBelowGL"
+      ],
+      "op": "||",
+      "default": 875.0,
+      "line": 255,
+      "coerced": true
+     }
+    },
+    "display": "faceWallStemBelowGL = faceWallStemBelowGL",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "faceWallHeelProj",
+   "value_at_defaults": 500,
+   "depends_on": [
+    "faceWallHeelProj"
+   ],
+   "partials": {
+    "faceWallHeelProj": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall footing heel projection",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "faceWallHeelProj",
+    "line": 256,
+    "inputs": {
+     "faceWallHeelProj": {
+      "chain": [
+       "faceWallHeelProj"
+      ],
+      "op": "||",
+      "default": 500.0,
+      "line": 256,
+      "coerced": true
+     }
+    },
+    "display": "faceWallHeelProj = faceWallHeelProj",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "faceWallToeProj",
+   "value_at_defaults": 250,
+   "depends_on": [
+    "faceWallToeProj"
+   ],
+   "partials": {
+    "faceWallToeProj": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall footing toe projection",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "faceWallToeProj",
+    "line": 257,
+    "inputs": {
+     "faceWallToeProj": {
+      "chain": [
+       "faceWallToeProj"
+      ],
+      "op": "||",
+      "default": 250.0,
+      "line": 257,
+      "coerced": true
+     }
+    },
+    "display": "faceWallToeProj = faceWallToeProj",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "faceWallFoundThk",
+   "value_at_defaults": 350,
+   "depends_on": [
+    "faceWallFoundThk"
+   ],
+   "partials": {
+    "faceWallFoundThk": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall footing thickness",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "faceWallFoundThk",
+    "line": 258,
+    "inputs": {
+     "faceWallFoundThk": {
+      "chain": [
+       "faceWallFoundThk"
+      ],
+      "op": "||",
+      "default": 350.0,
+      "line": 258,
+      "coerced": true
+     }
+    },
+    "display": "faceWallFoundThk = faceWallFoundThk",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "faceWallBeddingThk",
+   "value_at_defaults": 150,
+   "depends_on": [
+    "faceWallBeddingThk"
+   ],
+   "partials": {
+    "faceWallBeddingThk": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall bedding thickness",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "faceWallBeddingThk",
+    "line": 259,
+    "inputs": {
+     "faceWallBeddingThk": {
+      "chain": [
+       "faceWallBeddingThk",
+       "levelingCourse"
+      ],
+      "op": "||",
+      "default": 150.0,
+      "line": 259,
+      "coerced": true
+     }
+    },
+    "display": "faceWallBeddingThk = faceWallBeddingThk",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "faceWallBeddingProj",
+   "value_at_defaults": 200,
+   "depends_on": [
+    "faceWallBeddingProj"
+   ],
+   "partials": {
+    "faceWallBeddingProj": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall bedding projection",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "faceWallBeddingProj",
+    "line": 260,
+    "inputs": {
+     "faceWallBeddingProj": {
+      "chain": [
+       "faceWallBeddingProj"
+      ],
+      "op": "||",
+      "default": 200.0,
+      "line": 260,
+      "coerced": true
+     }
+    },
+    "display": "faceWallBeddingProj = faceWallBeddingProj",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "faceWallRubbleThk",
+   "value_at_defaults": 300,
+   "depends_on": [
+    "faceWallRubbleThk"
+   ],
+   "partials": {
+    "faceWallRubbleThk": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall rubble soling thickness",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "faceWallRubbleThk",
+    "line": 261,
+    "inputs": {
+     "faceWallRubbleThk": {
+      "chain": [
+       "faceWallRubbleThk",
+       "rubbleSoling",
+       "rubbleThk"
+      ],
+      "op": "||",
+      "default": 300.0,
+      "line": 261,
+      "coerced": true
+     }
+    },
+    "display": "faceWallRubbleThk = faceWallRubbleThk",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "faceWallShelfProj",
+   "value_at_defaults": 250,
+   "depends_on": [
+    "faceWallShelfProj"
+   ],
+   "partials": {
+    "faceWallShelfProj": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall shelf projection",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "faceWallShelfProj",
+    "line": 262,
+    "inputs": {
+     "faceWallShelfProj": {
+      "chain": [
+       "faceWallShelfProj"
+      ],
+      "op": "||",
+      "default": 250.0,
+      "line": 262,
+      "coerced": true
+     }
+    },
+    "display": "faceWallShelfProj = faceWallShelfProj",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "faceWallShelfDrop",
+   "value_at_defaults": 200,
+   "depends_on": [
+    "faceWallShelfDrop"
+   ],
+   "partials": {
+    "faceWallShelfDrop": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall shelf drop",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "faceWallShelfDrop",
+    "line": 263,
+    "inputs": {
+     "faceWallShelfDrop": {
+      "chain": [
+       "faceWallShelfDrop"
+      ],
+      "op": "||",
+      "default": 200.0,
+      "line": 263,
+      "coerced": true
+     }
+    },
+    "display": "faceWallShelfDrop = faceWallShelfDrop",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "faceWallTier1Width",
+   "value_at_defaults": 1.36,
+   "depends_on": [
+    "faceWallTier1Width"
+   ],
+   "partials": {
+    "faceWallTier1Width": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall first tier width",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "'|': not arithmetic (conditional, comparison, string or call)"
+   }
+  },
+  {
+   "name": "faceWallBaseWidth",
+   "value_at_defaults": 1.76,
+   "depends_on": [
+    "faceWallBaseWidth"
+   ],
+   "partials": {
+    "faceWallBaseWidth": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall base width",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "'|': not arithmetic (conditional, comparison, string or call)"
+   }
+  },
+  {
+   "name": "headwallTopM",
+   "value_at_defaults": 17.382,
+   "depends_on": [
+    "bedLevel",
+    "faceWallStemAboveGL"
+   ],
+   "partials": {
+    "bedLevel": {
+     "slope": 1.0,
+     "affine": true
+    },
+    "faceWallStemAboveGL": {
+     "slope": 0.001,
+     "affine": true
+    }
+   },
+   "kind": "level",
+   "unit": "m",
+   "label": "level of the top of the headwall",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "uses bl, which was not read ('!': not arithmetic (conditional, comparison, string or call))"
+   }
+  },
+  {
+   "name": "levelingBotM",
+   "value_at_defaults": 15.402,
+   "depends_on": [
+    "bedLevel",
+    "beddingThickness",
+    "levelingCourse"
+   ],
+   "partials": {
+    "beddingThickness": {
+     "slope": -0.001,
+     "affine": true
+    },
+    "levelingCourse": {
+     "slope": -0.001,
+     "affine": true
+    },
+    "bedLevel": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "level",
+   "unit": "m",
+   "label": "level of the underside of the leveling course",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "uses beddingBotM, which was not read (uses bl, which was not read ('!': not arithmetic (conditional, comparison, string or call)))"
+   }
+  },
+  {
+   "name": "foundBotM",
+   "value_at_defaults": 15.101999999999999,
+   "depends_on": [
+    "bedLevel",
+    "beddingThickness",
+    "levelingCourse",
+    "rubbleSoling"
+   ],
+   "partials": {
+    "beddingThickness": {
+     "slope": -0.001,
+     "affine": true
+    },
+    "levelingCourse": {
+     "slope": -0.001,
+     "affine": true
+    },
+    "rubbleSoling": {
+     "slope": -0.001,
+     "affine": true
+    },
+    "bedLevel": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "level",
+   "unit": "m",
+   "label": "level of the underside of the rubble soling / foundation",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "uses levelingBotM, which was not read (uses beddingBotM, which was not read (uses bl, which was not read ('!': not arithmetic (conditional, comparison, string or call))))"
+   }
+  },
+  {
+   "name": "rl",
+   "value_at_defaults": 18.848,
+   "depends_on": [
+    "railLevel"
+   ],
+   "partials": {
+    "railLevel": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "level",
+   "unit": "m",
+   "label": "rail level (alias)",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "'&': not arithmetic (conditional, comparison, string or call)"
+   }
+  },
+  {
+   "name": "fl",
+   "value_at_defaults": 18.315,
+   "depends_on": [
+    "formationLevel"
+   ],
+   "partials": {
+    "formationLevel": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "level",
+   "unit": "m",
+   "label": "formation level (alias)",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "'!': not arithmetic (conditional, comparison, string or call)"
+   }
+  },
+  {
+   "name": "hfl",
+   "value_at_defaults": 16.5,
+   "depends_on": [
+    "hfl"
+   ],
+   "partials": {
+    "hfl": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "level",
+   "unit": "m",
+   "label": "high flood level",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "'!': not arithmetic (conditional, comparison, string or call)"
+   }
+  },
+  {
+   "name": "bl",
+   "value_at_defaults": 15.852,
+   "depends_on": [
+    "bedLevel"
+   ],
+   "partials": {
+    "bedLevel": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "level",
+   "unit": "m",
+   "label": "bed level (alias)",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "'!': not arithmetic (conditional, comparison, string or call)"
+   }
+  },
+  {
+   "name": "scourLevel",
+   "value_at_defaults": 14.102,
+   "depends_on": [
+    "bedLevel",
+    "scourLevel"
+   ],
+   "partials": {
+    "bedLevel": {
+     "slope": 1.000062543,
+     "affine": false
+    },
+    "scourLevel": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "level",
+   "unit": "m",
+   "label": "scour level, recomputed from bed level when the entered value is a stale legacy default",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "uses 'getComputedScourLevel', which is not a number this reader knows"
+   }
+  },
+  {
+   "name": "foundingDepthBelowScour",
+   "value_at_defaults": 1.75,
+   "depends_on": [
+    "foundingDepthBelowScour"
+   ],
+   "partials": {
+    "foundingDepthBelowScour": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "founding depth below scour level",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "foundingDepthBelowScour",
+    "line": 173,
+    "inputs": {
+     "foundingDepthBelowScour": {
+      "chain": [
+       "foundingDepthBelowScour"
+      ],
+      "op": "??",
+      "default": 1.75,
+      "line": 173,
+      "coerced": true
+     }
+    },
+    "display": "foundingDepthBelowScour = foundingDepthBelowScour",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "foundingLevel",
+   "value_at_defaults": 12.352,
+   "depends_on": [
+    "bedLevel",
+    "foundingDepthBelowScour",
+    "scourLevel"
+   ],
+   "partials": {
+    "foundingDepthBelowScour": {
+     "slope": -1.0,
+     "affine": true
+    },
+    "bedLevel": {
+     "slope": 1.000062543,
+     "affine": false
+    },
+    "scourLevel": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "level",
+   "unit": "m",
+   "label": "founding level (scour level - founding depth)",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "uses scourLevel, which was not read (uses 'getComputedScourLevel', which is not a number this reader knows)"
+   }
+  },
+  {
+   "name": "floorLevel",
+   "value_at_defaults": 15.852,
+   "depends_on": [
+    "floorLevel"
+   ],
+   "partials": {
+    "floorLevel": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "level",
+   "unit": "m",
+   "label": "floor level",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "'!': not arithmetic (conditional, comparison, string or call)"
+   }
+  },
+  {
+   "name": "flBase",
+   "value_at_defaults": 14.633000000000001,
+   "depends_on": [
+    "bedLevel"
+   ],
+   "partials": {
+    "bedLevel": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "level",
+   "unit": "m",
+   "label": "level of the base of the pipe foundation (bed level - foundation thickness)",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "uses bl, which was not read ('!': not arithmetic (conditional, comparison, string or call))"
+   }
+  },
+  {
+   "name": "total_w",
+   "value_at_defaults": 3.56,
+   "depends_on": [
+    "numPipes",
+    "spanSize",
+    "wallThickness"
+   ],
+   "partials": {
+    "spanSize": {
+     "slope": 1.0,
+     "affine": true
+    },
+    "numPipes": {
+     "slope": 1.38,
+     "affine": false
+    },
+    "wallThickness": {
+     "slope": 0.002,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "overall width across all barrels, outer face to outer face",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "uses spanVal, which was not read (declared with let (it may be reassigned))"
+   }
+  },
+  {
+   "name": "total_h",
+   "value_at_defaults": 2.9959999999999987,
+   "depends_on": [
+    "bedLevel",
+    "railLevel"
+   ],
+   "partials": {
+    "railLevel": {
+     "slope": 1.0,
+     "affine": true
+    },
+    "bedLevel": {
+     "slope": -1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "overall height, rail level to bed level",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "uses rl, which was not read ('&': not arithmetic (conditional, comparison, string or call))"
+   }
+  },
+  {
+   "name": "soffit_level",
+   "value_at_defaults": 18.315,
+   "depends_on": [
+    "formationLevel"
+   ],
+   "partials": {
+    "formationLevel": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "level",
+   "unit": "m",
+   "label": "soffit level (= formation level)",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "uses fl, which was not read ('!': not arithmetic (conditional, comparison, string or call))"
+   }
+  },
+  {
+   "name": "flowArea",
+   "value_at_defaults": 1.1309733552923256,
+   "depends_on": [
+    "numPipes",
+    "spanSize"
+   ],
+   "partials": {
+    "spanSize": {
+     "slope": 1.989963327,
+     "affine": false
+    },
+    "numPipes": {
+     "slope": 1.130973355,
+     "affine": false
+    }
+   },
+   "kind": "area",
+   "unit": "m2",
+   "label": "total clear waterway area of all barrels",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "Math.PI is not arithmetic this reader evaluates"
+   }
+  },
+  {
+   "name": "totalHeight",
+   "value_at_defaults": 2.9959999999999987,
+   "depends_on": [
+    "bedLevel",
+    "railLevel"
+   ],
+   "partials": {
+    "railLevel": {
+     "slope": 1.0,
+     "affine": true
+    },
+    "bedLevel": {
+     "slope": -1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "overall height (alias of total_h)",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "uses total_h, which was not read (uses rl, which was not read ('&': not arithmetic (conditional, comparison, string or call)))"
+   }
+  },
+  {
+   "name": "abutmentHeight",
+   "value_at_defaults": 1.7769999999999986,
+   "depends_on": [
+    "bedLevel",
+    "railLevel"
+   ],
+   "partials": {
+    "railLevel": {
+     "slope": 1.0,
+     "affine": true
+    },
+    "bedLevel": {
+     "slope": -1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "abutment height (overall height - foundation thickness)",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "uses total_h, which was not read (uses rl, which was not read ('&': not arithmetic (conditional, comparison, string or call)))"
+   }
+  },
+  {
+   "name": "foundationThickness",
+   "value_at_defaults": 1.219,
+   "depends_on": [],
+   "partials": {},
+   "kind": "length",
+   "unit": "m",
+   "label": "foundation thickness (constant)",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "(1.219)",
+    "line": 230,
+    "inputs": {},
+    "display": "foundationThickness = 1.219",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "constant_verified"
+   }
+  },
+  {
+   "name": "innerBatter",
+   "value_at_defaults": 0,
+   "depends_on": [],
+   "partials": {},
+   "kind": "ratio",
+   "unit": "-",
+   "label": "inner face batter (constant, vertical)",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "(0.0)",
+    "line": 243,
+    "inputs": {},
+    "display": "innerBatter = 0.0",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "constant_verified"
+   }
+  },
+  {
+   "name": "wingWallBatter",
+   "value_at_defaults": 0.5,
+   "depends_on": [],
+   "partials": {},
+   "kind": "ratio",
+   "unit": "-",
+   "label": "wing wall batter",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "(0.5)",
+    "line": 244,
+    "inputs": {},
+    "display": "wingWallBatter = 0.5",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "constant_verified"
+   }
+  },
+  {
+   "name": "topAbutmentWidth",
+   "value_at_defaults": 0.5,
+   "depends_on": [],
+   "partials": {},
+   "kind": "length",
+   "unit": "m",
+   "label": "abutment top width (constant)",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "(0.5)",
+    "line": 246,
+    "inputs": {},
+    "display": "topAbutmentWidth = 0.5",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "constant_verified"
+   }
+  },
+  {
+   "name": "stepHeight",
+   "value_at_defaults": 381,
+   "depends_on": [],
+   "partials": {},
+   "kind": "length",
+   "unit": "mm",
+   "label": "abutment step riser height (constant)",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "(381)",
+    "line": 272,
+    "inputs": {},
+    "display": "stepHeight = 381",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "constant_verified"
+   }
+  },
+  {
+   "name": "foundationWidth",
+   "value_at_defaults": 4012,
+   "depends_on": [],
+   "partials": {},
+   "kind": "length",
+   "unit": "mm",
+   "label": "foundation width (constant)",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "(4012)",
+    "line": 274,
+    "inputs": {},
+    "display": "foundationWidth = 4012",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "constant_verified"
+   }
+  },
+  {
+   "name": "formationWidth",
+   "value_at_defaults": 7.85,
+   "depends_on": [
+    "formationWidthLeft",
+    "formationWidthRight"
+   ],
+   "partials": {
+    "formationWidthLeft": {
+     "slope": 1.0,
+     "affine": true
+    },
+    "formationWidthRight": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "formation width",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "uses formLeft, which was not read (declared with let (it may be reassigned))"
+   }
+  },
+  {
+   "name": "formationWidthLeft",
+   "value_at_defaults": 3.925,
+   "depends_on": [
+    "formationWidthLeft"
+   ],
+   "partials": {
+    "formationWidthLeft": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "formation width, left of centre line",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "uses formLeft, which was not read (declared with let (it may be reassigned))"
+   }
+  },
+  {
+   "name": "formationWidthRight",
+   "value_at_defaults": 3.925,
+   "depends_on": [
+    "formationWidthRight"
+   ],
+   "partials": {
+    "formationWidthRight": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "m",
+   "label": "formation width, right of centre line",
+   "unit_status": "authored",
+   "formula": {
+    "status": "opaque",
+    "why": "uses formRight, which was not read (declared with let (it may be reassigned))"
+   }
+  },
+  {
+   "name": "wearingCourseThk",
+   "value_at_defaults": 100,
+   "depends_on": [
+    "wearingCourseThk"
+   ],
+   "partials": {
+    "wearingCourseThk": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "length",
+   "unit": "mm",
+   "label": "wearing course thickness",
+   "unit_status": "authored",
+   "formula": {
+    "expr": "wearingCourseThk",
+    "line": 212,
+    "inputs": {
+     "wearingCourseThk": {
+      "chain": [
+       "wearingCourseThk"
+      ],
+      "op": "??",
+      "default": 100.0,
+      "line": 212,
+      "coerced": true
+     }
+    },
+    "display": "wearingCourseThk = wearingCourseThk",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   }
+  },
+  {
+   "name": "stoneFlooringSide",
+   "value_at_defaults": "left",
+   "kind": "text",
+   "unit": "-",
+   "depends_on": []
+  },
+  {
+   "name": "gradedGravelText",
+   "value_at_defaults": "GRADED GRAVEL",
+   "kind": "text",
+   "unit": "-",
+   "depends_on": []
+  },
+  {
+   "name": "showGradedGravel",
+   "value_at_defaults": true,
+   "kind": "flag",
+   "unit": "-",
+   "depends_on": []
+  },
+  {
+   "name": "gradedGravelHatch",
+   "value_at_defaults": "GRAVEL",
+   "kind": "text",
+   "unit": "-",
+   "depends_on": []
+  },
+  {
+   "name": "showCradleConcrete",
+   "value_at_defaults": false,
+   "kind": "flag",
+   "unit": "-",
+   "depends_on": []
+  },
+  {
+   "name": "flow_dir",
+   "value_at_defaults": "L2R",
+   "kind": "text",
+   "unit": "-",
+   "depends_on": []
+  },
+  {
+   "name": "flowDirection",
+   "value_at_defaults": "L2R",
+   "kind": "text",
+   "unit": "-",
+   "depends_on": []
+  }
+ ],
+ "formulas_summary": {
+  "extracted": 52,
+  "verified": 45,
+  "constants": 7,
+  "differs": [],
+  "opaque": [
+   "abutmentHeight",
+   "barrelLength",
+   "bl",
+   "cushionHeight",
+   "faceWallBaseWidth",
+   "faceWallStemAboveGL",
+   "faceWallTier1Width",
+   "fl",
+   "flBase",
+   "floorLevel",
+   "flowArea",
+   "flowDirection",
+   "flow_dir",
+   "formationWidth",
+   "formationWidthLeft",
+   "formationWidthRight",
+   "foundBotM",
+   "foundingLevel",
+   "gradedGravelHatch",
+   "gradedGravelText",
+   "headwallTopM",
+   "hfl",
+   "levelingBotM",
+   "pipeDiameterMeter",
+   "rl",
+   "scourLevel",
+   "showCradleConcrete",
+   "showGradedGravel",
+   "soffit_level",
+   "span",
+   "stoneFlooringSide",
+   "totalHeight",
+   "total_h",
+   "total_w"
+  ]
+ },
+ "defaults": {
+  "spanSize": 1.2,
+  "pipeDiameter": 1.2,
+  "numPipes": 1,
+  "numberOfPipes": 1,
+  "wallThickness": 180,
+  "pipeWallThickness": 180,
+  "formationWidth": 7.85,
+  "formationWidthLeft": 3.925,
+  "formationWidthRight": 3.925,
+  "barrelLength": 7.85,
+  "pipeSpacing": 180,
+  "wearingCourseThk": 100,
+  "beddingThickness": 300,
+  "levelingCourse": 150,
+  "rubbleSoling": 300,
+  "rubbleThk": 300,
+  "dropWallDepth": 1750,
+  "curtainWallDepth": 1200,
+  "curtainWallThickness": 300,
+  "curtainWallProjectionLeft": 250,
+  "curtainWallProjectionRight": 250,
+  "curtainWallFootingThk": 300,
+  "curtainWallBeddingProjLeft": 150,
+  "curtainWallBeddingProjRight": 150,
+  "curtainWallBeddingThk": 150,
+  "stonePitchingThk": 300,
+  "stoneFlooringSide": "left",
+  "foundingDepthBelowScour": 1.75,
+  "wingWallLength": 4.5,
+  "wingWallHeight": 2.5,
+  "railLevel": 18.848,
+  "formationLevel": 18.315,
+  "hfl": 16.5,
+  "bedLevel": 15.852,
+  "scourLevel": 14.102,
+  "floorLevel": 15.852,
+  "show460Line": true,
+  "showLeftSteps": false,
+  "showRightSteps": false,
+  "showLeftWingWall": true,
+  "showRightWingWall": true,
+  "showLeftHeadwall": true,
+  "showRightHeadwall": true,
+  "showLeftAbutment": false,
+  "showRightAbutment": false,
+  "showToeWall": true,
+  "toeWallAboveGL": 600,
+  "showFaceWall": true,
+  "faceWallStemAboveGL": 1530,
+  "faceWallStemBelowGL": 875,
+  "faceWallStemTopW": 450,
+  "faceWallStemBotW": 610,
+  "faceWallHeelProj": 500,
+  "faceWallToeProj": 250,
+  "faceWallFoundThk": 350,
+  "faceWallBeddingThk": 150,
+  "faceWallBeddingProj": 200,
+  "faceWallRubbleThk": 300,
+  "showGradedGravel": true,
+  "gradedGravelHatch": "GRAVEL",
+  "gradedGravelLength": 1200,
+  "gradedGravelGap": 1632,
+  "gradedGravelText": "GRADED GRAVEL",
+  "showCradleConcrete": false,
+  "cradleConcreteThk": 150,
+  "faceWallTier1Width": 1.36,
+  "faceWallBaseWidth": 1.76
+ },
+ "characterization": {
+  "samples_per_formula": 16,
+  "defaults_digest": "b56b425b801078f211fa0267ac789ff7634f58b56044c369d11e339a3fa9dd5d",
+  "derived_digest": "3e5ac077446249e5a3e2a7376bbd6d7d080f119c14b85c4792c4053f0e6af3fb"
+ }
+}

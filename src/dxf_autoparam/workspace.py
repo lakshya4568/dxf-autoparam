@@ -58,6 +58,7 @@ class SheetSession:
         self.lock = threading.RLock()
         self.sm: SheetModel | None = None
         self.shown: set[int] = set()  # entities the page draws changed (the committed state)
+        self.drawing = None  # the revision of the drawing the page shows: a feature operation (or its undo) changes it, and entity indices with it
         self.opened = 0.0
         self.gem = None  # one Gemini client per sheet: its prompt cache serves the follow-ups
         self.gem_model: str | None = None  # the model the client was made for
@@ -157,11 +158,15 @@ class SheetSession:
         sm = self._sm()
         sr = sm.regenerate()
         self.shown = set(sr.changed)
+        self.drawing = sm.dr
         return {"prims": self._prims(range(len(sm.dr.items)), sr), "extent": sm.dr.extent, "frame": sm.layout.frame}
 
     def _commit_delta(self) -> dict:
         """After a committed change: the entities that moved, and those that moved back, as they now stand."""
         sm = self._sm()
+        if self.drawing is not None and sm.dr is not self.drawing:  # another revision: no entity of the page's is this one's — it loads the sheet again
+            self.drawing, self.shown, self.pictures = sm.dr, set(), None
+            return {"reload": True, "delta": [], "errors": []}
         sr = sm.regenerate()
         now = set(sr.changed)
         touched = now | self.shown
@@ -268,6 +273,19 @@ class SheetSession:
             if top and top[0]["strong"] and suggested is None:
                 suggested = {"domain": name, "skill": top[0]["skill"], "score": top[0]["score"], "because": list(dict.fromkeys(b["printed"] for b in top[0]["because"]))}
         return {"domains": out, "suggested": suggested}
+
+    def production_info(self) -> dict:
+        """The production rule engines as this sheet stands: whether the knowledge and the bridge are available, the families the sheet's printed
+        words point at, and every binding kept on the sheet evaluated now (what the agent's bind_production_model kept; read only)."""
+        from .ai import library
+        from .production import manifest, service
+
+        st = service.status()
+        if not st.get("knowledge"):
+            return {"available": False, **st}
+        texts = library.drawing_texts(self.sm.dr.items) if self.sm is not None else []
+        return {"available": st["bridge"]["available"], "status": st, "match_this_drawing": manifest.knowledge().discover(texts) if texts else [],
+                "bindings": self.sm.domain_report() if self.sm is not None and self.sm.domain else []}
 
     def models(self) -> dict:
         from .ai.vertex import model_choices
@@ -486,6 +504,9 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
                 return handler._json(sheet.library_info()) or True
             if path == "/api/sheet/ai/models":
                 return handler._json(sheet.models()) or True
+            if path == "/api/sheet/production":
+                with sheet.lock:
+                    return handler._json(sheet.production_info()) or True
         if method == "POST" and path == "/api/sheet/ai/stop":
             body = json.loads(handler._body() or b"{}")
             return handler._json(sheet.stop_run(body)) or True

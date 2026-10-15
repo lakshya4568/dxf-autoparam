@@ -127,9 +127,10 @@ def reset_drawing(sm) -> dict:
     the redo stack is cleared (as for any new edit), and the saved project file is untouched until it is saved again."""
     st = sm.import_state
     had = {"values": sum(len(v) for v in sm.values.values()), "answers": sum(1 for u in sm.units.values() if u.answer),
-           "shared": len(sm.shared), "plans": sum(len((u.answer or {}).get("plans", [])) for u in sm.units.values())}
+           "shared": len(sm.shared), "plans": sum(len((u.answer or {}).get("plans", [])) for u in sm.units.values()), "domain_bindings": len(sm.domain)}
     sm._push()
     sm.values, sm.shared, sm.unlinked = {}, {}, set(st["unlinked"])
+    sm.domain = []
     sm.accepted, sm.relations, sm.questions, sm.stated_plan = set(), [], [], {}
     sm.layout.groups = copy.deepcopy(st["groups"])
     sm._relayout()

@@ -1,0 +1,4337 @@
+{
+ "format": "dxf-autoparam/production-knowledge-1",
+ "extractor_version": 1,
+ "knowledge_id": "aagento-bridge:psc_slab",
+ "family": "psc_slab",
+ "title": "PSC SLAB + I-GIRDER",
+ "source": {
+  "repository": "aagento-bridge",
+  "commit": "ca0b17ec2ccd82b81c246e2c02f8c4dc6fece565",
+  "branch": "cad_agent_dxf",
+  "dirty_files": [],
+  "registry": "src/app/features/bridges/models/bridge-registry.ts",
+  "modules": {
+   "defaults": {
+    "symbol": "PSC_SLAB_DEFAULTS",
+    "path": "src/app/features/bridges/models/psc-slab.defaults.ts"
+   },
+   "ruleEngine": {
+    "symbol": "PSCSlabRuleEngine",
+    "path": "src/app/features/bridges/utils/psc-slab/psc-slab-rule-engine.ts"
+   },
+   "sceneRenderer": {
+    "symbol": "PSCSlabDraw2D",
+    "path": "src/app/features/bridges/utils/psc-slab/psc-slab-draw-2d.ts"
+   },
+   "workspaceMapper": {
+    "symbol": "pscSlabWorkspaceMapper",
+    "path": "src/app/features/bridges/utils/psc-slab/psc-slab-mapper.ts"
+   },
+   "versionPayloadMapper": {
+    "symbol": "pscSlabVersionPayloadMapper",
+    "path": "src/app/features/bridges/utils/psc-slab/psc-slab-mapper.ts"
+   },
+   "computedLevelsMapper": {
+    "symbol": "pscSlabComputedLevelsMapper",
+    "path": "src/app/features/bridges/utils/psc-slab/psc-slab-mapper.ts"
+   },
+   "initial2DScaleAndPan": {
+    "symbol": "pscSlabInitial2DScaleAndPan",
+    "path": "src/app/features/bridges/utils/psc-slab/psc-slab-mapper.ts"
+   },
+   "viewButtons": {
+    "symbol": "pscSlabViewButtons",
+    "path": "src/app/features/bridges/utils/psc-slab/psc-slab-mapper.ts"
+   },
+   "canvasBasePoint": {
+    "symbol": "pscSlabCanvasBasePoint",
+    "path": "src/app/features/bridges/utils/psc-slab/psc-slab-mapper.ts"
+   }
+  },
+  "sources": {
+   "src/app/features/bridges/models/bridge-registry.ts": "4ad1cd4ab16a2f9e3b72cc5784eba7ce9326cb365c879ebb7ceb82c57c0215bf",
+   "src/app/features/bridges/models/psc-slab.defaults.ts": "a6b7048463daaafcdc80cb9c6c3ddd55b07e4268051543367a6adc7341aefaba",
+   "src/app/features/bridges/utils/psc-slab/psc-slab-draw-2d.ts": "ea1bdaf074dc00aa698c79c853c5074cc16ca96ce3657e142a20fdf4ee4c9bbf",
+   "src/app/features/bridges/utils/psc-slab/psc-slab-mapper.ts": "2b339878c8901d501ab2f2ac666c7664b9b827f54a16cb30a9705dbd8e5c7713",
+   "src/app/features/bridges/utils/psc-slab/psc-slab-rule-engine.ts": "f323e21a57522f3adbf4140737fb6ed77370b59253c2a1d7d97b17b6e3873c74"
+  },
+  "sources_digest": "de76815df2b21f2961c44842d54069919c3eeba0942274d617226dab0716e325"
+ },
+ "capabilities": {
+  "has_compute": true,
+  "has_validate": true,
+  "has_levels": true,
+  "has_views": true,
+  "has_renderer": true,
+  "has_defaults": true
+ },
+ "overlay": {
+  "present": false,
+  "status": null,
+  "basis": null
+ },
+ "validation": {
+  "available": true,
+  "messages_at_defaults": [
+   {
+    "sev": "ok",
+    "msg": "[IRS T-39] Slab thickness \u2265 L/25 (0.244m) \u2713"
+   },
+   {
+    "sev": "ok",
+    "msg": "[IRS BRules] Ballast 300mm \u2265 300mm \u2713"
+   },
+   {
+    "sev": "ok",
+    "msg": "[IRS BRules] HFL clearance 2.636m \u2265 0.6m \u2713"
+   },
+   {
+    "sev": "ok",
+    "msg": "[RDSO] Pier shaft width 1500mm \u2265 1200mm \u2713"
+   },
+   {
+    "sev": "ok",
+    "msg": "[RDSO] Pier cap 9750mm \u2265 9750mm (OHE+insp. std) \u2713"
+   },
+   {
+    "sev": "ok",
+    "msg": "[IRS] Bearing depth/seat 400mm \u2265 300mm \u2713"
+   },
+   {
+    "sev": "ok",
+    "msg": "[IRS Sub] RCC footing thickness OK \u2713"
+   },
+   {
+    "sev": "ok",
+    "msg": "[IRS] BG track gauge 1.676m \u2713"
+   },
+   {
+    "sev": "ok",
+    "msg": "[RDSO] PSC slab span 6.1m \u2264 12.2m \u2713"
+   },
+   {
+    "sev": "ok",
+    "msg": "[IRS] Deck width 8.534m \u2265 BG formation width \u2713"
+   }
+  ]
+ },
+ "levels_mapper": {
+  "available": true,
+  "levels_at_defaults": {
+   "formation": 31.47,
+   "ballastTop": 31.47,
+   "ballastBottom": 31.47,
+   "slabTop": 31.295,
+   "slabBottom": 30.835,
+   "bearingBottom": 30.795,
+   "pierCapTop": 30.795,
+   "pierCapBottom": 29.995,
+   "footingTop": 25.427,
+   "foundationBottom": 24.427,
+   "hflClearanceMm": 2635.999999999999
+  }
+ },
+ "views": {
+  "available": true,
+  "decided_by": [
+   "abutment.show_retaining_wall",
+   "abutment.show_return_wall",
+   "abutment.show_stairs",
+   "abutment.show_toe_wall",
+   "abutment.show_u_through_wall",
+   "abutment.show_wing_wall",
+   "options2d",
+   "psc_section.show_footpath",
+   "spans.arrangement.length",
+   "spans.count"
+  ],
+  "views": [
+   {
+    "mode": "sec",
+    "labels": [
+     "ELEVATION"
+    ],
+    "conditions": [
+     "always"
+    ],
+    "renders": true,
+    "draws": 2778,
+    "deterministic": true,
+    "reads": [
+     "abutment.base_thickness",
+     "abutment.bed_block_thickness",
+     "abutment.bedding_thickness",
+     "abutment.berm_width",
+     "abutment.dirt_wall_width",
+     "abutment.heel_length",
+     "abutment.height",
+     "abutment.piles.count",
+     "abutment.rcc_standard.cap",
+     "abutment.rcc_standard.pcc",
+     "abutment.show_stairs",
+     "abutment.show_stairs_right_top",
+     "abutment.stair_width",
+     "abutment.stem_thickness",
+     "abutment.step_width",
+     "abutment.structure_offset_substructure",
+     "abutment.toe_length",
+     "abutment.type",
+     "bearing.depth",
+     "bearing.enabled",
+     "bearing.height",
+     "foundation.depth",
+     "foundation.footing_thickness",
+     "foundation.soil_level",
+     "foundation.type",
+     "hydraulics.bed_level",
+     "hydraulics.hfl",
+     "hydraulics.scour_level",
+     "layers.ABUTMENT.visible",
+     "layers.BEARING.visible",
+     "layers.FOUNDATION.visible",
+     "layers.PIER.visible",
+     "layers.SLAB.visible",
+     "levels.formation_level",
+     "levels.rail_level",
+     "psc_section.psc_type",
+     "psc_section.wearing_coat_thick",
+     "spans.arrangement.0.length",
+     "spans.arrangement.constructor",
+     "spans.arrangement.forEach",
+     "spans.arrangement.length",
+     "spans.arrangement.map",
+     "spans.arrangement.some",
+     "substructure.pier_template.cap_height",
+     "substructure.pier_template.cap_width",
+     "superstructure.igirder.enabled",
+     "superstructure.slab.deck_type",
+     "superstructure.slab.width"
+    ],
+    "code_fallbacks": [
+     "abutment.piles.countX",
+     "abutment.piles.enabled",
+     "abutment.pro_pitching",
+     "abutment.show_berm",
+     "abutment.show_retaining_wall",
+     "abutment.show_toe_wall",
+     "abutment.show_wing_wall",
+     "abutment.stem_bottom_width",
+     "abutment.toe_wall_above_bed_level",
+     "abutment.toe_wall_below_bed_level",
+     "abutment.toe_wall_heel_length",
+     "abutment.toe_wall_stem_bottom",
+     "abutment.toe_wall_stem_top",
+     "abutment.toe_wall_toe_length",
+     "foundation.foundation_level_at_abutment",
+     "foundation.foundation_level_at_abutment_1",
+     "foundation.foundation_level_at_abutment_2",
+     "foundation.pier_foundation_levels",
+     "hydraulics.maxScourLevelAtAbutment1",
+     "hydraulics.maxScourLevelAtAbutment2",
+     "hydraulics.pierMaxScourLevels",
+     "levels.bottom_of_bed_block",
+     "options2d",
+     "pier",
+     "piers",
+     "pscSlabType",
+     "psc_section.drawing_number",
+     "spans.arrangement.0.drw",
+     "substructure.custom_piers",
+     "substructure.pier_template.bedBlockWidth",
+     "substructure.pier_template.capWidth",
+     "substructure.pier_template.shaftWidth",
+     "superstructure.effective_span",
+     "superstructure.slab.center_depth",
+     "superstructure.slab.depth"
+    ],
+    "affected_by": [
+     "abutment.base_thickness",
+     "abutment.bed_block_thickness",
+     "abutment.bedding_thickness",
+     "abutment.dirt_wall_width",
+     "abutment.heel_length",
+     "abutment.height",
+     "abutment.rcc_standard.pcc",
+     "abutment.stair_width",
+     "abutment.stem_thickness",
+     "abutment.step_width",
+     "abutment.structure_offset_substructure",
+     "abutment.toe_length",
+     "bearing.height",
+     "hydraulics.bed_level",
+     "hydraulics.hfl",
+     "hydraulics.scour_level",
+     "levels.formation_level",
+     "levels.rail_level",
+     "psc_section.wearing_coat_thick",
+     "spans.arrangement.0.length"
+    ],
+    "inputs_tried": 30
+   },
+   {
+    "mode": "elv",
+    "labels": [
+     "CROSS SECTION"
+    ],
+    "conditions": [
+     "always"
+    ],
+    "renders": true,
+    "draws": 1086,
+    "deterministic": false,
+    "reads": [
+     "abutment.base_thickness",
+     "abutment.bed_block_thickness",
+     "abutment.bedding_thickness",
+     "abutment.berm_width",
+     "abutment.piles.count",
+     "abutment.type",
+     "bearing.height",
+     "foundation.depth",
+     "foundation.footing_thickness",
+     "foundation.soil_level",
+     "hydraulics.bed_level",
+     "hydraulics.hfl",
+     "hydraulics.scour_level",
+     "levels.formation_level",
+     "levels.rail_level",
+     "psc_section.psc_type",
+     "psc_section.show_footpath",
+     "psc_section.wearing_coat_thick",
+     "spans.arrangement.0.length",
+     "spans.arrangement.constructor",
+     "spans.arrangement.forEach",
+     "spans.arrangement.length",
+     "spans.arrangement.map",
+     "spans.lengths.0",
+     "substructure.pier_template.cap_height",
+     "substructure.pier_template.cap_width",
+     "superstructure.igirder.enabled",
+     "superstructure.slab.deck_type",
+     "superstructure.slab.width"
+    ],
+    "code_fallbacks": [
+     "abutment.piles.countY",
+     "abutment.piles.enabled",
+     "abutment.show_berm",
+     "abutment.show_return_wall",
+     "abutment.show_toe_wall",
+     "abutment.show_wing_wall",
+     "abutment.toe_wall_above_bed_level",
+     "abutment.toe_wall_below_bed_level",
+     "abutment.toe_wall_heel_length",
+     "abutment.toe_wall_stem_bottom",
+     "abutment.toe_wall_stem_top",
+     "abutment.toe_wall_toe_length",
+     "block_count",
+     "design",
+     "foundation.foundation_level_at_abutment",
+     "foundation.foundation_level_at_abutment_1",
+     "foundation.foundation_level_at_abutment_2",
+     "foundation.pier_foundation_levels",
+     "hydraulics.maxScourLevelAtAbutment1",
+     "left_earth_retainer",
+     "pier",
+     "piers",
+     "project",
+     "pscSlabType",
+     "psc_section.drawing_number",
+     "psc_section.footpath_side",
+     "right_earth_retainer",
+     "spans.arrangement.0.drw",
+     "substructure.custom_piers",
+     "substructure.pier_template.capWidth",
+     "substructure.pier_template.shaftWidth",
+     "superstructure.slab.center_depth",
+     "superstructure.slab.depth",
+     "track_count",
+     "track_spacing"
+    ]
+   },
+   {
+    "mode": "plan",
+    "labels": [
+     "PLAN"
+    ],
+    "conditions": [
+     "always"
+    ],
+    "renders": true,
+    "draws": 1221,
+    "deterministic": true,
+    "reads": [
+     "abutment.dirt_wall_width",
+     "abutment.show_stairs",
+     "abutment.show_stairs_right_bottom",
+     "abutment.show_stairs_right_top",
+     "abutment.stair_width",
+     "abutment.stem_thickness",
+     "abutment.step_width",
+     "abutment.structure_offset_substructure",
+     "abutment.toe_length",
+     "abutment.wing_wall_plan_length",
+     "bearing.height",
+     "foundation.depth",
+     "foundation.footing_thickness",
+     "foundation.soil_level",
+     "hydraulics.bed_level",
+     "hydraulics.hfl",
+     "layers.BALLAST.visible",
+     "layers.GIRDER.visible",
+     "layers.PIER.visible",
+     "layers.SLAB.visible",
+     "layers.TRACK.visible",
+     "levels.formation_level",
+     "levels.rail_level",
+     "psc_section.psc_type",
+     "psc_section.show_footpath",
+     "psc_section.wearing_coat_thick",
+     "spans.arrangement.0.length",
+     "spans.arrangement.constructor",
+     "spans.arrangement.forEach",
+     "spans.arrangement.length",
+     "spans.arrangement.map",
+     "substructure.pier_template.cap_height",
+     "substructure.pier_template.cap_width",
+     "superstructure.igirder.enabled",
+     "superstructure.slab.deck_type",
+     "superstructure.slab.width",
+     "superstructure.track.track_gauge"
+    ],
+    "code_fallbacks": [
+     "abutment.pro_pitching",
+     "abutment.retaining_wall_heel_length",
+     "abutment.retaining_wall_stem_bottom",
+     "abutment.retaining_wall_stem_top",
+     "abutment.retaining_wall_toe_length",
+     "abutment.return_wall_above_bed_level",
+     "abutment.show_berm",
+     "abutment.show_retaining_wall",
+     "abutment.show_u_through_wall",
+     "abutment.show_wing_wall",
+     "abutment.toe_wall_above_bed_level",
+     "abutment.toe_wall_stem_bottom",
+     "abutment.toe_wall_stem_top",
+     "abutment.toe_wall_top_stem_width",
+     "block_count",
+     "foundation.foundation_level_at_abutment",
+     "foundation.foundation_level_at_abutment_1",
+     "foundation.foundation_level_at_abutment_2",
+     "foundation.pier_foundation_levels",
+     "hydraulics.flow_dir",
+     "hydraulics.flow_direction",
+     "left_earth_retainer",
+     "options2d",
+     "piers",
+     "pscSlabType",
+     "psc_section.drawing_number",
+     "psc_section.footpath_side",
+     "right_earth_retainer",
+     "substructure.custom_piers",
+     "substructure.pier_template.capWidth",
+     "substructure.pier_template.shaftWidth",
+     "superstructure.slab.center_depth",
+     "superstructure.slab.depth",
+     "track_count",
+     "track_spacing"
+    ],
+    "affected_by": [
+     "abutment.dirt_wall_width",
+     "abutment.stair_width",
+     "abutment.stem_thickness",
+     "abutment.step_width",
+     "abutment.structure_offset_substructure",
+     "abutment.toe_length",
+     "hydraulics.bed_level",
+     "levels.formation_level",
+     "spans.arrangement.0.length",
+     "superstructure.track.track_gauge"
+    ],
+    "inputs_tried": 21
+   },
+   {
+    "mode": "rdso_slab",
+    "labels": [
+     "STN/RDSO SLAB"
+    ],
+    "conditions": [
+     "always"
+    ],
+    "renders": true,
+    "draws": 650,
+    "deterministic": true,
+    "reads": [
+     "bearing.height",
+     "foundation.depth",
+     "foundation.footing_thickness",
+     "foundation.soil_level",
+     "hydraulics.bed_level",
+     "hydraulics.hfl",
+     "levels.formation_level",
+     "levels.rail_level",
+     "psc_section.psc_type",
+     "psc_section.wearing_coat_thick",
+     "spans.arrangement.0.length",
+     "spans.arrangement.constructor",
+     "spans.arrangement.forEach",
+     "spans.arrangement.length",
+     "spans.arrangement.map",
+     "substructure.pier_template.cap_height",
+     "substructure.pier_template.cap_width",
+     "superstructure.igirder.enabled",
+     "superstructure.slab.deck_type",
+     "superstructure.slab.width"
+    ],
+    "code_fallbacks": [
+     "foundation.foundation_level_at_abutment",
+     "foundation.foundation_level_at_abutment_1",
+     "foundation.foundation_level_at_abutment_2",
+     "foundation.pier_foundation_levels",
+     "left_earth_retainer",
+     "piers",
+     "pscSlabType",
+     "psc_section.drawing_number",
+     "right_earth_retainer",
+     "spans.arrangement.0.drw",
+     "substructure.custom_piers",
+     "substructure.pier_template.capWidth",
+     "substructure.pier_template.shaftWidth",
+     "superstructure.slab.center_depth",
+     "superstructure.slab.depth"
+    ],
+    "affected_by": [
+     "psc_section.wearing_coat_thick"
+    ],
+    "inputs_tried": 13
+   },
+   {
+    "mode": "footpath",
+    "labels": [
+     "FOOTPATH"
+    ],
+    "conditions": [
+     "always",
+     {
+      "when": {
+       "path": "psc_section.show_footpath",
+       "value": false
+      },
+      "removed": true
+     }
+    ],
+    "renders": true,
+    "draws": 333,
+    "deterministic": true,
+    "reads": [
+     "bearing.height",
+     "foundation.depth",
+     "foundation.footing_thickness",
+     "foundation.soil_level",
+     "hydraulics.bed_level",
+     "hydraulics.hfl",
+     "levels.formation_level",
+     "levels.rail_level",
+     "psc_section.psc_type",
+     "psc_section.wearing_coat_thick",
+     "spans.arrangement.0.length",
+     "spans.arrangement.constructor",
+     "spans.arrangement.forEach",
+     "spans.arrangement.length",
+     "spans.arrangement.map",
+     "spans.lengths.0",
+     "substructure.pier_template.cap_height",
+     "substructure.pier_template.cap_width",
+     "superstructure.igirder.enabled",
+     "superstructure.slab.deck_type",
+     "superstructure.slab.width"
+    ],
+    "code_fallbacks": [
+     "foundation.foundation_level_at_abutment",
+     "foundation.foundation_level_at_abutment_1",
+     "foundation.foundation_level_at_abutment_2",
+     "foundation.pier_foundation_levels",
+     "piers",
+     "pscSlabType",
+     "psc_section.drawing_number",
+     "substructure.custom_piers",
+     "substructure.pier_template.capWidth",
+     "substructure.pier_template.shaftWidth",
+     "superstructure.slab.center_depth",
+     "superstructure.slab.depth"
+    ],
+    "affected_by": [],
+    "inputs_tried": 14
+   },
+   {
+    "mode": "tw",
+    "labels": [
+     "TOE WALL"
+    ],
+    "conditions": [
+     "always",
+     {
+      "when": {
+       "path": "abutment.show_toe_wall",
+       "value": false
+      },
+      "removed": true
+     }
+    ],
+    "renders": true,
+    "draws": 220,
+    "deterministic": true,
+    "reads": [
+     "bearing.height",
+     "foundation.depth",
+     "foundation.footing_thickness",
+     "foundation.soil_level",
+     "hydraulics.bed_level",
+     "hydraulics.hfl",
+     "levels.formation_level",
+     "levels.rail_level",
+     "psc_section.psc_type",
+     "psc_section.wearing_coat_thick",
+     "spans.arrangement.0.length",
+     "spans.arrangement.constructor",
+     "spans.arrangement.forEach",
+     "spans.arrangement.length",
+     "spans.arrangement.map",
+     "substructure.pier_template.cap_height",
+     "substructure.pier_template.cap_width",
+     "superstructure.igirder.enabled",
+     "superstructure.slab.deck_type",
+     "superstructure.slab.width"
+    ],
+    "code_fallbacks": [
+     "abutment.toe_wall_above_bed_level",
+     "abutment.toe_wall_below_bed_level",
+     "abutment.toe_wall_heel_length",
+     "abutment.toe_wall_stem_bottom",
+     "abutment.toe_wall_stem_top",
+     "abutment.toe_wall_toe_length",
+     "foundation.foundation_level_at_abutment",
+     "foundation.foundation_level_at_abutment_1",
+     "foundation.foundation_level_at_abutment_2",
+     "foundation.pier_foundation_levels",
+     "hydraulics.bed_lvl",
+     "piers",
+     "pscSlabType",
+     "psc_section.drawing_number",
+     "substructure.custom_piers",
+     "substructure.pier_template.capWidth",
+     "substructure.pier_template.shaftWidth",
+     "superstructure.slab.center_depth",
+     "superstructure.slab.depth"
+    ],
+    "affected_by": [],
+    "inputs_tried": 13
+   },
+   {
+    "mode": "utw",
+    "labels": [
+     "U THROUGH WALL"
+    ],
+    "conditions": [
+     "always",
+     {
+      "when": {
+       "path": "abutment.show_u_through_wall",
+       "value": false
+      },
+      "removed": true
+     }
+    ],
+    "renders": true,
+    "draws": 562,
+    "deterministic": true,
+    "reads": [
+     "bearing.height",
+     "foundation.depth",
+     "foundation.footing_thickness",
+     "foundation.soil_level",
+     "hydraulics.bed_level",
+     "hydraulics.hfl",
+     "hydraulics.scour_level",
+     "levels.formation_level",
+     "levels.rail_level",
+     "psc_section.psc_type",
+     "psc_section.wearing_coat_thick",
+     "spans.arrangement.0.length",
+     "spans.arrangement.constructor",
+     "spans.arrangement.forEach",
+     "spans.arrangement.length",
+     "spans.arrangement.map",
+     "substructure.pier_template.cap_height",
+     "substructure.pier_template.cap_width",
+     "superstructure.igirder.enabled",
+     "superstructure.slab.deck_type",
+     "superstructure.slab.width"
+    ],
+    "code_fallbacks": [
+     "abutment.piles.enabled",
+     "abutment.u_through_wall_bottom_width",
+     "abutment.u_through_wall_top_width",
+     "foundation.foundation_level_at_abutment",
+     "foundation.foundation_level_at_abutment_1",
+     "foundation.foundation_level_at_abutment_2",
+     "foundation.pier_foundation_levels",
+     "hydraulics.maxScourLevelAtAbutment1",
+     "pier",
+     "piers",
+     "pscSlabType",
+     "psc_section.drawing_number",
+     "substructure.abutment_template.z_bof",
+     "substructure.abutment_template.z_tof",
+     "substructure.custom_piers",
+     "substructure.pier_template.capWidth",
+     "substructure.pier_template.shaftWidth",
+     "superstructure.slab.center_depth",
+     "superstructure.slab.depth"
+    ],
+    "affected_by": [
+     "hydraulics.bed_level",
+     "hydraulics.scour_level",
+     "levels.formation_level"
+    ],
+    "inputs_tried": 14
+   },
+   {
+    "mode": "stair",
+    "labels": [
+     "STAIR"
+    ],
+    "conditions": [
+     "always",
+     {
+      "when": {
+       "path": "abutment.show_stairs",
+       "value": false
+      },
+      "removed": true
+     }
+    ],
+    "renders": true,
+    "draws": 3197,
+    "deterministic": false,
+    "reads": [
+     "abutment.stair_width",
+     "abutment.step_width",
+     "bearing.height",
+     "foundation.depth",
+     "foundation.footing_thickness",
+     "foundation.soil_level",
+     "hydraulics.bed_level",
+     "hydraulics.hfl",
+     "levels.formation_level",
+     "levels.rail_level",
+     "psc_section.psc_type",
+     "psc_section.wearing_coat_thick",
+     "spans.arrangement.0.length",
+     "spans.arrangement.constructor",
+     "spans.arrangement.forEach",
+     "spans.arrangement.length",
+     "spans.arrangement.map",
+     "spans.arrangement.reduce",
+     "substructure.pier_template.cap_height",
+     "substructure.pier_template.cap_width",
+     "superstructure.igirder.enabled",
+     "superstructure.slab.deck_type",
+     "superstructure.slab.width"
+    ],
+    "code_fallbacks": [
+     "abutment.stair_unit_count",
+     "foundation.foundation_level_at_abutment",
+     "foundation.foundation_level_at_abutment_1",
+     "foundation.foundation_level_at_abutment_2",
+     "foundation.pier_foundation_levels",
+     "piers",
+     "project",
+     "pscSlabType",
+     "psc_section.drawing_number",
+     "substructure.custom_piers",
+     "substructure.pier_template.capWidth",
+     "substructure.pier_template.shaftWidth",
+     "superstructure.slab.center_depth",
+     "superstructure.slab.depth"
+    ]
+   },
+   {
+    "mode": "abut",
+    "labels": [
+     "ABUT X-SECTION"
+    ],
+    "conditions": [
+     "always"
+    ],
+    "renders": true,
+    "draws": 279,
+    "deterministic": true,
+    "reads": [
+     "abutment.bed_block_thickness",
+     "abutment.bedding_thickness",
+     "abutment.dirt_wall_width",
+     "abutment.stem_thickness",
+     "bearing.height",
+     "foundation.depth",
+     "foundation.footing_thickness",
+     "foundation.soil_level",
+     "hydraulics.bed_level",
+     "hydraulics.hfl",
+     "levels.formation_level",
+     "levels.rail_level",
+     "psc_section.psc_type",
+     "psc_section.wearing_coat_thick",
+     "spans.arrangement.0.length",
+     "spans.arrangement.constructor",
+     "spans.arrangement.forEach",
+     "spans.arrangement.length",
+     "spans.arrangement.map",
+     "substructure.pier_template.cap_height",
+     "substructure.pier_template.cap_width",
+     "superstructure.igirder.enabled",
+     "superstructure.slab.deck_type",
+     "superstructure.slab.width"
+    ],
+    "code_fallbacks": [
+     "foundation.foundation_level_at_abutment",
+     "foundation.foundation_level_at_abutment_1",
+     "foundation.foundation_level_at_abutment_2",
+     "foundation.pier_foundation_levels",
+     "levels.bottom_of_bed_block",
+     "piers",
+     "pscSlabType",
+     "psc_section.drawing_number",
+     "spans.arrangement.0.drw",
+     "substructure.custom_piers",
+     "substructure.pier_template.capWidth",
+     "substructure.pier_template.shaftWidth",
+     "superstructure.slab.center_depth",
+     "superstructure.slab.depth"
+    ],
+    "affected_by": [
+     "abutment.bed_block_thickness",
+     "abutment.bedding_thickness",
+     "abutment.dirt_wall_width",
+     "abutment.stem_thickness",
+     "levels.formation_level",
+     "psc_section.wearing_coat_thick",
+     "spans.arrangement.0.length",
+     "superstructure.slab.width"
+    ],
+    "inputs_tried": 17
+   },
+   {
+    "mode": "borelog",
+    "labels": [
+     "BORE LOG"
+    ],
+    "conditions": [
+     "always"
+    ],
+    "renders": true,
+    "draws": 104,
+    "deterministic": true,
+    "reads": [
+     "bearing.height",
+     "foundation.depth",
+     "foundation.footing_thickness",
+     "foundation.soil_level",
+     "hydraulics.bed_level",
+     "hydraulics.hfl",
+     "levels.formation_level",
+     "levels.rail_level",
+     "psc_section.psc_type",
+     "psc_section.wearing_coat_thick",
+     "spans.arrangement.0.length",
+     "spans.arrangement.constructor",
+     "spans.arrangement.forEach",
+     "spans.arrangement.length",
+     "spans.arrangement.map",
+     "substructure.pier_template.cap_height",
+     "substructure.pier_template.cap_width",
+     "superstructure.igirder.enabled",
+     "superstructure.slab.deck_type",
+     "superstructure.slab.width"
+    ],
+    "code_fallbacks": [
+     "foundation.foundation_level_at_abutment",
+     "foundation.foundation_level_at_abutment_1",
+     "foundation.foundation_level_at_abutment_2",
+     "foundation.pier_foundation_levels",
+     "foundation.rw_bottom_lvl",
+     "foundation.sbc_at_abutment",
+     "foundation.sbc_at_abutment_1",
+     "foundation.sbc_rw",
+     "hydraulics.bed_lvl",
+     "hydraulics.scour_lvl",
+     "options2d",
+     "pscSlabType",
+     "psc_section.drawing_number",
+     "substructure.pier_template.capWidth",
+     "substructure.pier_template.shaftWidth",
+     "superstructure.slab.center_depth",
+     "superstructure.slab.depth"
+    ],
+    "affected_by": [
+     "foundation.soil_level"
+    ],
+    "inputs_tried": 13
+   },
+   {
+    "mode": "rw",
+    "labels": [
+     "RETAINING WALL"
+    ],
+    "conditions": [
+     {
+      "when": {
+       "path": "abutment.show_retaining_wall",
+       "value": true
+      },
+      "added": true
+     }
+    ],
+    "renders": true,
+    "draws": 1083,
+    "deterministic": true,
+    "reads": [
+     "bearing.height",
+     "foundation.depth",
+     "foundation.footing_thickness",
+     "foundation.soil_level",
+     "hydraulics.bed_level",
+     "hydraulics.hfl",
+     "hydraulics.scour_level",
+     "levels.formation_level",
+     "levels.rail_level",
+     "psc_section.psc_type",
+     "psc_section.wearing_coat_thick",
+     "spans.arrangement.0.length",
+     "spans.arrangement.constructor",
+     "spans.arrangement.forEach",
+     "spans.arrangement.length",
+     "spans.arrangement.map",
+     "substructure.pier_template.cap_height",
+     "substructure.pier_template.cap_width",
+     "superstructure.igirder.enabled",
+     "superstructure.slab.deck_type",
+     "superstructure.slab.width"
+    ],
+    "code_fallbacks": [
+     "abutment.retaining_wall_h1",
+     "abutment.retaining_wall_h2",
+     "abutment.retaining_wall_heel_length",
+     "abutment.retaining_wall_stem_bottom",
+     "abutment.retaining_wall_stem_top",
+     "abutment.retaining_wall_toe_length",
+     "deck",
+     "foundation.foundation_level_at_abutment",
+     "foundation.foundation_level_at_abutment_1",
+     "foundation.foundation_level_at_abutment_2",
+     "foundation.pier_foundation_levels",
+     "geometry",
+     "hydraulics.maxScourLevelAtAbutment1",
+     "isWingWall",
+     "pscSlabType",
+     "psc_section.drawing_number",
+     "substructure.pier_template.capWidth",
+     "substructure.pier_template.shaftWidth",
+     "superstructure.slab.center_depth",
+     "superstructure.slab.depth"
+    ],
+    "affected_by": [
+     "hydraulics.bed_level",
+     "hydraulics.scour_level"
+    ],
+    "inputs_tried": 14
+   },
+   {
+    "mode": "rw2",
+    "labels": [
+     "RETURN WALL"
+    ],
+    "conditions": [
+     {
+      "when": {
+       "path": "abutment.show_return_wall",
+       "value": true
+      },
+      "added": true
+     }
+    ],
+    "renders": true,
+    "draws": 450,
+    "deterministic": true,
+    "reads": [
+     "bearing.height",
+     "foundation.depth",
+     "foundation.footing_thickness",
+     "foundation.soil_level",
+     "hydraulics.bed_level",
+     "hydraulics.hfl",
+     "hydraulics.scour_level",
+     "levels.formation_level",
+     "levels.rail_level",
+     "psc_section.psc_type",
+     "psc_section.wearing_coat_thick",
+     "spans.arrangement.0.length",
+     "spans.arrangement.constructor",
+     "spans.arrangement.forEach",
+     "spans.arrangement.length",
+     "spans.arrangement.map",
+     "substructure.pier_template.cap_height",
+     "substructure.pier_template.cap_width",
+     "superstructure.igirder.enabled",
+     "superstructure.slab.deck_type",
+     "superstructure.slab.width"
+    ],
+    "code_fallbacks": [
+     "abutment.return_wall_above_bed_level",
+     "abutment.return_wall_h1",
+     "abutment.return_wall_h2",
+     "abutment.return_wall_heel_length",
+     "abutment.return_wall_stem_bottom",
+     "abutment.return_wall_stem_top",
+     "abutment.return_wall_toe_length",
+     "abutment.return_wall_type",
+     "deck",
+     "foundation.foundation_level_at_abutment",
+     "foundation.foundation_level_at_abutment_1",
+     "foundation.foundation_level_at_abutment_2",
+     "foundation.pier_foundation_levels",
+     "geometry",
+     "hydraulics.maxScourLevelAtAbutment1",
+     "pscSlabType",
+     "psc_section.drawing_number",
+     "substructure.pier_template.capWidth",
+     "substructure.pier_template.shaftWidth",
+     "superstructure.slab.center_depth",
+     "superstructure.slab.depth"
+    ],
+    "affected_by": [
+     "hydraulics.bed_level",
+     "hydraulics.scour_level"
+    ],
+    "inputs_tried": 14
+   },
+   {
+    "mode": "wing_wall",
+    "labels": [
+     "WING WALL"
+    ],
+    "conditions": [
+     {
+      "when": {
+       "path": "abutment.show_wing_wall",
+       "value": true
+      },
+      "added": true
+     }
+    ],
+    "renders": true,
+    "draws": 1278,
+    "deterministic": true,
+    "reads": [
+     "abutment.approach.length",
+     "abutment.approach.slope",
+     "abutment.approach.thickness",
+     "abutment.base_thickness",
+     "abutment.bed_block_thickness",
+     "abutment.bedding_thickness",
+     "abutment.berm_width",
+     "abutment.dirt_wall_width",
+     "abutment.heel_length",
+     "abutment.height",
+     "abutment.pile_cap_thickness",
+     "abutment.pile_cap_width",
+     "abutment.piles.count",
+     "abutment.piles.diameter",
+     "abutment.piles.length",
+     "abutment.piles.spacing",
+     "abutment.profile.bottom_width",
+     "abutment.profile.taper",
+     "abutment.profile.top_width",
+     "abutment.rcc_standard.ballast_wall",
+     "abutment.rcc_standard.cap",
+     "abutment.rcc_standard.footing_left",
+     "abutment.rcc_standard.footing_right",
+     "abutment.rcc_standard.footing_thickness",
+     "abutment.rcc_standard.height",
+     "abutment.rcc_standard.pcc",
+     "abutment.rcc_standard.restrainer.height",
+     "abutment.rcc_standard.restrainer.width",
+     "abutment.rcc_standard.stem_thickness",
+     "abutment.show_stairs",
+     "abutment.show_stairs_left_bottom",
+     "abutment.show_stairs_left_top",
+     "abutment.show_stairs_right_bottom",
+     "abutment.show_stairs_right_top",
+     "abutment.stair_width",
+     "abutment.stem_thickness",
+     "abutment.step_width",
+     "abutment.structure_offset_substructure",
+     "abutment.toe_length",
+     "abutment.type",
+     "abutment.wing_wall_angle",
+     "abutment.wing_wall_plan_length",
+     "bearing.depth",
+     "bearing.enabled",
+     "bearing.height",
+     "bearing.type",
+     "bearing.width",
+     "bridge_name",
+     "foundation.bot_plug_thickness",
+     "foundation.depth",
+     "foundation.footing_length",
+     "foundation.footing_thickness",
+     "foundation.footing_width",
+     "foundation.n_piles",
+     "foundation.pcc_thickness",
+     "foundation.pile_cap_depth",
+     "foundation.pile_dia",
+     "foundation.pile_length",
+     "foundation.soil_level",
+     "foundation.type",
+     "foundation.well_cap_depth",
+     "foundation.well_dia",
+     "hydraulics.bed_level",
+     "hydraulics.hfl",
+     "hydraulics.scour_level",
+     "hydraulics.water_level",
+     "layers.ABUTMENT.color",
+     "layers.ABUTMENT.role",
+     "layers.ABUTMENT.visible",
+     "layers.BALLAST.color",
+     "layers.BALLAST.role",
+     "layers.BALLAST.visible",
+     "layers.BEARING.color",
+     "layers.BEARING.role",
+     "layers.BEARING.visible",
+     "layers.FOUNDATION.color",
+     "layers.FOUNDATION.role",
+     "layers.FOUNDATION.visible",
+     "layers.GIRDER.color",
+     "layers.GIRDER.role",
+     "layers.GIRDER.visible",
+     "layers.PIER.color",
+     "layers.PIER.role",
+     "layers.PIER.visible",
+     "layers.SLAB.color",
+     "layers.SLAB.role",
+     "layers.SLAB.visible",
+     "layers.SOIL.color",
+     "layers.SOIL.role",
+     "layers.SOIL.visible",
+     "layers.TRACK.color",
+     "layers.TRACK.role",
+     "layers.TRACK.visible",
+     "layers.WATER.color",
+     "layers.WATER.role",
+     "layers.WATER.visible",
+     "levels.formation_level",
+     "levels.rail_level",
+     "psc_section.bearing_seat_w",
+     "psc_section.depth_center",
+     "psc_section.depth_support",
+     "psc_section.drain_pipe_dia",
+     "psc_section.drain_pipe_spacing",
+     "psc_section.footpath_width",
+     "psc_section.psc_type",
+     "psc_section.railing_angle",
+     "psc_section.railing_pipe_dia",
+     "psc_section.railing_pipe_spacing",
+     "psc_section.ref_drawing",
+     "psc_section.show_footpath",
+     "psc_section.wc_slope",
+     "psc_section.wearing_coat_thick",
+     "skew_angle",
+     "spans.arrangement.0.index",
+     "spans.arrangement.0.length",
+     "spans.arrangement.0.type",
+     "spans.arrangement.constructor",
+     "spans.arrangement.forEach",
+     "spans.arrangement.length",
+     "spans.arrangement.map",
+     "spans.count",
+     "spans.lengths.0",
+     "spans.lengths.length",
+     "spans.total_length",
+     "substructure.abutment_template.backwall_height",
+     "substructure.abutment_template.thickness",
+     "substructure.pier_template.cap_height",
+     "substructure.pier_template.cap_width",
+     "substructure.pier_template.height",
+     "substructure.pier_template.width",
+     "superstructure.igirder.bfBot",
+     "superstructure.igirder.bfTop",
+     "superstructure.igirder.depth",
+     "superstructure.igirder.enabled",
+     "superstructure.igirder.nGirders",
+     "superstructure.igirder.spacing",
+     "superstructure.igirder.tfBot",
+     "superstructure.igirder.tfTop",
+     "superstructure.igirder.tw",
+     "superstructure.slab.camber",
+     "superstructure.slab.deck_type",
+     "superstructure.slab.is_continuous",
+     "superstructure.slab.thickness",
+     "superstructure.slab.type",
+     "superstructure.slab.width",
+     "superstructure.track.ballast_thickness",
+     "superstructure.track.rail_weight_kgpm",
+     "superstructure.track.sleeper_spacing",
+     "superstructure.track.track_gauge"
+    ],
+    "code_fallbacks": [
+     "abutment.approach.toJSON",
+     "abutment.piles.toJSON",
+     "abutment.profile.toJSON",
+     "abutment.rcc_standard.restrainer.toJSON",
+     "abutment.rcc_standard.toJSON",
+     "abutment.toJSON",
+     "abutment.wing_wall_h1",
+     "abutment.wing_wall_h2",
+     "abutment.wing_wall_heel_length",
+     "abutment.wing_wall_stem_bottom",
+     "abutment.wing_wall_stem_top",
+     "abutment.wing_wall_toe_length",
+     "bearing.toJSON",
+     "foundation.foundation_level_at_abutment",
+     "foundation.foundation_level_at_abutment_1",
+     "foundation.foundation_level_at_abutment_2",
+     "foundation.pier_foundation_levels",
+     "foundation.toJSON",
+     "hydraulics.toJSON",
+     "layers.ABUTMENT.toJSON",
+     "layers.BALLAST.toJSON",
+     "layers.BEARING.toJSON",
+     "layers.FOUNDATION.toJSON",
+     "layers.GIRDER.toJSON",
+     "layers.PIER.toJSON",
+     "layers.SLAB.toJSON",
+     "layers.SOIL.toJSON",
+     "layers.TRACK.toJSON",
+     "layers.WATER.toJSON",
+     "layers.toJSON",
+     "levels.toJSON",
+     "piers",
+     "pscSlabType",
+     "psc_section.drawing_number",
+     "psc_section.toJSON",
+     "spans.arrangement.0.toJSON",
+     "spans.arrangement.toJSON",
+     "spans.lengths.toJSON",
+     "spans.toJSON",
+     "substructure.abutment_template.toJSON",
+     "substructure.custom_piers",
+     "substructure.pier_template.capWidth",
+     "substructure.pier_template.shaftWidth",
+     "substructure.pier_template.toJSON",
+     "substructure.toJSON",
+     "superstructure.igirder.toJSON",
+     "superstructure.slab.center_depth",
+     "superstructure.slab.depth",
+     "superstructure.slab.toJSON",
+     "superstructure.toJSON",
+     "superstructure.track.toJSON",
+     "toJSON"
+    ],
+    "affected_by": [
+     "hydraulics.bed_level",
+     "hydraulics.scour_level",
+     "levels.formation_level"
+    ],
+    "inputs_tried": 96
+   }
+  ]
+ },
+ "operations": [
+  {
+   "op": "set_value",
+   "path": "levels.rail_level",
+   "outputs": [
+    "z_rail"
+   ],
+   "views": [
+    "sec"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "levels.formation_level",
+   "outputs": [
+    "z_formation",
+    "z_ballast_t",
+    "z_ballast_b",
+    "z_slab_t",
+    "z_slab_b",
+    "z_bearing_t",
+    "z_bearing_b",
+    "z_cap_t",
+    "z_cap_b",
+    "hflClrnce"
+   ],
+   "views": [
+    "sec",
+    "plan",
+    "utw",
+    "abut",
+    "wing_wall"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "spans.arrangement.0.length",
+   "outputs": [
+    "totalLength",
+    "positions.1",
+    "maxSpan",
+    "minSlabThk"
+   ],
+   "views": [
+    "sec",
+    "plan",
+    "abut"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "superstructure.slab.width",
+   "outputs": [
+    "rdso_cap_w"
+   ],
+   "views": [
+    "abut"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "superstructure.track.track_gauge",
+   "outputs": [],
+   "views": [
+    "plan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "bearing.height",
+   "outputs": [
+    "z_bearing_b",
+    "z_cap_t",
+    "z_cap_b",
+    "bearing_h"
+   ],
+   "views": [
+    "sec"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "substructure.pier_template.cap_height",
+   "outputs": [
+    "z_cap_b"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "abutment.height",
+   "outputs": [],
+   "views": [
+    "sec"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "abutment.stem_thickness",
+   "outputs": [],
+   "views": [
+    "sec",
+    "plan",
+    "abut"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "abutment.dirt_wall_width",
+   "outputs": [],
+   "views": [
+    "sec",
+    "plan",
+    "abut"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "abutment.bed_block_thickness",
+   "outputs": [],
+   "views": [
+    "sec",
+    "abut"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "abutment.bedding_thickness",
+   "outputs": [],
+   "views": [
+    "sec",
+    "abut"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "abutment.stair_width",
+   "outputs": [],
+   "views": [
+    "sec",
+    "plan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "abutment.step_width",
+   "outputs": [],
+   "views": [
+    "sec",
+    "plan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "abutment.structure_offset_substructure",
+   "outputs": [],
+   "views": [
+    "sec",
+    "plan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "abutment.rcc_standard.pcc",
+   "outputs": [],
+   "views": [
+    "sec"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "abutment.base_thickness",
+   "outputs": [],
+   "views": [
+    "sec"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "abutment.heel_length",
+   "outputs": [],
+   "views": [
+    "sec"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "abutment.toe_length",
+   "outputs": [],
+   "views": [
+    "sec",
+    "plan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "foundation.depth",
+   "outputs": [
+    "z_footing_t",
+    "z_footing_b"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "foundation.footing_thickness",
+   "outputs": [
+    "z_footing_t"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "foundation.soil_level",
+   "outputs": [
+    "z_soil",
+    "z_footing_t",
+    "z_footing_b"
+   ],
+   "views": [
+    "borelog"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "hydraulics.hfl",
+   "outputs": [
+    "hflClrnce"
+   ],
+   "views": [
+    "sec"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "hydraulics.bed_level",
+   "outputs": [],
+   "views": [
+    "sec",
+    "plan",
+    "utw",
+    "rw",
+    "rw2",
+    "wing_wall"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "hydraulics.scour_level",
+   "outputs": [],
+   "views": [
+    "sec",
+    "utw",
+    "rw",
+    "rw2",
+    "wing_wall"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "psc_section.wearing_coat_thick",
+   "outputs": [
+    "z_slab_t",
+    "z_slab_b",
+    "z_bearing_t",
+    "z_bearing_b",
+    "z_cap_t",
+    "z_cap_b",
+    "hflClrnce"
+   ],
+   "views": [
+    "sec",
+    "rdso_slab",
+    "abut"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "toggle",
+   "path": "psc_section.show_footpath",
+   "value": false,
+   "view": "footpath",
+   "effect": "removes the view",
+   "on_existing_drawing": "topology_change: a component and its views appear or disappear \u2014 needs geometry the drawing may not hold"
+  },
+  {
+   "op": "toggle",
+   "path": "abutment.show_toe_wall",
+   "value": false,
+   "view": "tw",
+   "effect": "removes the view",
+   "on_existing_drawing": "topology_change: a component and its views appear or disappear \u2014 needs geometry the drawing may not hold"
+  },
+  {
+   "op": "toggle",
+   "path": "abutment.show_u_through_wall",
+   "value": false,
+   "view": "utw",
+   "effect": "removes the view",
+   "on_existing_drawing": "topology_change: a component and its views appear or disappear \u2014 needs geometry the drawing may not hold"
+  },
+  {
+   "op": "toggle",
+   "path": "abutment.show_stairs",
+   "value": false,
+   "view": "stair",
+   "effect": "removes the view",
+   "on_existing_drawing": "topology_change: a component and its views appear or disappear \u2014 needs geometry the drawing may not hold"
+  },
+  {
+   "op": "toggle",
+   "path": "abutment.show_retaining_wall",
+   "value": true,
+   "view": "rw",
+   "effect": "adds the view",
+   "on_existing_drawing": "topology_change: a component and its views appear or disappear \u2014 needs geometry the drawing may not hold"
+  },
+  {
+   "op": "toggle",
+   "path": "abutment.show_return_wall",
+   "value": true,
+   "view": "rw2",
+   "effect": "adds the view",
+   "on_existing_drawing": "topology_change: a component and its views appear or disappear \u2014 needs geometry the drawing may not hold"
+  },
+  {
+   "op": "toggle",
+   "path": "abutment.show_wing_wall",
+   "value": true,
+   "view": "wing_wall",
+   "effect": "adds the view",
+   "on_existing_drawing": "topology_change: a component and its views appear or disappear \u2014 needs geometry the drawing may not hold"
+  }
+ ],
+ "duplicates": [
+  {
+   "path": "src/app/features/bridges/utils/psc-slab-rule-engine.ts",
+   "identical": false,
+   "lines": 375,
+   "authoritative_lines": 383,
+   "imported_by": [
+    "src/app/features/bridges/components/bridge-workspace/panels/psc-slab/levels-panel.ts",
+    "src/app/features/bridges/utils/ifc/psc_slab_ifc.ts",
+    "src/app/features/bridges/utils/psc-slab-draw-2d.ts",
+    "src/app/features/bridges/utils/psc-slab/cross-section/cross-section-superstructure.ts",
+    "src/app/features/bridges/utils/psc-slab/psc-slab-abutment-view.ts",
+    "src/app/features/bridges/utils/psc-slab/psc-slab-cross-section-view.ts",
+    "src/app/features/bridges/utils/psc-slab/psc-slab-dxf-export.ts",
+    "src/app/features/bridges/utils/psc-slab/psc-slab-dxf-export.ts",
+    "src/app/features/bridges/utils/psc-slab/psc-slab-elevation-view.ts",
+    "src/app/features/bridges/utils/psc-slab/psc-slab-pier-cross-section-view.ts",
+    "src/app/features/bridges/utils/psc-slab/psc-slab-pier-view.ts",
+    "src/app/features/bridges/utils/psc-slab/psc-slab-pier-x-section-view.ts"
+   ]
+  }
+ ],
+ "findings": [
+  {
+   "kind": "code_fallbacks",
+   "text": "compute() reads fields the family defaults do not hold; the code then uses its own constants: foundation.foundation_level_at_abutment \u2192 None, foundation.foundation_level_at_abutment_1 \u2192 None, foundation.foundation_level_at_abutment_2 \u2192 None, foundation.pier_foundation_levels \u2192 None, pscSlabType \u2192 None, psc_section.drawing_number \u2192 None, substructure.pier_template.capWidth \u2192 1.065, substructure.pier_template.shaftWidth \u2192 0.85, superstructure.slab.center_depth \u2192 None, superstructure.slab.depth \u2192 None",
+   "paths": [
+    "foundation.foundation_level_at_abutment",
+    "foundation.foundation_level_at_abutment_1",
+    "foundation.foundation_level_at_abutment_2",
+    "foundation.pier_foundation_levels",
+    "pscSlabType",
+    "psc_section.drawing_number",
+    "substructure.pier_template.capWidth",
+    "substructure.pier_template.shaftWidth",
+    "superstructure.slab.center_depth",
+    "superstructure.slab.depth"
+   ]
+  },
+  {
+   "kind": "duplicate_copy",
+   "text": "src/app/features/bridges/utils/psc-slab-rule-engine.ts also defines PSCSlabRuleEngine (DIFFERENT: 375 vs 383 lines); the registry uses src/app/features/bridges/utils/psc-slab/psc-slab-rule-engine.ts; still imported by src/app/features/bridges/components/bridge-workspace/panels/psc-slab/levels-panel.ts, src/app/features/bridges/utils/ifc/psc_slab_ifc.ts, src/app/features/bridges/utils/psc-slab-draw-2d.ts",
+   "evidence": [
+    "src/app/features/bridges/utils/psc-slab-rule-engine.ts",
+    "src/app/features/bridges/utils/psc-slab/psc-slab-rule-engine.ts"
+   ]
+  }
+ ],
+ "parameters": [
+  {
+   "path": "bridge_name",
+   "default": "PSC_Slab_Bridge_BG_01",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "skew_angle",
+   "default": 0,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "levels.rail_level",
+   "default": 32.232,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "levels.rail_level",
+     "levels.formation_level"
+    ],
+    "op": "??",
+    "fallback": 35.0,
+    "line": 151
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_outputs": [
+    "z_rail"
+   ],
+   "affects_views": [
+    "sec"
+   ]
+  },
+  {
+   "path": "levels.formation_level",
+   "default": 31.47,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "levels.rail_level",
+     "levels.formation_level"
+    ],
+    "op": "??",
+    "fallback": 35.0,
+    "line": 151
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_outputs": [
+    "z_formation",
+    "z_ballast_t",
+    "z_ballast_b",
+    "z_slab_t",
+    "z_slab_b",
+    "z_bearing_t",
+    "z_bearing_b",
+    "z_cap_t",
+    "z_cap_b",
+    "hflClrnce"
+   ],
+   "affects_views": [
+    "sec",
+    "plan",
+    "utw",
+    "abut",
+    "wing_wall"
+   ]
+  },
+  {
+   "path": "spans.count",
+   "default": 1,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "spans.lengths.0",
+   "default": 6.1,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "spans.arrangement.0.index",
+   "default": 1,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "spans.arrangement.0.length",
+   "default": 6.1,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_outputs": [
+    "totalLength",
+    "positions.1",
+    "maxSpan",
+    "minSlabThk"
+   ],
+   "affects_views": [
+    "sec",
+    "plan",
+    "abut"
+   ]
+  },
+  {
+   "path": "spans.arrangement.0.type",
+   "default": "span",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "spans.total_length",
+   "default": 6.1,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "superstructure.slab.deck_type",
+   "default": "railway",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored",
+   "values_that_change_outputs": [
+    "road"
+   ]
+  },
+  {
+   "path": "superstructure.slab.type",
+   "default": "solid",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "superstructure.slab.thickness",
+   "default": 0.46,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "superstructure.slab.width",
+   "default": 8.534,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "superstructure.slab.width"
+    ],
+    "op": "||",
+    "fallback": null,
+    "line": 186
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_outputs": [
+    "rdso_cap_w"
+   ],
+   "affects_views": [
+    "abut"
+   ]
+  },
+  {
+   "path": "superstructure.slab.camber",
+   "default": 0.115,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "superstructure.slab.is_continuous",
+   "default": false,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "superstructure.track.ballast_thickness",
+   "default": 0.3,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "superstructure.track.sleeper_spacing",
+   "default": 0.6,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "superstructure.track.track_gauge",
+   "default": 1.676,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "plan"
+   ]
+  },
+  {
+   "path": "superstructure.track.rail_weight_kgpm",
+   "default": 60,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "superstructure.igirder.enabled",
+   "default": false,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored",
+   "values_that_change_outputs": [
+    true
+   ]
+  },
+  {
+   "path": "superstructure.igirder.depth",
+   "default": 1295,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "superstructure.igirder.bfTop",
+   "default": 750,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "superstructure.igirder.tfTop",
+   "default": 165,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "superstructure.igirder.bfBot",
+   "default": 456,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "superstructure.igirder.tfBot",
+   "default": 165,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "superstructure.igirder.tw",
+   "default": 165,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "superstructure.igirder.nGirders",
+   "default": 4,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "superstructure.igirder.spacing",
+   "default": 1800,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "bearing.enabled",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "bearing.width",
+   "default": 0.4,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "bearing.depth",
+   "default": 0.4,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "bearing.height",
+   "default": 0.04,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "bearing.height"
+    ],
+    "op": "||",
+    "fallback": 0.065,
+    "line": 175
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_outputs": [
+    "z_bearing_b",
+    "z_cap_t",
+    "z_cap_b",
+    "bearing_h"
+   ],
+   "affects_views": [
+    "sec"
+   ]
+  },
+  {
+   "path": "bearing.type",
+   "default": "elastomeric",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "substructure.pier_template.width",
+   "default": 1.5,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "substructure.pier_template.cap_width",
+   "default": 9.75,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "substructure.pier_template.cap_height",
+   "default": 0.8,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_outputs": [
+    "z_cap_b"
+   ]
+  },
+  {
+   "path": "substructure.pier_template.height",
+   "default": 1.5,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "substructure.abutment_template.thickness",
+   "default": 1.2,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "substructure.abutment_template.backwall_height",
+   "default": 0.635,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "abutment.type",
+   "default": "rcc_approach",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "abutment.height",
+   "default": 5.608,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "sec"
+   ]
+  },
+  {
+   "path": "abutment.stem_thickness",
+   "default": 0.85,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "sec",
+    "plan",
+    "abut"
+   ]
+  },
+  {
+   "path": "abutment.dirt_wall_width",
+   "default": 0.3,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "sec",
+    "plan",
+    "abut"
+   ]
+  },
+  {
+   "path": "abutment.bed_block_thickness",
+   "default": 0.5,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "sec",
+    "abut"
+   ]
+  },
+  {
+   "path": "abutment.bedding_thickness",
+   "default": 0.04,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "sec",
+    "abut"
+   ]
+  },
+  {
+   "path": "abutment.show_stairs",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "abutment.show_stairs_left_top",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "abutment.show_stairs_left_bottom",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "abutment.show_stairs_right_top",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "abutment.show_stairs_right_bottom",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "abutment.stair_width",
+   "default": 1.2,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "sec",
+    "plan"
+   ]
+  },
+  {
+   "path": "abutment.step_width",
+   "default": 0.15,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "sec",
+    "plan"
+   ]
+  },
+  {
+   "path": "abutment.structure_offset_substructure",
+   "default": 1.8,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "sec",
+    "plan"
+   ]
+  },
+  {
+   "path": "abutment.berm_width",
+   "default": 1.5,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "abutment.profile.top_width",
+   "default": 0.95,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "abutment.profile.bottom_width",
+   "default": 4.114,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "abutment.profile.taper",
+   "default": 1,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "abutment.rcc_standard.height",
+   "default": 4,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "abutment.rcc_standard.stem_thickness",
+   "default": 0.9,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "abutment.rcc_standard.footing_left",
+   "default": 2.2,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "abutment.rcc_standard.footing_right",
+   "default": 2.295,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "abutment.rcc_standard.footing_thickness",
+   "default": 1,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "abutment.rcc_standard.pcc",
+   "default": 0.15,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "sec"
+   ]
+  },
+  {
+   "path": "abutment.rcc_standard.cap",
+   "default": 0.4,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "abutment.rcc_standard.ballast_wall",
+   "default": 0.6,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "abutment.rcc_standard.restrainer.width",
+   "default": 0.3,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "abutment.rcc_standard.restrainer.height",
+   "default": 0.3,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "abutment.approach.length",
+   "default": 3,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "abutment.approach.thickness",
+   "default": 0.3,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "abutment.approach.slope",
+   "default": 0.05,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "abutment.base_thickness",
+   "default": 0.85,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "sec"
+   ]
+  },
+  {
+   "path": "abutment.heel_length",
+   "default": 5.65,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "sec"
+   ]
+  },
+  {
+   "path": "abutment.toe_length",
+   "default": 1,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "sec",
+    "plan"
+   ]
+  },
+  {
+   "path": "abutment.wing_wall_angle",
+   "default": 45,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "abutment.wing_wall_plan_length",
+   "default": 19.1,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "abutment.pile_cap_width",
+   "default": 6,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "abutment.pile_cap_thickness",
+   "default": 1.5,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "abutment.piles.count",
+   "default": 4,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "abutment.piles.diameter",
+   "default": 1,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "abutment.piles.spacing",
+   "default": 2.5,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "abutment.piles.length",
+   "default": 10,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "foundation.type",
+   "default": "open",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "foundation.depth",
+   "default": 1.75,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "foundation.depth"
+    ],
+    "op": "??",
+    "fallback": 2.0,
+    "line": 195
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_outputs": [
+    "z_footing_t",
+    "z_footing_b"
+   ]
+  },
+  {
+   "path": "foundation.footing_width",
+   "default": 5,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "foundation.footing_length",
+   "default": 6.1,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "foundation.footing_thickness",
+   "default": 1,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "foundation.footing_thickness"
+    ],
+    "op": "??",
+    "fallback": 1.0,
+    "line": 196
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_outputs": [
+    "z_footing_t"
+   ]
+  },
+  {
+   "path": "foundation.pcc_thickness",
+   "default": 0.15,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "foundation.soil_level",
+   "default": 26.177,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_outputs": [
+    "z_soil",
+    "z_footing_t",
+    "z_footing_b"
+   ],
+   "affects_views": [
+    "borelog"
+   ]
+  },
+  {
+   "path": "foundation.pile_dia",
+   "default": 1,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "foundation.n_piles",
+   "default": 4,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "foundation.pile_length",
+   "default": 12,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "foundation.pile_cap_depth",
+   "default": 1,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "foundation.well_dia",
+   "default": 5,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "foundation.well_cap_depth",
+   "default": 2,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "foundation.bot_plug_thickness",
+   "default": 1.5,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "hydraulics.hfl",
+   "default": 28.199,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_outputs": [
+    "hflClrnce"
+   ],
+   "affects_views": [
+    "sec"
+   ]
+  },
+  {
+   "path": "hydraulics.bed_level",
+   "default": 27.337,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "hydraulics.bed_level"
+    ],
+    "op": "??",
+    "fallback": 21.0,
+    "line": 193
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "sec",
+    "plan",
+    "utw",
+    "rw",
+    "rw2",
+    "wing_wall"
+   ]
+  },
+  {
+   "path": "hydraulics.water_level",
+   "default": 27.5,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "hydraulics.scour_level",
+   "default": 26.177,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "sec",
+    "utw",
+    "rw",
+    "rw2",
+    "wing_wall"
+   ]
+  },
+  {
+   "path": "psc_section.psc_type",
+   "default": "posttensioned",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored",
+   "values_that_change_outputs": [
+    "pretensioned",
+    "psc_u_slab",
+    "uslab"
+   ]
+  },
+  {
+   "path": "psc_section.depth_support",
+   "default": 0.8,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "psc_section.depth_center",
+   "default": 0.83,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "psc_section.show_footpath",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "psc_section.footpath_width",
+   "default": 1,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "psc_section.wc_slope",
+   "default": 40,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "psc_section.bearing_seat_w",
+   "default": 0.305,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "psc_section.drain_pipe_dia",
+   "default": 50,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "psc_section.drain_pipe_spacing",
+   "default": 1000,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "psc_section.railing_angle",
+   "default": 100,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "psc_section.railing_pipe_dia",
+   "default": 25,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "psc_section.railing_pipe_spacing",
+   "default": 150,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "psc_section.wearing_coat_thick",
+   "default": 0.06,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_outputs": [
+    "z_slab_t",
+    "z_slab_b",
+    "z_bearing_t",
+    "z_bearing_b",
+    "z_cap_t",
+    "z_cap_b",
+    "hflClrnce"
+   ],
+   "affects_views": [
+    "sec",
+    "rdso_slab",
+    "abut"
+   ]
+  },
+  {
+   "path": "psc_section.ref_drawing",
+   "default": "RDSO/B-10274",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.SLAB.visible",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.SLAB.color",
+   "default": "#9ca3af",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.SLAB.role",
+   "default": "slab",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.GIRDER.visible",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.GIRDER.color",
+   "default": "#64b5f6",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.GIRDER.role",
+   "default": "girder",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.BEARING.visible",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.BEARING.color",
+   "default": "#52525b",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.BEARING.role",
+   "default": "bearing",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.ABUTMENT.visible",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.ABUTMENT.color",
+   "default": "#8b5cf6",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.ABUTMENT.role",
+   "default": "abutment",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.PIER.visible",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.PIER.color",
+   "default": "#f97316",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.PIER.role",
+   "default": "pier",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.FOUNDATION.visible",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.FOUNDATION.color",
+   "default": "#6b7280",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.FOUNDATION.role",
+   "default": "foundation",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.TRACK.visible",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.TRACK.color",
+   "default": "#ef4444",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.TRACK.role",
+   "default": "track",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.BALLAST.visible",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.BALLAST.color",
+   "default": "#4b5563",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.BALLAST.role",
+   "default": "ballast",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.SOIL.visible",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.SOIL.color",
+   "default": "#78350f",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.SOIL.role",
+   "default": "soil",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.WATER.visible",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.WATER.color",
+   "default": "#3b82f6",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "layers.WATER.role",
+   "default": "water",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "foundation.foundation_level_at_abutment",
+   "default": null,
+   "type": "unknown",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "foundation.foundation_level_at_abutment_1",
+     "foundation.foundation_level_at_abutment"
+    ],
+    "op": "??",
+    "fallback": null,
+    "line": 201
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "foundation.foundation_level_at_abutment_1",
+   "default": null,
+   "type": "unknown",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "foundation.foundation_level_at_abutment_1",
+     "foundation.foundation_level_at_abutment"
+    ],
+    "op": "??",
+    "fallback": null,
+    "line": 201
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "foundation.foundation_level_at_abutment_2",
+   "default": null,
+   "type": "unknown",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "foundation.foundation_level_at_abutment_2",
+     "foundation.foundation_level_at_abutment"
+    ],
+    "op": "??",
+    "fallback": null,
+    "line": 202
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "foundation.pier_foundation_levels",
+   "default": null,
+   "type": "unknown",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "pscSlabType",
+   "default": null,
+   "type": "unknown",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "values_that_change_outputs": [
+    "pretensioned",
+    "psc_u_slab",
+    "uslab"
+   ]
+  },
+  {
+   "path": "psc_section.drawing_number",
+   "default": null,
+   "type": "unknown",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "substructure.pier_template.capWidth",
+   "default": 1.065,
+   "type": "number",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "substructure.pier_template.capWidth"
+    ],
+    "op": "||",
+    "fallback": 1.065,
+    "line": 119
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "substructure.pier_template.shaftWidth",
+   "default": 0.85,
+   "type": "number",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "substructure.pier_template.shaftWidth"
+    ],
+    "op": "||",
+    "fallback": 0.85,
+    "line": 118
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "superstructure.slab.center_depth",
+   "default": null,
+   "type": "unknown",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "superstructure.slab.depth",
+   "default": null,
+   "type": "unknown",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  }
+ ],
+ "outputs": [
+  {
+   "name": "totalLength",
+   "value_at_defaults": 6.1,
+   "depends_on": [
+    "spans.arrangement.0.length"
+   ],
+   "partials": {
+    "spans.arrangement.0.length": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "uses positions, which was not read (declared with let (it may be reassigned))"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "nS",
+   "value_at_defaults": 1,
+   "depends_on": [],
+   "partials": {},
+   "formula": {
+    "status": "opaque",
+    "why": "uses 'spans.length', which is not a number this reader knows"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "nP",
+   "value_at_defaults": 0,
+   "depends_on": [],
+   "partials": {},
+   "formula": {
+    "status": "opaque",
+    "why": "uses nS, which was not read (uses 'spans.length', which is not a number this reader knows)"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "positions.0",
+   "value_at_defaults": 0,
+   "depends_on": [],
+   "partials": {},
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "positions.1",
+   "value_at_defaults": 6.1,
+   "depends_on": [
+    "spans.arrangement.0.length"
+   ],
+   "partials": {
+    "spans.arrangement.0.length": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "z_rail",
+   "value_at_defaults": 32.232,
+   "depends_on": [
+    "levels.rail_level"
+   ],
+   "partials": {
+    "levels.rail_level": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "formula": {
+    "expr": "z_top",
+    "line": 151,
+    "inputs": {
+     "z_top": {
+      "chain": [
+       "levels.rail_level",
+       "levels.formation_level"
+      ],
+      "op": "??",
+      "default": 35.0,
+      "line": 151
+     }
+    },
+    "display": "z_rail = z_top",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "z_formation",
+   "value_at_defaults": 31.47,
+   "depends_on": [
+    "levels.formation_level"
+   ],
+   "partials": {
+    "levels.formation_level": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "uses 'z_formation', which is not a number this reader knows"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "z_ballast_t",
+   "value_at_defaults": 31.47,
+   "depends_on": [
+    "levels.formation_level"
+   ],
+   "partials": {
+    "levels.formation_level": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "uses 'z_ballast_t', which is not a number this reader knows"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "z_ballast_b",
+   "value_at_defaults": 31.47,
+   "depends_on": [
+    "levels.formation_level"
+   ],
+   "partials": {
+    "levels.formation_level": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "uses 'z_ballast_b', which is not a number this reader knows"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "z_slab_t",
+   "value_at_defaults": 31.295,
+   "depends_on": [
+    "levels.formation_level",
+    "psc_section.wearing_coat_thick"
+   ],
+   "partials": {
+    "levels.formation_level": {
+     "slope": 1.0,
+     "affine": true
+    },
+    "psc_section.wearing_coat_thick": {
+     "slope": -1.0,
+     "affine": true
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "uses 'z_slab_t', which is not a number this reader knows"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "z_slab_b",
+   "value_at_defaults": 30.835,
+   "depends_on": [
+    "levels.formation_level",
+    "psc_section.wearing_coat_thick"
+   ],
+   "partials": {
+    "levels.formation_level": {
+     "slope": 1.0,
+     "affine": true
+    },
+    "psc_section.wearing_coat_thick": {
+     "slope": -1.0,
+     "affine": true
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "uses 'z_slab_b', which is not a number this reader knows"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "z_bearing_t",
+   "value_at_defaults": 30.835,
+   "depends_on": [
+    "levels.formation_level",
+    "psc_section.wearing_coat_thick"
+   ],
+   "partials": {
+    "levels.formation_level": {
+     "slope": 1.0,
+     "affine": true
+    },
+    "psc_section.wearing_coat_thick": {
+     "slope": -1.0,
+     "affine": true
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "uses 'z_slab_b', which is not a number this reader knows"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "z_bearing_b",
+   "value_at_defaults": 30.795,
+   "depends_on": [
+    "bearing.height",
+    "levels.formation_level",
+    "psc_section.wearing_coat_thick"
+   ],
+   "partials": {
+    "levels.formation_level": {
+     "slope": 1.0,
+     "affine": true
+    },
+    "bearing.height": {
+     "slope": -1.0,
+     "affine": true
+    },
+    "psc_section.wearing_coat_thick": {
+     "slope": -1.0,
+     "affine": true
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "uses z_bearing_t, which was not read (uses 'z_slab_b', which is not a number this reader knows)"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "z_cap_t",
+   "value_at_defaults": 30.795,
+   "depends_on": [
+    "bearing.height",
+    "levels.formation_level",
+    "psc_section.wearing_coat_thick"
+   ],
+   "partials": {
+    "levels.formation_level": {
+     "slope": 1.0,
+     "affine": true
+    },
+    "bearing.height": {
+     "slope": -1.0,
+     "affine": true
+    },
+    "psc_section.wearing_coat_thick": {
+     "slope": -1.0,
+     "affine": true
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "uses z_bearing_b, which was not read (uses z_bearing_t, which was not read (uses 'z_slab_b', which is not a number this reader knows))"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "z_cap_b",
+   "value_at_defaults": 29.995,
+   "depends_on": [
+    "bearing.height",
+    "levels.formation_level",
+    "psc_section.wearing_coat_thick",
+    "substructure.pier_template.cap_height"
+   ],
+   "partials": {
+    "levels.formation_level": {
+     "slope": 1.0,
+     "affine": true
+    },
+    "bearing.height": {
+     "slope": -1.0,
+     "affine": true
+    },
+    "substructure.pier_template.cap_height": {
+     "slope": -1.0,
+     "affine": true
+    },
+    "psc_section.wearing_coat_thick": {
+     "slope": -1.0,
+     "affine": true
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "uses z_cap_t, which was not read (uses z_bearing_b, which was not read (uses z_bearing_t, which was not read (uses 'z_slab_b', which is not a number this reader knows)))"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "z_soil",
+   "value_at_defaults": 26.177,
+   "depends_on": [
+    "foundation.soil_level"
+   ],
+   "partials": {
+    "foundation.soil_level": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "'?': not arithmetic (conditional, comparison, string or call)"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "z_footing_t",
+   "value_at_defaults": 25.427,
+   "depends_on": [
+    "foundation.depth",
+    "foundation.footing_thickness",
+    "foundation.soil_level"
+   ],
+   "partials": {
+    "foundation.depth": {
+     "slope": -1.0,
+     "affine": true
+    },
+    "foundation.footing_thickness": {
+     "slope": 1.0,
+     "affine": true
+    },
+    "foundation.soil_level": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "uses z_soil, which was not read ('?': not arithmetic (conditional, comparison, string or call))"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "z_footing_b",
+   "value_at_defaults": 24.427,
+   "depends_on": [
+    "foundation.depth",
+    "foundation.soil_level"
+   ],
+   "partials": {
+    "foundation.depth": {
+     "slope": -1.0,
+     "affine": true
+    },
+    "foundation.soil_level": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "declared with let (it may be reassigned)"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "rdso_cap_w",
+   "value_at_defaults": 9.75,
+   "depends_on": [
+    "superstructure.slab.width"
+   ],
+   "partials": {
+    "superstructure.slab.width": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "formula": {
+    "expr": "(deck_w + 2 * (0.608))",
+    "line": 188,
+    "inputs": {
+     "deck_w": {
+      "chain": [
+       "superstructure.slab.width"
+      ],
+      "op": "||",
+      "default": null,
+      "line": 186
+     }
+    },
+    "display": "rdso_cap_w = deck_w + 2 * inspection_w",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "inspection_w",
+   "value_at_defaults": 0.608,
+   "depends_on": [],
+   "partials": {},
+   "formula": {
+    "expr": "(0.608)",
+    "line": 187,
+    "inputs": {},
+    "display": "inspection_w = 0.608",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "constant_verified"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "ohe_offset",
+   "value_at_defaults": 3.638,
+   "depends_on": [],
+   "partials": {},
+   "formula": {
+    "status": "opaque",
+    "why": "uses 'BG_STANDARDS.track_gauge', which is not a number this reader knows"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "maxSpan",
+   "value_at_defaults": 6.1,
+   "depends_on": [
+    "spans.arrangement.0.length"
+   ],
+   "partials": {
+    "spans.arrangement.0.length": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "'.': not arithmetic (conditional, comparison, string or call)"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "minSlabThk",
+   "value_at_defaults": 0.244,
+   "depends_on": [
+    "spans.arrangement.0.length"
+   ],
+   "partials": {
+    "spans.arrangement.0.length": {
+     "slope": 0.04,
+     "affine": true
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "uses maxSpan, which was not read ('.': not arithmetic (conditional, comparison, string or call))"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "hflClrnce",
+   "value_at_defaults": 2.6359999999999992,
+   "depends_on": [
+    "hydraulics.hfl",
+    "levels.formation_level",
+    "psc_section.wearing_coat_thick"
+   ],
+   "partials": {
+    "levels.formation_level": {
+     "slope": 1.0,
+     "affine": true
+    },
+    "hydraulics.hfl": {
+     "slope": -1.0,
+     "affine": true
+    },
+    "psc_section.wearing_coat_thick": {
+     "slope": -1.0,
+     "affine": true
+    }
+   },
+   "formula": {
+    "status": "opaque",
+    "why": "uses 'z_slab_b', which is not a number this reader knows"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "girderDepth",
+   "value_at_defaults": 0,
+   "depends_on": [],
+   "partials": {},
+   "formula": {
+    "status": "opaque",
+    "why": "'&': not arithmetic (conditional, comparison, string or call)"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "bearing_h",
+   "value_at_defaults": 0.04,
+   "depends_on": [
+    "bearing.height"
+   ],
+   "partials": {
+    "bearing.height": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "formula": {
+    "expr": "bearing_h",
+    "line": 175,
+    "inputs": {
+     "bearing_h": {
+      "chain": [
+       "bearing.height"
+      ],
+      "op": "||",
+      "default": 0.065,
+      "line": 175
+     }
+    },
+    "display": "bearing_h = bearing_h",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "name": "masonry_plate",
+   "value_at_defaults": 0,
+   "depends_on": [],
+   "partials": {},
+   "formula": {
+    "expr": "(0)",
+    "line": 178,
+    "inputs": {},
+    "display": "masonry_plate = 0",
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "constant_verified"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  }
+ ],
+ "formulas_summary": {
+  "extracted": 5,
+  "verified": 3,
+  "constants": 2,
+  "differs": [],
+  "opaque": [
+   "girderDepth",
+   "hflClrnce",
+   "maxSpan",
+   "minSlabThk",
+   "nP",
+   "nS",
+   "ohe_offset",
+   "totalLength",
+   "z_ballast_b",
+   "z_ballast_t",
+   "z_bearing_b",
+   "z_bearing_t",
+   "z_cap_b",
+   "z_cap_t",
+   "z_footing_b",
+   "z_footing_t",
+   "z_formation",
+   "z_slab_b",
+   "z_slab_t",
+   "z_soil"
+  ]
+ },
+ "defaults": {
+  "bridge_name": "PSC_Slab_Bridge_BG_01",
+  "skew_angle": 0,
+  "levels": {
+   "rail_level": 32.232,
+   "formation_level": 31.47
+  },
+  "spans": {
+   "count": 1,
+   "lengths": [
+    6.1
+   ],
+   "arrangement": [
+    {
+     "index": 1,
+     "length": 6.1,
+     "type": "span"
+    }
+   ],
+   "total_length": 6.1
+  },
+  "superstructure": {
+   "slab": {
+    "deck_type": "railway",
+    "type": "solid",
+    "thickness": 0.46,
+    "width": 8.534,
+    "camber": 0.115,
+    "is_continuous": false
+   },
+   "track": {
+    "ballast_thickness": 0.3,
+    "sleeper_spacing": 0.6,
+    "track_gauge": 1.676,
+    "rail_weight_kgpm": 60
+   },
+   "igirder": {
+    "enabled": false,
+    "depth": 1295,
+    "bfTop": 750,
+    "tfTop": 165,
+    "bfBot": 456,
+    "tfBot": 165,
+    "tw": 165,
+    "nGirders": 4,
+    "spacing": 1800
+   }
+  },
+  "bearing": {
+   "enabled": true,
+   "width": 0.4,
+   "depth": 0.4,
+   "height": 0.04,
+   "type": "elastomeric"
+  },
+  "substructure": {
+   "pier_template": {
+    "width": 1.5,
+    "cap_width": 9.75,
+    "cap_height": 0.8,
+    "height": 1.5
+   },
+   "abutment_template": {
+    "thickness": 1.2,
+    "backwall_height": 0.635
+   }
+  },
+  "abutment": {
+   "type": "rcc_approach",
+   "height": 5.608,
+   "stem_thickness": 0.85,
+   "dirt_wall_width": 0.3,
+   "bed_block_thickness": 0.5,
+   "bedding_thickness": 0.04,
+   "show_stairs": true,
+   "show_stairs_left_top": true,
+   "show_stairs_left_bottom": true,
+   "show_stairs_right_top": true,
+   "show_stairs_right_bottom": true,
+   "stair_width": 1.2,
+   "step_width": 0.15,
+   "structure_offset_substructure": 1.8,
+   "berm_width": 1.5,
+   "profile": {
+    "top_width": 0.95,
+    "bottom_width": 4.114,
+    "taper": 1
+   },
+   "rcc_standard": {
+    "height": 4,
+    "stem_thickness": 0.9,
+    "footing_left": 2.2,
+    "footing_right": 2.295,
+    "footing_thickness": 1,
+    "pcc": 0.15,
+    "cap": 0.4,
+    "ballast_wall": 0.6,
+    "restrainer": {
+     "width": 0.3,
+     "height": 0.3
+    }
+   },
+   "approach": {
+    "length": 3,
+    "thickness": 0.3,
+    "slope": 0.05
+   },
+   "base_thickness": 0.85,
+   "heel_length": 5.65,
+   "toe_length": 1,
+   "wing_wall_angle": 45,
+   "wing_wall_plan_length": 19.1,
+   "pile_cap_width": 6,
+   "pile_cap_thickness": 1.5,
+   "piles": {
+    "count": 4,
+    "diameter": 1,
+    "spacing": 2.5,
+    "length": 10
+   }
+  },
+  "foundation": {
+   "type": "open",
+   "depth": 1.75,
+   "footing_width": 5,
+   "footing_length": 6.1,
+   "footing_thickness": 1,
+   "pcc_thickness": 0.15,
+   "soil_level": 26.177,
+   "pile_dia": 1,
+   "n_piles": 4,
+   "pile_length": 12,
+   "pile_cap_depth": 1,
+   "well_dia": 5,
+   "well_cap_depth": 2,
+   "bot_plug_thickness": 1.5
+  },
+  "hydraulics": {
+   "hfl": 28.199,
+   "bed_level": 27.337,
+   "water_level": 27.5,
+   "scour_level": 26.177
+  },
+  "psc_section": {
+   "psc_type": "posttensioned",
+   "depth_support": 0.8,
+   "depth_center": 0.83,
+   "show_footpath": true,
+   "footpath_width": 1,
+   "wc_slope": 40,
+   "bearing_seat_w": 0.305,
+   "drain_pipe_dia": 50,
+   "drain_pipe_spacing": 1000,
+   "railing_angle": 100,
+   "railing_pipe_dia": 25,
+   "railing_pipe_spacing": 150,
+   "wearing_coat_thick": 0.06,
+   "ref_drawing": "RDSO/B-10274"
+  },
+  "layers": {
+   "SLAB": {
+    "visible": true,
+    "color": "#9ca3af",
+    "role": "slab"
+   },
+   "GIRDER": {
+    "visible": true,
+    "color": "#64b5f6",
+    "role": "girder"
+   },
+   "BEARING": {
+    "visible": true,
+    "color": "#52525b",
+    "role": "bearing"
+   },
+   "ABUTMENT": {
+    "visible": true,
+    "color": "#8b5cf6",
+    "role": "abutment"
+   },
+   "PIER": {
+    "visible": true,
+    "color": "#f97316",
+    "role": "pier"
+   },
+   "FOUNDATION": {
+    "visible": true,
+    "color": "#6b7280",
+    "role": "foundation"
+   },
+   "TRACK": {
+    "visible": true,
+    "color": "#ef4444",
+    "role": "track"
+   },
+   "BALLAST": {
+    "visible": true,
+    "color": "#4b5563",
+    "role": "ballast"
+   },
+   "SOIL": {
+    "visible": true,
+    "color": "#78350f",
+    "role": "soil"
+   },
+   "WATER": {
+    "visible": true,
+    "color": "#3b82f6",
+    "role": "water"
+   }
+  }
+ },
+ "characterization": {
+  "samples_per_formula": 16,
+  "defaults_digest": "a20512f7c4bf7013e205d0a5a8f5682f94f2fa2748295d0afed1afa02571aed0",
+  "derived_digest": "a6b4d1ec2f3c6aa8b06558547184206f024b47c070c66c363374324fef3ed9a0"
+ }
+}
