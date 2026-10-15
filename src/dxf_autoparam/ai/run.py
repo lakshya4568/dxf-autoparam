@@ -35,6 +35,7 @@ from ..topology import of as topology_of
 from ..viewimg import box_around
 from . import agent as A
 from . import domain, library, production
+from . import understanding_tools as UT
 from .context import SheetScope
 from .loop import AgentLoop, Budget
 from .narrate import STAGE_OF
@@ -165,8 +166,10 @@ UNIFIED_SYSTEM = SESSION + A.AGENT_SYSTEM.replace("Aim to finish in about 10 tur
 
 
 def unified_tools(pack: dict | None = None):
-    """The session's tools; the production rule engines' tools only when the pack on declares production knowledge."""
-    return A.tools(extra=SHEET_TOOL_SPECS + production.tool_specs(pack), pack=pack)
+    """The session's tools: the unit tools, the sheet tools, the understanding tools (the whole drawing, views, components, annotations,
+    layers, duplicates, impact and behaviour checks, the agent's checklist and facts on record); the production rule engines' tools only
+    when the pack on declares production knowledge."""
+    return A.tools(extra=SHEET_TOOL_SPECS + UT.UNDERSTANDING_TOOL_SPECS + production.tool_specs(pack), pack=pack)
 
 
 def unified_system(pack: dict | None = None) -> str:
@@ -243,6 +246,10 @@ class SheetBench:
         # the sheet with their guards — one session for the whole run
         pk = production.production_for(run.pack)
         self.prod = production.ProductionSession(pk, self) if pk is not None else None
+        # the whole drawing, views, components, annotations, layers, duplicates, impact / behaviour checks, and the agent's working notes
+        self.understanding = UT.UnderstandingSession(self)
+        self._reads: dict[tuple, dict] = {}  # (read tool, its arguments) → the turn its result was last sent, and a digest of it
+        self.reads_deduped = 0
 
     # ── units ───────────────────────────────────────────────────────────────────
 
@@ -322,7 +329,7 @@ class SheetBench:
     # ── the loop's protocol ──────────────────────────────────────────────────────
 
     def is_read(self, name: str) -> bool:
-        return name in A.READ_TOOLS or name in SHEET_READ or name in production.PRODUCTION_READ
+        return name in A.READ_TOOLS or name in SHEET_READ or name in production.PRODUCTION_READ or name in UT.UNDERSTANDING_READ
 
     def single_of(self, name: str):
         return A.BATCH.get(name)
@@ -334,7 +341,26 @@ class SheetBench:
         return self.active
 
     def read(self, name: str, a: dict):
+        """A read tool's result — or, when the very same call gave the very same result a few turns ago and that result is still in the
+        conversation, a short marker pointing at it: an unchanged result is not paid for twice."""
         a = {k: v for k, v in a.items() if k != "why"}
+        res = self._read(name, a)
+        if not isinstance(res, dict) or "_image" in res or res.get("error"):
+            return res
+        key = (name, json.dumps(a, sort_keys=True, default=str))
+        digest = hashlib.sha256(json.dumps(res, sort_keys=True, default=str).encode()).hexdigest()[:20]
+        loop = getattr(self.run, "loop", None)
+        turn = loop.state.turns if loop is not None else 0
+        window = max(1, (loop.trim_keep if loop is not None else 8) - 1)  # a result older than this was cut to its verdict: send it again
+        prev = self._reads.get(key)
+        if prev and prev["digest"] == digest and 0 < turn - prev["turn"] <= window:
+            self.reads_deduped += 1  # the full result stays where it was sent: the pointer names that turn
+            return {"unchanged": True, "same_as": f"{name} at turn {prev['turn']}", "revision": self.sm.revision,
+                    "note": "identical to that result, which is still above in this conversation (call again after the sheet changes)"}
+        self._reads[key] = {"turn": turn, "digest": digest}  # sent in full now
+        return res
+
+    def _read(self, name: str, a: dict):
         if name in SHEET_READ:
             return getattr(self, name)(**a)
         if name in library.LIBRARY_TOOLS:  # the library needs no open unit
@@ -345,6 +371,8 @@ class SheetBench:
             if self.prod is None:
                 return {"error": "no production rule engines are on for this run"}
             return self.prod.call(name, a)
+        if name in UT.UNDERSTANDING_READ:
+            return self.understanding.call(name, a)
         return self.wb.read(name, a)
 
     def value_of(self, name: str, unit: str | None = None) -> tuple[float, str] | None:
@@ -361,6 +389,10 @@ class SheetBench:
     def write(self, name: str, a: dict) -> tuple[str, str]:
         if name in SHEET_WRITE:
             return getattr(self, "_" + name)(a)
+        if name in UT.UNDERSTANDING_WRITE:
+            item, note = self.understanding.write(name, a)
+            self.sheet_results[item] = self.understanding.verdict(item)
+            return item, note
         if name in production.PRODUCTION_WRITE:
             return self._bind_production(a)
         if name == "account_clause":
@@ -414,8 +446,8 @@ class SheetBench:
         return self.wb.verdict(item, kind) if self.active is not None else {"ok": True}
 
     def decorate(self, name: str, item: str, v: dict) -> None:
-        if name in SHEET_WRITE or name in production.PRODUCTION_WRITE or item.startswith("feature:"):  # a sheet tool keeps its own refusals, item by item
-            return
+        if name in SHEET_WRITE or name in production.PRODUCTION_WRITE or name in UT.UNDERSTANDING_WRITE or item.startswith("feature:"):
+            return  # a sheet tool keeps its own refusals, item by item
         if self.active is not None:
             self.wb.decorate(name, item, v)
         key = (self.active, item)
@@ -1239,8 +1271,10 @@ class Run:
         self.emit({"kind": "stage", "stage": "interpreting", "text": "Ready: the model reads the instruction"})
         task = self._first_message(bench)
         history = [types.Content(role="user", parts=[types.Part.from_text(text=task)])]
+        compactor = None if self.options.get("full_history") else self._working_state
         self.loop = AgentLoop(model, unified_system(self.pack), unified_tools(self.pack), parts, key, history, bench, self.budget, self._on_event, self._stop.is_set,
-                              label_prefix="turn")
+                              label_prefix="turn", compactor=compactor, keep_turns=int(self.options.get("keep_turns") or 6),
+                              compact_every=int(self.options.get("compact_every") or 6))
 
     def _prefix(self, bench: SheetBench):
         """The cached start of every request: the pictures (the whole sheet; the open view as drawn with its set-out lines, and its regions;
@@ -1271,10 +1305,29 @@ class Run:
             wb = bench.open(uid)
             ov, _ctx, _x = A.unit_overview(sm.path, wb.region, wb, wb.drawing, wb.analysis, wb.scope, self._context_extra(), wb.pack)
         parts = [types.Part.from_bytes(data=pic["png"], mime_type="image/png") for pic in pics]
-        text = ("OVERVIEW:\n" + json.dumps(ov, separators=(",", ":"), default=str)) if ov is not None else "No unit is open yet: inspect_sheet, then open_unit."
+        with self.host.lock:  # the whole drawing, once, in the cached prefix: views, layers, notes, levels, links, what is parametrized
+            whole = UT.drawing_overview(sm)
+        whole = {k: v for k, v in whole.items() if k not in ("checklist", "learned", "values_changed")}  # those are live: the working state carries them
+        text = ("DRAWING OVERVIEW (the whole sheet, revision " + str(sm.revision) + "; ask drawing_overview again only if the revision changed):\n"
+                + json.dumps(whole, separators=(",", ":"), default=str) + "\n\n")
+        text += ("OVERVIEW:\n" + json.dumps(ov, separators=(",", ":"), default=str)) if ov is not None else "No unit is open yet: inspect_view / open_unit."
         parts.append(types.Part.from_text(text=text))
         key = "|".join(["unified", unified_system(self.pack), *(f"{p['id']}:{p['meta']['fingerprint']}:{p['meta']['revision']}" for p in pics), text])
         return parts, hashlib.sha256(key.encode()).hexdigest()[:24]
+
+    def _working_state(self, rounds: int) -> str:
+        """What replaces the older turns: the person's words, the checklist, the facts on record, the decisions, the bench's status."""
+        b = self.bench
+        with self.host.lock:
+            st = b.status()
+            st.pop("instruction", None)
+            pending = b.person_questions()
+            text = UT.working_state(self.host.sm, st, self.instruction, self.scope, self.loop.compacted if self.loop else 0)
+        if self.answers_text:
+            text += "\nTHE PERSON'S ANSWERS SO FAR: " + " | ".join(a[:200] for a in self.answers_text[-6:])
+        if pending:
+            text += "\nOPEN QUESTIONS: " + " | ".join(q["text"][:160] for q in pending[:6])
+        return text + "\nContinue from here: what is done is on the sheet; do not redo it."
 
     def _context_extra(self) -> dict:
         return {"run": {"id": self.id, "scope": self.scope, "pictures": [{"id": k, **v} for k, v in self.images.items()]}}

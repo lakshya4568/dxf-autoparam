@@ -153,6 +153,45 @@ def trim(history: list, keep: int = 8) -> None:
         history[k] = types.Content(role="user", parts=parts)
 
 
+def compact(history: list, state_text: str, keep: int = 6) -> int:
+    """Older turns → ONE plain-text WORKING STATE message (built from the sheet and the bench, never from the model's prose), followed by the
+    last `keep` exchanges verbatim. Returns how many model turns were folded in.
+
+    Why this is safe with Gemini 3: thought signatures are validated strictly only for the CURRENT turn — every model function call and
+    function response since the last plain user TEXT message. The working state is such a message, so what came before it is no longer
+    part of the current turn; the exchanges kept after it carry their own signatures unchanged."""
+    from google.genai import types
+
+    model_idx = [k for k, c in enumerate(history) if c.role == "model"]
+    if len(model_idx) <= keep:
+        return 0
+    cut = model_idx[-keep]
+    folded = sum(1 for k in model_idx if k < cut)
+    history[:] = [types.Content(role="user", parts=[types.Part.from_text(text=state_text)]), *history[cut:]]
+    return folded
+
+
+def history_size(history: list) -> dict:
+    """What a request re-sends besides its cached prefix: characters of text and function payloads, pictures — measured on the contents."""
+    chars, pictures, turns = 0, 0, 0
+    for c in history:
+        if c.role == "model":
+            turns += 1
+        for p in c.parts or []:
+            if getattr(p, "text", None):
+                chars += len(p.text)
+            fc = getattr(p, "function_call", None)
+            if fc is not None:
+                chars += len(json.dumps(dict(fc.args or {}), default=str)) + len(fc.name or "")
+            fr = getattr(p, "function_response", None)
+            if fr is not None:
+                chars += len(json.dumps(fr.response or {}, default=str))
+                pictures += len(getattr(fr, "parts", None) or [])
+            if getattr(p, "inline_data", None) is not None:
+                pictures += 1
+    return {"chars": chars, "pictures": pictures, "model_turns": turns, "contents": len(history)}
+
+
 def pack(call, res) -> object:
     """The function response for one call. A result may carry a picture (`_image`: {"png": bytes, …}) — sent to the model as an
     image part of the response, so the model sees it next to the metadata that says what it shows."""
@@ -169,7 +208,8 @@ class AgentLoop:
     """One model + one bench (anything with the small protocol below), with a conversation that survives pauses."""
 
     def __init__(self, gem, system: str, tools, prefix_parts: list, prefix_key: str, history: list, bench, budget: Budget, emit=None, stop=None,
-                 thinking: str | None = None, step_thinking: str | None = None, label_prefix: str = "step"):
+                 thinking: str | None = None, step_thinking: str | None = None, label_prefix: str = "step", compactor=None,
+                 keep_turns: int = 6, compact_every: int = 6):
         self.gem, self.system, self.tools = gem, system, tools
         self.prefix_parts, self.prefix_key, self.history = prefix_parts, prefix_key, history
         self.bench, self.budget = bench, budget
@@ -180,6 +220,15 @@ class AgentLoop:
         self.step_thinking = step_thinking or os.environ.get("VERTEX_AGENT_STEP_THINKING") or self.plan_thinking
         self.label_prefix = label_prefix
         self.state = LoopState()
+        # Bounded context: once the conversation holds keep_turns + compact_every model turns, the older ones are folded into one working
+        # state (compactor(folded so far) → its text). None keeps the whole conversation (trimmed tool results, last pictures only).
+        self.compactor = compactor
+        self.keep_turns, self.compact_every = keep_turns, compact_every
+        # tool results kept in full for this many turns (older ones are cut to their verdict; the model asks again if it needs them):
+        # with a working state carrying what matters, the recent few are enough
+        self.trim_keep = max(2, keep_turns // 2 + 1) if compactor is not None else 8
+        self.compacted = 0
+        self.sizes: list[dict] = []  # what each request re-sent besides the cached prefix (measured on the contents)
 
     # ── conversation ────────────────────────────────────────────────────────────
 
@@ -230,6 +279,7 @@ class AgentLoop:
                 s.chunk_turns += 1
                 label = f"{self.label_prefix} {s.turns}"
                 self.emit({"kind": "turn", "turn": s.turns, "label": label, "turns_left": self.turns_left()})
+                self.sizes.append({"turn": s.turns, **history_size(self.history)})
                 try:
                     content, usage = self.gem.step(self.system, self.tools, self.prefix_parts, self.prefix_key, self.history, label,
                                                    self.plan_thinking if s.turns == 1 else self.step_thinking,
@@ -252,8 +302,14 @@ class AgentLoop:
                 from google.genai import types
 
                 self.history.append(types.Content(role="user", parts=parts))
-                trim(self.history, keep=8)
+                trim(self.history, keep=self.trim_keep)
                 keep_pictures(self.history, keep=3)
+                if self.compactor is not None and sum(1 for c in self.history if c.role == "model") >= self.keep_turns + self.compact_every:
+                    folded = compact(self.history, self.compactor(self.compacted + 1), self.keep_turns)
+                    if folded:
+                        self.compacted += folded
+                        self.emit({"kind": "note", "text": f"context compacted: {folded} older turn(s) folded into the working state "
+                                                           f"(the conversation keeps the last {self.keep_turns})"})
                 if done:
                     s.done = True
                     return "finished"

@@ -19,6 +19,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import math
 import re
 import time
 from pathlib import Path
@@ -159,14 +160,23 @@ TOOL_SPECS = [
     ("define_parts", "Create or replace parts (component tree nodes) made of regions and / or entities — all of them in one call.",
      _batch({"name": S, "type": S, "level": _enum("assembly", "component", "subcomponent"), "parent": S, "regions": LIST, "entities": LIST,
              "existing": B, "parametrize": B, "evidence": LIST, "description": S}, ["name", "type"])),
-    ("remove", "Remove things, as many as you like in one call: parts, parameters, constraints (by description), your formulas (by line).",
-     _schema({"parts": LIST, "parameters": LIST, "constraints": LIST, "formulas": LIST})),
+    ("remove", "Remove things, as many as you like in one call: parts, parameters, constraints (by description), your formulas (by line), transforms.",
+     _schema({"parts": LIST, "parameters": LIST, "constraints": LIST, "formulas": LIST, "transforms": LIST})),
     ("define_parameters", ("Create or replace design inputs, as many as you like in one call: each names WHERE the size is — a "
      "candidate (c…) with the occurrences meant (g… ids, or ['all'] when every equal size is one input; required when it has "
      "several), OR the two lines it spans (from_line, to_line), OR a dimension (annotation id) tied to one pair of lines. "
-     "The engine fills in the values and says what each drives."),
+     "An ANGLE (kind: angle, degrees) is measured from a drawn straight line (angle_of: its id) or read from a note that states it "
+     "(stated_by: the note's id) — never typed in. The engine fills in the values and says what each drives."),
      _batch({"name": S, "label": S, "part": S, "candidate": S, "occurrences": LIST, "from_line": S, "to_line": S, "dimension": S,
+             "kind": _enum("length", "angle"), "angle_of": S, "stated_by": S,
              "importance": _enum("primary", "secondary", "detail"), "recommended": B, "evidence": LIST}, ["name", "part"])),
+    ("define_transforms", ("Parts that turn, move or scale as a whole when a value changes — all of them in one call: kind rotate (pivot "
+     "[x, y] and angle in degrees), translate (dx, dy in mm) or scale (pivot, sx, sy: a ratio; sx ≠ sy only with nonuniform: true). "
+     "Each amount is a formula of the drawing's values and set-out lines (sind / cosd / atan2d … allowed); the part moves by the change of "
+     "that formula from its drawn value, so the drawing is reproduced exactly at the drawn values. A note whose leader is on the part "
+     "goes with it. One transform per entity; the engine checks kinds of quantity (a pivot is a length, an angle is an angle)."),
+     _batch({"name": S, "kind": _enum("rotate", "translate", "scale"), "part": S, "entities": LIST, "pivot": LIST, "angle": S, "dx": S, "dy": S,
+             "sx": S, "sy": S, "nonuniform": B, "why": S}, ["name", "kind"])),
     ("set_levels", "Name the horizontal lines stated levels are drawn at (all of them in one call).",
      _batch({"line": S, "name": S, "role": _enum("site_input", "check_only", "derived")}, ["line", "name", "role"])),
     ("set_formulas", ("Set lines out from others: each an expression in mm over line ids and parameter names, e.g. "
@@ -220,6 +230,7 @@ READ_TOOLS = {"inspect_regions", "inspect_lines", "find_values", "what_moves", "
 BEHAVIOUR_EDITS = ("set_formula", "add_constraint", "state_behaviour", "set_relation")  # wait for the plan when a change was asked
 # a batch tool applies the single edit to each of its items; each item gets its own verdict
 BATCH = {"define_parts": "define_part", "define_parameters": "define_parameter", "set_formulas": "set_formula", "set_levels": "set_level",
+         "define_transforms": "define_transform",
          "add_constraints": "add_constraint", "state_behaviours": "state_behaviour", "account_instruction": "account_clause"}
 
 
@@ -698,7 +709,21 @@ class Workbench:
             A["relations"] = [r for r in A["relations"] if r.get("name") not in gone["parameters"]]
             A["constraints"] = [c for c in A["constraints"] if c.get("description") not in gone["constraints"]]
             A["datum_formulas"] = [f for f in A["datum_formulas"] if f.get("datum") not in gone["formulas"]]
-            return "removed", f"removed {sum(len(v) for v in gone.values())} item(s)"
+            gone_t = {pascal(n) for n in a.get("transforms") or []}
+            if gone_t and A.get("transforms"):
+                A["transforms"] = [t for t in A["transforms"] if t.get("name") not in gone_t]
+            return "removed", f"removed {sum(len(v) for v in gone.values()) + len(gone_t)} item(s)"
+        if name == "define_parameter" and (a.get("kind") == "angle" or a.get("angle_of") or a.get("stated_by")):
+            return self._define_angle(a)
+        if name == "define_transform":
+            tname = pascal(a["name"])
+            row = {k: a[k] for k in ("kind", "part", "entities", "pivot", "angle", "dx", "dy", "sx", "sy", "nonuniform", "why") if a.get(k) not in (None, "", [])}
+            if row.get("part"):
+                row["part"] = pascal(row["part"])
+            self.prechecked.pop(tname, None)
+            self.answer.setdefault("transforms", [])
+            self._upsert("transforms", "name", tname, {"name": tname, **row})
+            return tname, ""
         if name == "define_parameter":
             a = {**a, "name": pascal(a["name"]), "part": pascal(a.get("part", "")) if a.get("part") else ""}
             self.prechecked.pop(a["name"], None)
@@ -778,6 +803,38 @@ class Workbench:
             self._pause = True
             return "question", ""
         raise KeyError(name)
+
+    def _define_angle(self, a: dict) -> tuple[str, str]:
+        """An angle: measured here from the line it names (or the number the note it names states) — the engine checks it again."""
+        name = pascal(a["name"])
+        self.prechecked.pop(name, None)
+        ref = a.get("angle_of") or a.get("stated_by")
+        k = entity_index(ref or "")
+        items = self.drawing.items
+        if k is None or not 0 <= k < len(items) or entity_id(items[k]) != ref:
+            self.prechecked[name] = _failure("V1", name, [], "a straight line (angle_of) or a note that states the angle (stated_by)", f"{ref!r}",
+                                             "an angle is measured from the drawing, never typed in", "agent", "name the line or the note by its id")
+            return name, ""
+        it = items[k]
+        if a.get("angle_of"):
+            if len(it.pts) < 2:
+                self.prechecked[name] = _failure("V1", name, [], "a straight line", it.dxftype, "an angle is the direction of a straight line", "agent", "name a line")
+                return name, ""
+            (x1, y1), (x2, y2) = it.pts[0], it.pts[1]
+            value = math.degrees(math.atan2(y2 - y1, x2 - x1)) % 180.0
+            note = f"{name} = {value:.3f}° (the direction of {ref})"
+        else:
+            nums = [float(x) for x in re.findall(r"(?<![\d.])(\d+(?:\.\d+)?)(?![\d.])", it.text or "")]
+            if not nums:
+                self.prechecked[name] = _failure("V2", name, [], "a note with the angle in it", repr((it.text or "")[:40]), "no number in the note", "agent", "name the note that states it")
+                return name, ""
+            value = nums[0]
+            note = f"{name} = {value:g}° (stated by {ref})"
+        row = {"name": name, "label": a.get("label") or name, "component": pascal(a.get("part", "")) if a.get("part") else "", "kind": "angle",
+               "unit": "deg", "value": round(value, 6), "evidence": a.get("evidence", [])[:6], "confidence": 0.9}
+        row["angle_of" if a.get("angle_of") else "stated_by"] = ref
+        self._upsert("parameters", "name", name, row)
+        return name, note
 
     def _propose(self, a: dict) -> tuple[str, str]:
         if a.get("operation"):
