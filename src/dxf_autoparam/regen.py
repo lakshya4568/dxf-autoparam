@@ -17,6 +17,7 @@ import re
 from dataclasses import dataclass, field
 
 from .ir import Item, Model, Role
+from .program import ExprError
 
 
 @dataclass
@@ -27,6 +28,7 @@ class Regenerated:
     radius: dict[int, float]
     texts: dict[int, str]
     issues: list[str] = field(default_factory=list)
+    turns: dict[int, float] = field(default_factory=dict)  # degrees an entity was turned by a component transform (texts, arcs)
 
     @property
     def ok(self) -> bool:
@@ -159,6 +161,74 @@ def _name(it: Item) -> str:
     return f"{it.dxftype} {it.src or it.handle} ({it.layer})"
 
 
+def apply_transforms(prog, pts: dict[int, list], vals: dict[str, float], datum: dict[str, float], radius: dict[int, float] | None = None) -> tuple[dict[int, float], list[str]]:
+    """The program's component transforms, applied after the set-out: each rotates / translates / scales its entities
+    about its pivot by (its value now − its value as drawn) — exact at the defaults, closed form. Annotations carried by
+    a transformed part (a leader on it, a label on it) move with the point they hang on, keeping their reading direction.
+    Returns (turns in degrees per entity, issues)."""
+    if not getattr(prog, "transforms", None):
+        return {}, []
+    from .program import evaluate
+
+    an = prog.analysis
+    u = an.drawing.units_mm
+    d0 = prog.datum_values()
+    scope0 = {**prog.defaults(), **{d: v * u for d, v in d0.items()}}
+    scope1 = {**vals, **{d: v * u for d, v in datum.items()}}
+    turns: dict[int, float] = {}
+    issues: list[str] = []
+    for t in prog.transforms:
+        try:
+            kind = t["kind"]
+            if kind == "rotate":
+                a = math.radians(evaluate(t["angle"], scope1) - evaluate(t["angle"], scope0))
+                px, py = evaluate(t["pivot"][0], scope1) / u, evaluate(t["pivot"][1], scope1) / u
+                c, s = math.cos(a), math.sin(a)
+
+                def fn(p, px=px, py=py, c=c, s=s):
+                    return (px + c * (p[0] - px) - s * (p[1] - py), py + s * (p[0] - px) + c * (p[1] - py))
+
+                turn = math.degrees(a)
+            elif kind == "translate":
+                dx = (evaluate(t["dx"], scope1) - evaluate(t["dx"], scope0)) / u
+                dy = (evaluate(t["dy"], scope1) - evaluate(t["dy"], scope0)) / u
+
+                def fn(p, dx=dx, dy=dy):
+                    return (p[0] + dx, p[1] + dy)
+
+                turn = 0.0
+            elif kind == "scale":
+                sx = evaluate(t["sx"], scope1) / evaluate(t["sx"], scope0)
+                sy = evaluate(t["sy"], scope1) / evaluate(t["sy"], scope0)
+                px, py = evaluate(t["pivot"][0], scope1) / u, evaluate(t["pivot"][1], scope1) / u
+
+                def fn(p, sx=sx, sy=sy, px=px, py=py):
+                    return (px + sx * (p[0] - px), py + sy * (p[1] - py))
+
+                turn = 0.0
+                if radius is not None and abs(sx - sy) <= 1e-12:
+                    for i in t["entities"]:
+                        if i in radius:
+                            radius[i] *= sx
+            else:
+                issues.append(f"transform {t.get('name')}: unknown kind {kind}")
+                continue
+        except (ExprError, ZeroDivisionError, KeyError) as exc:
+            issues.append(f"transform {t.get('name')}: {exc}")
+            continue
+        for i in t["entities"]:
+            if i in pts:
+                pts[i] = [fn(p) for p in pts[i]]
+                if turn:
+                    turns[i] = turns.get(i, 0.0) + turn
+        for i, (ax, ay) in (t.get("carried") or {}).items():
+            i = int(i)
+            if i in pts:
+                nx, ny = fn((ax, ay))
+                pts[i] = [(p[0] + nx - ax, p[1] + ny - ay) for p in pts[i]]
+    return turns, issues
+
+
 def regenerate_program(prog, values: dict[str, float] | None = None, check: bool = True) -> Regenerated:
     """Regenerate from a parametric Program (formulas in mm, levels in m)."""
     vals = prog.defaults()
@@ -171,6 +241,7 @@ def regenerate_program(prog, values: dict[str, float] | None = None, check: bool
     datum = prog.datum_values(vals)
     pts = place(an, datum)
     radius = prog.radii(vals)
+    turns, t_issues = apply_transforms(prog, pts, vals, datum, radius)
     u = an.drawing.units_mm
     texts: dict[int, str] = {}
     for idx, links in prog.text_links.items():
@@ -193,9 +264,9 @@ def regenerate_program(prog, values: dict[str, float] | None = None, check: bool
             new = f"{v:.{dec}f}" if dec else f"{round(v)}"
             text = re.sub(rf"(?<![\d.]){re.escape(tok)}(?![\d.])", new, text, count=1)
         texts[idx] = text
-    out = Regenerated(values=vals, datum=datum, pts=pts, radius=radius, texts=texts)
+    out = Regenerated(values=vals, datum=datum, pts=pts, radius=radius, texts=texts, turns=turns)
     if check:
-        out.issues = _check_program(prog, out)
+        out.issues = t_issues + _check_program(prog, out)
     return out
 
 
@@ -217,8 +288,13 @@ def check_change(prog, values: dict[str, float], base_datum: dict[str, float], u
     an = prog.analysis
     moved = {i for d, v in datum.items() if abs(v - base_datum.get(d, v)) > 1e-12 for i in users.get(d, ())}
     moved |= set(prog.radius)
+    for t in getattr(prog, "transforms", ()):  # a transform moves its entities without moving any set-out line
+        moved |= set(t["entities"])
     sub = [an.drawing.items[i] for i in sorted(moved) if an.drawing.items[i].role != Role.FIXED and an.drawing.items[i].anchor is None]
-    r = Regenerated(values=vals, datum=datum, pts=place(an, datum, sub), radius=prog.radii(values), texts={})
+    pts = place(an, datum, sub)
+    radius = prog.radii(values)
+    apply_transforms(prog, pts, vals, datum, radius)
+    r = Regenerated(values=vals, datum=datum, pts=pts, radius=radius, texts={})
 
     class _M:
         analysis = an

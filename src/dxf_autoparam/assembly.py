@@ -32,7 +32,7 @@ from dataclasses import dataclass, field
 from itertools import pairwise
 
 from .intent import Part, descendants
-from .program import ExprError, Program, _num, names_in
+from .program import CONSTS, ExprError, Program, _num, names_in
 from .topology import of
 
 POLICIES = ("centered", "start_fixed", "end_fixed", "as_set_out")
@@ -61,6 +61,8 @@ def linear(expr: str) -> tuple[dict[str, float], float] | None:
         if isinstance(n, ast.Constant) and isinstance(n.value, (int, float)) and not isinstance(n.value, bool):
             return {}, float(n.value)
         if isinstance(n, ast.Name):
+            if n.id in CONSTS:
+                return {}, float(CONSTS[n.id])
             return {n.id: 1.0}, 0.0
         if isinstance(n, ast.UnaryOp) and isinstance(n.op, (ast.USub, ast.UAdd)):
             r = lin(n.operand)

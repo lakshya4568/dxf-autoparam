@@ -41,11 +41,16 @@ from .intent import (
 from .ir import Analysis
 from .plan import compile_plans, prepare_plans, verify_plan
 from .program import (
+    ANGLE,
+    LENGTH,
+    RATIO,
     Component,
     ExprError,
     Param,
     Program,
     Relation,
+    check_dims,
+    dim_of_unit,
     evaluate,
     from_model,
     names_in,
@@ -152,6 +157,7 @@ def apply(an: Analysis, answer: dict, base_decisions: Decisions | None = None, h
     loose: list[dict] = []
     claimed: dict[str, str] = {}  # occurrence → the parameter that drives it
     subset_pairs: dict[str, list[tuple[str, str, str | None]]] = {}
+    angle_params: list[dict] = []
     for p in answer.get("parameters", []):
         name = p.get("name", "")
         if not PASCAL.match(name) or GENERIC.match(name):
@@ -159,6 +165,10 @@ def apply(an: Analysis, answer: dict, base_decisions: Decisions | None = None, h
             continue
         if name in used_names:
             rep.bad("parameter", "V3", name, f"{name} is defined twice")
+            continue
+        if p.get("kind") == "angle" or p.get("unit") in ("deg", "°"):
+            angle_params.append(p)  # measured from a line's direction, or stated by a note (below)
+            used_names.add(name)
             continue
         cid = p.get("candidate")
         if cid:
@@ -258,6 +268,23 @@ def apply(an: Analysis, answer: dict, base_decisions: Decisions | None = None, h
         used_names.add(name)
         rep.ok("parameter")
 
+    # ── angle parameters (V1, V2): the direction of a drawn line, or the number a note states ─────────
+    for p in angle_params:
+        _angle_param(an, prog, p, rep)
+    names_t: set[str] = set()
+    for t in answer.get("transforms", []):  # what the transforms use is used: an angle that turns a part drives it
+        for key in ("angle", "dx", "dy", "sx", "sy"):
+            try:
+                names_t |= names_in(str(t.get(key) or "0"))
+            except ExprError:
+                pass
+        for e in t.get("pivot") or []:
+            try:
+                names_t |= names_in(str(e or "0"))
+            except ExprError:
+                pass
+    prog._transform_names = names_t
+
     # ── datum formulas (V1, V4, V5) ───────────────────────────────────────────────
     defaults_mm = {d: datums[d].value * u for d in datums}
     for f in answer.get("datum_formulas", []):
@@ -273,6 +300,11 @@ def apply(an: Analysis, answer: dict, base_decisions: Decisions | None = None, h
         unknown = [n for n in names if n not in prog.formulas and n not in prog.params]
         if unknown:
             rep.bad("formula", "V4", d, f"{d} = {expr}: unknown {', '.join(unknown)}")
+            continue
+        try:  # a set-out line is a length: a formula mixing kinds of quantity is refused before it is evaluated
+            check_dims(expr, dims_of(prog), want=LENGTH)
+        except ExprError as exc:
+            rep.bad("formula", "V4", d, f"{d} = {expr}: {exc}")
             continue
         old = prog.formulas[d]
         prog.formulas[d] = expr
@@ -374,6 +406,13 @@ def apply(an: Analysis, answer: dict, base_decisions: Decisions | None = None, h
                 rep.warn("V7", name, f"{name} holds on this drawing but the model does not keep it when its inputs change")
         prog.relations.insert(0, rel)
         rep.ok("relation")
+
+    # ── component transforms (V17): a part rotated / moved / scaled about a pivot, by formulas ──────────
+    for t in answer.get("transforms", []):
+        row = _transform(an, prog, parts, t, rep)
+        if row is not None:
+            prog.transforms.append(row)
+            rep.ok("transform")
 
     # ── components (V1): the parts tree ───────────────────────────────────────────
     for c in answer.get("components", []):
@@ -500,7 +539,7 @@ def _retire_undriven(prog: Program, rep: Report, dims: dict, cannot: dict, why: 
     """A named value no line is set out from: a size other inputs fix at both ends is a RESULT — reported as a
     worked-out quantity measured between its lines (notes follow it), with the reason; it is never silently lost."""
     an = prog.analysis
-    referenced = set()
+    referenced = set(getattr(prog, "_transform_names", set()))  # names a component transform uses (an angle) drive it
     for e in [*prog.formulas.values(), *prog.radius.values()]:
         referenced |= names_in(e)
     for name in list(prog.params):
@@ -518,6 +557,132 @@ def _retire_undriven(prog: Program, rep: Report, dims: dict, cannot: dict, why: 
             rep.findings.append(Finding("V9", "info", name, reason + f" — kept as a worked-out quantity ({b} - {a}), not an input"))
         else:
             rep.bad("parameter", "V9", name, f"{name} drives nothing and measures no two lines: name a candidate or two lines")
+
+
+def dims_of(prog: Program) -> dict[str, str]:
+    """The kind of quantity of every name a formula may use: parameters by their unit (mm / m → length, deg → angle,
+    - → ratio); set-out lines are lengths."""
+    out = {n: dim_of_unit(p.unit) for n, p in prog.params.items()}
+    for d in prog.formulas:
+        out.setdefault(d, LENGTH)
+    return out
+
+
+def _angle_param(an: Analysis, prog: Program, p: dict, rep: Report) -> None:
+    """An angle measured from the drawing: the direction of a drawn straight line (`angle_of`: its id, degrees from +x,
+    the line read either way), or the number a note states (`stated_by`: the note's id). Never a typed-in angle."""
+    name = p["name"]
+    try:
+        value = float(p.get("value"))
+    except (TypeError, ValueError):
+        rep.bad("parameter", "V2", name, f"{name}: an angle needs its value (degrees)")
+        return
+    items = an.drawing.items
+    ref = p.get("angle_of") or p.get("stated_by")
+    k = entity_index(ref or "")
+    if k is None or not 0 <= k < len(items):
+        rep.bad("parameter", "V1", name, f"{name}: an angle is measured from a line (angle_of) or read from a note (stated_by); {ref!r} is neither")
+        return
+    it = items[k]
+    if p.get("angle_of"):
+        if it.dxftype not in ("LINE", "LWPOLYLINE", "POLYLINE") or len(it.pts) < 2:
+            rep.bad("parameter", "V1", name, f"{name}: {ref} is a {it.dxftype}, not a straight line")
+            return
+        (x1, y1), (x2, y2) = it.pts[0], it.pts[1]
+        measured = math.degrees(math.atan2(y2 - y1, x2 - x1))
+        alts = [measured + k_ * 180.0 for k_ in (-2, -1, 0, 1, 2)]
+        best = min(alts, key=lambda a: abs(a - value))
+        if abs(best - value) > 0.05:
+            rep.bad("parameter", "V2", name, f"{name} = {value:g}° but {ref} is drawn at {measured % 180:.3f}° (or {measured % 180 - 180:.3f}°)")
+            return
+        evidence = [f"the direction of {ref}: {best:.4f}°"]
+        value = best
+    else:
+        nums = [float(x) for x in re.findall(r"(?<![\d.])(\d+(?:\.\d+)?)(?![\d.])", it.text or "")]
+        if not any(abs(n - value) <= 1e-6 for n in nums):
+            rep.bad("parameter", "V2", name, f"{name} = {value:g}° but {ref} says {(it.text or '')[:60]!r}")
+            return
+        evidence = [f"stated by {ref}: {(it.text or '')[:60]!r}"]
+    prog.params[name] = Param(name=name, label=p.get("label", name), value=value, unit="deg", kind="angle", component=p.get("component", ""),
+                              source="ai", confidence=float(p.get("confidence") or 0.9),
+                              evidence=[str(e) for e in p.get("evidence", [])][:5] + evidence, note=p.get("reason", ""))
+    rep.ok("parameter")
+
+
+def _transform(an: Analysis, prog: Program, parts: dict, t: dict, rep: Report) -> dict | None:
+    """A component transform, checked: what it moves (a part, or entities), its pivot and amount as formulas of the
+    drawing's values and set-out lines (kinds of quantity checked), one transform per entity, and the notes it carries
+    (those whose leader or place is on what it moves)."""
+    from .assembly import part_entities
+
+    name, kind = t.get("name", ""), t.get("kind")
+    if not PASCAL.match(name or ""):
+        rep.bad("transform", "V3", name or "?", f"transform name {name!r} is not PascalCase")
+        return None
+    if kind not in ("rotate", "translate", "scale"):
+        rep.bad("transform", "V17", name, f"{name}: kind is rotate, translate or scale (got {kind!r})")
+        return None
+    ents: set[int] = set()
+    if t.get("part"):
+        if t["part"] not in parts:
+            rep.bad("transform", "V17", name, f"{name}: no part {t['part']!r}")
+            return None
+        ents |= part_entities(prog, parts, t["part"])
+    for eid in t.get("entities", []):
+        k = entity_index(str(eid))
+        if k is None or not 0 <= k < len(an.drawing.items):
+            rep.bad("transform", "V17", name, f"{name}: no entity {eid}")
+            return None
+        ents.add(k)
+    if not ents:
+        rep.bad("transform", "V17", name, f"{name}: it moves nothing (name a part or entities)")
+        return None
+    taken = {i: r["name"] for r in prog.transforms for i in r["entities"]}
+    clash = sorted({taken[i] for i in ents if i in taken})
+    if clash:
+        rep.bad("transform", "V17", name, f"{name}: some of its entities are already moved by {', '.join(clash)} — one transform per entity")
+        return None
+    wants = {"rotate": {"pivot_x": LENGTH, "pivot_y": LENGTH, "angle": ANGLE}, "translate": {"dx": LENGTH, "dy": LENGTH},
+             "scale": {"pivot_x": LENGTH, "pivot_y": LENGTH, "sx": RATIO, "sy": RATIO}}[kind]
+    exprs = {"pivot_x": (t.get("pivot") or [None, None])[0], "pivot_y": (t.get("pivot") or [None, None])[1],
+             "angle": t.get("angle"), "dx": t.get("dx"), "dy": t.get("dy"), "sx": t.get("sx"), "sy": t.get("sy")}
+    u = an.drawing.units_mm
+    scope = {**prog.defaults(), **{d: v * u for d, v in prog.datum_values().items()}}
+    dims = dims_of(prog)
+    for key, want in wants.items():
+        e = str(exprs[key] if exprs[key] is not None else "").strip()
+        if not e:
+            rep.bad("transform", "V17", name, f"{name}: {kind} needs {key}")
+            return None
+        try:
+            unknown = [n for n in names_in(e) if n not in prog.params and n not in prog.formulas]
+            if unknown:
+                raise ExprError(f"unknown {', '.join(unknown)}")
+            check_dims(e, dims, want=want if want != RATIO else None)
+            evaluate(e, scope)
+        except ExprError as exc:
+            rep.bad("transform", "V17", name, f"{name}: {key} = {e}: {exc}")
+            return None
+        exprs[key] = e
+    if kind == "scale" and exprs["sx"] != exprs["sy"] and not t.get("nonuniform"):
+        rep.bad("transform", "V17", name, f"{name}: a scale with different x and y factors distorts the part; say nonuniform: true if that is meant")
+        return None
+    row = {"name": name, "kind": kind, "entities": sorted(ents), "why": t.get("why", "")}
+    if kind in ("rotate", "scale"):
+        row["pivot"] = [exprs["pivot_x"], exprs["pivot_y"]]
+    for key in ("angle", "dx", "dy", "sx", "sy"):
+        if key in wants:
+            row[key] = exprs[key]
+    model = an.cache.get("annotations")
+    carried: dict[int, tuple[float, float]] = {}
+    if model is not None:
+        for a in model.annotations:
+            if a.attachment in ("geometry", "component") and a.targets and a.targets[0].index in ents and a.anchor is not None:
+                for i in a.items:
+                    if i not in ents:
+                        carried[i] = (float(a.anchor[0]), float(a.anchor[1]))
+    row["carried"] = carried
+    return row
 
 
 def _reverse(d: str, expr: str, prog: Program) -> tuple[str, str] | None:
