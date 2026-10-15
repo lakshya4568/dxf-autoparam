@@ -100,6 +100,56 @@ def _dashed(d: ImageDraw.ImageDraw, pts: list[tuple[float, float]], fill, width:
                 drawing, phase = not drawing, 0.0
 
 
+def _pattern(d: ImageDraw.ImageDraw, pts: list[tuple[float, float]], fill, width: int, pattern: list[float]) -> None:
+    """A polyline in a CAD linetype: dash, gap, dash … in pixels; a zero-length dash is a dot. The pattern runs on along
+    the whole polyline (continuous linetype generation)."""
+    n = len(pattern)
+    if not n or sum(pattern) <= 1e-9:
+        d.line(pts, fill=fill, width=width)
+        return
+    r = max(width / 2, 0.8)
+    k, left = 0, pattern[0]
+    for a, b in pairwise(pts):
+        seg = math.dist(a, b)
+        if seg < 1e-9:
+            continue
+        ux, uy = (b[0] - a[0]) / seg, (b[1] - a[1]) / seg
+        pos = 0.0
+        while True:
+            if k % 2 == 0 and pattern[k] <= 1e-9:  # a dot, then on to the gap after it
+                cx, cy = a[0] + ux * pos, a[1] + uy * pos
+                d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=fill)
+                k = (k + 1) % n
+                left = pattern[k]
+                continue
+            if pos >= seg - 1e-9:
+                break
+            step = min(left, seg - pos)
+            if k % 2 == 0:
+                d.line([(a[0] + ux * pos, a[1] + uy * pos), (a[0] + ux * (pos + step), a[1] + uy * (pos + step))], fill=fill, width=width)
+            pos += step
+            left -= step
+            if left <= 1e-9:
+                k = (k + 1) % n
+                left = pattern[k]
+
+
+def paper_rgb(style: dict | None) -> tuple[int, int, int]:
+    """An entity's colour on white paper: ACI 7 (white on a dark screen) is black; a colour too light to read on white
+    (yellow, light cyan) is darkened, keeping its hue — what a monochrome-safe plot does."""
+    if not style:
+        return (40, 40, 40)
+    if style.get("fg"):
+        return (25, 25, 25)
+    c = style.get("color", "#282828")
+    r, g, b = int(c[1:3], 16), int(c[3:5], 16), int(c[5:7], 16)
+    lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
+    if lum > 0.62:
+        k = 0.62 / lum
+        r, g, b = int(r * k), int(g * k), int(b * k)
+    return (r, g, b)
+
+
 def _nice(mm: float) -> float:
     """A round length near `mm` for a scale bar."""
     if mm <= 0:
@@ -188,7 +238,8 @@ class Pictures:
                 continue
             mm = units.get(it.index, sm.dr.units_mm)
             if hit_now:
-                cur.extend(primitives(it, pts, (sr.reg.radius.get(it.index) if sr else None), (sr.reg.texts.get(it.index) if sr else None), mm))
+                cur.extend(primitives(it, pts, (sr.reg.radius.get(it.index) if sr else None), (sr.reg.texts.get(it.index) if sr else None), mm,
+                                      (sr.reg.turns.get(it.index, 0.0) if sr else 0.0)))
                 drawn.add(it.index)
             if moved:
                 ghost.extend(primitives(it, it.pts, None, None, mm))
@@ -244,11 +295,26 @@ class Pictures:
                     line = [P(q) for q in p["pts"]] + ([P(p["pts"][0])] if p.get("closed") else [])
                     if inside(line):
                         _dashed(d, line, (60, 90, 255, 200), 1, (3.0, 3.0))
-        for p in cur:  # fills first
+        for p in cur:  # fills first: hatch boundaries (a faint tint under a pattern), solid fills, arrowheads, wipeouts
             if p["k"] == "g" and len(p["pts"]) >= 3:
                 poly = [P(q) for q in p["pts"]]
-                if inside(poly):
-                    d.polygon(poly, fill=(120, 120, 220, 38))
+                if not inside(poly):
+                    continue
+                if p.get("mask"):
+                    d.polygon(poly, fill=(255, 255, 255, 255))
+                elif p.get("fill") == "pattern":
+                    d.polygon(poly, fill=(*paper_rgb(p.get("s")), 22))
+                else:
+                    col = (255, 130, 0) if p["i"] in highlight else paper_rgb(p.get("s"))
+                    d.polygon(poly, fill=(*col, int(255 * (p.get("s") or {}).get("alpha", 1.0))))
+        for p in cur:  # hatch pattern lines, thin
+            if p["k"] == "m":
+                col = (*paper_rgb(p.get("s")), 150)
+                segs = p["segs"]
+                for x0_, y0_, x1_, y1_ in segs:
+                    a, b = P((x0_, y0_)), P((x1_, y1_))
+                    if inside([a, b]):
+                        d.line([a, b], fill=col, width=1)
         for p in cur:
             if p["k"] != "p" or len(p["pts"]) < 2:
                 continue
@@ -260,6 +326,19 @@ class Pictures:
                 d.line(line, fill=(255, 130, 0, 255), width=4)
                 continue
             role = p["role"]
+            st = p.get("s")
+            if st is not None:  # as the draftsman drew it: colour, linetype, lineweight (structure a little heavier)
+                col = (*paper_rgb(st), int(255 * st.get("alpha", 1.0)))
+                if i in furniture or role == "fixed":
+                    col = (*col[:3], 120)
+                w = max(1, round((st.get("lw") or 0.25) / 0.3)) + (1 if role == "structural" and not p.get("dim") else 0)
+                dash = st.get("dash") or []
+                px_pattern = [abs(v) * fr.scale for v in dash]
+                if dash and sum(px_pattern) >= 4:  # a pattern finer than a few pixels draws as a line (as CAD does when zoomed out)
+                    _pattern(d, line, col, w, px_pattern)
+                else:
+                    d.line(line, fill=col, width=w)
+                continue
             if i in furniture or role == "fixed":
                 col, w = (200, 200, 200, 255), 1
             elif p.get("dim"):
@@ -307,24 +386,35 @@ class Pictures:
         return out
 
     def _text(self, img, d, fr: Frame, p: dict, highlight: set[int]) -> None:
+        """A text as CAD places it: its anchor, how it hangs from it (left / centre / right × top / middle / baseline),
+        its rotation and its own colour — up to a few lines of a note."""
         h_px = (p.get("h") or 1.0) * fr.scale
         if h_px < 4.5 and p["i"] not in highlight:
             return
-        size = int(max(8, min(26, h_px)))
-        text = (p["text"] or "").split("\n")[0][:60]
+        size = int(max(8, min(28, h_px * 1.25)))
+        lines = [ln[:80] for ln in (p["text"] or "").split("\n")[:6]]
         x, y = fr.px(*p["at"])
-        if not (fr.pad - 80 <= x <= fr.width - fr.pad + 80 and fr.pad - 80 <= y <= fr.height - fr.pad + 80):
+        if not (fr.pad - 200 <= x <= fr.width - fr.pad + 200 and fr.pad - 200 <= y <= fr.height - fr.pad + 200):
             return
-        col = (255, 130, 0) if p["i"] in highlight else (70, 120, 190) if p.get("dim") else (95, 95, 95)
+        st = p.get("s")
+        col = (255, 130, 0) if p["i"] in highlight else paper_rgb(st) if st is not None else (70, 120, 190) if p.get("dim") else (95, 95, 95)
         font = _font(size)
+        lh = int(size * 1.35 * (p.get("ls") or 1.0))
+        w = max(int(d.textlength(ln, font=font)) for ln in lines) + 4
+        block_h = lh * (len(lines) - 1) + size
+        ha, va = p.get("ha", "l"), p.get("va", "b")
+        ax = {"l": 0, "c": w / 2, "r": w}.get(ha, 0)
+        ay = {"t": 0, "m": block_h / 2, "b": block_h - size * 0.2, "bt": block_h}.get(va, block_h - size * 0.2)
+        # the tile is twice the block so the anchor is its centre: rotating about the centre keeps the anchor in place
+        tw, th = int(2 * max(ax, w - ax) + 8), int(2 * max(ay, block_h - ay) + 8)
+        tile = Image.new("RGBA", (tw, th), (255, 255, 255, 0))
+        td = ImageDraw.Draw(tile)
+        ox, oy = tw / 2 - ax, th / 2 - ay
+        for k, ln in enumerate(lines):
+            td.text((ox, oy + k * lh), ln, fill=(*col, 255), font=font, anchor="la")
         rot = float(p.get("rot") or 0.0)
-        if abs(rot) < 0.5 or abs(abs(rot) - 360) < 0.5:
-            d.text((x, y), text, fill=col, font=font, anchor="ls")
-            return
-        w = int(d.textlength(text, font=font)) + 8
-        tile = Image.new("RGBA", (w, size * 2 + 6), (255, 255, 255, 0))
-        ImageDraw.Draw(tile).text((4, size + 2), text, fill=(*col, 255), font=font, anchor="ls")
-        tile = tile.rotate(rot, expand=True, resample=Image.BICUBIC)
+        if abs(rot) > 0.5 and abs(abs(rot) - 360) > 0.5:
+            tile = tile.rotate(rot, expand=True, resample=Image.BICUBIC)
         img.paste(tile, (int(x - tile.width / 2), int(y - tile.height / 2)), tile)
 
     def _scale_bar(self, d: ImageDraw.ImageDraw, fr: Frame) -> None:

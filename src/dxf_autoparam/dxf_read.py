@@ -8,11 +8,19 @@ What a real GAD file throws at a reader, and what happens to it here:
                                    (level marker, arrow, logo) is a RIGID symbol on its insert
   attributes on blocks (ATTRIB)    read as texts of that block
   mirrored entities (extrusion -Z) turned upright first, so every coordinate is world X/Y
-  layers off / frozen, invisible   skipped — the reader sees what CAD shows
+  layers off / frozen, invisible   skipped (top level and inside blocks) — the reader sees what CAD shows
   content only in paper space      the busiest paper-space layout is used instead
-  DIMENSIONs (also inside blocks)  kept as dimensions: measured points + value + text
-  XREF, ACAD_TABLE, IMAGE, OLE ... counted as unsupported and left exactly as they are
+  DIMENSIONs (also inside blocks)  kept as dimensions: measured points + value + text, and the PARTS CAD draws them
+                                   with (extension / dimension lines, arrowheads, the text of their block)
+  LEADER / MULTILEADER             points + the parts CAD draws (lines, arrowheads, content)
+  WIPEOUT, XLINE / RAY, IMAGE      a mask, a construction line kept as drawn, a placeholder frame
+  ACAD_TABLE, MLINE, …             drawn through their own graphical representation (virtual entities)
+  XREF, REGION, 3DSOLID, OLE …     counted as not read, by handle, and left exactly as they are
   units                            $INSUNITS, else guessed from what the dimensions say
+
+Every item also keeps its SOURCE (own handle — the block definition's entity for view blocks —, owner, INSERT chain, raw
+properties) and its resolved STYLE (colour, dash pattern in drawing units, lineweight, alpha, font): fidelity.py.
+The reader's COVERAGE report (Drawing.coverage) says what was in the file, read, drawn, editable and exportable.
 
 Roles come from drafting conventions only (layer names, linetypes, entity types):
   structural   lines / polylines / arcs / circles on ordinary layers
@@ -32,9 +40,23 @@ from pathlib import Path
 import ezdxf
 import ezdxf.recover
 import ezdxf.upright
-from ezdxf import path as ezpath
 from ezdxf.document import Drawing as EzDoc
 
+from .fidelity import (
+    DATA_ERRORS,
+    Coverage,
+    Styler,
+    coverage_report,
+    has_width,
+    hatch_info,
+    parts_of,
+    plain_text,
+    source_info,
+    wide_polygons,
+)
+from .fidelity import (
+    flatten as _flatten,
+)
 from .ir import Drawing, Item, Role
 
 INSUNITS_MM = {1: 25.4, 2: 304.8, 4: 1.0, 5: 10.0, 6: 1000.0, 14: 100.0}
@@ -55,11 +77,18 @@ class ReadOptions:
 
 
 STRUCTURAL_TYPES = {"LINE", "LWPOLYLINE", "POLYLINE", "ARC", "CIRCLE"}
-UNSUPPORTED = {"ACAD_TABLE", "IMAGE", "OLE2FRAME", "OLEFRAME", "WIPEOUT", "UNDERLAY", "PDFUNDERLAY", "DWFUNDERLAY",
-               "DGNUNDERLAY", "VIEWPORT", "XLINE", "RAY", "MESH", "3DSOLID", "REGION", "BODY", "SURFACE", "MLEADER", "MULTILEADER"}
+# Not readable as geometry here: ACIS solids / regions (their data is a modeller's), OLE objects, and paper-space viewports
+# (the reader works in one layout; the coverage report lists the layouts and their viewports).
+UNSUPPORTED = {"OLE2FRAME", "OLEFRAME", "VIEWPORT", "MESH", "3DSOLID", "REGION", "BODY", "SURFACE", "EXTRUDEDSURFACE",
+               "LOFTEDSURFACE", "REVOLVEDSURFACE", "SWEPTSURFACE", "PLANESURFACE", "NURBSURFACE"}
+COMPOUND_TYPES = {"MULTILEADER", "MLEADER", "ACAD_TABLE", "MLINE", "ARC_DIMENSION", "ACAD_PROXY_ENTITY"}
+FRAMED_TYPES = {"WIPEOUT", "IMAGE", "PDFUNDERLAY", "DWFUNDERLAY", "DGNUNDERLAY", "UNDERLAY"}
 
 
-def _linetype(doc: EzDoc, e, layer_name: str) -> str:
+def _linetype(doc: EzDoc, e, layer_name: str, style: dict | None = None) -> str:
+    """The linetype as drawn: the resolved one (BYBLOCK through the INSERT chain) when the style is known."""
+    if style and style.get("lt"):
+        return style["lt"].upper()
     lt = (e.dxf.get("linetype") or "BYLAYER").upper()
     if lt in ("BYLAYER", "BYBLOCK"):
         layer = doc.layers.get(layer_name) if layer_name in doc.layers else None
@@ -67,7 +96,7 @@ def _linetype(doc: EzDoc, e, layer_name: str) -> str:
     return lt.upper()
 
 
-def _props(doc: EzDoc, e, layer_name: str) -> dict:
+def _props(doc: EzDoc, e, layer_name: str, style: dict | None = None) -> dict:
     """Colour (ACI, BYLAYER resolved), linetype and lineweight (mm) as drawn — evidence of what a line is."""
     layer = doc.layers.get(layer_name) if layer_name in doc.layers else None
     layer_color = abs(int(layer.dxf.get("color", 7))) if layer else 7
@@ -75,12 +104,15 @@ def _props(doc: EzDoc, e, layer_name: str) -> dict:
     lw = int(e.dxf.get("lineweight", -1))
     if lw < 0 and layer is not None:
         lw = int(layer.dxf.get("lineweight", -3))
-    return {"color": layer_color if color in (0, 256) else color, "linetype": _linetype(doc, e, layer_name),
-            "lineweight": lw / 100.0 if lw >= 0 else None, "layer_color": layer_color,
-            "layer_linetype": ((layer.dxf.get("linetype") if layer else None) or "CONTINUOUS").upper()}
+    out = {"color": layer_color if color in (0, 256) else color, "linetype": _linetype(doc, e, layer_name, style),
+           "lineweight": lw / 100.0 if lw >= 0 else None, "layer_color": layer_color,
+           "layer_linetype": ((layer.dxf.get("linetype") if layer else None) or "CONTINUOUS").upper()}
+    if style and style.get("lw") is not None and out["lineweight"] is None:
+        out["lineweight"] = style["lw"]
+    return out
 
 
-def _role(doc: EzDoc, e, layer_name: str, opts: ReadOptions) -> Role:
+def _role(doc: EzDoc, e, layer_name: str, opts: ReadOptions, style: dict | None = None) -> Role:
     layer = layer_name.upper()
     if re.search(opts.fixed_layers, layer, re.IGNORECASE) or layer_name in opts.extra_fixed:
         return Role.FIXED
@@ -90,7 +122,7 @@ def _role(doc: EzDoc, e, layer_name: str, opts: ReadOptions) -> Role:
     if opts.include_layers is not None and layer_name not in opts.include_layers:
         return Role.ANNOTATION
     if t in ("LINE", "LWPOLYLINE", "POLYLINE") and (
-        re.search(opts.reference_linetypes, _linetype(doc, e, layer_name), re.IGNORECASE) or re.search(opts.reference_layers, layer, re.IGNORECASE)
+        re.search(opts.reference_linetypes, _linetype(doc, e, layer_name, style), re.IGNORECASE) or re.search(opts.reference_layers, layer, re.IGNORECASE)
     ):
         return Role.REFERENCE
     if re.search(opts.annotation_layers, layer, re.IGNORECASE):
@@ -102,21 +134,8 @@ def _xy(p) -> tuple[float, float]:
     return (float(p[0]), float(p[1]))
 
 
-# Errors malformed DXF DATA raises (bad values, broken references). Programming errors (TypeError,
-# AttributeError on our side) are not in it: they must surface, not be absorbed as "bad data".
-DATA_ERRORS = (ezdxf.DXFError, ValueError, ArithmeticError, IndexError, KeyError)
 
 
-def plain_text(e) -> str:
-    t = e.dxftype()
-    try:
-        if t == "MTEXT":
-            return e.plain_text(split=False)
-        if t in ("TEXT", "ATTRIB", "ATTDEF"):
-            return e.plain_text()
-    except DATA_ERRORS:  # unparsable formatting codes: the raw string is still the note
-        return str(e.dxf.get("text", ""))
-    return str(e.dxf.get("text", ""))
 
 
 def _dim_text(e) -> dict:
@@ -129,21 +148,6 @@ def _dim_text(e) -> dict:
     except (*DATA_ERRORS, AttributeError):
         return {}
 
-
-def _flatten(e, tol: float) -> list[list[tuple[float, float]]]:
-    try:
-        p = ezpath.make_path(e)
-    except TypeError:  # make_path's documented answer for a type with no path (TEXT, MTEXT, INSERT in a block)
-        return []
-    try:
-        out = []
-        for sub in p.sub_paths():
-            pts = [(v.x, v.y) for v in sub.flattening(tol)]
-            if len(pts) >= 2:
-                out.append(pts)
-        return out
-    except DATA_ERRORS:  # a curve ezdxf cannot flatten is drawn without its shape (display only)
-        return []
 
 
 def entity_points(e, tol: float = 1.0) -> dict | None:
@@ -240,7 +244,51 @@ def entity_points(e, tol: float = 1.0) -> dict | None:
         return {"pts": [_xy(e.dxf.location)], "vertex_pts": [], "segments": []}
     if t == "INSERT":
         return {"pts": [_xy(e.dxf.insert)], "vertex_pts": [], "segments": [], "extra": {"block": e.dxf.name}}
+    if t in ("XLINE", "RAY"):
+        start = _xy(e.dxf.start)
+        u = e.dxf.unit_vector
+        n = math.hypot(u[0], u[1]) or 1.0
+        d = (float(u[0]) / n, float(u[1]) / n)
+        return {"pts": [start, (start[0] + d[0], start[1] + d[1])], "vertex_pts": [], "segments": [],
+                "extra": {"infinite": t.lower(), "dir": d}}
+    if t in FRAMED_TYPES:
+        ring: list[tuple[float, float]] = []
+        try:
+            ring = [_xy(v) for v in e.boundary_path_wcs()]
+        except (*DATA_ERRORS, AttributeError, TypeError):  # an underlay with no clipping boundary: its insertion point only
+            ring = [_xy(e.dxf.insert)] if e.dxf.hasattr("insert") else []
+        if len(ring) > 1 and ring[0] == ring[-1]:
+            ring = ring[:-1]
+        if not ring:
+            return None
+        return {"pts": ring, "vertex_pts": [], "segments": [], "closed": len(ring) >= 3, "extra": {"frame": t.lower()}}
+    if t in COMPOUND_TYPES:  # its points come from the parts CAD draws it with (read_dxf)
+        return {"pts": [], "vertex_pts": [], "segments": [], "extra": {"compound": t.lower()}}
     return None
+
+
+def _compound_points(e, parts: list[dict]) -> list[tuple[float, float]]:
+    """Where a compound annotation is held: a multileader's arrow tips and its content's anchor; anything else, its
+    insertion point (or where its first part starts)."""
+    t = e.dxftype()
+    if t in ("MULTILEADER", "MLEADER"):
+        try:
+            ctx = e.context
+            tips = [_xy(line.vertices[0]) for leader in ctx.leaders for line in leader.lines if line.vertices]
+            content = ctx.mtext.insert if ctx.mtext is not None else (ctx.block.insert if ctx.block is not None else ctx.base_point)
+            pts = tips + [_xy(content)]
+            if pts:
+                return pts
+        except (*DATA_ERRORS, AttributeError, TypeError, IndexError):
+            pass  # an unusual context record: the parts still say where it is
+    if e.dxf.hasattr("insert"):
+        return [_xy(e.dxf.insert)]
+    for q in parts:
+        if q.get("pts"):
+            return [tuple(q["pts"][0])]
+        if q.get("at"):
+            return [tuple(q["at"])]
+    return []
 
 
 def _poly(pts, bulges, closed) -> dict:
@@ -312,9 +360,11 @@ def read_dxf(path: str, opts: ReadOptions | None = None) -> tuple[Drawing, EzDoc
             layout = busiest
             notes.append(f"Model space is empty; read paper space layout '{busiest.name}'.")
     hidden_layers = _hidden_layers(doc)
+    frozen_layers = {ly.dxf.name for ly in doc.layers if _frozen(ly)}
     items: list[Item] = []
     unsupported: Counter[str] = Counter()
-    hidden = 0
+    styler = Styler(doc, layout)
+    cov = Coverage(repaired_linetypes=styler.repaired_linetypes)
 
     # The drawing's size decides what a "small" (symbol) block is.
     try:
@@ -328,60 +378,121 @@ def read_dxf(path: str, opts: ReadOptions | None = None) -> tuple[Drawing, EzDoc
     sizes: dict[str, tuple[int, float]] = {}
     tol_flat = max(sheet * 2e-4, 1e-6)
 
-    def add(e, src: str, layer_name: str, anchor: int | None, force_role: Role | None) -> int | None:
+    def handle_of(e) -> str:
+        orig = getattr(e, "source_of_copy", None) or e
+        return orig.dxf.get("handle") or e.dxf.get("handle") or "?"
+
+    def add(e, src: str, layer_name: str, anchor: int | None, force_role: Role | None, chain: list[str], owner: str) -> int | None:
         t = e.dxftype()
+        props = styler.props(e)
+        if props is not None and not props.is_visible:  # an off / frozen layer (inherited inside a block), or invisible
+            cov.hide(t, handle_of(e))
+            return None
+        cov.see(t)
         if t in UNSUPPORTED:
             unsupported[t] += 1
+            cov.drop(t, handle_of(e), "no readable geometry (" + ("ACIS solid / region data" if t in ("3DSOLID", "REGION", "BODY", "MESH") or "SURFACE" in t else "not supported") + ")")
             return None
         try:
             _upright(e)
             info = entity_points(e, tol_flat)
         except (*DATA_ERRORS, AttributeError, TypeError) as exc:  # one malformed entity: counted, the rest is read
             unsupported[f"{t} (unreadable: {type(exc).__name__})"] += 1
+            cov.drop(t, handle_of(e), f"unreadable ({type(exc).__name__})")
             return None
+        if info is None and hasattr(e, "virtual_entities") and t not in ("INSERT", "DIMENSION"):
+            info = {"pts": [], "vertex_pts": [], "segments": [], "extra": {"compound": t.lower()}}  # drawn through its own representation
         if info is None:
             unsupported[t] += 1
+            cov.drop(t, handle_of(e), "no readable geometry")
             return None
-        role = force_role or _role(doc, e, layer_name, opts)
-        info.setdefault("extra", {})["props"] = _props(doc, e, layer_name)
+        style = styler.style(props)
+        extra = info.setdefault("extra", {})
+        if extra.get("infinite"):
+            extra["reach"] = 2 * sheet  # drawn across the whole sheet
+        extra["style"] = style
+        extra["source"] = source_info(e, chain, owner)
+        extra["props"] = _props(doc, e, layer_name, style)
+        if t in ("DIMENSION", "LEADER") or extra.get("compound"):
+            parts = parts_of(e, styler, tol_flat, tag_fills="arrow")
+            extra["parts"] = parts
+            for q in parts:
+                cov.compound_parts[f"{t} {q['k']}:{q.get('tag', '')}"] += 1
+            if extra.get("compound"):
+                info["pts"] = _compound_points(e, parts)
+                info["display"] = [q["pts"] for q in parts if q["k"] == "p"]
+                if not info["pts"]:
+                    unsupported[t] += 1
+                    cov.drop(t, handle_of(e), "its graphical representation is empty")
+                    return None
+        elif t == "HATCH":
+            extra["hatch"] = hatch_info(e, tol_flat)
+        elif t in ("LWPOLYLINE", "POLYLINE") and has_width(e):
+            extra["bands"] = wide_polygons(e)
+            if t == "LWPOLYLINE":
+                extra["widths"] = [(float(s_), float(w_)) for _x, _y, s_, w_ in e.get_points("xyse")]
+                extra["const_width"] = float(e.dxf.get("const_width", 0.0) or 0.0)
+        if t in ("TEXT", "ATTRIB", "ATTDEF", "MTEXT"):
+            if t == "MTEXT" and float(e.dxf.get("width", 0.0) or 0.0) > 0:
+                extra["width"] = float(e.dxf.width)
+            if t != "MTEXT" and abs(float(e.dxf.get("oblique", 0.0) or 0.0)) > 1e-6:
+                extra["oblique"] = float(e.dxf.oblique)
+        role = force_role or _role(doc, e, layer_name, opts, style)
         it = Item(
             index=len(items), handle=src.split("/")[0], dxftype=t, layer=layer_name, role=role, pts=info["pts"],
             closed=info.get("closed", False), bulges=info.get("bulges", []), radius=info.get("radius"),
             text=info.get("text"), text_height=info.get("text_height"), vertex_pts=info["vertex_pts"],
-            segments=info["segments"], extra=info.get("extra", {}), src=src, anchor=anchor, display=info.get("display", []),
+            segments=info["segments"], extra=extra, src=src, anchor=anchor, display=info.get("display", []),
         )
         items.append(it)
         return it.index
 
-    def expand(ins, src: str, parent_layer: str, anchor: int | None, symbol: bool) -> None:
+    def expand(ins, src: str, parent_layer: str, anchor: int | None, symbol: bool, chain: list[str], depth: int) -> None:
         """Block content in world coordinates; nested blocks recurse depth-first (the order explode() uses)."""
         try:
             children = list(ins.virtual_entities())
         except (*DATA_ERRORS, AttributeError, TypeError) as exc:
             unsupported[f"INSERT (cannot expand: {type(exc).__name__})"] += 1
+            cov.drop("INSERT", handle_of(ins), f"cannot expand ({type(exc).__name__})")
             return
-        for k, v in enumerate(children):
-            layer_name = parent_layer if v.dxf.get("layer", "0") == "0" else v.dxf.layer
-            if v.dxf.get("invisible", 0):
-                continue
-            sub = f"{src}/{k}"
-            if v.dxftype() == "INSERT":
-                expand_insert(v, sub, layer_name, anchor, symbol)
-            else:
-                add(v, sub, layer_name, anchor, Role.ANNOTATION if symbol else None)
-        for a, att in enumerate(getattr(ins, "attribs", [])):
-            add(att, f"{src}/@{a}", att.dxf.get("layer", parent_layer), anchor, Role.ANNOTATION)
+        cov.inserts += 1
+        cov.max_depth = max(cov.max_depth, depth)
+        p_ins = styler.props(ins)
+        if p_ins is not None:
+            styler.push(p_ins)
+        try:
+            for k, v in enumerate(children):
+                layer_name = parent_layer if v.dxf.get("layer", "0") == "0" else v.dxf.layer
+                if v.dxf.get("invisible", 0):
+                    cov.hide(v.dxftype(), handle_of(v))
+                    continue
+                sub = f"{src}/{k}"
+                if v.dxftype() == "INSERT":
+                    if layer_name in frozen_layers:  # a frozen layer hides the whole reference
+                        cov.hide("INSERT", handle_of(v))
+                        continue
+                    cov.see("INSERT")
+                    expand_insert(v, sub, layer_name, anchor, symbol, [*chain, handle_of(v)], depth + 1)
+                else:
+                    add(v, sub, layer_name, anchor, Role.ANNOTATION if symbol else None, chain, ins.dxf.name)
+            for a, att in enumerate(getattr(ins, "attribs", [])):
+                add(att, f"{src}/@{a}", att.dxf.get("layer", parent_layer), anchor, Role.ANNOTATION, chain, ins.dxf.name)
+        finally:
+            if p_ins is not None:
+                styler.pop()
 
-    def expand_insert(ins, src: str, layer_name: str, anchor: int | None, symbol: bool) -> None:
+    def expand_insert(ins, src: str, layer_name: str, anchor: int | None, symbol: bool, chain: list[str], depth: int) -> None:
         try:
             _upright(ins)
         except (*DATA_ERRORS, AttributeError, TypeError) as exc:
             unsupported[f"INSERT (unreadable: {type(exc).__name__})"] += 1
+            cov.drop("INSERT", handle_of(ins), f"unreadable ({type(exc).__name__})")
             return
         name = ins.dxf.name
         blk = doc.blocks.get(name)
         if blk is None or blk.block.is_xref:
             unsupported["XREF" if blk is not None else "INSERT (missing block)"] += 1
+            cov.drop("XREF" if blk is not None else "INSERT", handle_of(ins), "external reference (not loaded)" if blk is not None else f"missing block {name}")
             return
         if name not in sizes:
             sizes[name] = _block_size(doc, name)
@@ -390,28 +501,27 @@ def read_dxf(path: str, opts: ReadOptions | None = None) -> tuple[Drawing, EzDoc
         small = n <= opts.symbol_max_entities and diag * scale <= opts.symbol_max_size_frac * sheet
         if anchor is None and small:
             # a rigid symbol: everything in it follows its insertion point
-            anchor = add(ins, src, layer_name, None, Role.ANNOTATION)
+            anchor = add(ins, src, layer_name, None, Role.ANNOTATION, chain[:-1], "symbol")
             symbol = True
         if ins.mcount > 1:
             for m, single in enumerate(ins.multi_insert()):
-                expand(single, f"{src}#{m}", layer_name, anchor, symbol)
+                expand(single, f"{src}#{m}", layer_name, anchor, symbol, chain, depth)
         else:
-            expand(ins, src, layer_name, anchor, symbol)
+            expand(ins, src, layer_name, anchor, symbol, chain, depth)
 
     for e in layout:
-        if e.dxf.get("invisible", 0):
-            hidden += 1
-            continue
         layer_name = e.dxf.get("layer", "0")
-        if layer_name in hidden_layers:
-            hidden += 1
+        if e.dxf.get("invisible", 0) or (layer_name in hidden_layers and (e.dxftype() != "INSERT" or layer_name in frozen_layers)):
+            cov.hide(e.dxftype(), e.dxf.get("handle", "?"))
             continue
         if e.dxftype() == "INSERT":
-            expand_insert(e, e.dxf.handle, layer_name, None, False)
+            cov.see("INSERT")
+            expand_insert(e, e.dxf.handle, layer_name, None, False, [e.dxf.handle], 1)
         else:
-            add(e, e.dxf.handle, layer_name, None, None)
-    if hidden:
-        notes.append(f"{hidden} entities on layers that are off/frozen (or invisible) were not read, as CAD does not show them.")
+            add(e, e.dxf.handle, layer_name, None, None, [], layout.name)
+    hidden_total = sum(cov.hidden.values())
+    if hidden_total:
+        notes.append(f"{hidden_total} entities on layers that are off/frozen (or invisible) were not read, as CAD does not show them.")
 
     declared = INSUNITS_MM.get(int(doc.header.get("$INSUNITS", 0) or 0))
     measured = _guess_units(items, [])
@@ -429,7 +539,17 @@ def read_dxf(path: str, opts: ReadOptions | None = None) -> tuple[Drawing, EzDoc
     extent = (min(xs), min(ys), max(xs), max(ys)) if xs else (0.0, 0.0, 0.0, 0.0)
     dr = Drawing(path=path, units_mm=units_mm, tol=opts.tol_mm / units_mm, items=items, extent=extent,
                  unsupported=dict(unsupported), notes=notes, layout=layout.name)
+    dr.coverage = coverage_report(dr, doc, cov, layout)
+    if not dr.coverage["faithful"]:
+        notes.append("Not everything visible in the file is drawn here: " + "; ".join(dr.coverage["problems"][:4]))
     return dr, doc
+
+
+def _frozen(layer) -> bool:
+    try:
+        return bool(layer.is_frozen())
+    except DATA_ERRORS:  # unreadable flags: not frozen (shown rather than dropped)
+        return False
 
 
 def _fix_frames(items: list[Item], notes: list[str]) -> None:

@@ -153,6 +153,35 @@ def _production(a) -> int:
     return 2
 
 
+def _fidelity(a) -> int:
+    reports = {}
+    worst = 0
+    for path in a.dxf:
+        dr, _ = read_dxf(path)
+        cov = dr.coverage
+        reports[path] = cov
+        e = cov["entities"]
+        print(f"{Path(path).name}: {e['visible_in_file']} visible entities, {e['read']} read, {e['hidden']} hidden (off / frozen layers), "
+              f"{e['not_read']} not read · {e['inserts_expanded']} block references expanded, depth {e['block_depth']} · "
+              f"{'FAITHFUL' if cov['faithful'] else 'NOT FAITHFUL'}")
+        print(f"  {'type':<14}{'in file':>8}{'read':>7}{'drawn':>7}{'editable':>9}{'hidden':>8}{'not read':>9}  export")
+        for r in cov["types"]:
+            print(f"  {r['type']:<14}{r['in_file']:>8}{r['read']:>7}{r['drawn']:>7}{r['editable']:>9}{r['hidden']:>8}{r['not_read']:>9}  {r['export']}")
+        if cov["compound_parts"]:
+            print("  drawn through their parts: " + ", ".join(f"{k} ×{v}" for k, v in sorted(cov["compound_parts"].items())))
+        lts = ", ".join(f"{k} ({v['entities']}, {v['drawn_as']})" for k, v in cov["linetypes"].items())
+        print(f"  linetypes: {lts}")
+        if cov["hatch_patterns"]:
+            print("  hatches: " + ", ".join(f"{k} ×{v['count']} → {'/'.join(v['drawn_as'])}" for k, v in cov["hatch_patterns"].items()))
+        for prob in cov["problems"]:
+            print(f"  ! {prob}")
+        worst = max(worst, 0 if cov["faithful"] else 1)
+    if a.json:
+        Path(a.json).write_text(json.dumps(reports, indent=1, default=str))
+        print(f"wrote {a.json}")
+    return worst
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="dxf-autoparam", description="Existing DXF → parametric model → regenerated DXF")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -196,6 +225,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--out", default="out/check")
     p = sub.add_parser("views")
     p.add_argument("dxf")
+    p = sub.add_parser("fidelity", help="what the DXF holds and what of it is read, drawn, editable and exported — by type, with the handles of "
+                                        "anything visible that is not drawn (no model, no cost)")
+    p.add_argument("dxf", nargs="+")
+    p.add_argument("--json", default=None, help="write the full coverage reports here")
     p = sub.add_parser("bench")
     p.add_argument("fixtures", nargs="?", default="fixtures/library")
     p.add_argument("--domain", choices=["bridge"], default=None)
@@ -280,6 +313,8 @@ def main(argv: list[str] | None = None) -> int:
         Path(a.out).write_text(json.dumps(report, indent=1, default=str))
         print(f"wrote {a.out}")
         return 0
+    if a.cmd == "fidelity":
+        return _fidelity(a)
     if a.cmd == "views":
         dr, _ = read_dxf(a.dxf)
         for v in detect_views(dr):

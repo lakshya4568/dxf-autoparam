@@ -7,7 +7,8 @@
                               (same order the reader walked) and those are reshaped
   dimensions                  measured points moved, then re-rendered so the text shows the new value
   notes stating a value       the number is rewritten
-  everything else             left exactly as it was
+  multileader, wipeout, image moved as a whole (a tip and content moving apart is reported)
+  everything else             left exactly as it was — every entity keeps its own handle, layer and properties
 """
 
 from __future__ import annotations
@@ -59,10 +60,15 @@ def _apply(e, it: Item, pts: list, reg: Regenerated, report: dict) -> None:
         e.dxf.center = _v(pts[0], e.dxf.center.z)
         if it.index in reg.radius:
             e.dxf.radius = reg.radius[it.index]
+        if t == "ARC" and it.index in getattr(reg, "turns", {}):  # a turned part: the arc turns with it
+            e.dxf.start_angle = (float(e.dxf.start_angle) + reg.turns[it.index]) % 360
+            e.dxf.end_angle = (float(e.dxf.end_angle) + reg.turns[it.index]) % 360
     elif t in ("ELLIPSE",):
         e.dxf.center = _v(pts[0], e.dxf.center.z)
     elif t in ("TEXT", "ATTRIB"):
         e.dxf.insert = _v(pts[0])
+        if it.index in getattr(reg, "turns", {}):
+            e.dxf.rotation = (float(e.dxf.get("rotation", 0.0)) + reg.turns[it.index]) % 360
         if len(pts) > 1 and e.dxf.hasattr("align_point"):
             e.dxf.align_point = _v(pts[1])
         new = reg.texts.get(it.index)
@@ -71,6 +77,8 @@ def _apply(e, it: Item, pts: list, reg: Regenerated, report: dict) -> None:
             report["texts_changed"] += 1
     elif t == "MTEXT":
         e.dxf.insert = _v(pts[0])
+        if it.index in getattr(reg, "turns", {}):
+            e.dxf.rotation = (float(e.get_rotation()) + reg.turns[it.index]) % 360
         new = reg.texts.get(it.index)
         if new is not None and new != it.text:
             e.text = new
@@ -139,6 +147,17 @@ def _apply(e, it: Item, pts: list, reg: Regenerated, report: dict) -> None:
             e.control_points = [Vec3(p[0] + dx, p[1] + dy, p[2]) for p in e.control_points]
         if len(e.fit_points):
             e.fit_points = [Vec3(p[0] + dx, p[1] + dy, p[2]) for p in e.fit_points]
+    elif it.extra.get("compound") or it.extra.get("frame"):
+        # a multileader, a wipeout, an image frame, a table: moved as a whole (by where it is held — a multileader's tip).
+        # Its parts are not reshaped one by one: a tip and its content moving apart is said, not silently averaged.
+        dx, dy = pts[0][0] - it.pts[0][0], pts[0][1] - it.pts[0][1]
+        if any(abs((p[0] - q[0]) - dx) > 1e-6 or abs((p[1] - q[1]) - dy) > 1e-6 for p, q in zip(pts, it.pts)):
+            report.setdefault("moved_as_a_whole", []).append(f"{t} {it.src}: its points moved apart; written moved by its first point")
+        try:
+            e.translate(dx, dy, 0.0)
+        except (ezdxf.DXFError, NotImplementedError, AttributeError) as exc:
+            report.setdefault("not_written", []).append(f"{t} {it.src}: {type(exc).__name__}")
+            return
     report["updated"] += 1
 
 

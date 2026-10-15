@@ -259,6 +259,7 @@ async function guard(fn, text) { try { if (text) busy(true, text); return await 
 function ingest(prims) {
   const out = [];
   for (const q of prims) {
+    if (q.k === "m") continue;   // hatch pattern lines: drawn by the new workspace only
     const o = { i: q.i, k: q.k, r: q.r, l: q.l, v: q.v, c: !!q.c, d: !!q.d };
     if (q.p) o.p = Float64Array.from(q.p);
     if (q.k === "t") { o.at = q.at; o.t = q.t; o.h = q.h || 0; o.rot = q.rot || 0; o.ha = q.ha; o.va = q.va; o.wf = q.wf; o.ls = q.ls; }

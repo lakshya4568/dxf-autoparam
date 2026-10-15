@@ -76,6 +76,9 @@ class Drawing:
     unsupported: dict[str, int] = field(default_factory=dict)
     notes: list[str] = field(default_factory=list)  # what the reader repaired, skipped or assumed
     layout: str = "Model"
+    # What the file held and what of it is read, drawn, editable and exportable (fidelity.coverage_report) — by type,
+    # with the handles of every visible entity that is not drawn. Empty for a drawing not read from a file.
+    coverage: dict = field(default_factory=dict)
 
 
 # ── Analysis: what the geometry says about itself ───────────────────────────────
