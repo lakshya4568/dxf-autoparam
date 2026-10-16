@@ -399,12 +399,16 @@ def _segments(it: Item) -> list[tuple[tuple[float, float], tuple[float, float]]]
 
 
 def _rules(dr: Drawing, frame: tuple, frame_items: list[int], skip: set[int]) -> list[int]:
-    """Panel rules: long straight lines (or whole outlines made of them) joined to the frame through other long lines."""
+    """Panel rules: long straight lines (or whole outlines made of them) joined to the frame through other long lines.
+    A centre or axis line is never one: it is a construction axis that runs THROUGH a drawing (a track's centre line
+    ends near the sheet's margin like an inner border does), while a rule parts the sheet and nothing is drawn across it."""
     W, H = frame[2] - frame[0], frame[3] - frame[1]
     tol = 0.004 * max(W, H)
     longs: dict[int, list] = {}
     for it in dr.items:
         if it.index in skip or it.index in frame_items or it.dxftype not in ("LINE", "LWPOLYLINE", "POLYLINE"):
+            continue
+        if it.role == Role.REFERENCE:
             continue
         segs = _segments(it)
         if not segs:
@@ -527,6 +531,81 @@ def _title_candidates(dr: Drawing, skip: set[int]) -> list[Item]:
     return out
 
 
+LINE_TYPES = ("LINE", "LWPOLYLINE", "POLYLINE", "LEADER")
+
+
+def _clips(px, py, qx, qy, x0: float, y0: float, x1: float, y1: float) -> np.ndarray:
+    """Which of the segments (p→q, as arrays) meet the rectangle [x0,x1]×[y0,y1] (Liang–Barsky, all at once)."""
+    dx, dy = qx - px, qy - py
+    t0, t1 = np.zeros_like(px), np.ones_like(px)
+    alive = np.ones(px.shape, dtype=bool)
+    for p, q in ((-dx, px - x0), (dx, x1 - px), (-dy, py - y0), (dy, y1 - py)):
+        parallel = np.abs(p) < 1e-12
+        alive &= ~(parallel & (q < 0))
+        with np.errstate(divide="ignore", invalid="ignore"):
+            r = np.where(parallel, 0.0, q / np.where(parallel, 1.0, p))
+        t0 = np.where(~parallel & (p < 0), np.maximum(t0, r), t0)
+        t1 = np.where(~parallel & (p > 0), np.minimum(t1, r), t1)
+    return alive & (t0 <= t1)
+
+
+def _local(o, u, v, x, y):
+    """Coordinates (x, y) in a text's own frame: origin at its lower-left corner, u along the words, v up."""
+    return (x - o[0]) * u[0] + (y - o[1]) * u[1], (x - o[0]) * v[0] + (y - o[1]) * v[1]
+
+
+def _drawn_labels(dr: Drawing, texts: list[Item], skip: set[int]) -> tuple[set[int], set[int]]:
+    """Texts that may belong to a drawing rather than title one — a title stands on clear paper, beside its view.
+      · CALLOUTS: the text rests on a leader's landing (the leader points from it to what it names). Never a title.
+      · EMBEDDED: lines of the drawing run THROUGH the text (a cut label on a centre line, a level on a datum). That is
+        evidence, not proof — a view's own axis may run through its real title — so such a text only ranks behind any
+        title that is not crossed. Lines that end at a title, or underline it, do not count.
+    (callout indices, embedded indices)"""
+    segs: list[tuple[float, float, float, float]] = []
+    landings: list[tuple[float, float, float, float, float, float]] = []  # a leader's last leg (from, to) and its tip
+    for it in dr.items:
+        if it.index in skip or it.dxftype not in LINE_TYPES or it.role == Role.FIXED or len(it.pts) < 2:
+            continue
+        for a, b in itertools.pairwise(it.pts):
+            segs.append((a[0], a[1], b[0], b[1]))
+        if it.dxftype == "LEADER":
+            landings.append((*it.pts[-2], *it.pts[-1], *it.pts[0]))
+    if not texts or (not segs and not landings):
+        return set(), set()
+    arr = np.array(segs, dtype=float).reshape(-1, 4)
+    leg = np.array(landings, dtype=float).reshape(-1, 6)
+    callouts: set[int] = set()
+    embedded: set[int] = set()
+    for t in texts:
+        c = text_outline(t)
+        o = np.array(c[0])
+        u, v = np.array(c[1]) - o, np.array(c[3]) - o
+        w, hb = float(np.hypot(*u)), float(np.hypot(*v))
+        if w < 1e-9 or hb < 1e-9:
+            continue
+        u, v = u / w, v / hb
+        h = t.text_height or hb
+        if leg.size:
+            m = 0.6 * h  # the landing runs under (or through) the words, a few tenths of a height off them
+            ax, ay = _local(o, u, v, leg[:, 0], leg[:, 1])
+            bx, by = _local(o, u, v, leg[:, 2], leg[:, 3])
+            tx, ty = _local(o, u, v, leg[:, 4], leg[:, 5])
+            on_words = _clips(ax, ay, bx, by, -m, -m, w + m, hb + m)
+            points_away = ~((tx >= -1.5 * h) & (tx <= w + 1.5 * h) & (ty >= -1.5 * h) & (ty <= hb + 1.5 * h))
+            if (on_words & points_away).any():
+                callouts.add(t.index)
+                continue
+        if not arr.size:
+            continue
+        px, py = _local(o, u, v, arr[:, 0], arr[:, 1])
+        qx, qy = _local(o, u, v, arr[:, 2], arr[:, 3])
+        core = _clips(px, py, qx, qy, 0.08 * w, 0.2 * hb, 0.92 * w, 0.8 * hb)  # the middle of the words, clear of a baseline rule
+        outside = ~(((px >= 0) & (px <= w) & (py >= 0) & (py <= hb)) | ((qx >= 0) & (qx <= w) & (qy >= 0) & (qy <= hb)))
+        if (core & outside).any():
+            embedded.add(t.index)
+    return callouts, embedded
+
+
 def _above(it: Item, k: float) -> tuple[float, float]:
     """A point k text heights 'above' a text in its own frame (a rotated title stands beside its view)."""
     b = text_outline(it)
@@ -626,7 +705,11 @@ def segment(dr: Drawing, grid: int = 800, trace: list | None = None) -> SheetLay
         notes.append(f"{len(rules)} panel rule(s) part the sheet into panels")
     skip |= set(rules)
 
-    titles = _title_candidates(dr, skip)
+    candidates = _title_candidates(dr, skip)
+    callouts, embedded = _drawn_labels(dr, candidates, skip)
+    titles = [t for t in candidates if t.index not in callouts]
+    if callouts:
+        notes.append(f"{len(callouts)} text(s) with view words sit on a leader: callouts of a drawing, not titles")
     underline = _underlines(dr, titles)
     cell = max(W, H) / grid
     g = _Grid((work[0] - cell, work[1] - cell, work[2] + cell, work[3] + cell), cell)
@@ -980,7 +1063,7 @@ def segment(dr: Drawing, grid: int = 800, trace: list | None = None) -> SheetLay
         groups_raw.extend((sorted(v), None) for v in lg.values())
 
     groups = [_describe(dr, mem, kind) for mem, kind in groups_raw if mem]
-    _titles(dr, groups, cell)
+    _titles(dr, groups, cell, callouts, embedded)
     _absorb_labels(groups, max(g0 * cell, 2 * med_h))
     _title_block(dr, groups)
     _name_ids(groups)
@@ -1072,7 +1155,7 @@ def _describe(dr: Drawing, mem: list[int], forced: str | None = None) -> Group:
     return grp
 
 
-def _titles(dr: Drawing, groups: list[Group], cell: float) -> None:
+def _titles(dr: Drawing, groups: list[Group], cell: float, callouts: set[int] = frozenset(), embedded: set[int] = frozenset()) -> None:
     """Name each view from its title: a text with view words just below (or above) it, often underlined, often the
     largest words there, often followed by its scale. Words already part of a table or a note are not titles."""
     items = dr.items
@@ -1090,7 +1173,7 @@ def _titles(dr: Drawing, groups: list[Group], cell: float) -> None:
         med = statistics.median(hs) if hs else 0.0
         for it in pool:
             o = owner.get(it.index)
-            if o is not None and o is not v and o.kind in ("table", "title_block", "view"):
+            if it.index in callouts or (o is not None and o is not v and o.kind in ("table", "title_block", "view")):
                 continue
             types = _type_of(it.text) if not TITLE_BLOCK_RE.search(it.text) else []
             stated = SCALE_RE.search(it.text) or NTS_RE.search(it.text)
@@ -1133,11 +1216,15 @@ def _titles(dr: Drawing, groups: list[Group], cell: float) -> None:
             v.questions.append("no title found: name this view")
             v.confidence = 0.5
             continue
+        # a text the drawing runs through (a cut label on an axis) ranks behind any title that stands on clear paper
+        cands.sort(key=lambda si: si[1] in embedded)
         named = [(s, i) for s, i in cands if _type_of(items[i].text)]
         titles = named or cands[:1]
         # several titles side by side: halves of one figure, or separate views
         chosen = [titles[0]]
         for s, i in titles[1:]:
+            if i in embedded and titles[0][1] not in embedded:
+                continue
             if s >= titles[0][0] - 1.0 and abs(text_outline(items[i])[0][1] - text_outline(items[titles[0][1]])[0][1]) < 0.15 * (v.bbox[3] - v.bbox[1]):
                 chosen.append((s, i))
         chosen.sort(key=lambda si: text_outline(items[si[1]])[0][0])
