@@ -35,19 +35,42 @@ import tempfile
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any, cast
 
 import ezdxf
 import ezdxf.recover
+from ezdxf.filemanagement import readfile
+from ezdxf.lldxf.const import DXFError, DXFStructureError
+from ezdxf.math import Vec3
 
 from .dxf_write import _apply
-from .ir import Drawing, Role
+from .ir import Analysis, Drawing, Role
 from .regen import Regenerated
 from .topology import of as topology_of
 
 AX = {"x": 0, "y": 1}
-LEFT, RIGHT, BAND, STRETCH, PARTIAL, AXIS, FIXED = "left", "right", "band", "stretch", "partial", "axis", "fixed"
+LEFT, RIGHT, BAND, STRETCH, PARTIAL, AXIS, FIXED = (
+    "left",
+    "right",
+    "band",
+    "stretch",
+    "partial",
+    "axis",
+    "fixed",
+)
 ANNOTATION = {"DIMENSION", "HATCH", "TEXT", "MTEXT", "LEADER", "ATTRIB"}
-NO_STRETCH = {"ARC", "CIRCLE", "ELLIPSE", "SPLINE", "TEXT", "MTEXT", "POINT", "INSERT", "ATTRIB", "ATTDEF"}
+NO_STRETCH = {
+    "ARC",
+    "CIRCLE",
+    "ELLIPSE",
+    "SPLINE",
+    "TEXT",
+    "MTEXT",
+    "POINT",
+    "INSERT",
+    "ATTRIB",
+    "ATTDEF",
+}
 MAX_REFUSALS = 12
 
 
@@ -82,8 +105,14 @@ class Repeat:
         return self.first + k * self.pitch
 
     def describe(self, um: float = 1.0) -> dict:
-        return {"id": self.id, "axis": self.axis, "count": self.count, "pitch_mm": round(self.pitch * um, 3), "size_mm": [round(self.width * um, 3), round(self.height * um, 3)],
-                "regions": self.regions}
+        return {
+            "id": self.id,
+            "axis": self.axis,
+            "count": self.count,
+            "pitch_mm": round(self.pitch * um, 3),
+            "size_mm": [round(self.width * um, 3), round(self.height * um, 3)],
+            "regions": self.regions,
+        }
 
 
 def detect_repeats(an) -> list[Repeat]:
@@ -96,7 +125,12 @@ def detect_repeats(an) -> list[Repeat]:
     for r in sorted(topo.regions, key=lambda r: -r.area):
         w, h = r.bbox[2] - r.bbox[0], r.bbox[3] - r.bbox[1]
         for c in clusters:
-            if abs(w - c[0]) <= t2 and abs(h - c[1]) <= t2 and abs(r.area - c[2]) <= 0.01 * c[2] + t2 * max(w, h) and _congruent(r, c[3][0], t2):
+            if (
+                abs(w - c[0]) <= t2
+                and abs(h - c[1]) <= t2
+                and abs(r.area - c[2]) <= 0.01 * c[2] + t2 * max(w, h)
+                and _congruent(r, c[3][0], t2)
+            ):
                 c[3].append(r)
                 break
         else:
@@ -147,8 +181,20 @@ def _flush(found: list[Repeat], run: list, ax: int, name: str, area: float) -> N
         return
     r0 = run[0]
     pitch = (run[-1].bbox[ax] - r0.bbox[ax]) / (len(run) - 1)
-    found.append(Repeat(id="", axis=name, pitch=pitch, count=len(run), first=r0.bbox[ax], width=r0.bbox[ax + 2] - r0.bbox[ax],
-                        height=r0.bbox[3 - ax] - r0.bbox[1 - ax], area=area, regions=[r.id for r in run], perp=r0.bbox[1 - ax]))
+    found.append(
+        Repeat(
+            id="",
+            axis=name,
+            pitch=pitch,
+            count=len(run),
+            first=r0.bbox[ax],
+            width=r0.bbox[ax + 2] - r0.bbox[ax],
+            height=r0.bbox[3 - ax] - r0.bbox[1 - ax],
+            area=area,
+            regions=[r.id for r in run],
+            perp=r0.bbox[1 - ax],
+        )
+    )
 
 
 def instances(an, rep: Repeat) -> int:
@@ -158,7 +204,11 @@ def instances(an, rep: Repeat) -> int:
     n = 0
     for r in topology_of(an).regions:
         w, h = r.bbox[ax + 2] - r.bbox[ax], r.bbox[3 - ax] - r.bbox[1 - ax]
-        if abs(w - rep.width) > t2 or abs(h - rep.height) > t2 or abs(r.bbox[1 - ax] - rep.perp) > t2:
+        if (
+            abs(w - rep.width) > t2
+            or abs(h - rep.height) > t2
+            or abs(r.bbox[1 - ax] - rep.perp) > t2
+        ):
             continue
         ph = (r.bbox[ax] - rep.first) % rep.pitch
         if min(ph, rep.pitch - ph) <= t2 and r.bbox[ax] >= rep.first - t2:
@@ -169,7 +219,8 @@ def instances(an, rep: Repeat) -> int:
 def _lattices(reps: list[Repeat], t2: float) -> list[list[Repeat]]:
     """Repeats of one pitch along one axis, the best supported first. The lattice a drawing is set out on shows itself in many of its members (the
     cells, what stands between them, their corners, the same bays in the plan), where a chance pair of equal members shows once: the support of a
-    lattice is the sum over its repeats of (instances − 1)², so a third equal member at the same pitch counts for more than another pair."""
+    lattice is the sum over its repeats of (instances − 1)², so a third equal member at the same pitch counts for more than another pair.
+    """
     out: list[list[Repeat]] = []
     for r in reps:
         for grp in out:
@@ -195,20 +246,40 @@ STANDS_OUT = 3  # the support a lattice needs to be taken without being named: t
 def _normalise(req: dict) -> dict:
     kind = req.get("kind", "set_count")
     if kind != "set_count":
-        raise FeatureRefused(f"unknown operation {kind!r}: this engine makes set_count (add or remove instances of a repeated unit)")
+        raise FeatureRefused(
+            f"unknown operation {kind!r}: this engine makes set_count (add or remove instances of a repeated unit)"
+        )
     try:
         count = int(req["count"])
     except (KeyError, TypeError, ValueError) as exc:
-        raise FeatureRefused("count: the number of instances the drawing should show (a whole number)") from exc
+        raise FeatureRefused(
+            "count: the number of instances the drawing should show (a whole number)"
+        ) from exc
     if count < 1:
         raise FeatureRefused("count must be at least 1")
     at = req.get("at", "end")
-    if at not in ("end", "start") and not (isinstance(at, int) and not isinstance(at, bool) and at >= 0):
-        raise FeatureRefused("at: 'end', 'start' or the index (from 0) the new instance takes / the first one removed")
+    if at not in ("end", "start") and not (
+        isinstance(at, int) and not isinstance(at, bool) and at >= 0
+    ):
+        raise FeatureRefused(
+            "at: 'end', 'start' or the index (from 0) the new instance takes / the first one removed"
+        )
     out = {"kind": kind, "count": count, "at": at}
     if req.get("detached") not in (None, "move", "keep"):
-        raise FeatureRefused("detached: 'move' (what stands apart beyond the unit moves with it) or 'keep' (it stays where it is)")
-    for k in ("unit", "repeat", "current", "binding", "field", "nouns", "axis", "drop_plans", "detached"):
+        raise FeatureRefused(
+            "detached: 'move' (what stands apart beyond the unit moves with it) or 'keep' (it stays where it is)"
+        )
+    for k in (
+        "unit",
+        "repeat",
+        "current",
+        "binding",
+        "field",
+        "nouns",
+        "axis",
+        "drop_plans",
+        "detached",
+    ):
         if req.get(k) is not None:
             out[k] = req[k]
     return out
@@ -228,7 +299,7 @@ class Base:
     dr: Drawing
     path: str
     items: list[int]  # the unit's entities, as indices of `dr`
-    an: object  # the unit's analysis (the sheet's own: ids the parametrization uses)
+    an: Analysis  # the unit's analysis (the sheet's own: ids the parametrization uses)
     sub: Drawing
 
 
@@ -243,7 +314,10 @@ def _base(sm, uid: str) -> Base:
 def _extent(it, ax: int) -> tuple[float, float]:
     t = it.dxftype
     if t == "DIMENSION" and it.extra.get("dimtype") in (0, 1):
-        cs = [it.pts[1][ax], it.pts[2][ax]]  # the measured points: where the text sits is placement
+        cs = [
+            it.pts[1][ax],
+            it.pts[2][ax],
+        ]  # the measured points: where the text sits is placement
     else:
         cs = [p[ax] for p in it.pts]
     if t in ("CIRCLE", "ARC") and it.radius:
@@ -255,7 +329,9 @@ def _extent(it, ax: int) -> tuple[float, float]:
 
 
 def _classify(a: float, b: float, lo: float, hi: float, tol: float) -> str:
-    if b - a <= tol:  # a point, a line across the axis: the band is half open [lo, hi), so every boundary line belongs to exactly one side
+    if (
+        b - a <= tol
+    ):  # a point, a line across the axis: the band is half open [lo, hi), so every boundary line belongs to exactly one side
         m = (a + b) / 2
         return LEFT if m < lo - tol else RIGHT if m >= hi - tol else BAND
     if b <= lo + tol:
@@ -271,18 +347,36 @@ def _classify(a: float, b: float, lo: float, hi: float, tol: float) -> str:
 
 def _same(a, b, tol: float, shift: float, ax: int) -> bool:
     """`b` is `a` moved by `shift` along the axis: same kind, layer, text, points."""
-    if a.dxftype != b.dxftype or a.layer != b.layer or (a.text or "") != (b.text or "") or len(a.pts) != len(b.pts):
+    if (
+        a.dxftype != b.dxftype
+        or a.layer != b.layer
+        or (a.text or "") != (b.text or "")
+        or len(a.pts) != len(b.pts)
+    ):
         return False
     pairs = list(zip(a.pts, b.pts, strict=True))
     if a.dxftype == "DIMENSION" and a.extra.get("dimtype") in (0, 1):
-        pairs = pairs[1:3]  # what it measures: where its line and its text sit is placement, and instances place theirs by hand
-    return all(abs(p[ax] + shift - q[ax]) <= 2 * tol and abs(p[1 - ax] - q[1 - ax]) <= 2 * tol for p, q in pairs)
+        pairs = pairs[
+            1:3
+        ]  # what it measures: where its line and its text sit is placement, and instances place theirs by hand
+    return all(
+        abs(p[ax] + shift - q[ax]) <= 2 * tol and abs(p[1 - ax] - q[1 - ax]) <= 2 * tol
+        for p, q in pairs
+    )
 
 
 class _Twins:
     """Does another instance carry the same entity? (what makes an annotation per-instance, and so safe to copy or delete)"""
 
-    def __init__(self, dr: Drawing, items: list[int], ax: int, pitch: float, count: int, tol: float):
+    def __init__(
+        self,
+        dr: Drawing,
+        items: list[int],
+        ax: int,
+        pitch: float,
+        count: int,
+        tol: float,
+    ):
         self.dr, self.ax, self.pitch, self.count, self.tol = dr, ax, pitch, count, tol
         self.bucket: dict[tuple, list[int]] = defaultdict(list)
         for i in items:
@@ -297,7 +391,9 @@ class _Twins:
                 continue
             o = self.dr.items[j]
             for n in range(1, self.count + 1):
-                if _same(it, o, self.tol, n * self.pitch, self.ax) or _same(it, o, self.tol, -n * self.pitch, self.ax):
+                if _same(it, o, self.tol, n * self.pitch, self.ax) or _same(
+                    it, o, self.tol, -n * self.pitch, self.ax
+                ):
                     return True
         return False
 
@@ -319,19 +415,29 @@ def _stretchable(it, lo: float, hi: float, tol: float, ax: int, doc) -> str | No
         if e is None:
             return f"{_label(it)}: its boundary cannot be read"
         for path in e.paths:
-            if not hasattr(path, "vertices") and any(type(x).__name__ != "LineEdge" for x in path.edges):
+            if not hasattr(path, "vertices") and any(
+                type(x).__name__ != "LineEdge" for x in path.edges
+            ):
                 return f"{_label(it)} has a curved boundary: it cannot be stretched across the repeated unit"
         rings = it.extra.get("rings") or []
         verts = [it.pts[k][ax] for r in rings for k in r]
-        edges = [(it.pts[r[i]], it.pts[r[(i + 1) % len(r)]]) for r in rings for i in range(len(r))]
+        edges = [
+            (it.pts[r[i]], it.pts[r[(i + 1) % len(r)]])
+            for r in rings
+            for i in range(len(r))
+        ]
     else:
         verts = [p[ax] for p in it.pts]
         n = len(it.pts)
-        edges = [(it.pts[i], it.pts[i + 1]) for i in range(n - 1)] + ([(it.pts[-1], it.pts[0])] if it.closed and n > 2 else [])
+        edges = [(it.pts[i], it.pts[i + 1]) for i in range(n - 1)] + (
+            [(it.pts[-1], it.pts[0])] if it.closed and n > 2 else []
+        )
     if any(lo + tol < c < hi - tol for c in verts):
         return f"{_label(it)} has vertices inside the repeated unit: stretching it would not repeat that detail"
     for p, q in edges:
-        across = (p[ax] <= lo + tol and q[ax] >= hi - tol) or (q[ax] <= lo + tol and p[ax] >= hi - tol)
+        across = (p[ax] <= lo + tol and q[ax] >= hi - tol) or (
+            q[ax] <= lo + tol and p[ax] >= hi - tol
+        )
         if across and abs(p[1 - ax] - q[1 - ax]) > tol:
             return f"{_label(it)} has an edge across the repeated unit that is not parallel to the axis: stretching it would change its slope"
     return None
@@ -345,33 +451,62 @@ class Scan:
     nested: dict[str, set[str]] = field(default_factory=dict)
 
 
-def _scan(base: Base, doc, lo: float, hi: float, ax: int, tol: float, axis_value: float | None, twins: _Twins, items: list[int]) -> Scan:
+def _scan(
+    base: Base,
+    doc,
+    lo: float,
+    hi: float,
+    ax: int,
+    tol: float,
+    axis_value: float | None,
+    twins: _Twins,
+    items: list[int],
+) -> Scan:
     dr = base.dr
     kinds: dict[int, str] = {}
     refusals: list[str] = []
     nested: dict[str, set[str]] = defaultdict(set)
-    hatch_in_region = {base.items[h] for r in topology_of(base.an).regions for h in r.hatches}  # a hatch that fills a region is that region's material
+    hatch_in_region = {
+        base.items[h] for r in topology_of(base.an).regions for h in r.hatches
+    }  # a hatch that fills a region is that region's material
     for i in items:
         it = dr.items[i]
-        if it.anchor is not None:  # the contents of a rigid symbol follow its insertion point
+        if (
+            it.anchor is not None
+        ):  # the contents of a rigid symbol follow its insertion point
             continue
         if it.role == Role.FIXED:
             kinds[i] = FIXED
             continue
         a, b = _extent(it, ax)
         kind = _classify(a, b, lo, hi, tol)
-        if axis_value is not None and b - a <= tol and abs((a + b) / 2 - axis_value) <= tol and it.dxftype != "INSERT" and not twins.has(i):
+        if (
+            axis_value is not None
+            and b - a <= tol
+            and abs((a + b) / 2 - axis_value) <= tol
+            and it.dxftype != "INSERT"
+            and not twins.has(i)
+        ):
             kind = AXIS  # the structure's own centre: it moves with the middle, not with an instance
         if kind == PARTIAL:
-            refusals.append(f"{_label(it)} lies across the edge of the repeated unit (it spans {a:g}…{b:g}, the unit {lo:g}…{hi:g}): "
-                            "it belongs to neither one instance nor the rest")
+            refusals.append(
+                f"{_label(it)} lies across the edge of the repeated unit (it spans {a:g}…{b:g}, the unit {lo:g}…{hi:g}): "
+                "it belongs to neither one instance nor the rest"
+            )
         elif kind == STRETCH:
             why = _stretchable(it, lo, hi, tol, ax, doc)
             if why:
                 refusals.append(why)
-        elif kind == BAND and it.dxftype in ANNOTATION and not (it.dxftype == "HATCH" and i in hatch_in_region) and not twins.has(i):
-            refusals.append(f"{_label(it)} stands inside the repeated unit but no other instance has one like it: whether every instance "
-                            "carries it cannot be told, so it is neither copied nor removed")
+        elif (
+            kind == BAND
+            and it.dxftype in ANNOTATION
+            and not (it.dxftype == "HATCH" and i in hatch_in_region)
+            and not twins.has(i)
+        ):
+            refusals.append(
+                f"{_label(it)} stands inside the repeated unit but no other instance has one like it: whether every instance "
+                "carries it cannot be told, so it is neither copied nor removed"
+            )
         if it.src and "/" in it.src and it.anchor is None:
             nested[it.handle].add(kind)
         kinds[i] = kind
@@ -381,8 +516,10 @@ def _scan(base: Base, doc, lo: float, hi: float, ax: int, tol: float, axis_value
             continue
         everyone = [j for j, o in enumerate(dr.items) if o.handle == top]
         if movers != {RIGHT} or any(j not in kinds for j in everyone):
-            refusals.append(f"the view stored in block reference {top} would be reshaped (it holds entities that stay, move, stretch or repeat): "
-                            "explode the block first")
+            refusals.append(
+                f"the view stored in block reference {top} would be reshaped (it holds entities that stay, move, stretch or repeat): "
+                "explode the block first"
+            )
     return Scan(kinds=kinds, refusals=refusals, warnings=[], nested=dict(nested))
 
 
@@ -419,9 +556,12 @@ class Operation:
         return [i for i, k in self.kinds.items() if k == LEFT]
 
 
-def _band_candidates(rep: Repeat, mode: str, at, d: int) -> list[tuple[float, float, str, str, int]]:
+def _band_candidates(
+    rep: Repeat, mode: str, at, d: int
+) -> list[tuple[float, float, str, str, int]]:
     """(lo, hi, cut, shape, index) in the order they are tried. A band is one pitch wide for an insertion (that period is copied), `d` pitches
-    for a removal; the L shape is an instance with the member after it, the R shape the member before it with the instance."""
+    for a removal; the L shape is an instance with the member after it, the R shape the member before it with the instance.
+    """
     n, P, w = rep.count, rep.pitch, rep.width
     out: list[tuple[float, float, str, str, int]] = []
 
@@ -433,7 +573,11 @@ def _band_candidates(rep: Repeat, mode: str, at, d: int) -> list[tuple[float, fl
 
     if mode == "insert":
         i = n if at == "end" else 0 if at == "start" else min(int(at), n)
-        order = [("B", i), ("C", i)] if i == n else [("A", i)] if i == 0 else [("A", i), ("B", i), ("C", i), ("D", i)]
+        order = (
+            [("B", i), ("C", i)]
+            if i == n
+            else [("A", i)] if i == 0 else [("A", i), ("B", i), ("C", i), ("D", i)]
+        )
         for tag, i in order:
             if tag == "A" and i <= n - 1:
                 out.append((*L(i, 1), "left", "L", i))
@@ -444,39 +588,72 @@ def _band_candidates(rep: Repeat, mode: str, at, d: int) -> list[tuple[float, fl
             elif tag == "D" and 1 <= i <= n - 1:
                 out.append((*R(i, 1), "left", "R", i))
     else:
-        k = n - d if at == "end" else 0 if at == "start" else max(0, min(int(at), n - d))
-        shapes = [("R", k + d - 1), ("L", k)] if k + d == n else [("L", k), ("R", k + d - 1)]
+        k = (
+            n - d
+            if at == "end"
+            else 0 if at == "start" else max(0, min(int(at), n - d))
+        )
+        shapes = (
+            [("R", k + d - 1), ("L", k)] if k + d == n else [("L", k), ("R", k + d - 1)]
+        )
         for shape, j in shapes:
             lo, hi = R(j, d) if shape == "R" else L(j, d)
             out.append((lo, hi, "none", shape, k))
     return out
 
 
-def _select_repeat(reps: list[Repeat], req: dict, tol: float, um: float) -> tuple[Repeat | None, list[str], list[dict]]:
+def _select_repeat(
+    reps: list[Repeat], req: dict, tol: float, um: float
+) -> tuple[Repeat | None, list[str], list[dict]]:
     """The repeat a count is about: the one named (`repeat`), else the lattice the drawing is clearly set out on — and then the repeat of it whose
-    count is the one stated. Where no lattice stands out the answer is a question (the candidates, with ids), never a guess."""
+    count is the one stated. Where no lattice stands out the answer is a question (the candidates, with ids), never a guess.
+    """
     ax = req.get("axis")
     cands = [r for r in reps if ax is None or r.axis == ax]
     cur = req.get("current")
     if req.get("repeat"):
         pool = [r for r in reps if r.id == req["repeat"]]
         if not pool:
-            return None, [f"no repeat {req['repeat']!r} in this unit (it shows {[r.id for r in reps] or 'none'})"], []
+            return (
+                None,
+                [
+                    f"no repeat {req['repeat']!r} in this unit (it shows {[r.id for r in reps] or 'none'})"
+                ],
+                [],
+            )
     else:
         lats = _lattices(cands, 2 * tol)
         if not lats:
-            return None, ["no repeated unit: the unit shows no two congruent regions at an equal pitch, so there is no pitch to extend"], []
+            return (
+                None,
+                [
+                    "no repeated unit: the unit shows no two congruent regions at an equal pitch, so there is no pitch to extend"
+                ],
+                [],
+            )
         top = lats[0]
-        if _support(top) < STANDS_OUT or (len(lats) > 1 and _support(top) < 2 * _support(lats[1])):
+        if _support(top) < STANDS_OUT or (
+            len(lats) > 1 and _support(top) < 2 * _support(lats[1])
+        ):
             return None, [], [r.describe(um) for lat in lats[:4] for r in lat[:1]]
         pool = top
-    n = max(r.count for r in pool)  # the instances are the most numerous members of the lattice (what stands between them is one fewer)
+    n = max(
+        r.count for r in pool
+    )  # the instances are the most numerous members of the lattice (what stands between them is one fewer)
     if cur is not None and n != int(cur):
-        return None, [f"the drawing's repeated unit shows {n} instance(s), not {int(cur)} as stated: nothing says which repeat the count is about"], []
+        return (
+            None,
+            [
+                f"the drawing's repeated unit shows {n} instance(s), not {int(cur)} as stated: nothing says which repeat the count is about"
+            ],
+            [],
+        )
     return max((r for r in pool if r.count == n), key=lambda r: r.area), [], []
 
 
-def _order(sm, uid: str, req: dict, base: Base, doc, with_texts: bool = True) -> tuple[Operation | None, dict]:
+def _order(
+    sm, uid: str, req: dict, base: Base, doc, with_texts: bool = True
+) -> tuple[Operation | None, dict]:
     """The operation for a request on a unit — or None and the plan's reasons. Reads only."""
     u = sm.unit(uid)
     um = u.sub.units_mm
@@ -488,8 +665,16 @@ def _order(sm, uid: str, req: dict, base: Base, doc, with_texts: bool = True) ->
     if rep is None:
         info["refusals"] += why
         if ask:
-            info["questions"].append({"text": "No repeated unit stands out clearly in this unit: which repeat is the count about? (pass its id as `repeat`)", "options": [f"{a['id']}: {a['count']} × {a['size_mm']} mm at {a['pitch_mm']} mm" for a in ask],
-                                      "about": "repeat"})
+            info["questions"].append(
+                {
+                    "text": "No repeated unit stands out clearly in this unit: which repeat is the count about? (pass its id as `repeat`)",
+                    "options": [
+                        f"{a['id']}: {a['count']} × {a['size_mm']} mm at {a['pitch_mm']} mm"
+                        for a in ask
+                    ],
+                    "about": "repeat",
+                }
+            )
         return None, info
     n, m = rep.count, int(req["count"])
     info["repeat"] = rep.describe(um)
@@ -501,11 +686,19 @@ def _order(sm, uid: str, req: dict, base: Base, doc, with_texts: bool = True) ->
         info["refusals"].append("a drawing keeps at least one instance")
         return None, info
     ax = AX[rep.axis]
-    islands = _islands(base, [r for r in reps if r.axis == rep.axis and abs(r.pitch - rep.pitch) <= 2 * tol])
+    islands = _islands(
+        base,
+        [r for r in reps if r.axis == rep.axis and abs(r.pitch - rep.pitch) <= 2 * tol],
+    )
     ga = base.an.global_axis.get(rep.axis)
     axis_value = None
     if ga and ga in base.an.datums:
-        xs = [p[ax] for k in base.items if base.dr.items[k].role == Role.STRUCTURAL and k not in islands for p in base.dr.items[k].pts]
+        xs = [
+            p[ax]
+            for k in base.items
+            if base.dr.items[k].role == Role.STRUCTURAL and k not in islands
+            for p in base.dr.items[k].pts
+        ]
         axv = base.an.datums[ga].value
         if xs and abs(axv - (min(xs) + max(xs)) / 2) <= 2 * tol:
             axis_value = axv
@@ -523,25 +716,53 @@ def _order(sm, uid: str, req: dict, base: Base, doc, with_texts: bool = True) ->
             chosen = (lo, hi, cut, shape, k, sc)
             break
     if chosen is None:
-        info["refusals"] += (first_reasons or ["no band of the repeated unit can be placed there"])[:MAX_REFUSALS]
+        info["refusals"] += (
+            first_reasons or ["no band of the repeated unit can be placed there"]
+        )[:MAX_REFUSALS]
         if tried > 1:
-            info["refusals"].append(f"(tried {tried} placements of the unit; the reasons are those of the first)")
+            info["refusals"].append(
+                f"(tried {tried} placements of the unit; the reasons are those of the first)"
+            )
         return None, info
     lo, hi, cut, shape, k, sc = chosen
     det = [i for i, kd in sc.kinds.items() if kd == RIGHT and i in islands]
     if det and req.get("detached") is None:
-        info["questions"].append({"text": f"{len(det)} entit(ies) beyond the repeated unit touch nothing of the structure ({', '.join(_label(base.dr.items[i]) for i in det[:3])}"
-                                          f"{'…' if len(det) > 3 else ''}): do they move with it, or stay where they are?", "options": ["move", "keep"], "about": "detached"})
+        info["questions"].append(
+            {
+                "text": f"{len(det)} entit(ies) beyond the repeated unit touch nothing of the structure ({', '.join(_label(base.dr.items[i]) for i in det[:3])}"
+                f"{'…' if len(det) > 3 else ''}): do they move with it, or stay where they are?",
+                "options": ["move", "keep"],
+                "about": "detached",
+            }
+        )
         return None, info
     if det and req["detached"] == "keep":
         for i in det:
             sc.kinds[i] = LEFT
-        runs = _runs_into(base, det, sc.kinds, ax, rep.pitch * d if mode == "insert" else 0.0, tol)
+        runs = _runs_into(
+            base, det, sc.kinds, ax, rep.pitch * d if mode == "insert" else 0.0, tol
+        )
         if runs:
             info["refusals"] += runs
             return None, info
-    op = Operation(request=req, uid=uid, base=base, rep=rep, ax=ax, tol=tol, mode=mode, delta=d if mode == "insert" else -d, lo=lo, hi=hi, cut=cut,
-                   band=shape, kinds=sc.kinds, axis_value=axis_value, first_removed=k if mode == "remove" else 0, doc=doc)
+    op = Operation(
+        request=req,
+        uid=uid,
+        base=base,
+        rep=rep,
+        ax=ax,
+        tol=tol,
+        mode=mode,
+        delta=d if mode == "insert" else -d,
+        lo=lo,
+        hi=hi,
+        cut=cut,
+        band=shape,
+        kinds=sc.kinds,
+        axis_value=axis_value,
+        first_removed=k if mode == "remove" else 0,
+        doc=doc,
+    )
     if with_texts:
         _count_notes(op, n, m)
     return op, info
@@ -564,14 +785,26 @@ def _islands(base: Base, lattice: list[Repeat]) -> set[int]:
         for o in others:
             parent[find(k)] = find(o)
     by_id = {r.id: r for r in topo.regions}
-    members = {find(i) for rep in lattice for rid in rep.regions for i in by_id[rid].items}
-    return {s for s, k in local.items() if base.dr.items[s].role == Role.STRUCTURAL and find(k) not in members}
+    members = {
+        find(i) for rep in lattice for rid in rep.regions for i in by_id[rid].items
+    }
+    return {
+        s
+        for s, k in local.items()
+        if base.dr.items[s].role == Role.STRUCTURAL and find(k) not in members
+    }
 
 
-def _runs_into(base: Base, kept: list[int], kinds: dict[int, str], ax: int, grow: float, tol: float) -> list[str]:
+def _runs_into(
+    base: Base, kept: list[int], kinds: dict[int, str], ax: int, grow: float, tol: float
+) -> list[str]:
     """What stays where it is while the structure grows over it."""
     dr = base.dr
-    movers = [i for i, kd in kinds.items() if kd not in (FIXED,) and i not in kept and dr.items[i].role == Role.STRUCTURAL]
+    movers = [
+        i
+        for i, kd in kinds.items()
+        if kd not in (FIXED,) and i not in kept and dr.items[i].role == Role.STRUCTURAL
+    ]
     if not movers or grow <= 0:
         return []
     far = max(_extent(dr.items[i], ax)[1] for i in movers) + grow
@@ -579,17 +812,26 @@ def _runs_into(base: Base, kept: list[int], kinds: dict[int, str], ax: int, grow
     for i in kept:
         a, b = _extent(dr.items[i], ax)
         if a < far - tol and b > far - grow + tol:
-            out.append(f"{_label(dr.items[i])} stays where it is but the structure would grow over it (to {far:g}): it has to move, or the count stays")
+            out.append(
+                f"{_label(dr.items[i])} stays where it is but the structure would grow over it (to {far:g}): it has to move, or the count stays"
+            )
     return out
 
 
-def _collide(sm, uid: str, rep: Repeat, ax: int, mode: str, d: int, base: Base, um: float) -> list[str]:
+def _collide(
+    sm, uid: str, rep: Repeat, ax: int, mode: str, d: int, base: Base, um: float
+) -> list[str]:
     """Another view the grown one would run into (the drawing is never rearranged around it)."""
     if mode != "insert":
         return []
     u = sm.units[uid]
     boxes = [sm.layout.group(v).bbox for v in u.views]
-    ub = (min(b[0] for b in boxes), min(b[1] for b in boxes), max(b[2] for b in boxes), max(b[3] for b in boxes))
+    ub = (
+        min(b[0] for b in boxes),
+        min(b[1] for b in boxes),
+        max(b[2] for b in boxes),
+        max(b[3] for b in boxes),
+    )
     grown = list(ub)
     grown[ax + 2] += d * rep.pitch
     out = []
@@ -597,9 +839,19 @@ def _collide(sm, uid: str, rep: Repeat, ax: int, mode: str, d: int, base: Base, 
         if g.id in u.views or g.kind == "title_block":
             continue
         gb = g.bbox
-        if gb[0] <= grown[2] and gb[2] >= grown[0] and gb[1] <= grown[3] and gb[3] >= grown[1] and not (gb[0] <= ub[2] and gb[2] >= ub[0] and gb[1] <= ub[3] and gb[3] >= ub[1]):
-            out.append(f"the view would grow by {d * rep.pitch * um:g} mm into {g.id}{' (' + g.name + ')' if g.name else ''}: it is not moved — "
-                       "make room first, or keep the drawing as it is")
+        if (
+            gb[0] <= grown[2]
+            and gb[2] >= grown[0]
+            and gb[1] <= grown[3]
+            and gb[3] >= grown[1]
+            and not (
+                gb[0] <= ub[2] and gb[2] >= ub[0] and gb[1] <= ub[3] and gb[3] >= ub[1]
+            )
+        ):
+            out.append(
+                f"the view would grow by {d * rep.pitch * um:g} mm into {g.id}{' (' + g.name + ')' if g.name else ''}: it is not moved — "
+                "make room first, or keep the drawing as it is"
+            )
     return out
 
 
@@ -609,16 +861,25 @@ def _count_notes(op: Operation, n: int, m: int) -> None:
     dr = op.base.dr
     for i in op.base.items:
         it = dr.items[i]
-        if it.dxftype not in ("TEXT", "MTEXT") or not it.text or op.kinds.get(i) not in (LEFT, RIGHT, AXIS, STRETCH, BAND):
+        if (
+            it.dxftype not in ("TEXT", "MTEXT")
+            or not it.text
+            or op.kinds.get(i) not in (LEFT, RIGHT, AXIS, STRETCH, BAND)
+        ):
             continue
         text = it.text
         if nouns:
-            pat = re.compile(rf"(?<![\d.]){n}(?![\d.])(\s*[-–]?\s*)(?=(?:{'|'.join(map(re.escape, nouns))})\b)", re.IGNORECASE)
+            pat = re.compile(
+                rf"(?<![\d.]){n}(?![\d.])(\s*[-–]?\s*)(?=(?:{'|'.join(map(re.escape, nouns))})\b)",
+                re.IGNORECASE,
+            )
             if pat.search(text) and op.kinds[i] != BAND:
                 op.notes[i] = pat.sub(lambda mo: f"{m}{mo.group(1)}", text, count=1)
                 continue
         if re.search(rf"(?<![\d.]){n}(?![\d.])", text):
-            op.warnings.append(f"the note '{text.splitlines()[0][:50]}' contains {n}: if it states the count, it is left as drawn — correct it by hand")
+            op.warnings.append(
+                f"the note '{text.splitlines()[0][:50]}' contains {n}: if it states the count, it is left as drawn — correct it by hand"
+            )
 
 
 # ── writing the derived drawing ──────────────────────────────────────────────────
@@ -641,7 +902,9 @@ def _stretched(it, op: Operation) -> list[tuple[float, float]]:
     out = []
     for p in it.pts:
         c = p[ax]
-        d = 0.0 if c <= op.lo + op.tol else D if c >= op.hi - op.tol else D / 2  # inside the band only a placement (a dimension's text) can be
+        d = (
+            0.0 if c <= op.lo + op.tol else D if c >= op.hi - op.tol else D / 2
+        )  # inside the band only a placement (a dimension's text) can be
         out.append((p[0] + d, p[1]) if ax == 0 else (p[0], p[1] + d))
     return out
 
@@ -650,13 +913,23 @@ def derive(op: Operation, out_path: str) -> Derived:
     base = op.base
     try:
         doc, _ = ezdxf.recover.readfile(base.path)
-    except ezdxf.DXFStructureError:
-        doc = ezdxf.readfile(base.path)
+    except DXFStructureError:
+        doc = readfile(base.path)
     db = doc.entitydb
     dr = base.dr
     ax, D, P = op.ax, op.shift, op.rep.pitch
-    report = {"updated": 0, "dimensions_rendered": 0, "dimension_render_failed": 0, "texts_changed": 0, "kept": 0, "blocks_exploded": 0, "blocks_moved": 0,
-              "symbols_moved": 0, "_units_mm": dr.units_mm, "_item_units_mm": {}}
+    report = {
+        "updated": 0,
+        "dimensions_rendered": 0,
+        "dimension_render_failed": 0,
+        "texts_changed": 0,
+        "kept": 0,
+        "blocks_exploded": 0,
+        "blocks_moved": 0,
+        "symbols_moved": 0,
+        "_units_mm": dr.units_mm,
+        "_item_units_mm": {},
+    }
     reg = Regenerated(values={}, datum={}, pts={}, radius={}, texts=dict(op.notes))
     copies: dict[int, list[str]] = {}
     deleted: list[int] = []
@@ -667,13 +940,17 @@ def derive(op: Operation, out_path: str) -> Derived:
             continue
         e = db.get(it.handle)
         if e is None:
-            raise FeatureRefused(f"{_label(it)}: the entity is not in the file it was read from")
+            raise FeatureRefused(
+                f"{_label(it)}: the entity is not in the file it was read from"
+            )
         nested = bool(it.src and "/" in it.src)
-        if nested:  # a view block that moves as one piece: its insertion point moves, once
+        if (
+            nested
+        ):  # a view block that moves as one piece: its insertion point moves, once
             if it.handle not in moved_blocks and kind == RIGHT:
                 moved_blocks.add(it.handle)
                 ins = e.dxf.insert
-                e.dxf.insert = ins + ezdxf.math.Vec3(*((D, 0, 0) if ax == 0 else (0, D, 0)))
+                e.dxf.insert = ins + Vec3(*((D, 0, 0) if ax == 0 else (0, D, 0)))
                 report["blocks_moved"] += 1
             continue
         reg.texts = {**reg.texts}
@@ -684,7 +961,7 @@ def derive(op: Operation, out_path: str) -> Derived:
         elif kind == STRETCH:
             _place(e, it, _stretched(it, op), reg, report)
         elif kind == BAND and op.mode == "remove":
-            layout = e.get_layout()
+            layout = cast(Any, e).get_layout()
             if e.dxftype() == "DIMENSION" and e.dxf.hasattr("geometry"):
                 block = e.dxf.geometry
                 layout.delete_entity(e)
@@ -697,7 +974,7 @@ def derive(op: Operation, out_path: str) -> Derived:
             offsets = [(0 if op.cut == "left" else P) + j * P for j in range(op.delta)]
             own = D if op.cut == "left" else 0.0
             handles = []
-            layout = e.get_layout()
+            layout = cast(Any, e).get_layout()
             for off in offsets:
                 c = e.copy()
                 layout.add_entity(c)
@@ -709,7 +986,10 @@ def derive(op: Operation, out_path: str) -> Derived:
             if own:
                 _place(e, it, _moved(it.pts, own, ax), reg, report)
     if report["dimension_render_failed"]:
-        raise FeatureRefused("a dimension could not be re-drawn at its new place: " + "; ".join(report.get("dimension_render_errors", [])[:2]))
+        raise FeatureRefused(
+            "a dimension could not be re-drawn at its new place: "
+            + "; ".join(report.get("dimension_render_errors", [])[:2])
+        )
     doc.saveas(out_path)
     for k in ("_units_mm", "_item_units_mm"):
         report.pop(k, None)
@@ -718,7 +998,7 @@ def derive(op: Operation, out_path: str) -> Derived:
 
 def _place(e, it, pts, reg: Regenerated, report: dict) -> None:
     if e.dxftype() == "INSERT":
-        e.dxf.insert = ezdxf.math.Vec3(pts[0][0], pts[0][1], e.dxf.insert.z)
+        e.dxf.insert = Vec3(pts[0][0], pts[0][1], e.dxf.insert.z)
         report["symbols_moved"] += 1
         return
     _apply(e, it, pts, reg, report)
@@ -729,31 +1009,56 @@ def _place(e, it, pts, reg: Regenerated, report: dict) -> None:
 
 def _effects(op: Operation) -> dict:
     c = Counter(op.kinds.values())
-    return {"stay": c.get(LEFT, 0) + c.get(FIXED, 0), "shift": c.get(RIGHT, 0), "stretch": c.get(STRETCH, 0), "on_axis": c.get(AXIS, 0),
-            "copied" if op.mode == "insert" else "deleted": c.get(BAND, 0) * (abs(op.delta) if op.mode == "insert" else 1)}
+    return {
+        "stay": c.get(LEFT, 0) + c.get(FIXED, 0),
+        "shift": c.get(RIGHT, 0),
+        "stretch": c.get(STRETCH, 0),
+        "on_axis": c.get(AXIS, 0),
+        "copied" if op.mode == "insert" else "deleted": c.get(BAND, 0)
+        * (abs(op.delta) if op.mode == "insert" else 1),
+    }
 
 
 def plan_summary(op: Operation, um: float) -> dict:
     n = op.rep.count
     m = int(op.request["count"])
-    return {"axis": op.rep.axis, "from_count": n, "to_count": m, "mode": op.mode, "pitch_mm": round(op.rep.pitch * um, 3), "grows_mm": round(op.shift * um, 3),
-            "band_mm": [round(op.lo * um, 3), round(op.hi * um, 3)], "band": op.band, "effects": _effects(op),
-            "notes_rewritten": [{"from": op.base.dr.items[i].text[:60], "to": t[:60]} for i, t in op.notes.items()]}
+    return {
+        "axis": op.rep.axis,
+        "from_count": n,
+        "to_count": m,
+        "mode": op.mode,
+        "pitch_mm": round(op.rep.pitch * um, 3),
+        "grows_mm": round(op.shift * um, 3),
+        "band_mm": [round(op.lo * um, 3), round(op.hi * um, 3)],
+        "band": op.band,
+        "effects": _effects(op),
+        "notes_rewritten": [
+            {"from": (op.base.dr.items[i].text or "")[:60], "to": t[:60]}
+            for i, t in op.notes.items()
+        ],
+    }
 
 
 def request_digest(sm, uid: str, req: dict) -> str:
-    return hashlib.sha256(json.dumps([sm.fingerprint(), sm.revision, uid, req], sort_keys=True, default=str).encode()).hexdigest()[:12]
+    return hashlib.sha256(
+        json.dumps(
+            [sm.fingerprint(), sm.revision, uid, req], sort_keys=True, default=str
+        ).encode()
+    ).hexdigest()[:12]
 
 
 def plan_count(sm, uid: str, request: dict, workdir: Path | None = None) -> dict:
     """What a change of count would do on this unit, and whether it can be done faithfully — through the whole chain (the derived drawing, its
     re-import, the parametrization carried over, the production guards at the new count), without changing the sheet. `status`: ready |
-    refused | needs_decision. A plan is accepted by `accept(plan)` and applied by `SheetModel.apply_feature`, which builds it again."""
+    refused | needs_decision. A plan is accepted by `accept(plan)` and applied by `SheetModel.apply_feature`, which builds it again.
+    """
     own = workdir is None
     work = Path(workdir or tempfile.mkdtemp(prefix="feature-plan-"))
     try:
         plan = build_candidate(sm, uid, request, work).plan
-        plan.pop("derived", None)  # the file is gone with the work folder: a plan describes, it leaves nothing behind
+        plan.pop(
+            "derived", None
+        )  # the file is gone with the work folder: a plan describes, it leaves nothing behind
         return plan
     finally:
         if own:
@@ -762,7 +1067,13 @@ def plan_count(sm, uid: str, request: dict, workdir: Path | None = None) -> dict
 
 def accept_plan(plan: dict, by: str = "person") -> dict:
     if plan.get("status") != "ready":
-        raise ValueError(f"plan {plan.get('id')} is {plan.get('status')}: " + "; ".join([q["text"] for q in plan.get("questions", [])][:2] + plan.get("refusals", [])[:2]))
+        raise ValueError(
+            f"plan {plan.get('id')} is {plan.get('status')}: "
+            + "; ".join(
+                [q["text"] for q in plan.get("questions", [])][:2]
+                + plan.get("refusals", [])[:2]
+            )
+        )
     out = copy.deepcopy(plan)
     out["status"] = "accepted"
     out["accepted_by"] = by
@@ -775,7 +1086,7 @@ def accept_plan(plan: dict, by: str = "person") -> dict:
 @dataclass
 class Candidate:
     plan: dict
-    new: object | None = None  # the new SheetModel (built, validated) when ready
+    new: Any | None = None  # the new SheetModel (built, validated) when ready
     path: str | None = None
 
 
@@ -784,7 +1095,16 @@ def build_candidate(sm, uid: str, request: dict, workdir: Path) -> Candidate:
     none of them behind."""
     from .feature_carry import bake, carry
 
-    plan: dict = {"id": "", "kind": "set_count", "unit": uid, "status": "refused", "revision": sm.revision, "refusals": [], "warnings": [], "questions": []}
+    plan: dict = {
+        "id": "",
+        "kind": "set_count",
+        "unit": uid,
+        "status": "refused",
+        "revision": sm.revision,
+        "refusals": [],
+        "warnings": [],
+        "questions": [],
+    }
     work: Path | None = None
     try:
         req = _normalise(request)
@@ -794,15 +1114,17 @@ def build_candidate(sm, uid: str, request: dict, workdir: Path) -> Candidate:
         plan["id"] = f"F_{uid}_{req['count']}_{request_digest(sm, uid, req)}"
         work = workdir / plan["id"]
         work.mkdir(parents=True, exist_ok=True)
-        if any(v for v in sm.values.values()):  # a changed value is geometry from here on: the sheet as the person sees it is what is extended
-            sm, baked = bake(sm, work, req), True
+        if any(
+            v for v in sm.values.values()
+        ):  # a changed value is geometry from here on: the sheet as the person sees it is what is extended
+            sm, baked = cast(Any, bake(sm, work, req)), True
         else:
             baked = False
         base = _base(sm, uid)
         try:
             doc, _ = ezdxf.recover.readfile(base.path)
-        except ezdxf.DXFStructureError:
-            doc = ezdxf.readfile(base.path)
+        except DXFStructureError:
+            doc = readfile(base.path)
         op, info = _order(sm, uid, req, base, doc)
         plan.update({k: info[k] for k in ("repeats", "questions") if info.get(k)})
         if info.get("repeat"):
@@ -824,15 +1146,25 @@ def build_candidate(sm, uid: str, request: dict, workdir: Path) -> Candidate:
         plan["derived"] = str(out)
         if baked:
             Path(base.path).unlink(missing_ok=True)
-            plan["warnings"].append("values changed since the import are now part of the drawing (the new revision starts from them)")
+            plan["warnings"].append(
+                "values changed since the import are now part of the drawing (the new revision starts from them)"
+            )
         return Candidate(plan=plan, new=new, path=str(out))
     except FeatureRefused as exc:
         plan["refusals"] = exc.reasons[:MAX_REFUSALS]
         if exc.question:
             plan["questions"] = [exc.question]
             plan["status"] = "needs_decision"
-    except (ezdxf.DXFError, OSError, ValueError, KeyError, ArithmeticError) as exc:  # a drawing the writer or reader cannot handle is a refusal, not a crash
-        plan["refusals"] = [f"the derived drawing could not be made: {type(exc).__name__}: {str(exc)[:200]}"]
+    except (
+        DXFError,
+        OSError,
+        ValueError,
+        KeyError,
+        ArithmeticError,
+    ) as exc:  # a drawing the writer or reader cannot handle is a refusal, not a crash
+        plan["refusals"] = [
+            f"the derived drawing could not be made: {type(exc).__name__}: {str(exc)[:200]}"
+        ]
     _discard(work)
     return Candidate(plan=plan)
 
@@ -858,4 +1190,12 @@ def default_dir(sm) -> Path:
     return p.parent / f"{p.stem}.revisions"
 
 
-__all__ = ["FeatureRefused", "Repeat", "accept_plan", "build_candidate", "default_dir", "detect_repeats", "plan_count"]
+__all__ = [
+    "FeatureRefused",
+    "Repeat",
+    "accept_plan",
+    "build_candidate",
+    "default_dir",
+    "detect_repeats",
+    "plan_count",
+]

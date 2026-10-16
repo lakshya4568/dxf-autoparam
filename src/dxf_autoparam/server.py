@@ -50,9 +50,20 @@ class Session:
         self.gem = None
         self.instructions = ""  # the person's standing instructions for Gemini
         self.history: list[dict] = []  # what was asked of Gemini, in order
-        self.checking: Program | None = None  # the program whose background regeneration check is running
-        self.pending: str | None = None  # a drawing to open when the classic page first asks for it
-        self.job: dict = {"running": False, "events": [], "error": None, "kind": None, "started": 0.0, "stop": threading.Event()}
+        self.checking: Program | None = (
+            None  # the program whose background regeneration check is running
+        )
+        self.pending: str | None = (
+            None  # a drawing to open when the classic page first asks for it
+        )
+        self.job: dict = {
+            "running": False,
+            "events": [],
+            "error": None,
+            "kind": None,
+            "started": 0.0,
+            "stop": threading.Event(),
+        }
         if path:
             self.open(path)
 
@@ -64,6 +75,16 @@ class Session:
     def busy(self) -> bool:
         return bool(self.job["running"])
 
+    def require_path(self) -> str:
+        if self.path is None:
+            raise RuntimeError("no drawing is open")
+        return self.path
+
+    def require_program(self) -> Program:
+        if self.prog is None:
+            raise RuntimeError("no program is loaded")
+        return self.prog
+
     def open(self, path: str) -> None:
         self._drop_gemini()
         self.history = []
@@ -71,10 +92,18 @@ class Session:
         self.region = None
         dr, _ = read_dxf(path)
         self.views = detect_views(dr)
-        self.baseline(drawing=dr)  # the drawing just read: a big sheet takes seconds to read again
+        self.baseline(
+            drawing=dr
+        )  # the drawing just read: a big sheet takes seconds to read again
 
     def baseline(self, selection: dict | None = None, drawing=None) -> None:
-        dr = drawing if drawing is not None and not self.region else read_dxf(self.path)[0]
+        if self.path is None and drawing is None:
+            raise RuntimeError("no drawing is open")
+        dr = (
+            drawing
+            if drawing is not None and not self.region
+            else read_dxf(self.path or "")[0]
+        )
         if self.region:
             restrict(dr, self.region)
         an = analyse(dr)
@@ -96,7 +125,9 @@ class Session:
             found = Report()
             try:
                 check_regeneration(prog, found)
-            except Exception:  # noqa: BLE001 — a background check's boundary: logged, the drawing stays usable
+            except (
+                Exception
+            ):  # noqa: BLE001 — a background check's boundary: logged, the drawing stays usable
                 traceback.print_exc()
             with self.lock:
                 if self.prog is prog:
@@ -117,10 +148,22 @@ class Session:
         if not self.busy():
             return False
         self.job["stop"].set()
-        self.job["events"].append({"kind": "note", "text": "stopping at Gemini's next message…", "t": round(time.time() - self.job["started"], 1)})
+        self.job["events"].append(
+            {
+                "kind": "note",
+                "text": "stopping at Gemini's next message…",
+                "t": round(time.time() - self.job["started"], 1),
+            }
+        )
         return True
 
-    def start_ai(self, kind: str, rounds: int = 2, instructions: str | None = None, request: str = "") -> None:
+    def start_ai(
+        self,
+        kind: str,
+        rounds: int = 2,
+        instructions: str | None = None,
+        request: str = "",
+    ) -> None:
         """Run Gemini in the background ("run": a fresh parametrization following the instructions; "revise": the
         current answer changed as the person asks). Progress — thought summaries, calls, each round's verdict — is
         collected in self.job for the page to follow."""
@@ -130,42 +173,98 @@ class Session:
         if self.busy():
             raise RuntimeError("Gemini is already working on this drawing")
         if kind == "revise" and not (self.mode == "ai" and self.ai_info):
-            raise RuntimeError("there is no Gemini answer to revise yet: run Gemini first")
+            raise RuntimeError(
+                "there is no Gemini answer to revise yet: run Gemini first"
+            )
         if instructions is not None and kind == "run":
             self.instructions = instructions
-        job = {"running": True, "events": [], "error": None, "kind": kind, "started": time.time(), "stop": threading.Event()}
+        job = {
+            "running": True,
+            "events": [],
+            "error": None,
+            "kind": kind,
+            "started": time.time(),
+            "stop": threading.Event(),
+        }
         self.job = job
 
         def push(event: dict) -> None:
             if len(job["events"]) < 4000:
-                job["events"].append({**event, "t": round(time.time() - job["started"], 1)})
+                job["events"].append(
+                    {**event, "t": round(time.time() - job["started"], 1)}
+                )
 
-        path, region, hold, standing = self.path, self.region, self.hold_existing, self.instructions
+        if self.path is None:
+            raise RuntimeError("no drawing is open")
+        path, region, hold, standing = (
+            self.path,
+            self.region,
+            self.hold_existing,
+            self.instructions,
+        )
         previous = (self.ai_info or {}).get("answer")
 
         def work() -> None:
             try:
                 if self.gem is None:
                     self.gem = Gemini()
-                log = lambda *a: push({"kind": "log", "text": " ".join(str(x) for x in a)})
+                log = lambda *a: push(
+                    {"kind": "log", "text": " ".join(str(x) for x in a)}
+                )
                 # the tool-using agent: small checked edits instead of one big answer (ai_parametrize / ai_refine remain for scripts)
-                prog, rep, info = agent_parametrize(path, region=region, instructions=standing, hold_existing=hold, gem=self.gem,
-                                                    on_event=push, stop=job["stop"].is_set, log=log,
-                                                    **({"start": previous, "request": request} if kind == "revise" else {}))
+                prog, rep, info = agent_parametrize(
+                    path,
+                    region=region,
+                    instructions=standing,
+                    hold_existing=hold,
+                    gem=self.gem,
+                    on_event=push,
+                    stop=job["stop"].is_set,
+                    log=log,
+                    **(
+                        {"start": previous, "request": request}
+                        if kind == "revise"
+                        else {}
+                    ),
+                )
                 info["instructions"] = standing
                 with self.lock:
                     self.prog, self.report, self.ai_info = prog, rep, info
                     self.values = prog.defaults()
                     self.mode = "ai"
                     self.selection = None
-                    self.history.append({"kind": kind, "text": standing if kind == "run" else request, "at": time.strftime("%H:%M"),
-                                         "rejected": sum(rep.rejected.values()), "tokens_in": info["tokens_in"], "tokens_out": info["tokens_out"]})
-                push({"kind": "done", "accepted": rep.accepted, "rejected": rep.rejected, "tokens_in": info["tokens_in"],
-                      "tokens_out": info["tokens_out"], "tokens_cached": info.get("tokens_cached", 0), "seconds": info["seconds"]})
+                    self.history.append(
+                        {
+                            "kind": kind,
+                            "text": standing if kind == "run" else request,
+                            "at": time.strftime("%H:%M"),
+                            "rejected": sum(rep.rejected.values()),
+                            "tokens_in": info["tokens_in"],
+                            "tokens_out": info["tokens_out"],
+                        }
+                    )
+                push(
+                    {
+                        "kind": "done",
+                        "accepted": rep.accepted,
+                        "rejected": rep.rejected,
+                        "tokens_in": info["tokens_in"],
+                        "tokens_out": info["tokens_out"],
+                        "tokens_cached": info.get("tokens_cached", 0),
+                        "seconds": info["seconds"],
+                    }
+                )
             except GeminiStopped:
-                push({"kind": "stopped", "text": "Stopped. Nothing changed: the parametrization you had is kept. "
-                      "(Tokens Gemini generated before the stop are billed.)"})
-            except Exception as exc:  # noqa: BLE001 — the job boundary: traceback logged, the error shown in the app
+                push(
+                    {
+                        "kind": "stopped",
+                        "text": "Stopped. Nothing changed: the parametrization you had is kept. "
+                        "(Tokens Gemini generated before the stop are billed.)",
+                    }
+                )
+            except (
+                Exception
+            ) as exc:  # noqa: BLE001 — the job boundary: traceback logged, the error shown in the app
                 traceback.print_exc()
                 job["error"] = f"{type(exc).__name__}: {exc}"
                 push({"kind": "error", "text": job["error"]})
@@ -176,7 +275,13 @@ class Session:
 
     def load_answer(self, answer_path: str) -> None:
         """A saved Gemini answer (e.g. from `dxf-autoparam ai --answer-out`), validated again — no AI call."""
-        self.ai_info = {"answer": json.loads(Path(answer_path).read_text()), "usage": [], "seconds": 0, "tokens_in": 0, "tokens_out": 0}
+        self.ai_info = {
+            "answer": json.loads(Path(answer_path).read_text()),
+            "usage": [],
+            "seconds": 0,
+            "tokens_in": 0,
+            "tokens_out": 0,
+        }
         self.mode = "ai"
         self.selection = None
         self.reapply()
@@ -186,8 +291,15 @@ class Session:
         from .ai.parametrize import reapply
 
         if self.mode == "ai" and self.ai_info:
-            self.prog, self.report = reapply(self.path, self.ai_info["answer"], self.region, hold_existing=self.hold_existing,
-                                             selection=self.selection)
+            if self.path is None:
+                raise RuntimeError("no drawing is open")
+            self.prog, self.report = reapply(
+                self.path,
+                self.ai_info["answer"],
+                self.region,
+                hold_existing=self.hold_existing,
+                selection=self.selection,
+            )
             self.values = self.prog.defaults()
         else:
             self.baseline(self.selection)
@@ -205,11 +317,15 @@ class Session:
     # ── payloads ──────────────────────────────────────────────────────────────
 
     def geometry(self, values: dict[str, float]) -> tuple[list[dict], list[str], dict]:
+        if self.prog is None:
+            raise RuntimeError("no program is loaded")
         r = regenerate_program(self.prog, values)
         return scene(self.prog.analysis, r.pts, r.radius, r.texts), r.issues, r.texts
 
     def state(self) -> dict:
         prog = self.prog
+        if prog is None:
+            raise RuntimeError("no program is loaded")
         an = prog.analysis
         u = an.drawing.units_mm
         reach = affects(prog)
@@ -218,76 +334,191 @@ class Session:
         params = []
         for p in prog.params.values():
             named = p.source == "ai" or p.kind == "level"
-            params.append({
-                "name": p.name, "label": p.label, "value": p.value, "unit": p.unit, "kind": p.kind, "component": p.component or ("Levels" if p.kind == "level" else ""),
-                "named": named, "source": p.source, "confidence": p.confidence, "occurrences": p.occurrences, "evidence": p.evidence[:4], "note": p.note,
-                # a big sheet: a size can move thousands of entities × hundreds of sizes (15 MB) — long lists are fetched on hover
-                "influence": ents if len(ents := reach.get(p.name, {}).get("entities", [])) <= 300 else None, "influence_n": len(ents),
-                "parts": (pp := reach.get(p.name, {}).get("parts", []))[:12], "parts_n": len(pp),
-                "relations": reach.get(p.name, {}).get("relations", []), "texts": len(reach.get(p.name, {}).get("texts", [])),
-            })
+            params.append(
+                {
+                    "name": p.name,
+                    "label": p.label,
+                    "value": p.value,
+                    "unit": p.unit,
+                    "kind": p.kind,
+                    "component": p.component or ("Levels" if p.kind == "level" else ""),
+                    "named": named,
+                    "source": p.source,
+                    "confidence": p.confidence,
+                    "occurrences": p.occurrences,
+                    "evidence": p.evidence[:4],
+                    "note": p.note,
+                    # a big sheet: a size can move thousands of entities × hundreds of sizes (15 MB) — long lists are fetched on hover
+                    "influence": (
+                        ents
+                        if len(ents := reach.get(p.name, {}).get("entities", [])) <= 300
+                        else None
+                    ),
+                    "influence_n": len(ents),
+                    "parts": (pp := reach.get(p.name, {}).get("parts", []))[:12],
+                    "parts_n": len(pp),
+                    "relations": reach.get(p.name, {}).get("relations", []),
+                    "texts": len(reach.get(p.name, {}).get("texts", [])),
+                }
+            )
         params.sort(key=lambda q: (not q["named"], q["component"], -q["influence_n"]))
         rep = self.report or Report()
         return {
-            "file": Path(self.path).name,
+            "file": Path(self.require_path()).name,
             "mode": self.mode,
             "region": self.region,
             "views": self.views,
             "units_mm": u,
             "structure": prog.structure,
-            "components": [{"name": c.name, "type": c.type, "description": c.description, "level": c.level, "parent": c.parent,
-                            "regions": c.regions, "existing": c.existing, "parametrize": c.parametrize, "held": c.held,
-                            "confidence": c.confidence, "evidence": c.evidence,
-                            "items": sorted(set().union(*(topo.by_id()[r].items for r in c.regions if r in topo.by_id())) if c.regions else set())}
-                           for c in prog.components],
-            "regions": [{"id": r.id, "inside": r.inside, "items": sorted(r.items), "width": r.bbox[2] - r.bbox[0], "height": r.bbox[3] - r.bbox[1],
-                         "fill": r.pattern, "parent": r.parent} for r in topo.regions],
+            "components": [
+                {
+                    "name": c.name,
+                    "type": c.type,
+                    "description": c.description,
+                    "level": c.level,
+                    "parent": c.parent,
+                    "regions": c.regions,
+                    "existing": c.existing,
+                    "parametrize": c.parametrize,
+                    "held": c.held,
+                    "confidence": c.confidence,
+                    "evidence": c.evidence,
+                    "items": sorted(
+                        set().union(
+                            *(
+                                topo.by_id()[r].items
+                                for r in c.regions
+                                if r in topo.by_id()
+                            )
+                        )
+                        if c.regions
+                        else set()
+                    ),
+                }
+                for c in prog.components
+            ],
+            "regions": [
+                {
+                    "id": r.id,
+                    "inside": r.inside,
+                    "items": sorted(r.items),
+                    "width": r.bbox[2] - r.bbox[0],
+                    "height": r.bbox[3] - r.bbox[1],
+                    "fill": r.pattern,
+                    "parent": r.parent,
+                }
+                for r in topo.regions
+            ],
             "hold_existing": self.hold_existing,
             "instructions": self.instructions,
             "history": self.history,
-            "ai_job": {"running": self.busy(), "kind": self.job["kind"], "events": len(self.job["events"]), "error": self.job["error"],
-                       "stopping": self.job["stop"].is_set()},
-            "thoughts": [{"label": u.get("label"), "model": u.get("model"), "thinking": u.get("thinking"), "cached": u.get("cached"),
-                          "prompt_cache": u.get("prompt_cache"), "thoughts": u.get("thoughts", [])}
-                         for u in (self.ai_info or {}).get("usage", [])],
+            "ai_job": {
+                "running": self.busy(),
+                "kind": self.job["kind"],
+                "events": len(self.job["events"]),
+                "error": self.job["error"],
+                "stopping": self.job["stop"].is_set(),
+            },
+            "thoughts": [
+                {
+                    "label": u.get("label"),
+                    "model": u.get("model"),
+                    "thinking": u.get("thinking"),
+                    "cached": u.get("cached"),
+                    "prompt_cache": u.get("prompt_cache"),
+                    "thoughts": u.get("thoughts", []),
+                }
+                for u in (self.ai_info or {}).get("usage", [])
+            ],
             "selection": prog.intent.get("selection") or self.selection or {},
             "intent": {k: v for k, v in prog.intent.items() if k not in ("parts",)},
             "part_names": sorted(parts),
             "parameters": params,
-            "relations": [{"name": r.name, "label": r.label, "expr": r.expr, "enforced": r.enforced, "dimensioned": r.dimensioned,
-                           "check": r.check} for r in prog.relations if not r.name.startswith("R_")][:30]
-                         + [{"name": r.label, "label": "worked out", "expr": r.expr, "enforced": True, "dimensioned": r.dimensioned, "check": r.check}
-                            for r in prog.relations if r.name.startswith("R_")][:30],
-            "formulas_ai": [{"datum": d, "expr": e} for d, e in prog.formulas.items() if prog.origin.get(d) == "ai"],
-            "validation": {"accepted": rep.accepted, "rejected": rep.rejected, "findings": [f.as_dict() for f in rep.findings][:60],
-                           "checking": self.checking is not None and self.checking is self.prog},
-            "ai": {k: v for k, v in (self.ai_info or {}).items() if k in ("usage", "seconds", "tokens_in", "tokens_out")} if self.ai_info else None,
+            "relations": [
+                {
+                    "name": r.name,
+                    "label": r.label,
+                    "expr": r.expr,
+                    "enforced": r.enforced,
+                    "dimensioned": r.dimensioned,
+                    "check": r.check,
+                }
+                for r in prog.relations
+                if not r.name.startswith("R_")
+            ][:30]
+            + [
+                {
+                    "name": r.label,
+                    "label": "worked out",
+                    "expr": r.expr,
+                    "enforced": True,
+                    "dimensioned": r.dimensioned,
+                    "check": r.check,
+                }
+                for r in prog.relations
+                if r.name.startswith("R_")
+            ][:30],
+            "formulas_ai": [
+                {"datum": d, "expr": e}
+                for d, e in prog.formulas.items()
+                if prog.origin.get(d) == "ai"
+            ],
+            "validation": {
+                "accepted": rep.accepted,
+                "rejected": rep.rejected,
+                "findings": [f.as_dict() for f in rep.findings][:60],
+                "checking": self.checking is not None and self.checking is self.prog,
+            },
+            "ai": (
+                {
+                    k: v
+                    for k, v in (self.ai_info or {}).items()
+                    if k in ("usage", "seconds", "tokens_in", "tokens_out")
+                }
+                if self.ai_info
+                else None
+            ),
             "reader_notes": an.drawing.notes + an.notes,
             "unsupported": an.drawing.unsupported,
             "entities": len(an.drawing.items),
         }
 
     def relation_values(self, values: dict[str, float]) -> list[dict]:
+        if self.prog is None:
+            raise RuntimeError("no program is loaded")
         out = []
         for r in self.prog.relations:
             name = r.name if not r.name.startswith("R_") else r.label
             try:
                 out.append({"name": name, "value": self.prog.relation_value(r, values)})
-            except (ExprError, ArithmeticError, KeyError) as exc:  # shown as not computable, never silently dropped
-                out.append({"name": name, "value": None, "error": f"{type(exc).__name__}: {exc}"})
+            except (
+                ExprError,
+                ArithmeticError,
+                KeyError,
+            ) as exc:  # shown as not computable, never silently dropped
+                out.append(
+                    {
+                        "name": name,
+                        "value": None,
+                        "error": f"{type(exc).__name__}: {exc}",
+                    }
+                )
         return out
 
 
 def make_handler(session: Session, sheet=None):
     from .workspace import SheetSession, handle
 
-    sheet = sheet or SheetSession()
+    if sheet is None:
+        sheet = SheetSession()
 
     class Handler(BaseHTTPRequestHandler):
-        def log_message(self, *args):
+        def log_message(self, format: str, *args: object) -> None:
             pass
 
-        def _send(self, code: int, body: bytes, ctype: str, extra: dict | None = None) -> None:
+        def _send(
+            self, code: int, body: bytes, ctype: str, extra: dict | None = None
+        ) -> None:
             self.send_response(code)
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(body)))
@@ -296,7 +527,7 @@ def make_handler(session: Session, sheet=None):
             try:
                 self.end_headers()
                 self.wfile.write(body)
-            except (BrokenPipeError, ConnectionResetError):
+            except BrokenPipeError, ConnectionResetError:
                 # The page reloaded or moved on before the answer arrived; nothing to send it to.
                 pass
 
@@ -309,62 +540,153 @@ def make_handler(session: Session, sheet=None):
 
         def do_GET(self):
             url = urlparse(self.path)
-            if handle(self, sheet, "GET", url):  # the sheet workspace (the main page) and /api/sheet/*
+            if handle(
+                self, sheet, "GET", url
+            ):  # the sheet workspace (the main page) and /api/sheet/*
                 return
             try:
-                if url.path == "/classic":  # the single-view page, with its Gemini panel
-                    return self._send(200, (STATIC / "index.html").read_bytes(), "text/html; charset=utf-8")
+                if (
+                    url.path == "/classic"
+                ):  # the single-view page, with its Gemini panel
+                    return self._send(
+                        200,
+                        (STATIC / "index.html").read_bytes(),
+                        "text/html; charset=utf-8",
+                    )
                 if url.path == "/api/state":
                     with session.lock:
-                        if session.prog is None and session.pending:  # opened on first use: the workspace read it already
+                        if (
+                            session.prog is None and session.pending
+                        ):  # opened on first use: the workspace read it already
                             session.open(session.pending)
                             session.pending = None
                         if session.prog is None:
                             return self._json({"empty": True})
                         st = session.state()
                         geom, issues, _ = session.geometry(session.values)
-                        st.update(geometry=geom, values=session.values, issues=issues, relation_values=session.relation_values(session.values))
+                        st.update(
+                            geometry=geom,
+                            values=session.values,
+                            issues=issues,
+                            relation_values=session.relation_values(session.values),
+                        )
                         return self._json(st)
                 if url.path == "/api/influence":
                     name = parse_qs(url.query).get("name", [""])[0]
                     with session.lock:
-                        return self._json({"name": name, "entities": affects(session.prog).get(name, {}).get("entities", [])})
-                if url.path == "/api/validation":  # light: the page follows the background check without the drawing
+                        prog = session.require_program()
+                        return self._json(
+                            {
+                                "name": name,
+                                "entities": affects(prog)
+                                .get(name, {})
+                                .get("entities", []),
+                            }
+                        )
+                if (
+                    url.path == "/api/validation"
+                ):  # light: the page follows the background check without the drawing
                     with session.lock:
                         rep = session.report or Report()
-                        return self._json({"accepted": rep.accepted, "rejected": rep.rejected, "findings": [f.as_dict() for f in rep.findings][:60],
-                                           "checking": session.checking is not None and session.checking is session.prog})
+                        return self._json(
+                            {
+                                "accepted": rep.accepted,
+                                "rejected": rep.rejected,
+                                "findings": [f.as_dict() for f in rep.findings][:60],
+                                "checking": session.checking is not None
+                                and session.checking is session.prog,
+                            }
+                        )
                 if url.path == "/api/ai/progress":
                     since = int(parse_qs(url.query).get("since", ["0"])[0])
                     job = session.job
-                    return self._json({"running": job["running"], "kind": job["kind"], "error": job["error"], "stopping": job["stop"].is_set(),
-                                       "events": job["events"][since:], "next": len(job["events"])})
-                if url.path == "/api/answer.json":  # the AI's answer as validated: re-open later with serve --answer
+                    return self._json(
+                        {
+                            "running": job["running"],
+                            "kind": job["kind"],
+                            "error": job["error"],
+                            "stopping": job["stop"].is_set(),
+                            "events": job["events"][since:],
+                            "next": len(job["events"]),
+                        }
+                    )
+                if (
+                    url.path == "/api/answer.json"
+                ):  # the AI's answer as validated: re-open later with serve --answer
                     with session.lock:
-                        body = json.dumps((session.ai_info or {}).get("answer") or {}, indent=1).encode()
-                    return self._send(200, body, "application/json", {"Content-Disposition": 'attachment; filename="gemini-answer.json"'})
+                        body = json.dumps(
+                            (session.ai_info or {}).get("answer") or {}, indent=1
+                        ).encode()
+                    return self._send(
+                        200,
+                        body,
+                        "application/json",
+                        {
+                            "Content-Disposition": 'attachment; filename="gemini-answer.json"'
+                        },
+                    )
                 if url.path == "/api/program.json":
                     with session.lock:
-                        body = json.dumps(session.prog.to_json(), default=str, indent=1).encode()
-                    return self._send(200, body, "application/json", {"Content-Disposition": 'attachment; filename="parametric-program.json"'})
+                        body = json.dumps(
+                            session.require_program().to_json(), default=str, indent=1
+                        ).encode()
+                    return self._send(
+                        200,
+                        body,
+                        "application/json",
+                        {
+                            "Content-Disposition": 'attachment; filename="parametric-program.json"'
+                        },
+                    )
                 if url.path in ("/api/cad.json", "/api/graph.json"):
                     with session.lock:
-                        doc = cad_json(session.prog.analysis, session.prog) if url.path == "/api/cad.json" else dependency_graph(session.prog)
+                        prog = session.require_program()
+                        doc = (
+                            cad_json(prog.analysis, prog)
+                            if url.path == "/api/cad.json"
+                            else dependency_graph(prog)
+                        )
                         body = json.dumps(doc, default=str, indent=1).encode()
-                    name = Path(session.path).stem + ("_cad.json" if url.path == "/api/cad.json" else "_graph.json")
-                    return self._send(200, body, "application/json", {"Content-Disposition": f'attachment; filename="{name}"'})
+                    name = Path(session.require_path()).stem + (
+                        "_cad.json" if url.path == "/api/cad.json" else "_graph.json"
+                    )
+                    return self._send(
+                        200,
+                        body,
+                        "application/json",
+                        {"Content-Disposition": f'attachment; filename="{name}"'},
+                    )
                 if url.path == "/api/export.dxf":
                     q = parse_qs(url.query)
                     with session.lock:
-                        vals = {**session.values, **{k: float(v) for k, v in json.loads(q.get("values", ["{}"])[0]).items() if k in session.prog.params}}
-                        reg = regenerate_program(session.prog, vals)
+                        prog = session.require_program()
+                        vals = {
+                            **session.values,
+                            **{
+                                k: float(v)
+                                for k, v in json.loads(
+                                    q.get("values", ["{}"])[0]
+                                ).items()
+                                if k in prog.params
+                            },
+                        }
+                        reg = regenerate_program(prog, vals)
                         tmp = Path(tempfile.mkdtemp()) / "regenerated.dxf"
-                        write_dxf(session.prog, reg, str(tmp))
-                        name = Path(session.path).stem + "_parametric.dxf"
-                    return self._send(200, tmp.read_bytes(), "application/dxf", {"Content-Disposition": f'attachment; filename="{name}"'})
-            except Exception as exc:  # noqa: BLE001 — the request boundary: traceback logged, the error returned to the page
+                        write_dxf(prog, reg, str(tmp))
+                        name = Path(session.require_path()).stem + "_parametric.dxf"
+                    return self._send(
+                        200,
+                        tmp.read_bytes(),
+                        "application/dxf",
+                        {"Content-Disposition": f'attachment; filename="{name}"'},
+                    )
+            except (
+                Exception
+            ) as exc:  # noqa: BLE001 — the request boundary: traceback logged, the error returned to the page
                 traceback.print_exc()
-                return self._json({"ok": False, "error": f"{type(exc).__name__}: {exc}"}, 500)
+                return self._json(
+                    {"ok": False, "error": f"{type(exc).__name__}: {exc}"}, 500
+                )
             return self._send(404, b"not found", "text/plain")
 
         def do_POST(self):
@@ -380,7 +702,13 @@ def make_handler(session: Session, sheet=None):
                     tmp = Path(tempfile.mkdtemp()) / fname
                     tmp.write_bytes(self._body())
                     if session.busy():
-                        return self._json({"ok": False, "error": "Gemini is working on this drawing; wait for it to finish"}, 409)
+                        return self._json(
+                            {
+                                "ok": False,
+                                "error": "Gemini is working on this drawing; wait for it to finish",
+                            },
+                            409,
+                        )
                     with session.lock:
                         session.open(str(tmp))
                     return self._json({"ok": True})
@@ -392,7 +720,9 @@ def make_handler(session: Session, sheet=None):
                     tmp = Path(tempfile.mkdtemp()) / fname
                     tmp.write_bytes(self._body())
                     with session.lock:
-                        lesson = learn(session.path, str(tmp), session.prog)
+                        lesson = learn(
+                            session.require_path(), str(tmp), session.require_program()
+                        )
                     return self._json({"ok": True, "lesson": lesson})
                 body = json.loads(self._body() or b"{}")
                 if url.path == "/api/selection":
@@ -401,35 +731,67 @@ def make_handler(session: Session, sheet=None):
                     return self._json({"ok": True})
                 if url.path == "/api/regen":
                     with session.lock:
+                        prog = session.require_program()
                         vals = dict(session.values)
                         for k, v in body.get("values", {}).items():
-                            if k in session.prog.params:
+                            if k in prog.params:
                                 vals[k] = float(v)
                         geom, issues, _ = session.geometry(vals)
                         if not issues:
                             session.values = vals
-                        return self._json({"ok": not issues, "issues": issues, "values": vals, "geometry": geom,
-                                           "relation_values": session.relation_values(vals)})
+                        return self._json(
+                            {
+                                "ok": not issues,
+                                "issues": issues,
+                                "values": vals,
+                                "geometry": geom,
+                                "relation_values": session.relation_values(vals),
+                            }
+                        )
                 if url.path == "/api/region":
                     if session.busy():
-                        return self._json({"ok": False, "error": "Gemini is working on this view; wait for it to finish"}, 409)
+                        return self._json(
+                            {
+                                "ok": False,
+                                "error": "Gemini is working on this view; wait for it to finish",
+                            },
+                            409,
+                        )
                     with session.lock:
                         if body.get("view") is not None:
-                            session.set_region(tuple(session.views[int(body["view"])]["bbox"]))
+                            session.set_region(
+                                tuple(session.views[int(body["view"])]["bbox"])
+                            )
                         else:
-                            session.set_region(tuple(body["region"]) if body.get("region") else None)
+                            session.set_region(
+                                tuple(body["region"]) if body.get("region") else None
+                            )
                     return self._json({"ok": True})
                 if url.path == "/api/ai/stop":
                     return self._json({"ok": True, "stopping": session.stop_ai()})
                 if url.path in ("/api/ai", "/api/ai/revise"):
                     with session.lock:
                         if url.path == "/api/ai":
-                            session.start_ai("run", rounds=int(body.get("rounds", 2)), instructions=str(body.get("instructions", "")))
+                            session.start_ai(
+                                "run",
+                                rounds=int(body.get("rounds", 2)),
+                                instructions=str(body.get("instructions", "")),
+                            )
                         else:
                             request = str(body.get("request", "")).strip()
                             if not request:
-                                return self._json({"ok": False, "error": "say what Gemini should change"}, 400)
-                            session.start_ai("revise", rounds=int(body.get("rounds", 2)), request=request)
+                                return self._json(
+                                    {
+                                        "ok": False,
+                                        "error": "say what Gemini should change",
+                                    },
+                                    400,
+                                )
+                            session.start_ai(
+                                "revise",
+                                rounds=int(body.get("rounds", 2)),
+                                request=request,
+                            )
                     return self._json({"ok": True, "started": True})
                 if url.path == "/api/hold-existing":
                     with session.lock:
@@ -437,7 +799,13 @@ def make_handler(session: Session, sheet=None):
                     return self._json({"ok": True})
                 if url.path == "/api/geometry-only":
                     if session.busy():
-                        return self._json({"ok": False, "error": "Gemini is working; wait for it to finish"}, 409)
+                        return self._json(
+                            {
+                                "ok": False,
+                                "error": "Gemini is working; wait for it to finish",
+                            },
+                            409,
+                        )
                     with session.lock:
                         session.baseline()
                     return self._json({"ok": True})
@@ -447,16 +815,26 @@ def make_handler(session: Session, sheet=None):
                         tmp = Path(tempfile.mkdtemp()) / "check.dxf"
                         rep = write_dxf(session.prog, reg, str(tmp))
                     return self._json({"write": rep, "audit": audit(str(tmp))})
-            except Exception as exc:  # noqa: BLE001 — the request boundary: traceback logged, the error returned to the page
+            except (
+                Exception
+            ) as exc:  # noqa: BLE001 — the request boundary: traceback logged, the error returned to the page
                 traceback.print_exc()
-                return self._json({"ok": False, "error": f"{type(exc).__name__}: {exc}"}, 500)
+                return self._json(
+                    {"ok": False, "error": f"{type(exc).__name__}: {exc}"}, 500
+                )
             return self._send(404, b"not found", "text/plain")
 
     return Handler
 
 
-def serve(path: str | None, domain: str | None = None, host: str = "127.0.0.1", port: int = 8765, answer: str | None = None,
-          project: str | None = None) -> None:
+def serve(
+    path: str | None,
+    domain: str | None = None,
+    host: str = "127.0.0.1",
+    port: int = 8765,
+    answer: str | None = None,
+    project: str | None = None,
+) -> None:
     from .crossview import SheetModel
     from .workspace import SheetSession
 
@@ -467,7 +845,9 @@ def serve(path: str | None, domain: str | None = None, host: str = "127.0.0.1", 
         session = Session(None)
         session.pending = path  # the classic page opens it when it is first used
     sheet = SheetSession(path)
-    if project and path:  # a saved parametric project (parts, sizes, plans) opened with its drawing
+    if (
+        project and path
+    ):  # a saved parametric project (parts, sizes, plans) opened with its drawing
         sheet.sm = SheetModel.load(project, dxf=path)
     for candidate in range(port, port + 20):
         try:
@@ -479,7 +859,9 @@ def serve(path: str | None, domain: str | None = None, host: str = "127.0.0.1", 
             print(f"port {candidate} is in use, trying {candidate + 1}")
     else:
         raise SystemExit(f"no free port between {port} and {port + 19}; pass --port")
-    print(f"dxf-autoparam on http://{host}:{candidate}  ({path or 'open a DXF in the page'})")
+    print(
+        f"dxf-autoparam on http://{host}:{candidate}  ({path or 'open a DXF in the page'})"
+    )
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
