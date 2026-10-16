@@ -71,11 +71,12 @@ export const api = {
   resetValue: (name: string) => call<DeltaResult>("POST", "/api/sheet/reset_value", { name }),
   runs: () => call<{ runs: RunSummary[]; current: string | null }>("GET", "/api/sheet/ai/runs"),
   models: () => call<{ models: { id: string; label: string; thinking?: string }[]; default: string }>("GET", "/api/sheet/ai/models"),
-  startRun: (instruction: string, scope: Record<string, unknown>, options: Record<string, unknown>) =>
-    call<{ ok: boolean; run: string }>("POST", "/api/sheet/ai/run", { instruction, scope, options }),
+  startRun: (instruction: string, scope: Record<string, unknown>, options: Record<string, unknown>, parent?: string) =>
+    call<{ ok: boolean; run: string }>("POST", "/api/sheet/ai/run", { instruction, scope, options, ...(parent ? { parent } : {}) }),
   progress: (run: string | null, since: number) => call<RunProgress>("GET", `/api/sheet/ai/progress?${q({ run, since })}`),
   stopRun: (run: string) => call<Record<string, unknown>>("POST", "/api/sheet/ai/stop", { run }),
-  continueRun: (run: string, note: string) => call<{ ok: boolean; run: string }>("POST", "/api/sheet/ai/continue", { run, note }),
+  continueRun: (run: string, body: { note?: string; answers?: Record<string, string>; more_turns?: number }) =>
+    call<{ ok: boolean; run: string }>("POST", "/api/sheet/ai/continue", { run, ...body }),
   applyRun: (run: string) => call<DeltaResult>("POST", "/api/sheet/ai/apply", { run }),
   revertRun: (run: string) => call<DeltaResult>("POST", "/api/sheet/ai/revert", { run }),
   exportUrl: () => "/api/sheet/export",

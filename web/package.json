@@ -9,7 +9,7 @@
     "build": "tsc -p tsconfig.json --noEmit && vite build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "e2e": "node e2e/workspace.e2e.mjs"
+    "e2e": "node e2e/workspace.e2e.mjs && node e2e/agent.e2e.mjs"
   },
   "dependencies": {
     "react": "19.3.0",

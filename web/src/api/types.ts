@@ -275,16 +275,69 @@ export interface AgentNotes {
   revision?: number;
 }
 
+/** One event of a run, as the engine emitted it (src/dxf_autoparam/ai/run.py, loop.py, narrate.py). Fields depend on `kind`. */
 export interface RunEvent {
-  kind: string;
-  name?: string;
-  ok?: boolean;
-  summary?: string;
-  said?: string;
-  why?: string;
-  text?: string;
-  t?: number;
+  kind: string; // run_start · user · stage · turn · call · thought · retry · tool_start · tool · image · applied · state · question · verdict · error · note · budget · status
+  seq?: number;
+  t?: number; // seconds since the run started
   turn?: number;
+  id?: string; // a tool call's id (tool_start and its tool)
+  name?: string; // the tool
+  doing?: string; // what the tool is doing, in words (the engine's)
+  stage?: string | null;
+  phase?: string | null; // planning · inspecting · applying · validating · asking
+  args?: string;
+  args_full?: unknown;
+  result?: unknown;
+  ok?: boolean;
+  why?: string;
+  said?: string; // the model's own one-line reason for the call
+  summary?: string; // the engine's sentence about the result
+  ms?: number;
+  unit?: string | null;
+  image?: { id?: string; revision?: number; unit?: string; view_ids?: string[]; state?: string };
+  text?: string;
+  instruction?: string;
+  scope?: Record<string, unknown>;
+  answers?: Record<string, string>;
+  from?: string;
+  to?: string;
+  label?: string;
+  reason?: string;
+  options?: string[];
+  recommended?: string;
+  about?: string;
+  model?: string;
+  thinking?: string;
+  cached?: boolean;
+  revision?: number;
+  values?: string[];
+  [k: string]: unknown;
+}
+
+export interface RunQuestion {
+  id: string;
+  text: string;
+  options?: string[];
+  recommended?: string;
+  about?: string;
+  why?: string;
+}
+
+export interface Criterion {
+  id: string;
+  ok: boolean;
+  detail: string;
+}
+
+export interface RunVerdict {
+  state?: string;
+  headline?: string;
+  remaining?: unknown;
+  criteria?: Criterion[];
+  finish_summary?: string;
+  values_applied?: { name: string; value: number; already?: boolean }[];
+  notes?: string[];
   [k: string]: unknown;
 }
 
@@ -294,15 +347,19 @@ export interface RunProgress {
   label?: string;
   reason?: string | null;
   stage?: string | null;
+  phase?: string | null;
   error?: string | null;
   events: RunEvent[];
   next: number;
-  usage?: Record<string, unknown>;
-  questions?: unknown[];
-  verdict?: Record<string, unknown> | null;
+  usage?: { turns?: number; tool_calls?: number; tokens?: number; seconds?: number; limits?: Record<string, number> };
+  questions?: RunQuestion[];
+  verdict?: RunVerdict | null;
   can?: { stop: boolean; continue: boolean; answer: boolean; apply: boolean; revert: boolean };
   instruction?: string;
+  scope?: Record<string, unknown>;
   elapsed?: number;
+  parent?: string | null;
+  reverted?: boolean;
 }
 
 export interface RunSummary {
@@ -316,6 +373,8 @@ export interface RunSummary {
   units?: string[];
   verdict?: { state?: string; headline?: string; remaining?: unknown } | null;
   reason?: string | null;
+  scope?: Record<string, unknown>;
+  timeline?: RunEvent[];
 }
 
 /** Keys the Python side must keep (checked by tests/test_web_contract.py). */
@@ -331,4 +390,7 @@ export const CONTRACT = {
   behaviour: ["ok", "failed", "categories", "changed_entities"],
   coverage: ["faithful", "problems", "types", "linetypes"],
   notes: ["checklist", "learned"],
+  run_progress: ["run", "status", "events", "next", "phase", "can", "usage"],
+  tool_start: ["id", "name", "doing", "stage", "phase", "args_full"],
+  tool_result: ["id", "name", "doing", "stage", "phase", "ok", "summary", "ms", "args_full", "result"],
 } as const;

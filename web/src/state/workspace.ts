@@ -8,7 +8,7 @@ import { GridIndex, primBox } from "../canvas/spatial";
 import { type Camera, DEFAULT_CAMERA, fitBox, padBox, unionBox, ViewHistory } from "../canvas/viewport";
 import { Store } from "./store";
 
-export type LeftTab = "views" | "layers" | "values" | "agent" | "fidelity";
+export type LeftTab = "views" | "layers" | "values" | "fidelity";
 export type RightTab = "inspect" | "validate";
 
 export interface Preview {
@@ -53,6 +53,8 @@ export interface WorkspaceState {
   rightWidth: number;
   leftOpen: boolean;
   rightOpen: boolean;
+  agentOpen: boolean;
+  agentWidth: number;
   frameMs: number;
 }
 
@@ -61,7 +63,7 @@ export const store = new Store<WorkspaceState>({
   theme: typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light",
   hiddenLayers: new Set(), hiddenStatus: new Set(), statusOf: null, overlays: { ...DEFAULT_OVERLAYS }, selection: new Set(), hover: null,
   focusView: null, highlight: null, param: null, unit: null, preview: null, behaviour: null, issues: new Set(), entity: null, message: null,
-  busy: null, leftTab: "views", rightTab: "inspect", leftWidth: 320, rightWidth: 360, leftOpen: true, rightOpen: true, frameMs: 0,
+  busy: null, leftTab: "views", rightTab: "inspect", leftWidth: 320, rightWidth: 360, leftOpen: true, rightOpen: true, agentOpen: false, agentWidth: 440, frameMs: 0,
 });
 
 export const history = new ViewHistory();
@@ -123,6 +125,28 @@ export async function loadAll(fit: boolean): Promise<void> {
     if (fit || !store.get().fitted) fitSheet(false);
     void loadStatuses();
   });
+}
+
+/** After the engine changed the sheet on its own (the agent applied something): fetch what changed. The camera, the selection and the
+ * panels stay as they are; nothing is fetched when the revision is the one already shown. */
+export async function refreshSheet(): Promise<void> {
+  try {
+    const summary = await api.summary();
+    if (summary.empty) return;
+    const s = store.get();
+    if (s.summary && summary.revision === s.revision && summary.entities === s.summary.entities) {
+      store.set({ summary });
+      return;
+    }
+    const g = await api.geometry();
+    store.set({ summary, revision: summary.revision });
+    setGeometry(g);
+    void loadStatuses();
+    const u = store.get().unit;
+    if (u) void openUnit(u.id);
+  } catch (e) {
+    say(e instanceof Error ? e.message : String(e), "bad");
+  }
 }
 
 export async function openFile(file: File): Promise<void> {
@@ -200,8 +224,30 @@ export async function select(i: number | null, additive = false): Promise<void> 
   if (additive && sel.has(i)) sel.delete(i);
   else sel.add(i);
   store.set({ selection: sel, rightTab: "inspect", rightOpen: true });
+  makeRoom(["left"]); // with the agent open, the inspector takes room from the views list, never from the drawing
   const rec = await guard("Asking the engine about it…", () => api.entity(i));
   if (rec) store.set({ entity: rec });
+}
+
+const MIN_CANVAS = 560;
+
+/** Keep the drawing usable: when the open panels leave the canvas under MIN_CANVAS px, close panels in the order given (the person can
+ * reopen them; nothing is lost). Panel widths and the window are the only inputs. */
+export function makeRoom(sacrifice: ("left" | "right")[]): void {
+  const room = () => {
+    const s = store.get();
+    return (typeof window !== "undefined" ? window.innerWidth : 1600) - (s.leftOpen ? s.leftWidth + 6 : 0) - (s.rightOpen ? s.rightWidth + 6 : 0) - (s.agentOpen ? s.agentWidth + 6 : 0);
+  };
+  for (const side of sacrifice) {
+    if (room() >= MIN_CANVAS) return;
+    store.set(side === "left" ? { leftOpen: false } : { rightOpen: false });
+  }
+}
+
+export function toggleAgent(): void {
+  const open = !store.get().agentOpen;
+  store.set({ agentOpen: open });
+  if (open) makeRoom(["right", "left"]);
 }
 
 export function setHover(i: number | null): void {

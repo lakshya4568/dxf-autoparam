@@ -11,6 +11,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { requireFreePort } from "./harness.mjs";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -40,6 +41,7 @@ function check(name, ok, detail = "") {
 const sameCam = (a, b) => a && b && Math.abs(a.cx - b.cx) < 1e-9 * Math.max(1, Math.abs(a.cx)) && Math.abs(a.cy - b.cy) < 1e-9 * Math.max(1, Math.abs(a.cy))
   && Math.abs(a.s - b.s) < 1e-12 * Math.max(1, a.s) && a.rot === b.rot;
 
+await requireFreePort(base);
 const server = spawn("uv", ["run", "dxf-autoparam", "serve", dxf, "--port", String(port), ...(project ? ["--project", project] : [])], { cwd: root, stdio: ["ignore", "pipe", "pipe"] });
 let serverLog = "";
 server.stdout.on("data", (d) => (serverLog += d));
@@ -212,15 +214,15 @@ try {
   }
 
   // 7 · panels render with the engine's data
-  for (const [tab, testid] of [["fidelity", "faithful"], ["layers", "layers-panel"], ["agent", "agent-panel"], ["values", "values-panel"]]) {
+  for (const [tab, testid] of [["fidelity", "faithful"], ["layers", "layers-panel"], ["values", "values-panel"]]) {
     await js(`document.querySelector('[data-testid=tab-${tab}]').click()`);
     check(`the ${tab} panel renders`, await until(`!!document.querySelector('[data-testid=${testid}]')`, 8000));
   }
-  await js("document.querySelector('[data-testid=tab-agent]').click()");
-  await until("!!document.querySelector('[data-testid=agent-start]')", 5000);
-  const startDisabled = await js("document.querySelector('[data-testid=agent-start]').disabled");
-  const confirmShown = await js("!!document.querySelector('[data-testid=agent-confirm]')");
-  check("the agent never starts without an instruction and a confirmation", startDisabled && !confirmShown, `start disabled with no instruction: ${startDisabled}, confirmation shown: ${confirmShown}`);
+  await js("document.querySelector('[data-testid=agent-toggle]').click()");
+  check("the agent dock opens", await until("!!document.querySelector('[data-testid=agent-panel]')", 8000));
+  const sendDisabled = await js("document.querySelector('[data-testid=send]').disabled");
+  const confirmShown = await js("!!document.querySelector('[data-testid=cost-confirm]')");
+  check("the agent never starts without an instruction and a confirmation", sendDisabled && !confirmShown, `send disabled with no instruction: ${sendDisabled}, confirmation shown: ${confirmShown}`);
   await shot("05_panels");
 
   const errors = await js("window.__errors");

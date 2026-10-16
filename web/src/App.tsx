@@ -3,17 +3,20 @@
 // whole window when a sheet needs it.
 import { useEffect, useRef } from "react";
 import { CanvasView } from "./canvas/CanvasView";
-import { AgentPanel } from "./panels/AgentPanel";
+import { AgentPanel } from "./agent/AgentPanel";
+import { lifecycle } from "./agent/model";
+import { Spinner } from "./agent/StatusMark";
 import { FidelityPanel } from "./panels/FidelityPanel";
 import { InspectorPanel } from "./panels/InspectorPanel";
 import { LayersPanel } from "./panels/LayersPanel";
 import { ValidationPanel } from "./panels/ValidationPanel";
 import { ValuesPanel } from "./panels/ValuesPanel";
 import { ViewsPanel } from "./panels/ViewsPanel";
+import { agent, currentRun } from "./state/agent";
 import { useStore } from "./state/store";
-import { back, fitSheet, loadAll, openFile, redo, store, undo, type LeftTab, type RightTab } from "./state/workspace";
+import { back, fitSheet, loadAll, openFile, redo, store, toggleAgent, undo, type LeftTab, type RightTab } from "./state/workspace";
 
-const LEFT: [LeftTab, string][] = [["views", "Views"], ["layers", "Layers"], ["values", "Values"], ["agent", "Agent"], ["fidelity", "Fidelity"]];
+const LEFT: [LeftTab, string][] = [["views", "Views"], ["layers", "Layers"], ["values", "Values"], ["fidelity", "Fidelity"]];
 const RIGHT: [RightTab, string][] = [["inspect", "Inspector"], ["validate", "Validation"]];
 
 function Tabs<T extends string>({ items, value, onChange }: { items: [T, string][]; value: T; onChange: (t: T) => void }) {
@@ -29,7 +32,7 @@ function Tabs<T extends string>({ items, value, onChange }: { items: [T, string]
   );
 }
 
-function Splitter({ side }: { side: "left" | "right" }) {
+function Splitter({ side }: { side: "left" | "right" | "agent" }) {
   const start = useRef<{ x: number; w: number } | null>(null);
   return (
     <div
@@ -39,16 +42,28 @@ function Splitter({ side }: { side: "left" | "right" }) {
       onPointerDown={(e) => {
         (e.target as HTMLElement).setPointerCapture(e.pointerId);
         const s = store.get();
-        start.current = { x: e.clientX, w: side === "left" ? s.leftWidth : s.rightWidth };
+        start.current = { x: e.clientX, w: side === "left" ? s.leftWidth : side === "agent" ? s.agentWidth : s.rightWidth };
       }}
       onPointerMove={(e) => {
         if (!start.current) return;
         const d = e.clientX - start.current.x;
-        const w = Math.max(220, Math.min(720, start.current.w + (side === "left" ? d : -d)));
-        store.set(side === "left" ? { leftWidth: w } : { rightWidth: w });
+        const w = Math.max(side === "agent" ? 340 : 220, Math.min(side === "agent" ? 900 : 720, start.current.w + (side === "left" ? d : -d)));
+        store.set(side === "left" ? { leftWidth: w } : side === "agent" ? { agentWidth: w } : { rightWidth: w });
       }}
       onPointerUp={() => (start.current = null)}
     />
+  );
+}
+
+function AgentButton({ btn }: { btn: string }) {
+  const open = useStore(store, (x) => x.agentOpen);
+  const a = useStore(agent, (x) => ({ runs: x.runs, currentId: x.currentId, busy: x.busy }));
+  const life = lifecycle(currentRun({ ...agent.get(), runs: a.runs, currentId: a.currentId }), a.busy === "starting");
+  return (
+    <button className={`${btn} flex items-center gap-1.5 ${open ? "bg-slate-100 dark:bg-slate-800" : ""}`} onClick={toggleAgent} aria-pressed={open} data-testid="agent-toggle" title={`Agent — ${life.label}`}>
+      {life.active ? <Spinner /> : life.key === "awaiting" ? <span className="h-2 w-2 rounded-full bg-amber-500" /> : null}
+      Agent
+    </button>
   );
 }
 
@@ -74,6 +89,7 @@ function TopBar() {
           : s.message && <span data-testid="message" className={`text-[13px] truncate ${s.message.kind === "bad" ? "text-red-600" : s.message.kind === "ok" ? "text-emerald-600" : "text-slate-600"}`}>{s.message.text}</span>}
       </div>
       <button className={btn} onClick={() => store.set({ theme: s.theme === "dark" ? "light" : "dark" })}>{s.theme === "dark" ? "Light" : "Dark"}</button>
+      <AgentButton btn={btn} />
       <a className={btn} href="/legacy" title="The previous page">Legacy</a>
       <button className={btn} title="Show or hide the right panel" onClick={() => store.set({ rightOpen: !s.rightOpen })}>☷</button>
     </header>
@@ -81,7 +97,7 @@ function TopBar() {
 }
 
 export function App() {
-  const s = useStore(store, (x) => ({ theme: x.theme, leftTab: x.leftTab, rightTab: x.rightTab, leftWidth: x.leftWidth, rightWidth: x.rightWidth, leftOpen: x.leftOpen, rightOpen: x.rightOpen, has: !!x.summary }));
+  const s = useStore(store, (x) => ({ theme: x.theme, leftTab: x.leftTab, rightTab: x.rightTab, leftWidth: x.leftWidth, rightWidth: x.rightWidth, leftOpen: x.leftOpen, rightOpen: x.rightOpen, agentOpen: x.agentOpen, agentWidth: x.agentWidth, has: !!x.summary }));
   useEffect(() => {
     void loadAll(true);
   }, []);
@@ -98,7 +114,6 @@ export function App() {
                   {s.leftTab === "views" && <ViewsPanel />}
                   {s.leftTab === "layers" && <LayersPanel />}
                   {s.leftTab === "values" && <ValuesPanel />}
-                  {s.leftTab === "agent" && <AgentPanel />}
                   {s.leftTab === "fidelity" && <FidelityPanel />}
                 </div>
               </aside>
@@ -111,6 +126,14 @@ export function App() {
             )}
             <CanvasView />
           </main>
+          {s.agentOpen && (
+            <>
+              <Splitter side="agent" />
+              <aside className="flex flex-col shrink-0 bg-white dark:bg-[#11161d] border-l border-slate-200 dark:border-slate-700" style={{ width: s.agentWidth }} aria-label="Agent" data-testid="agent-dock">
+                <AgentPanel />
+              </aside>
+            </>
+          )}
           {s.rightOpen && (
             <>
               <Splitter side="right" />
