@@ -38,7 +38,7 @@ from . import domain, library, production
 from . import understanding_tools as UT
 from .context import SheetScope
 from .loop import AgentLoop, Budget
-from .narrate import STAGE_OF
+from .narrate import STAGE_OF, phase_of
 from .sheet_ai import apply_shared, apply_views, commit_unit
 from .statement import BOUND, KINDS, RELATIONS, apply_plan, gap_lines, group_facts, plan_gaps, plan_report
 from .vertex import GeminiStopped, GeminiUnavailable
@@ -1380,6 +1380,7 @@ class Run:
                 self.answers_text.append(p["note"])
             for w in b.units.values():
                 w.instructions += f"\n[the person: {p['note']}]" if p.get("note") else ""
+            self.emit({"kind": "user", "text": p.get("note") or "", "answers": {str(k): str(v)[:200] for k, v in (p.get("answers") or {}).items()}})
             self.loop.add_user("THE PERSON ANSWERS:\n" + "\n".join(lines) + "\nContinue with their answers (the engine has applied them to the plans); do not ask again what they settled.")
             self.emit({"kind": "note", "text": "answers recorded: " + "; ".join(l[:90] for l in lines)})
         elif self.status == "running":
@@ -1520,7 +1521,7 @@ class Run:
         with self._ev:
             events = self.events[since:]
             nxt = len(self.events)
-        return {"run": self.id, "status": self.status, "label": LABELS[self.status], "reason": self.reason, "stage": self.stage, "error": self.error,
+        return {"run": self.id, "status": self.status, "label": LABELS[self.status], "reason": self.reason, "stage": self.stage, "phase": phase_of(self.stage), "error": self.error,
                 "events": events, "next": nxt, "usage": self.usage(), "questions": self.questions if self.status == "awaiting_user" else [],
                 "verdict": self.verdict, "can": self.can(), "instruction": self.instruction, "scope": self.scope, "images": [{**v, "stale": self.host.pictures.is_stale(v["id"]) if self.host.pictures else False} for v in list(self.images.values())[-30:]],
                 "started": self.t_started, "finished": self.t_finished, "reverted": self.reverted, "elapsed": self.elapsed(), "parent": self.parent}

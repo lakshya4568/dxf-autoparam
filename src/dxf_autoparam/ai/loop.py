@@ -29,7 +29,7 @@ import os
 import time
 from dataclasses import asdict, dataclass, field
 
-from .narrate import shrink, summarise
+from .narrate import doing, phase_of, shrink, stage_of, summarise
 from .vertex import GeminiStopped
 
 
@@ -333,8 +333,9 @@ def execute_calls(bench, calls: list, emit, state: LoopState, budget: Budget, tu
     before = bench.snapshot()
     for n, call in enumerate(calls):
         a = _args(call)
-        emit({"kind": "tool_start", "id": f"c{state.tool_calls - len(calls) + n + 1}", "name": call.name, "args": short(a),
-              "unit": bench.unit_label() if hasattr(bench, "unit_label") else None})
+        emit({"kind": "tool_start", "id": f"c{state.tool_calls - len(calls) + n + 1}", "name": call.name, "args": short(a), "args_full": shrink(a),
+              "doing": doing(call.name), "stage": stage_of(call.name),
+              "phase": phase_of(stage_of(call.name)), "unit": bench.unit_label() if hasattr(bench, "unit_label") else None})
     for n, call in enumerate(calls):
         a = _args(call)
         t0 = time.perf_counter()
@@ -404,7 +405,7 @@ def execute_calls(bench, calls: list, emit, state: LoopState, budget: Budget, tu
 
 
 def _tool_event(cid: str, name: str, a: dict, ok: bool, why: str, res, t0: float, bench, image: dict | None = None) -> dict:
-    ev = {"kind": "tool", "id": cid, "name": name, "args": short(a), "args_full": shrink(a), "ok": bool(ok), "why": why,
+    ev = {"kind": "tool", "id": cid, "name": name, "args": short(a), "args_full": shrink(a), "ok": bool(ok), "why": why, "doing": doing(name), "stage": stage_of(name), "phase": phase_of(stage_of(name)),
           "result": shrink(res), "summary": summarise(name, a, res), "ms": int((time.perf_counter() - t0) * 1000),
           "unit": bench.unit_label() if hasattr(bench, "unit_label") else None}
     why_text = a.get("why") if isinstance(a, dict) else None

@@ -18,9 +18,19 @@ STAGE_OF = {
     "set_levels": "binding values", "set_formulas": "binding values", "set_relation": "binding values", "remove": "binding values",
     "add_constraints": "stating intent", "state_behaviours": "stating intent", "propose_plan": "planning",
     "ask_person": "asking", "finish": "validating",
+    "drawing_overview": "inspecting", "inspect_view": "looking", "inspect_component": "looking", "inspect_annotations": "inspecting",
+    "inspect_layers": "inspecting", "find_duplicates": "inspecting", "impact_plan": "measuring", "check_behaviour": "validating",
+    "review_parameters": "inspecting", "update_checklist": "planning", "record_learned": "planning", "accept_semantics": "understanding the views",
+    "rename_values": "binding values", "define_transforms": "binding values",
+    "list_skills": "consulting the library", "load_skill": "consulting the library", "search_library": "consulting the library", "record_finding": "consulting the library",
 }
 STAGES = ("inspecting", "looking", "interpreting", "understanding the views", "naming the parts", "binding values", "stating intent", "planning",
-          "measuring", "linking the views", "stating the plan", "asking", "validating", "committing")
+          "measuring", "linking the views", "stating the plan", "asking", "validating", "committing", "consulting the library")
+# What a person sees a stage as — planning, inspecting, applying changes (the engine WRITES to the sheet's model), validating, asking.
+PHASE_OF = {"interpreting": "planning", "planning": "planning", "stating the plan": "planning",
+            "inspecting": "inspecting", "looking": "inspecting", "measuring": "inspecting", "consulting the library": "inspecting",
+            "understanding the views": "applying", "naming the parts": "applying", "binding values": "applying", "stating intent": "applying",
+            "linking the views": "applying", "committing": "applying", "validating": "validating", "asking": "asking"}
 
 WORDS = {
     "inspect_sheet": "looked at the sheet", "open_unit": "opened a view", "inspect_regions": "inspected regions", "inspect_lines": "inspected lines",
@@ -31,7 +41,42 @@ WORDS = {
     "define_parts": "named parts", "define_parameters": "bound values", "set_levels": "named levels", "set_formulas": "wrote formulas",
     "set_relation": "related values", "remove": "removed items", "add_constraints": "stated constraints", "state_behaviours": "stated behaviour",
     "propose_plan": "proposed a plan", "ask_person": "asked you", "finish": "finished",
+    "drawing_overview": "read the whole drawing", "inspect_view": "inspected a view", "inspect_component": "inspected a component", "inspect_annotations": "read the annotations",
+    "inspect_layers": "read the layers", "find_duplicates": "looked for duplicates", "impact_plan": "planned the impact of a change", "check_behaviour": "checked the assembly",
+    "review_parameters": "reviewed the value names", "update_checklist": "updated the checklist", "record_learned": "recorded what it learned",
+    "accept_semantics": "recorded a decision", "rename_values": "renamed values", "define_transforms": "defined transforms",
+    "list_skills": "listed library skills", "load_skill": "read a library skill", "search_library": "searched the library", "record_finding": "recorded library findings",
 }
+
+# What each tool is doing while it runs, in the present tense (WORDS above is the past tense, for a finished call).
+DOING = {
+    "inspect_sheet": "Reading the sheet's views and units", "open_unit": "Opening a view's unit", "inspect_regions": "Inspecting regions",
+    "inspect_lines": "Inspecting set-out lines", "inspect_candidates": "Inspecting candidate sizes", "inspect_dimensions": "Reading the dimensions",
+    "resolve_labels": "Resolving labels to geometry", "find_values": "Searching for sizes", "knowledge": "Consulting the knowledge pack",
+    "what_moves": "Measuring what a value moves", "inspect_assembly": "Inspecting the assembly", "zoom_view": "Looking at a picture of the drawing",
+    "account_instruction": "Reading the instruction clause by clause", "describe_views": "Identifying and naming the views", "share_sizes": "Linking sizes across views",
+    "state_plan": "Stating the plan across views", "set_structure": "Naming the structure", "define_parts": "Naming the parts", "define_parameters": "Binding values to dimensions",
+    "set_levels": "Naming levels", "set_formulas": "Writing formulas", "set_relation": "Relating values", "remove": "Removing items", "add_constraints": "Stating constraints",
+    "state_behaviours": "Stating how the assembly should behave", "propose_plan": "Proposing and measuring the plan", "ask_person": "Asking you", "finish": "Checking the criteria to finish",
+    "drawing_overview": "Reading the whole drawing at a glance", "inspect_view": "Inspecting a view", "inspect_component": "Inspecting a component",
+    "inspect_annotations": "Reading the annotations", "inspect_layers": "Reading layers and existing/proposed status", "find_duplicates": "Looking for duplicate geometry",
+    "impact_plan": "Planning what a change would touch", "check_behaviour": "Checking the whole assembly under a change", "review_parameters": "Reviewing the value names",
+    "update_checklist": "Updating its checklist", "record_learned": "Recording what it learned", "accept_semantics": "Recording an existing/proposed decision",
+    "rename_values": "Renaming values", "define_transforms": "Defining rotations, translations and scales",
+    "list_skills": "Listing matching library skills", "load_skill": "Reading a library skill", "search_library": "Searching the library", "record_finding": "Recording what the library gave",
+}
+
+
+def stage_of(name: str) -> str | None:
+    return STAGE_OF.get(name)
+
+
+def phase_of(stage: str | None) -> str | None:
+    return PHASE_OF.get(stage or "")
+
+
+def doing(name: str) -> str:
+    return DOING.get(name) or WORDS.get(name, name).capitalize()
 
 
 def _n(x) -> int:
@@ -95,7 +140,12 @@ def summarise(name: str, a: dict, res) -> str:
         if name in ("describe_views", "share_sizes") and vs:
             v = vs[0]
             return f"{len(v.get('applied') or [])} applied" + (f"; {len(v.get('refused') or [])} refused ({str((v.get('refused') or ['?'])[0])[:90]})" if v.get("refused") else "")
-        if name in ("define_parts", "define_parameters", "set_levels", "set_formulas", "add_constraints", "state_behaviours", "account_instruction") and vs:
+        if name == "inspect_annotations" and isinstance(res, dict) and "total" in res:
+            return f"{res['total']} annotation(s)"
+        if name == "inspect_layers" and isinstance(res, dict) and isinstance(res.get("layers"), list):
+            return f"{len(res['layers'])} layer(s)"
+        if name in ("define_parts", "define_parameters", "set_levels", "set_formulas", "add_constraints", "state_behaviours", "account_instruction",
+                    "define_transforms", "update_checklist", "record_learned", "accept_semantics", "rename_values") and vs:
             ok = [v for v in vs if v.get("ok")]
             bad = [v for v in vs if not v.get("ok")]
             names = _ids([v.get("item") for v in ok])
