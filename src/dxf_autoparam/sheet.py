@@ -48,12 +48,7 @@ NUMBER_ONLY = re.compile(r"^[\s\d.,:+\-xX×/()%°]*$")
 
 
 def _words_re(words: list[str]) -> re.Pattern:
-    return re.compile(
-        r"(?<![A-Z])("
-        + "|".join(re.escape(w) for w in sorted(words, key=len, reverse=True))
-        + r")(?![A-Z])",
-        re.IGNORECASE,
-    )
+    return re.compile(r"(?<![A-Z])(" + "|".join(re.escape(w) for w in sorted(words, key=len, reverse=True)) + r")(?![A-Z])", re.IGNORECASE)
 
 
 TYPE_RE = {t: _words_re(ws) for t, ws in VOCAB["view_types"].items()}
@@ -72,47 +67,23 @@ class Group:
     items: list[int]
     bbox: tuple[float, float, float, float]
     name: str = ""
-    view_type: str = (
-        "unknown"  # plan | section | elevation | detail | arrangement | composite | unknown
-    )
+    view_type: str = "unknown"  # plan | section | elevation | detail | arrangement | composite | unknown
     view_types: list[str] = field(default_factory=list)
     titles: list[int] = field(default_factory=list)
-    scale: float | None = (
-        None  # the stated drawing scale 1:N (None: not stated / not to scale)
-    )
-    units_mm: float | None = (
-        None  # millimetres per drawing unit measured from its own dimensions (None: the sheet's)
-    )
+    scale: float | None = None  # the stated drawing scale 1:N (None: not stated / not to scale)
+    units_mm: float | None = None  # millimetres per drawing unit measured from its own dimensions (None: the sheet's)
     confidence: float = 0.0
     evidence: list[str] = field(default_factory=list)
     questions: list[str] = field(default_factory=list)
-    split: list[list[int]] = field(
-        default_factory=list
-    )  # a proposed split into views, when unsure
+    split: list[list[int]] = field(default_factory=list)  # a proposed split into views, when unsure
     counts: dict[str, int] = field(default_factory=dict)
-    key: str = (
-        ""  # a content hash: the same entities give the same key in every session
-    )
+    key: str = ""  # a content hash: the same entities give the same key in every session
 
     def to_dict(self) -> dict:
-        return {
-            "id": self.id,
-            "kind": self.kind,
-            "name": self.name,
-            "view_type": self.view_type,
-            "view_types": self.view_types,
-            "bbox": [round(v, 3) for v in self.bbox],
-            "entities": len(self.items),
-            "titles": self.titles,
-            "scale": self.scale,
-            "units_mm": self.units_mm,
-            "confidence": round(self.confidence, 2),
-            "evidence": self.evidence,
-            "questions": self.questions,
-            "split": [len(s) for s in self.split],
-            "counts": self.counts,
-            "key": self.key,
-        }
+        return {"id": self.id, "kind": self.kind, "name": self.name, "view_type": self.view_type, "view_types": self.view_types,
+                "bbox": [round(v, 3) for v in self.bbox], "entities": len(self.items), "titles": self.titles, "scale": self.scale,
+                "units_mm": self.units_mm, "confidence": round(self.confidence, 2), "evidence": self.evidence, "questions": self.questions,
+                "split": [len(s) for s in self.split], "counts": self.counts, "key": self.key}
 
 
 @dataclass
@@ -125,9 +96,7 @@ class SheetLayout:
     groups: list[Group]
     cell: float  # raster cell, drawing units
     gap: float  # the white space that separates views on this sheet, drawing units
-    gaps: list[
-        float
-    ]  # every measured gap between geometry pieces (the evidence for `gap`)
+    gaps: list[float]  # every measured gap between geometry pieces (the evidence for `gap`)
     notes: list[str] = field(default_factory=list)
     item_group: dict[int, str] = field(default_factory=dict)
 
@@ -138,25 +107,12 @@ class SheetLayout:
         return [g for g in self.groups if g.kind == "view"]
 
     def furniture(self) -> list[int]:
-        return sorted(
-            set(self.frame_items)
-            | set(self.rules)
-            | set(self.stray)
-            | set(self.watermark)
-        )
+        return sorted(set(self.frame_items) | set(self.rules) | set(self.stray) | set(self.watermark))
 
     def to_dict(self) -> dict:
-        return {
-            "frame": self.frame,
-            "frame_items": len(self.frame_items),
-            "rules": len(self.rules),
-            "stray": len(self.stray),
-            "watermark": len(self.watermark),
-            "cell": self.cell,
-            "gap": self.gap,
-            "notes": self.notes,
-            "groups": [g.to_dict() for g in self.groups],
-        }
+        return {"frame": self.frame, "frame_items": len(self.frame_items), "rules": len(self.rules), "stray": len(self.stray),
+                "watermark": len(self.watermark), "cell": self.cell, "gap": self.gap, "notes": self.notes,
+                "groups": [g.to_dict() for g in self.groups]}
 
 
 # ── geometry of an item, for the raster ──────────────────────────────────────────
@@ -171,17 +127,11 @@ def _bbox(pts) -> tuple[float, float, float, float]:
 def text_outline(it: Item) -> list[tuple[float, float]]:
     """A text's footprint: its words' rectangle (rotated), estimated from the height and the longest line, hung from its
     anchor the way CAD hangs it — an MTEXT by its attachment point (top / middle / bottom × left / centre / right), a
-    TEXT by its alignment (baseline / bottom / middle / top × left / centre / right, aligned and fit across both points).
-    """
+    TEXT by its alignment (baseline / bottom / middle / top × left / centre / right, aligned and fit across both points)."""
     h = it.text_height or 1.0
     lines = (it.text or "").split("\n") or [""]
     n = len(lines)
-    w = (
-        0.62
-        * h
-        * max(1, max(len(s) for s in lines))
-        * float(it.extra.get("wf", 1.0) or 1.0)
-    )
+    w = 0.62 * h * max(1, max(len(s) for s in lines)) * float(it.extra.get("wf", 1.0) or 1.0)
     a = math.radians(it.extra.get("rotation", 0.0) or 0.0)
     ox, oy = it.pts[0]
     if it.dxftype == "MTEXT":
@@ -192,18 +142,11 @@ def text_outline(it: Item) -> list[tuple[float, float]]:
         ylo, yhi = ((-H, 0.0), (-H / 2, H / 2), (0.0, H))[row]
         local = [(x0, ylo), (x0 + w, ylo), (x0 + w, yhi), (x0, yhi)]
     else:
-        ha, va = int(it.extra.get("halign", 0) or 0), int(
-            it.extra.get("valign", 0) or 0
-        )
+        ha, va = int(it.extra.get("halign", 0) or 0), int(it.extra.get("valign", 0) or 0)
         if (ha or va) and len(it.pts) > 1:
             ox, oy = it.pts[1]
-            if ha in (
-                3,
-                5,
-            ):  # aligned / fit: the text runs from the insertion point to the alignment point
-                ox, oy = (it.pts[0][0] + it.pts[1][0]) / 2, (
-                    it.pts[0][1] + it.pts[1][1]
-                ) / 2
+            if ha in (3, 5):  # aligned / fit: the text runs from the insertion point to the alignment point
+                ox, oy = (it.pts[0][0] + it.pts[1][0]) / 2, (it.pts[0][1] + it.pts[1][1]) / 2
         x0 = -w / 2 if ha in (1, 3, 4, 5) else -w if ha == 2 else 0.0
         if ha == 4 or va == 2:
             ylo, yhi = -0.65 * h, 0.65 * h
@@ -232,23 +175,11 @@ def item_lines(it: Item) -> list[list[tuple[float, float]]]:
         return [list(it.pts) + ([it.pts[0]] if it.closed else [])]
     if t in ("CIRCLE", "ARC") and it.radius:
         c, r = it.pts[0], it.radius
-        a0, a1 = (
-            (0.0, 360.0)
-            if t == "CIRCLE"
-            else (it.extra.get("start_angle", 0.0), it.extra.get("end_angle", 360.0))
-        )
+        a0, a1 = (0.0, 360.0) if t == "CIRCLE" else (it.extra.get("start_angle", 0.0), it.extra.get("end_angle", 360.0))
         if a1 <= a0:
             a1 += 360.0
         n = max(8, int((a1 - a0) / 10))
-        return [
-            [
-                (
-                    c[0] + r * math.cos(math.radians(a0 + (a1 - a0) * k / n)),
-                    c[1] + r * math.sin(math.radians(a0 + (a1 - a0) * k / n)),
-                )
-                for k in range(n + 1)
-            ]
-        ]
+        return [[(c[0] + r * math.cos(math.radians(a0 + (a1 - a0) * k / n)), c[1] + r * math.sin(math.radians(a0 + (a1 - a0) * k / n))) for k in range(n + 1)]]
     if t == "HATCH":
         return [[*p, p[0]] for p in it.extra.get("polys", []) if len(p) >= 3]
     if it.display:
@@ -302,11 +233,7 @@ class _Grid:
                 if n > 20000:  # a line far longer than the sheet (stray): its ends only
                     n = 1
                 t = np.linspace(0.0, 1.0, n + 1)
-                out.append(
-                    np.column_stack(
-                        (a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t)
-                    )
-                )
+                out.append(np.column_stack((a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t)))
         if not out:
             return np.zeros(0, dtype=np.int64)
         p = np.concatenate(out)
@@ -318,15 +245,10 @@ class _Grid:
 
 def _label(mask: np.ndarray, nx: int, four: bool = False) -> np.ndarray:
     """Connected components of the marked cells (8-connected, or 4-connected for open areas walled by lines, which
-    must not leak through the corner where two lines cross): label per cell (-1 where unmarked).
-    """
+    must not leak through the corner where two lines cross): label per cell (-1 where unmarked)."""
     lab = np.full(mask.shape, -1, dtype=np.int64)
     ny = mask.size // nx
-    steps = (
-        [(0, -1), (0, 1), (-1, 0), (1, 0)]
-        if four
-        else [(dy, dx) for dy in (-1, 0, 1) for dx in (-1, 0, 1) if dy or dx]
-    )
+    steps = [(0, -1), (0, 1), (-1, 0), (1, 0)] if four else [(dy, dx) for dy in (-1, 0, 1) for dx in (-1, 0, 1) if dy or dx]
     nxt = 0
     for start in np.flatnonzero(mask):
         if lab[start] >= 0:
@@ -347,12 +269,9 @@ def _label(mask: np.ndarray, nx: int, four: bool = False) -> np.ndarray:
     return lab
 
 
-def _wave(
-    atom: np.ndarray, wall: np.ndarray, nx: int, reach: int
-) -> tuple[np.ndarray, np.ndarray, dict[tuple[int, int], int]]:
+def _wave(atom: np.ndarray, wall: np.ndarray, nx: int, reach: int) -> tuple[np.ndarray, np.ndarray, dict[tuple[int, int], int]]:
     """Grow every atom at once (one cell per step, never through a wall): each empty cell learns its nearest atom and
-    the distance to it; where two waves meet, the white space between those atoms is measured (in cells).
-    """
+    the distance to it; where two waves meet, the white space between those atoms is measured (in cells)."""
     ny = atom.size // nx
     owner = atom.copy()
     dist = np.where(atom >= 0, 0, 1 << 30).astype(np.int64)
@@ -419,11 +338,7 @@ def _rect(it: Item) -> tuple[float, float, float, float] | None:
         return None
     x0, y0, x1, y1 = _bbox(pts)
     tol = 1e-3 * max(x1 - x0, y1 - y0, 1e-9)
-    if all(
-        min(abs(p[0] - x0), abs(p[0] - x1)) < tol
-        and min(abs(p[1] - y0), abs(p[1] - y1)) < tol
-        for p in pts
-    ):
+    if all(min(abs(p[0] - x0), abs(p[0] - x1)) < tol and min(abs(p[1] - y0), abs(p[1] - y1)) < tol for p in pts):
         return x0, y0, x1, y1
     return None
 
@@ -436,32 +351,19 @@ def _robust_bounds(items: list[Item]) -> tuple[float, float, float, float]:
     return xs[lo], ys[lo], xs[hi], ys[hi]
 
 
-def _frame(
-    dr: Drawing, centres: dict[int, tuple[float, float]]
-) -> tuple[tuple | None, list[int]]:
+def _frame(dr: Drawing, centres: dict[int, tuple[float, float]]) -> tuple[tuple | None, list[int]]:
     """The sheet frame: the outermost rectangle that holds nearly every entity, and every border line on it."""
     items = [it for it in dr.items if it.pts]
     if not items:
         return None, []
     rx0, ry0, rx1, ry1 = _robust_bounds(items)
     area = max((rx1 - rx0) * (ry1 - ry0), 1e-9)
-    rects = [
-        (it.index, r)
-        for it in items
-        if (r := _rect(it)) and (r[2] - r[0]) * (r[3] - r[1]) > 0.25 * area
-    ]
+    rects = [(it.index, r) for it in items if (r := _rect(it)) and (r[2] - r[0]) * (r[3] - r[1]) > 0.25 * area]
     n = len(centres)
     best = None
     for idx, r in rects:
-        inside = sum(
-            1
-            for i, c in centres.items()
-            if i != idx and r[0] <= c[0] <= r[2] and r[1] <= c[1] <= r[3]
-        )
-        if inside >= 0.8 * n and (
-            best is None
-            or (r[2] - r[0]) * (r[3] - r[1]) > (best[2] - best[0]) * (best[3] - best[1])
-        ):
+        inside = sum(1 for i, c in centres.items() if i != idx and r[0] <= c[0] <= r[2] and r[1] <= c[1] <= r[3])
+        if inside >= 0.8 * n and (best is None or (r[2] - r[0]) * (r[3] - r[1]) > (best[2] - best[0]) * (best[3] - best[1])):
             best = r
     if best is None:  # border drawn as loose lines: the reader already holds them fixed
         fixed = [it for it in items if it.role == Role.FIXED and len(it.pts) >= 2]
@@ -477,16 +379,8 @@ def _frame(
         x0, y0, x1, y1 = _bbox(it.pts)
         near = lambda v, w: abs(v - w) < tol
         whole = (x1 - x0) > 0.6 * W and (y1 - y0) > 0.6 * H
-        hside = (
-            (x1 - x0) > 0.6 * W
-            and (y1 - y0) < tol
-            and (near(y0, best[1]) or near(y1, best[3]))
-        )
-        vside = (
-            (y1 - y0) > 0.6 * H
-            and (x1 - x0) < tol
-            and (near(x0, best[0]) or near(x1, best[2]))
-        )
+        hside = (x1 - x0) > 0.6 * W and (y1 - y0) < tol and (near(y0, best[1]) or near(y1, best[3]))
+        vside = (y1 - y0) > 0.6 * H and (x1 - x0) < tol and (near(x0, best[0]) or near(x1, best[2]))
         if whole or hside or vside:
             frame_items.append(it.index)
     return best, frame_items
@@ -496,9 +390,7 @@ def _segments(it: Item) -> list[tuple[tuple[float, float], tuple[float, float]]]
     pts = list(it.pts)
     if it.dxftype in ("LINE",) and len(pts) >= 2:
         return [(pts[0], pts[1])]
-    if it.dxftype in ("LWPOLYLINE", "POLYLINE") and not any(
-        abs(b) > 1e-9 for b in it.bulges
-    ):
+    if it.dxftype in ("LWPOLYLINE", "POLYLINE") and not any(abs(b) > 1e-9 for b in it.bulges):
         segs = list(itertools.pairwise(pts))
         if it.closed and len(pts) > 2:
             segs.append((pts[-1], pts[0]))
@@ -506,22 +398,15 @@ def _segments(it: Item) -> list[tuple[tuple[float, float], tuple[float, float]]]
     return []
 
 
-def _rules(
-    dr: Drawing, frame: tuple, frame_items: list[int], skip: set[int]
-) -> list[int]:
+def _rules(dr: Drawing, frame: tuple, frame_items: list[int], skip: set[int]) -> list[int]:
     """Panel rules: long straight lines (or whole outlines made of them) joined to the frame through other long lines.
     A centre or axis line is never one: it is a construction axis that runs THROUGH a drawing (a track's centre line
-    ends near the sheet's margin like an inner border does), while a rule parts the sheet and nothing is drawn across it.
-    """
+    ends near the sheet's margin like an inner border does), while a rule parts the sheet and nothing is drawn across it."""
     W, H = frame[2] - frame[0], frame[3] - frame[1]
     tol = 0.004 * max(W, H)
     longs: dict[int, list] = {}
     for it in dr.items:
-        if (
-            it.index in skip
-            or it.index in frame_items
-            or it.dxftype not in ("LINE", "LWPOLYLINE", "POLYLINE")
-        ):
+        if it.index in skip or it.index in frame_items or it.dxftype not in ("LINE", "LWPOLYLINE", "POLYLINE"):
             continue
         if it.role == Role.REFERENCE:
             continue
@@ -530,37 +415,19 @@ def _rules(
             continue
         ok = []
         for a, b in segs:
-            if (
-                abs(a[1] - b[1]) < tol
-                and abs(a[0] - b[0]) > 0.1 * W
-                or abs(a[0] - b[0]) < tol
-                and abs(a[1] - b[1]) > 0.1 * H
-            ):
+            if abs(a[1] - b[1]) < tol and abs(a[0] - b[0]) > 0.1 * W or abs(a[0] - b[0]) < tol and abs(a[1] - b[1]) > 0.1 * H:
                 ok.append((a, b))
-        if ok and len(ok) == len(
-            segs
-        ):  # every edge long and straight: a rule, or a panel drawn as one outline
+        if ok and len(ok) == len(segs):  # every edge long and straight: a rule, or a panel drawn as one outline
             longs[it.index] = ok
 
     def on(p, seg) -> bool:
-        a, b = seg
+        (a, b) = seg
         if abs(a[1] - b[1]) < tol:  # horizontal
-            return (
-                abs(p[1] - a[1]) < tol
-                and min(a[0], b[0]) - tol <= p[0] <= max(a[0], b[0]) + tol
-            )
-        return (
-            abs(p[0] - a[0]) < tol
-            and min(a[1], b[1]) - tol <= p[1] <= max(a[1], b[1]) + tol
-        )
+            return abs(p[1] - a[1]) < tol and min(a[0], b[0]) - tol <= p[0] <= max(a[0], b[0]) + tol
+        return abs(p[0] - a[0]) < tol and min(a[1], b[1]) - tol <= p[1] <= max(a[1], b[1]) + tol
 
     fx0, fy0, fx1, fy1 = frame
-    border = [
-        ((fx0, fy0), (fx1, fy0)),
-        ((fx1, fy0), (fx1, fy1)),
-        ((fx1, fy1), (fx0, fy1)),
-        ((fx0, fy1), (fx0, fy0)),
-    ]
+    border = [((fx0, fy0), (fx1, fy0)), ((fx1, fy0), (fx1, fy1)), ((fx1, fy1), (fx0, fy1)), ((fx0, fy1), (fx0, fy0))]
     for idx in frame_items:
         border.extend(_segments(dr.items[idx]))
     # inner borders sit a little inside the outer one: an end within 2 % of the frame touches it
@@ -575,10 +442,7 @@ def _rules(
                 continue
             ends = [p for s in segs for p in s]
             touch = any(on(p, s) for p in ends for s in anchors) or any(
-                min(abs(p[0] - fx0), abs(p[0] - fx1), abs(p[1] - fy0), abs(p[1] - fy1))
-                < near_frame
-                for p in ends
-            )
+                min(abs(p[0] - fx0), abs(p[0] - fx1), abs(p[1] - fy0), abs(p[1] - fy1)) < near_frame for p in ends)
             if touch:
                 joined.add(idx)
                 anchors.extend(segs)
@@ -609,9 +473,7 @@ def _watermark(dr: Drawing, frame: tuple) -> list[int]:
         layers = Counter(dr.items[i].layer for i in out)
         for lay, n in layers.items():
             on_layer = [it.index for it in dr.items if it.layer == lay]
-            if all(
-                dr.items[i].dxftype in TEXT_TYPES for i in on_layer
-            ) and n >= 0.5 * len(on_layer):
+            if all(dr.items[i].dxftype in TEXT_TYPES for i in on_layer) and n >= 0.5 * len(on_layer):
                 out.extend(on_layer)
     return sorted(set(out))
 
@@ -633,11 +495,7 @@ def _type_of(text: str) -> list[str]:
 def _primary(types: list[str], text: str) -> str:
     if not types:
         return "unknown"
-    if (
-        len(types) > 1
-        and re.search(r"\bHALF\b", text, re.IGNORECASE)
-        and {"section", "elevation"} <= set(types)
-    ):
+    if len(types) > 1 and re.search(r"\bHALF\b", text, re.IGNORECASE) and {"section", "elevation"} <= set(types):
         return "composite"
     # the noun comes last ("SECTIONAL ELEVATION" is an elevation; "SECTION OF TOE WALL" a section)
     last = max(types, key=lambda t: max(m.start() for m in TYPE_RE[t].finditer(text)))
@@ -667,9 +525,7 @@ def _title_candidates(dr: Drawing, skip: set[int]) -> list[Item]:
         text = it.text.strip()
         if len(text) > 90 or not _type_of(text) or TITLE_BLOCK_RE.search(text):
             continue
-        if NOTES_RE.search(text) and not re.search(
-            r"\b(SECTION|ELEVATION|PLAN)\b", text, re.IGNORECASE
-        ):
+        if NOTES_RE.search(text) and not re.search(r"\b(SECTION|ELEVATION|PLAN)\b", text, re.IGNORECASE):
             continue
         out.append(it)
     return out
@@ -698,9 +554,7 @@ def _local(o, u, v, x, y):
     return (x - o[0]) * u[0] + (y - o[1]) * u[1], (x - o[0]) * v[0] + (y - o[1]) * v[1]
 
 
-def _drawn_labels(
-    dr: Drawing, texts: list[Item], skip: set[int]
-) -> tuple[set[int], set[int]]:
+def _drawn_labels(dr: Drawing, texts: list[Item], skip: set[int]) -> tuple[set[int], set[int]]:
     """Texts that may belong to a drawing rather than title one — a title stands on clear paper, beside its view.
       · CALLOUTS: the text rests on a leader's landing (the leader points from it to what it names). Never a title.
       · EMBEDDED: lines of the drawing run THROUGH the text (a cut label on a centre line, a level on a datum). That is
@@ -708,16 +562,9 @@ def _drawn_labels(
         title that is not crossed. Lines that end at a title, or underline it, do not count.
     (callout indices, embedded indices)"""
     segs: list[tuple[float, float, float, float]] = []
-    landings: list[tuple[float, float, float, float, float, float]] = (
-        []
-    )  # a leader's last leg (from, to) and its tip
+    landings: list[tuple[float, float, float, float, float, float]] = []  # a leader's last leg (from, to) and its tip
     for it in dr.items:
-        if (
-            it.index in skip
-            or it.dxftype not in LINE_TYPES
-            or it.role == Role.FIXED
-            or len(it.pts) < 2
-        ):
+        if it.index in skip or it.dxftype not in LINE_TYPES or it.role == Role.FIXED or len(it.pts) < 2:
             continue
         for a, b in itertools.pairwise(it.pts):
             segs.append((a[0], a[1], b[0], b[1]))
@@ -739,19 +586,12 @@ def _drawn_labels(
         u, v = u / w, v / hb
         h = t.text_height or hb
         if leg.size:
-            m = (
-                0.6 * h
-            )  # the landing runs under (or through) the words, a few tenths of a height off them
+            m = 0.6 * h  # the landing runs under (or through) the words, a few tenths of a height off them
             ax, ay = _local(o, u, v, leg[:, 0], leg[:, 1])
             bx, by = _local(o, u, v, leg[:, 2], leg[:, 3])
             tx, ty = _local(o, u, v, leg[:, 4], leg[:, 5])
             on_words = _clips(ax, ay, bx, by, -m, -m, w + m, hb + m)
-            points_away = ~(
-                (tx >= -1.5 * h)
-                & (tx <= w + 1.5 * h)
-                & (ty >= -1.5 * h)
-                & (ty <= hb + 1.5 * h)
-            )
+            points_away = ~((tx >= -1.5 * h) & (tx <= w + 1.5 * h) & (ty >= -1.5 * h) & (ty <= hb + 1.5 * h))
             if (on_words & points_away).any():
                 callouts.add(t.index)
                 continue
@@ -759,13 +599,8 @@ def _drawn_labels(
             continue
         px, py = _local(o, u, v, arr[:, 0], arr[:, 1])
         qx, qy = _local(o, u, v, arr[:, 2], arr[:, 3])
-        core = _clips(
-            px, py, qx, qy, 0.08 * w, 0.2 * hb, 0.92 * w, 0.8 * hb
-        )  # the middle of the words, clear of a baseline rule
-        outside = ~(
-            ((px >= 0) & (px <= w) & (py >= 0) & (py <= hb))
-            | ((qx >= 0) & (qx <= w) & (qy >= 0) & (qy <= hb))
-        )
+        core = _clips(px, py, qx, qy, 0.08 * w, 0.2 * hb, 0.92 * w, 0.8 * hb)  # the middle of the words, clear of a baseline rule
+        outside = ~(((px >= 0) & (px <= w) & (py >= 0) & (py <= hb)) | ((qx >= 0) & (qx <= w) & (qy >= 0) & (qy <= hb)))
         if (core & outside).any():
             embedded.add(t.index)
     return callouts, embedded
@@ -780,9 +615,7 @@ def _above(it: Item, k: float) -> tuple[float, float]:
     return cx - math.sin(a) * k * h, cy + math.cos(a) * k * h
 
 
-def _title_rays(
-    t: Item, grid2d: np.ndarray, g: _Grid, find
-) -> list[tuple[float, int, int]]:
+def _title_rays(t: Item, grid2d: np.ndarray, g: _Grid, find) -> list[tuple[float, int, int]]:
     """Candidate pieces for a title: cast straight 'up' and 'down' from it (in its own frame) across its width, and
     note the first two pieces met each way: (cost, piece, side). A view usually stands over its title, a table hangs
     under its heading — the other way round costs 1.6×."""
@@ -802,22 +635,16 @@ def _title_rays(
         seen: set[int] = set()
         weight = (1.6 if sign > 0 else 1.0) if tabular else (1.0 if sign > 0 else 1.6)
         for step in range(1, limit + 1):
-            if (
-                vertical
-            ):  # the text's 'up' is the sheet's left (rotated 90°) or right (270°)
-                col = (
-                    (c0 - step if rot < 180 else c1 + step)
-                    if sign > 0
-                    else (c1 + step if rot < 180 else c0 - step)
-                )
+            if vertical:  # the text's 'up' is the sheet's left (rotated 90°) or right (270°)
+                col = (c0 - step if rot < 180 else c1 + step) if sign > 0 else (c1 + step if rot < 180 else c0 - step)
                 if col < 0 or col >= g.nx:
                     break
-                line = grid2d[r0 : r1 + 1, col]
+                line = grid2d[r0: r1 + 1, col]
             else:
                 row = r1 + step if sign > 0 else r0 - step
                 if row < 0 or row >= g.ny:
                     break
-                line = grid2d[row, c0 : c1 + 1]
+                line = grid2d[row, c0: c1 + 1]
             for a in {int(v) for v in line[line >= 0]}:
                 pc = find(a)
                 if pc not in seen:
@@ -831,13 +658,7 @@ def _title_rays(
 def _underlines(dr: Drawing, titles: list[Item]) -> dict[int, int]:
     """Lines that underline a title (just under its words, about as long): part of the title, not of the drawing."""
     out: dict[int, int] = {}
-    flat = [
-        it
-        for it in dr.items
-        if it.dxftype in ("LINE", "LWPOLYLINE")
-        and len(it.pts) == 2
-        and abs(it.pts[0][1] - it.pts[1][1]) < 1e-6
-    ]
+    flat = [it for it in dr.items if it.dxftype in ("LINE", "LWPOLYLINE") and len(it.pts) == 2 and abs(it.pts[0][1] - it.pts[1][1]) < 1e-6]
     flat.sort(key=lambda it: it.pts[0][1])
     ys = [it.pts[0][1] for it in flat]
     for t in titles:
@@ -850,12 +671,7 @@ def _underlines(dr: Drawing, titles: list[Item]) -> dict[int, int]:
             ln = flat[k]
             lx0, lx1 = sorted((ln.pts[0][0], ln.pts[1][0]))
             w = x1 - x0
-            if (
-                lx1 - lx0 >= 0.4 * w
-                and lx1 - lx0 <= 1.6 * w
-                and lx0 <= x0 + 0.5 * w
-                and lx1 >= x1 - 0.5 * w
-            ):
+            if lx1 - lx0 >= 0.4 * w and lx1 - lx0 <= 1.6 * w and lx0 <= x0 + 0.5 * w and lx1 >= x1 - 0.5 * w:
                 out[ln.index] = t.index
             k += 1
     return out
@@ -875,21 +691,11 @@ def segment(dr: Drawing, grid: int = 800, trace: list | None = None) -> SheetLay
     work = frame if frame else _robust_bounds([it for it in items if it.pts])
     W, H = max(work[2] - work[0], 1e-9), max(work[3] - work[1], 1e-9)
     if frame:
-        notes.append(
-            f"sheet frame {W:.0f} × {H:.0f} drawing units ({len(frame_items)} border item(s))"
-        )
+        notes.append(f"sheet frame {W:.0f} × {H:.0f} drawing units ({len(frame_items)} border item(s))")
     m = 0.01 * max(W, H)
-    stray = sorted(
-        i
-        for i, c in centres.items()
-        if not (
-            work[0] - m <= c[0] <= work[2] + m and work[1] - m <= c[1] <= work[3] + m
-        )
-    )
+    stray = sorted(i for i, c in centres.items() if not (work[0] - m <= c[0] <= work[2] + m and work[1] - m <= c[1] <= work[3] + m))
     if stray:
-        notes.append(
-            f"{len(stray)} entit(ies) lie outside the sheet: kept, not part of any view"
-        )
+        notes.append(f"{len(stray)} entit(ies) lie outside the sheet: kept, not part of any view")
     watermark = _watermark(dr, work)
     if watermark:
         notes.append(f"{len(watermark)} repeated stamp text(s) treated as a watermark")
@@ -903,9 +709,7 @@ def segment(dr: Drawing, grid: int = 800, trace: list | None = None) -> SheetLay
     callouts, embedded = _drawn_labels(dr, candidates, skip)
     titles = [t for t in candidates if t.index not in callouts]
     if callouts:
-        notes.append(
-            f"{len(callouts)} text(s) with view words sit on a leader: callouts of a drawing, not titles"
-        )
+        notes.append(f"{len(callouts)} text(s) with view words sit on a leader: callouts of a drawing, not titles")
     underline = _underlines(dr, titles)
     cell = max(W, H) / grid
     g = _Grid((work[0] - cell, work[1] - cell, work[2] + cell, work[3] + cell), cell)
@@ -917,11 +721,7 @@ def segment(dr: Drawing, grid: int = 800, trace: list | None = None) -> SheetLay
     for it in items:
         if it.index in skip or not it.pts or it.anchor is not None:
             continue
-        if (
-            it.role in (Role.STRUCTURAL, Role.REFERENCE)
-            and it.dxftype not in TEXT_TYPES
-            and it.index not in underline
-        ):
+        if it.role in (Role.STRUCTURAL, Role.REFERENCE) and it.dxftype not in TEXT_TYPES and it.index not in underline:
             c = g.cells(item_lines(it))
             c = c[~wall[c]]
             if c.size:
@@ -988,10 +788,7 @@ def segment(dr: Drawing, grid: int = 800, trace: list | None = None) -> SheetLay
         if piece_title[pc]:
             t0, side0 = piece_title[pc][0]
             h = items[ti].text_height or cell
-            y_new, y_old = (
-                _bbox(text_outline(items[ti]))[1],
-                _bbox(text_outline(items[t0]))[1],
-            )
+            y_new, y_old = _bbox(text_outline(items[ti]))[1], _bbox(text_outline(items[t0]))[1]
             if side != side0 or abs(y_new - y_old) > 2.5 * h:
                 continue
         title_piece[ti] = pc
@@ -1020,12 +817,7 @@ def segment(dr: Drawing, grid: int = 800, trace: list | None = None) -> SheetLay
         p.xs |= a_xs.get(a, set())
         p.ys |= a_ys.get(a, set())
         b = a_bounds[a]
-        p.bounds = [
-            min(p.bounds[0], b[0]),
-            min(p.bounds[1], b[1]),
-            max(p.bounds[2], b[2]),
-            max(p.bounds[3], b[3]),
-        ]
+        p.bounds = [min(p.bounds[0], b[0]), min(p.bounds[1], b[1]), max(p.bounds[2], b[2]), max(p.bounds[3], b[3])]
     for ti, a in title_atom.items():
         pieces[uf.find(a)].titles.add(ti)
     # gaps between pieces
@@ -1043,12 +835,7 @@ def segment(dr: Drawing, grid: int = 800, trace: list | None = None) -> SheetLay
 
     def inside_frac(p: P, q: P, pad: int) -> float:
         """How much of p lies within q's extent (by its atoms' middles, weighted by size)."""
-        x0, y0, x1, y1 = (
-            q.bounds[0] - pad,
-            q.bounds[1] - pad,
-            q.bounds[2] + pad,
-            q.bounds[3] + pad,
-        )
+        x0, y0, x1, y1 = q.bounds[0] - pad, q.bounds[1] - pad, q.bounds[2] + pad, q.bounds[3] + pad
         tot = inn = 0
         for a in p.atoms:
             b = a_bounds[a]
@@ -1091,56 +878,24 @@ def segment(dr: Drawing, grid: int = 800, trace: list | None = None) -> SheetLay
             best = None
             mx, my = (p.bounds[0] + p.bounds[2]) / 2, (p.bounds[1] + p.bounds[3]) / 2
             cands = dict(nbrs.get(r, {}))
-            for (
-                s,
-                q,
-            ) in pieces.items():  # pieces whose extent holds this one, touching or not
-                if (
-                    s != r
-                    and s not in cands
-                    and q.bounds[0] - g0 <= mx <= q.bounds[2] + g0
-                    and q.bounds[1] - g0 <= my <= q.bounds[3] + g0
-                ):
+            for s, q in pieces.items():  # pieces whose extent holds this one, touching or not
+                if s != r and s not in cands and q.bounds[0] - g0 <= mx <= q.bounds[2] + g0 and q.bounds[1] - g0 <= my <= q.bounds[3] + g0:
                     cands[s] = 1 << 30
             for s, w in cands.items():
                 q = pieces.get(s)
-                if (
-                    q is None
-                    or q.count < p.count
-                    or (p.titles and q.titles and p.titles != q.titles)
-                ):
+                if q is None or q.count < p.count or (p.titles and q.titles and p.titles != q.titles):
                     continue
-                ix = max(
-                    0, min(p.bounds[2], q.bounds[2]) - max(p.bounds[0], q.bounds[0]) + 1
-                ) * max(
-                    0, min(p.bounds[3], q.bounds[3]) - max(p.bounds[1], q.bounds[1]) + 1
-                )
+                ix = max(0, min(p.bounds[2], q.bounds[2]) - max(p.bounds[0], q.bounds[0]) + 1) * max(0, min(p.bounds[3], q.bounds[3]) - max(p.bounds[1], q.bounds[1]) + 1)
                 pa = (p.bounds[2] - p.bounds[0] + 1) * (p.bounds[3] - p.bounds[1] + 1)
-                contained = (
-                    inside_frac(p, q, g0) >= 0.6
-                    and (w <= 8 * g0 or inside_frac(p, q, 0) >= 0.95)
-                ) or (pa >= 16 and ix >= 0.5 * pa)
-                satellite = (
-                    w <= 3 * g0
-                    and extent(p) <= 0.6 * extent(q)
-                    and p.count <= 0.2 * q.count
-                )
+                contained = (inside_frac(p, q, g0) >= 0.6 and (w <= 8 * g0 or inside_frac(p, q, 0) >= 0.95)) or (pa >= 16 and ix >= 0.5 * pa)
+                satellite = w <= 3 * g0 and extent(p) <= 0.6 * extent(q) and p.count <= 0.2 * q.count
                 # a titled piece right next to an untitled one: the title names the whole drawing
                 titled_part = bool(p.titles) and not q.titles and w <= 2 * g0
                 # a thin piece set out on the other's lines: its dimension chain, its level lines
                 bw, bh = p.bounds[2] - p.bounds[0], p.bounds[3] - p.bounds[1]
-                along = (
-                    p.xs
-                    if bh <= max(2, 0.05 * bw)
-                    else p.ys if bw <= max(2, 0.05 * bh) else None
-                )
-                aligned = (
-                    along is not None
-                    and len(along) >= 2
-                    and w <= 8 * g0
-                    and len(along & (q.xs if along is p.xs else q.ys))
-                    >= 0.6 * len(along)
-                )
+                along = p.xs if bh <= max(2, 0.05 * bw) else p.ys if bw <= max(2, 0.05 * bh) else None
+                aligned = (along is not None and len(along) >= 2 and w <= 8 * g0
+                           and len(along & (q.xs if along is p.xs else q.ys)) >= 0.6 * len(along))
                 if contained or satellite or titled_part or aligned:
                     score = (contained, -w, q.count)
                     if best is None or score > best[0]:
@@ -1151,12 +906,7 @@ def segment(dr: Drawing, grid: int = 800, trace: list | None = None) -> SheetLay
             q = pieces[s]
             q.atoms.extend(p.atoms)
             q.count += p.count
-            q.bounds = [
-                min(q.bounds[0], p.bounds[0]),
-                min(q.bounds[1], p.bounds[1]),
-                max(q.bounds[2], p.bounds[2]),
-                max(q.bounds[3], p.bounds[3]),
-            ]
+            q.bounds = [min(q.bounds[0], p.bounds[0]), min(q.bounds[1], p.bounds[1]), max(q.bounds[2], p.bounds[2]), max(q.bounds[3], p.bounds[3])]
             q.titles |= p.titles
             q.xs |= p.xs
             q.ys |= p.ys
@@ -1180,11 +930,7 @@ def segment(dr: Drawing, grid: int = 800, trace: list | None = None) -> SheetLay
 
     # ANNOTATION joins the view of what it marks, within reach: three tight gaps, or — dimensions are placed a few text
     # heights off what they measure — eight of the sheet's text heights, whichever is more (four of its own for a word)
-    hs_all = [
-        it.text_height
-        for it in items
-        if it.dxftype in TEXT_TYPES and it.text_height and it.index not in skip
-    ]
+    hs_all = [it.text_height for it in items if it.dxftype in TEXT_TYPES and it.text_height and it.index not in skip]
     med_h = statistics.median(hs_all) if hs_all else 0.0
     annot_reach = max(3 * g0, int(8 * med_h / cell))
     # The wave above stops at 5% of the sheet; an annotation may stand further off what it marks (eight text heights).
@@ -1207,11 +953,7 @@ def segment(dr: Drawing, grid: int = 800, trace: list | None = None) -> SheetLay
         for dy in (-1, 0, 1):
             for dx in (-1, 0, 1):
                 yy, xx = ky + dy, kx + dx
-                if (
-                    0 <= yy < cny
-                    and 0 <= xx < cnx
-                    and nearest_coarse[yy * cnx + xx] < 0
-                ):
+                if 0 <= yy < cny and 0 <= xx < cnx and nearest_coarse[yy * cnx + xx] < 0:
                     nearest_coarse[yy * cnx + xx] = nearest_coarse[key]
                     frontier.append(yy * cnx + xx)
 
@@ -1235,27 +977,12 @@ def segment(dr: Drawing, grid: int = 800, trace: list | None = None) -> SheetLay
 
     loose: list[int] = []
     for it in items:
-        if (
-            it.index in skip
-            or it.index in geom_cells
-            or not it.pts
-            or it.anchor is not None
-        ):
+        if it.index in skip or it.index in geom_cells or not it.pts or it.anchor is not None:
             continue
         pts = anchor_points(it)
         if it.dxftype in TEXT_TYPES:
             b = text_outline(it)
-            pts = (
-                pts
-                + b
-                + [
-                    (
-                        (b[k][0] + b[(k + 1) % 4][0]) / 2,
-                        (b[k][1] + b[(k + 1) % 4][1]) / 2,
-                    )
-                    for k in range(4)
-                ]
-            )
+            pts = pts + b + [((b[k][0] + b[(k + 1) % 4][0]) / 2, (b[k][1] + b[(k + 1) % 4][1]) / 2) for k in range(4)]
         limit = annot_reach
         if it.dxftype in TEXT_TYPES and it.text_height:
             limit = max(limit, int(4 * it.text_height / cell))
@@ -1266,13 +993,9 @@ def segment(dr: Drawing, grid: int = 800, trace: list | None = None) -> SheetLay
                 continue
             if best is None or dist[c] < best[1]:
                 best = (int(piece_of_atom[int(owner[c])]), int(dist[c]))
-        if (
-            best is None
-        ):  # beyond the wave's reach but within the annotation's: the nearest geometry, found directly
+        if best is None:  # beyond the wave's reach but within the annotation's: the nearest geometry, found directly
             best = near_atom(pts, limit)
-        if (
-            it.index in title_atom
-        ):  # a title goes with the view it titles, its underline with it
+        if it.index in title_atom:  # a title goes with the view it titles, its underline with it
             best = (int(piece_of_atom[title_atom[it.index]]), 0)
         elif underline.get(it.index) in title_atom:
             best = (int(piece_of_atom[title_atom[underline[it.index]]]), 0)
@@ -1291,9 +1014,7 @@ def segment(dr: Drawing, grid: int = 800, trace: list | None = None) -> SheetLay
 
     # loose words. Words in a GRID of small walled panels (a table or a title block drawn with the frame's own rules)
     # are one group; the rest are paragraphs of notes and labels, grouped by closeness, never across a rule.
-    groups_raw: list[tuple[list[int], str | None]] = [
-        (sorted(v), None) for v in members.values()
-    ]
+    groups_raw: list[tuple[list[int], str | None]] = [(sorted(v), None) for v in members.values()]
     if loose:
         panel = _label(~wall, g.nx, four=True)
         n_pan = int(panel.max()) + 1 if panel.size and panel.max() >= 0 else 0
@@ -1301,10 +1022,7 @@ def segment(dr: Drawing, grid: int = 800, trace: list | None = None) -> SheetLay
         small = area < 0.04 * max(1, int((panel >= 0).sum()))
         pan_uf = _UF(n_pan)
         wy, wx = np.divmod(np.flatnonzero(wall), g.nx)
-        for dy, dx in (
-            (0, 1),
-            (1, 0),
-        ):  # a one-cell wall between two small panels makes them neighbours
+        for dy, dx in ((0, 1), (1, 0)):  # a one-cell wall between two small panels makes them neighbours
             ya, xa, yb, xb = wy - dy, wx - dx, wy + dy, wx + dx
             ok = (ya >= 0) & (xa >= 0) & (yb < g.ny) & (xb < g.nx)
             la, lb = panel[ya[ok] * g.nx + xa[ok]], panel[yb[ok] * g.nx + xb[ok]]
@@ -1312,10 +1030,7 @@ def segment(dr: Drawing, grid: int = 800, trace: list | None = None) -> SheetLay
             for a, b in zip(la[both].tolist(), lb[both].tolist()):
                 if small[a] and small[b]:
                     pan_uf.union(a, b)
-        boxes = {
-            i: _bbox([p for line in item_lines(items[i]) for p in line] or items[i].pts)
-            for i in loose
-        }
+        boxes = {i: _bbox([p for line in item_lines(items[i]) for p in line] or items[i].pts) for i in loose}
         pan = {}
         for i in loose:
             b = boxes[i]
@@ -1352,11 +1067,7 @@ def segment(dr: Drawing, grid: int = 800, trace: list | None = None) -> SheetLay
             active = [j for j in active if boxes[rest[j]][2] + reachw >= b[0]]
             for j in active:
                 o = boxes[rest[j]]
-                if (
-                    pan[rest[j]] == pan[rest[k]]
-                    and o[1] - reachw <= b[3]
-                    and b[1] - reachw <= o[3]
-                ):
+                if pan[rest[j]] == pan[rest[k]] and o[1] - reachw <= b[3] and b[1] - reachw <= o[3]:
                     ufl.union(j, k)
             active.append(k)
         lg: dict[int, list[int]] = defaultdict(list)
@@ -1370,27 +1081,12 @@ def segment(dr: Drawing, grid: int = 800, trace: list | None = None) -> SheetLay
     _title_block(dr, groups)
     _name_ids(groups)
     item_group = {i: gr.id for gr in groups for i in gr.items}
-    for (
-        gr
-    ) in (
-        groups
-    ):  # a title stays with its view (annotations.py reads this mark on the unit's copy of the item)
+    for gr in groups:  # a title stays with its view (annotations.py reads this mark on the unit's copy of the item)
         for t in gr.titles:
             if 0 <= t < len(dr.items):
                 dr.items[t].extra["view_title"] = gr.id
-    lay = SheetLayout(
-        frame=frame,
-        frame_items=frame_items,
-        rules=rules,
-        stray=stray,
-        watermark=watermark,
-        groups=groups,
-        cell=cell,
-        gap=g0 * cell,
-        gaps=[w * cell for w in merges],
-        notes=notes,
-        item_group=item_group,
-    )
+    lay = SheetLayout(frame=frame, frame_items=frame_items, rules=rules, stray=stray, watermark=watermark, groups=groups, cell=cell,
+                      gap=g0 * cell, gaps=[w * cell for w in merges], notes=notes, item_group=item_group)
     _units(dr, lay)
     return lay
 
@@ -1399,15 +1095,8 @@ def _title_block(dr: Drawing, groups: list[Group]) -> None:
     """The title block: the corner of the sheet where its ownership words gather (drawing number, signatures, the
     authority…). Every word group whose middle lies in that corner joins it."""
     items = dr.items
-    hits = [
-        (g, i)
-        for g in groups
-        if g.kind in ("notes", "label", "title_block")
-        for i in g.items
-        if items[i].dxftype in TEXT_TYPES
-        and items[i].text
-        and TITLE_BLOCK_RE.search(items[i].text)
-    ]
+    hits = [(g, i) for g in groups if g.kind in ("notes", "label", "title_block") for i in g.items
+            if items[i].dxftype in TEXT_TYPES and items[i].text and TITLE_BLOCK_RE.search(items[i].text)]
     if len({i for _g, i in hits}) < 3:
         return
     pts = [items[i].pts[0] for _g, i in hits]
@@ -1415,24 +1104,13 @@ def _title_block(dr: Drawing, groups: list[Group]) -> None:
     # the densest half of them: the corner, not a stray word in a note
     n = len(pts)
     cx, cy = xs[n // 2], ys[n // 2]
-    spread = sorted(math.hypot(p[0] - cx, p[1] - cy) for p in pts)[
-        max(0, int(0.75 * n) - 1)
-    ]
-    near = [
-        (g, i)
-        for (g, i), p in zip(hits, pts)
-        if math.hypot(p[0] - cx, p[1] - cy) <= spread * 1.05
-    ]
+    spread = sorted(math.hypot(p[0] - cx, p[1] - cy) for p in pts)[max(0, int(0.75 * n) - 1)]
+    near = [(g, i) for (g, i), p in zip(hits, pts) if math.hypot(p[0] - cx, p[1] - cy) <= spread * 1.05]
     bounds = _bbox([q for _g, i in near for q in text_outline(items[i])])
     pad = 0.15 * max(bounds[2] - bounds[0], bounds[3] - bounds[1])
     bounds = (bounds[0] - pad, bounds[1] - pad, bounds[2] + pad, bounds[3] + pad)
-    tb = [
-        g
-        for g in groups
-        if g.kind in ("notes", "label", "title_block")
-        and bounds[0] <= (g.bbox[0] + g.bbox[2]) / 2 <= bounds[2]
-        and bounds[1] <= (g.bbox[1] + g.bbox[3]) / 2 <= bounds[3]
-    ]
+    tb = [g for g in groups if g.kind in ("notes", "label", "title_block")
+          and bounds[0] <= (g.bbox[0] + g.bbox[2]) / 2 <= bounds[2] and bounds[1] <= (g.bbox[1] + g.bbox[3]) / 2 <= bounds[3]]
     if len(tb) < 2:
         return
     keep = tb[0]
@@ -1440,10 +1118,7 @@ def _title_block(dr: Drawing, groups: list[Group]) -> None:
         keep.items = sorted(set(keep.items) | set(g.items))
         g.items = []
     keep.kind = "title_block"
-    keep.bbox = _bbox(
-        [q for i in keep.items for line in item_lines(items[i]) for q in line]
-        or [q for i in keep.items for q in items[i].pts]
-    )
+    keep.bbox = _bbox([q for i in keep.items for line in item_lines(items[i]) for q in line] or [q for i in keep.items for q in items[i].pts])
     keep.name = "title block"
     keep.confidence = 0.8
     keep.evidence = [f"{len(near)} title-block words gather here"]
@@ -1454,60 +1129,26 @@ def _describe(dr: Drawing, mem: list[int], forced: str | None = None) -> Group:
     """What kind of thing a cluster is, from what it holds (or what its panels already said)."""
     items = dr.items
     texts = [items[i] for i in mem if items[i].dxftype in TEXT_TYPES]
-    geom = [
-        items[i]
-        for i in mem
-        if items[i].role in (Role.STRUCTURAL, Role.REFERENCE)
-        and items[i].dxftype not in TEXT_TYPES
-    ]
+    geom = [items[i] for i in mem if items[i].role in (Role.STRUCTURAL, Role.REFERENCE) and items[i].dxftype not in TEXT_TYPES]
     dims = sum(1 for i in mem if items[i].dxftype == "DIMENSION")
     hatches = sum(1 for i in mem if items[i].dxftype == "HATCH")
     segs = [s for it in geom for s in _segments(it)]
-    curved = sum(
-        1
-        for it in geom
-        if it.dxftype in ("ARC", "CIRCLE", "ELLIPSE", "SPLINE")
-        or any(abs(b) > 1e-9 for b in it.bulges)
-    )
-    pts = [p for i in mem for line in item_lines(items[i]) for p in line] or [
-        p for i in mem for p in items[i].pts
-    ]
+    curved = sum(1 for it in geom if it.dxftype in ("ARC", "CIRCLE", "ELLIPSE", "SPLINE") or any(abs(b) > 1e-9 for b in it.bulges))
+    pts = [p for i in mem for line in item_lines(items[i]) for p in line] or [p for i in mem for p in items[i].pts]
     bounds = _bbox(pts)
     bw, bh = max(bounds[2] - bounds[0], 1e-9), max(bounds[3] - bounds[1], 1e-9)
     tol = 1e-3 * max(bw, bh)
-    axis = [
-        s for s in segs if abs(s[0][0] - s[1][0]) < tol or abs(s[0][1] - s[1][1]) < tol
-    ]
-    long_h = sum(
-        1 for a, b in axis if abs(a[1] - b[1]) < tol and abs(a[0] - b[0]) > 0.5 * bw
-    )
-    long_v = sum(
-        1 for a, b in axis if abs(a[0] - b[0]) < tol and abs(a[1] - b[1]) > 0.5 * bh
-    )
+    axis = [s for s in segs if abs(s[0][0] - s[1][0]) < tol or abs(s[0][1] - s[1][1]) < tol]
+    long_h = sum(1 for a, b in axis if abs(a[1] - b[1]) < tol and abs(a[0] - b[0]) > 0.5 * bw)
+    long_v = sum(1 for a, b in axis if abs(a[0] - b[0]) < tol and abs(a[1] - b[1]) > 0.5 * bh)
     words = " ".join(t.text or "" for t in texts)
     tb_words = len({m.group(0).upper() for m in TITLE_BLOCK_RE.finditer(words)})
     straight = len(axis) / max(1, len(segs))
-    counts = {
-        "geometry": len(geom),
-        "texts": len(texts),
-        "dimensions": dims,
-        "hatches": hatches,
-        "curves": curved,
-        "segments": len(segs),
-        "long_h": long_h,
-        "long_v": long_v,
-    }
+    counts = {"geometry": len(geom), "texts": len(texts), "dimensions": dims, "hatches": hatches, "curves": curved,
+              "segments": len(segs), "long_h": long_h, "long_v": long_v}
     if tb_words >= 3 and len(texts) >= 4:
         kind = "title_block"
-    elif (
-        len(texts) >= 4
-        and straight >= 0.9
-        and curved <= 0.1 * max(1, len(segs))
-        and long_h >= 3
-        and long_v >= 2
-        and hatches == 0
-        and dims == 0
-    ):
+    elif len(texts) >= 4 and straight >= 0.9 and curved <= 0.1 * max(1, len(segs)) and long_h >= 3 and long_v >= 2 and hatches == 0 and dims == 0:
         kind = "table"  # straight rules on a grid with words in the cells (rounded corners allowed); a table has no dimensions — a drawn view does
     elif texts and len(geom) <= max(2, len(texts) // 4) and dims == 0:
         kind = "notes" if len(texts) >= 2 else "label"
@@ -1535,18 +1176,11 @@ def _titles(
     embedded: set[int] | frozenset[int] = frozenset(),
 ) -> None:
     """Name each view from its title: a text with view words just below (or above) it, often underlined, often the
-    largest words there, often followed by its scale. Words already part of a table or a note are not titles.
-    """
+    largest words there, often followed by its scale. Words already part of a table or a note are not titles."""
     items = dr.items
     views = [g for g in groups if g.kind == "view"]
     claimed: dict[int, tuple[float, Group]] = {}
-    under = [
-        it
-        for it in items
-        if it.dxftype in ("LINE", "LWPOLYLINE")
-        and len(it.pts) >= 2
-        and abs(it.pts[0][1] - it.pts[-1][1]) < 1e-6
-    ]
+    under = [it for it in items if it.dxftype in ("LINE", "LWPOLYLINE") and len(it.pts) >= 2 and abs(it.pts[0][1] - it.pts[-1][1]) < 1e-6]
     under_by_y = sorted(under, key=lambda it: it.pts[0][1])
     ys = [it.pts[0][1] for it in under_by_y]
     pool = [it for it in items if it.dxftype in TEXT_TYPES and it.text]
@@ -1562,34 +1196,22 @@ def _titles(
         med = statistics.median(hs) if hs else 0.0
         for it in pool:
             o = owner.get(it.index)
-            if it.index in callouts or (
-                o is not None
-                and o is not v
-                and o.kind in ("table", "title_block", "view")
-            ):
+            if it.index in callouts or (o is not None and o is not v and o.kind in ("table", "title_block", "view")):
                 continue
             text_value = it.text or ""
             types = (
                 _type_of(text_value) if not TITLE_BLOCK_RE.search(text_value) else []
             )
             stated = SCALE_RE.search(text_value) or NTS_RE.search(text_value)
-            if (not types and not stated) or (
-                o is not None and o is not v and not types
-            ):
+            if (not types and not stated) or (o is not None and o is not v and not types):
                 continue
             b = text_outline(it)
             tx0, ty0, tx1, ty1 = _bbox(b)
             cx, cy = (tx0 + tx1) / 2, (ty0 + ty1) / 2
-            in_reach = (
-                x0 - 0.25 * w <= cx <= x1 + 0.25 * w
-                and y0 - 0.35 * h - 20 * cell <= cy <= y1 + 0.2 * h + 10 * cell
-            )
+            in_reach = x0 - 0.25 * w <= cx <= x1 + 0.25 * w and y0 - 0.35 * h - 20 * cell <= cy <= y1 + 0.2 * h + 10 * cell
             rot = (it.extra.get("rotation", 0.0) or 0.0) % 180
             if 45 < rot < 135:  # a vertical title stands to the side of its view
-                in_reach = in_reach or (
-                    y0 - 0.25 * h <= cy <= y1 + 0.25 * h
-                    and x0 - 0.35 * w - 20 * cell <= cx <= x1 + 0.35 * w + 20 * cell
-                )
+                in_reach = in_reach or (y0 - 0.25 * h <= cy <= y1 + 0.25 * h and x0 - 0.35 * w - 20 * cell <= cx <= x1 + 0.35 * w + 20 * cell)
             if not in_reach and o is not v:
                 continue
             inside = (x0 <= cx <= x1 and y0 <= cy <= y1) or o is v
@@ -1599,15 +1221,9 @@ def _titles(
             if med and it.text_height and it.text_height >= 1.2 * med:
                 score += 0.5
             k = np.searchsorted(ys, ty0 - 1.2 * (it.text_height or 1.0))
-            for ln in under_by_y[max(0, k - 2) : k + 6]:
+            for ln in under_by_y[max(0, k - 2): k + 6]:
                 lx0, lx1 = sorted((ln.pts[0][0], ln.pts[-1][0]))
-                if (
-                    ty0 - 1.2 * (it.text_height or 1)
-                    <= ln.pts[0][1]
-                    <= ty0 + 0.3 * (it.text_height or 1)
-                    and lx1 - lx0 >= 0.5 * (tx1 - tx0)
-                    and lx0 <= cx <= lx1
-                ):
+                if ty0 - 1.2 * (it.text_height or 1) <= ln.pts[0][1] <= ty0 + 0.3 * (it.text_height or 1) and lx1 - lx0 >= 0.5 * (tx1 - tx0) and lx0 <= cx <= lx1:
                     score += 1.0  # underlined
                     break
             if not inside:
@@ -1615,9 +1231,7 @@ def _titles(
                 dx = max(x0 - cx, 0, cx - x1) / max(w, 1e-9)
                 dy = max(y0 - cy, 0, cy - y1) / max(h, 1e-9)
                 score -= 1.5 * (dx + dy)
-            if score >= 2.0 and (
-                it.index not in claimed or score > claimed[it.index][0]
-            ):
+            if score >= 2.0 and (it.index not in claimed or score > claimed[it.index][0]):
                 claimed[it.index] = (score, v)
     by_view: dict[int, list[tuple[float, int]]] = defaultdict(list)
     for idx, (score, v) in claimed.items():
@@ -1637,9 +1251,7 @@ def _titles(
         for s, i in titles[1:]:
             if i in embedded and titles[0][1] not in embedded:
                 continue
-            if s >= titles[0][0] - 1.0 and abs(
-                text_outline(items[i])[0][1] - text_outline(items[titles[0][1]])[0][1]
-            ) < 0.15 * (v.bbox[3] - v.bbox[1]):
+            if s >= titles[0][0] - 1.0 and abs(text_outline(items[i])[0][1] - text_outline(items[titles[0][1]])[0][1]) < 0.15 * (v.bbox[3] - v.bbox[1]):
                 chosen.append((s, i))
         chosen.sort(key=lambda si: text_outline(items[si[1]])[0][0])
         v.titles = [i for _s, i in chosen]
@@ -1660,11 +1272,7 @@ def _titles(
         )
         text = " ".join(items[i].text or "" for i in v.titles)
         v.view_types = _type_of(text)
-        v.view_type = (
-            "composite"
-            if len(names) > 1 and {"section", "elevation"} <= set(v.view_types)
-            else _primary(v.view_types, text)
-        )
+        v.view_type = "composite" if len(names) > 1 and {"section", "elevation"} <= set(v.view_types) else _primary(v.view_types, text)
         sc = SCALE_RE.search(text)
         if sc:
             v.scale = float(sc.group(1))
@@ -1674,9 +1282,7 @@ def _titles(
         v.evidence.append(f"title: {v.name!r}")
         v.confidence = min(0.95, 0.6 + 0.1 * chosen[0][0])
         if len(names) > 1:
-            v.questions.append(
-                f"{len(names)} titles in one cluster ({'; '.join(names)}): one figure drawn in parts, or separate views?"
-            )
+            v.questions.append(f"{len(names)} titles in one cluster ({'; '.join(names)}): one figure drawn in parts, or separate views?")
         for i in v.titles:  # the title belongs to the view it names
             for g in groups:
                 if g is not v and i in g.items:
@@ -1686,40 +1292,17 @@ def _titles(
         v.items.sort()
     for g in groups:
         if g.kind != "view":
-            words = " ".join(
-                items[i].text or "" for i in g.items if items[i].dxftype in TEXT_TYPES
-            )
-            head = max(
-                (
-                    items[i]
-                    for i in g.items
-                    if items[i].dxftype in TEXT_TYPES and items[i].text
-                ),
-                key=lambda it: (it.text_height or 0, it.pts[0][1]),
-                default=None,
-            )
+            words = " ".join(items[i].text or "" for i in g.items if items[i].dxftype in TEXT_TYPES)
+            head = max((items[i] for i in g.items if items[i].dxftype in TEXT_TYPES and items[i].text), key=lambda it: (it.text_height or 0, it.pts[0][1]), default=None)
             if head is not None:
                 g.name = _clean_title(head.text or "")[:80]
-            g.confidence = (
-                0.8
-                if (g.kind == "table" and TABLE_RE.search(words))
-                or (g.kind == "notes" and NOTES_RE.search(words))
-                or g.kind == "title_block"
-                else 0.6
-            )
+            g.confidence = 0.8 if (g.kind == "table" and TABLE_RE.search(words)) or (g.kind == "notes" and NOTES_RE.search(words)) or g.kind == "title_block" else 0.6
 
 
 def _absorb_labels(groups: list[Group], gap: float) -> None:
     """A lone label, a few words, or a scrap of geometry with no title (a mark, a stub of a level line) next to a view
     belong to it; empty groups go."""
-    scraps = [
-        g
-        for g in groups
-        if g.kind == "view"
-        and not g.titles
-        and g.counts.get("geometry", 0) <= 5
-        and len(g.items) <= 8
-    ]
+    scraps = [g for g in groups if g.kind == "view" and not g.titles and g.counts.get("geometry", 0) <= 5 and len(g.items) <= 8]
     for g in scraps:
         g.kind = "label"
     views = [g for g in groups if g.kind == "view"]
@@ -1735,9 +1318,7 @@ def _absorb_labels(groups: list[Group], gap: float) -> None:
         if best:
             best[1].items = sorted(set(best[1].items) | set(g.items))
             g.items = []
-    for (
-        g
-    ) in scraps:  # a small drawing with no view near it to join is a view of its own
+    for g in scraps:  # a small drawing with no view near it to join is a view of its own
         if g.items:
             g.kind = "view"
     groups[:] = [g for g in groups if g.items]
@@ -1745,13 +1326,7 @@ def _absorb_labels(groups: list[Group], gap: float) -> None:
 
 def _name_ids(groups: list[Group]) -> None:
     """Stable ids in reading order (top to bottom, left to right) per kind: V01…, T01…, N01…, TB, L01…"""
-    prefix = {
-        "view": "V",
-        "table": "T",
-        "notes": "N",
-        "title_block": "TB",
-        "label": "L",
-    }
+    prefix = {"view": "V", "table": "T", "notes": "N", "title_block": "TB", "label": "L"}
     for kind, pre in prefix.items():
         gs = [g for g in groups if g.kind == kind]
         if not gs:
@@ -1766,28 +1341,17 @@ def _name_ids(groups: list[Group]) -> None:
 
 def _units(dr: Drawing, lay: SheetLayout) -> None:
     """Each view's own drawing unit, from its own dimensions (a detail at 1:25 on a 1:100 sheet reads 4× finer);
-    a group key from the handles it holds (the same entities → the same key, session after session).
-    """
+    a group key from the handles it holds (the same entities → the same key, session after session)."""
     items = dr.items
     for g in lay.groups:
-        g.key = hashlib.sha1(
-            ",".join(items[i].src or items[i].handle for i in g.items).encode()
-        ).hexdigest()[:12]
+        g.key = hashlib.sha1(",".join(items[i].src or items[i].handle for i in g.items).encode()).hexdigest()[:12]
         if g.kind != "view":
             continue
         ratios = []
         for i in g.items:
             it = items[i]
-            if (
-                it.dxftype == "DIMENSION"
-                and it.extra.get("dimtype") in (0, 1)
-                and len(it.pts) >= 3
-            ):
-                drawn = (
-                    abs(it.pts[1][0] - it.pts[2][0])
-                    if abs(math.cos(math.radians(it.extra.get("angle", 0.0)))) > 0.5
-                    else abs(it.pts[1][1] - it.pts[2][1])
-                )
+            if it.dxftype == "DIMENSION" and it.extra.get("dimtype") in (0, 1) and len(it.pts) >= 3:
+                drawn = abs(it.pts[1][0] - it.pts[2][0]) if abs(math.cos(math.radians(it.extra.get("angle", 0.0)))) > 0.5 else abs(it.pts[1][1] - it.pts[2][1])
                 if it.extra.get("dimtype") == 1:
                     drawn = math.dist(it.pts[1], it.pts[2])
                 nums = re.findall(r"\d+(?:\.\d+)?", (it.text or "").replace("<>", ""))
@@ -1800,25 +1364,16 @@ def _units(dr: Drawing, lay: SheetLayout) -> None:
             agree = sum(1 for x in ratios if abs(x / r - 1) < 0.02)
             k = r / dr.units_mm
             # its own scale only when most of its dimensions agree on it, and it is a drafting ratio (1:5 … 5:1 of the sheet)
-            if (
-                agree >= max(3, 0.6 * len(ratios))
-                and 0.2 <= k <= 5
-                and abs(k - 1) > 0.05
-            ):
+            if agree >= max(3, 0.6 * len(ratios)) and 0.2 <= k <= 5 and abs(k - 1) > 0.05:
                 g.units_mm = r
-                g.evidence.append(
-                    f"its dimensions read {r:g} mm per drawing unit (the sheet: {dr.units_mm:g})"
-                )
+                g.evidence.append(f"its dimensions read {r:g} mm per drawing unit (the sheet: {dr.units_mm:g})")
                 if not any("another scale" in q for q in g.questions):
-                    g.questions.append(
-                        f"drawn at another scale than the sheet ({r / dr.units_mm:g}×): its sizes are read at its own scale"
-                    )
+                    g.questions.append(f"drawn at another scale than the sheet ({r / dr.units_mm:g}×): its sizes are read at its own scale")
 
 
 def view_drawing(dr: Drawing, g: Group | list[int]) -> tuple[Drawing, list[int]]:
     """One view as a standalone Drawing (items re-indexed 0…n-1) and, for each of its items, the index on the sheet.
-    The sheet is not touched; the view's analysis, program and regeneration work on this copy only.
-    """
+    The sheet is not touched; the view's analysis, program and regeneration work on this copy only."""
     keep = sorted(set(g.items if isinstance(g, Group) else g))
     local = {s: k for k, s in enumerate(keep)}
     out: list[Item] = []
@@ -1826,31 +1381,12 @@ def view_drawing(dr: Drawing, g: Group | list[int]) -> tuple[Drawing, list[int]]
         it = dr.items[s]
         anchor = local.get(it.anchor) if it.anchor is not None else None
         role = it.role if it.anchor is None or anchor is not None else Role.FIXED
-        out.append(
-            replace(
-                it,
-                index=local[s],
-                anchor=anchor,
-                role=role,
-                pts=list(it.pts),
-                extra=dict(it.extra),
-                vertex_pts=list(it.vertex_pts),
-                segments=list(it.segments),
-                bulges=list(it.bulges),
-            )
-        )
+        out.append(replace(it, index=local[s], anchor=anchor, role=role, pts=list(it.pts), extra=dict(it.extra),
+                           vertex_pts=list(it.vertex_pts), segments=list(it.segments), bulges=list(it.bulges)))
     pts = [it.pts[k] for it in out if it.role == Role.STRUCTURAL for k in it.vertex_pts]
     if not pts:
         pts = [p for it in out for p in it.pts]
     units = g.units_mm if isinstance(g, Group) and g.units_mm else dr.units_mm
-    sub = Drawing(
-        path=dr.path,
-        units_mm=units,
-        tol=dr.tol,
-        items=out,
-        extent=_bbox(pts) if pts else dr.extent,
-        unsupported=dict(dr.unsupported),
-        notes=list(dr.notes),
-        layout=dr.layout,
-    )
+    sub = Drawing(path=dr.path, units_mm=units, tol=dr.tol, items=out, extent=_bbox(pts) if pts else dr.extent,
+                  unsupported=dict(dr.unsupported), notes=list(dr.notes), layout=dr.layout)
     return sub, keep

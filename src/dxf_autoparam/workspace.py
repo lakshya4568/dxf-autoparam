@@ -70,14 +70,10 @@ class SheetSession:
     def __init__(self, path: str | None = None):
         self.lock = threading.RLock()
         self.sm: SheetModel | None = None
-        self.shown: set[int] = (
-            set()
-        )  # entities the page draws changed (the committed state)
+        self.shown: set[int] = set()  # entities the page draws changed (the committed state)
         self.drawing = None  # the revision of the drawing the page shows: a feature operation (or its undo) changes it, and entity indices with it
         self.opened = 0.0
-        self.gem = (
-            None  # one Gemini client per sheet: its prompt cache serves the follow-ups
-        )
+        self.gem = None  # one Gemini client per sheet: its prompt cache serves the follow-ups
         self.gem_model: str | None = None  # the model the client was made for
         self.gem_factory = None  # a test (or another provider) supplies the model here
         self.gem_per_run = False
@@ -136,61 +132,18 @@ class SheetSession:
                 }
             )
         return {
-            "file": Path(sm.path).name,
-            "path": sm.path,
-            "units_mm": sm.dr.units_mm,
-            "extent": sm.dr.extent,
-            "frame": lay.frame,
-            "opened_s": round(self.opened, 2),
-            "entities": len(sm.dr.items),
-            "notes": lay.notes + sm.dr.notes,
-            "groups": [
-                {**g.to_dict(), "unit": sm.unit_of_view.get(g.id)} for g in lay.groups
-            ],
-            "furniture": {
-                "frame": lay.frame_items,
-                "rules": lay.rules,
-                "stray": lay.stray,
-                "watermark": lay.watermark,
-            },
-            "links": sm.links,
-            "unlinked": sorted(list(k) for k in sm.unlinked),
-            "units": units,
-            "shared": [
-                {
-                    "id": p.id,
-                    "name": p.name,
-                    "label": p.label,
-                    "value": p.value,
-                    "unit": p.unit,
-                    "evidence": p.evidence,
-                    "bindings": [
-                        {
-                            "unit": b.unit,
-                            "param": b.param,
-                            "status": b.status,
-                            "reason": b.reason,
-                            "candidate": b.candidate,
-                            "datums": b.datums,
-                            "views": (
-                                sm.units[b.unit].views if b.unit in sm.units else []
-                            ),
-                        }
-                        for b in p.bindings
-                    ],
-                }
-                for p in sm.shared.values()
-            ],
-            "values": sm.current(),
-            "can_undo": bool(sm.history),
-            "can_redo": bool(sm.future),
-            "relations": sm.relations,
-            "questions": sm.questions,
-            "accepted": sorted(list(k) for k in sm.accepted),
-            "ai_running": self.running(),
-            "current_run": self.current_run,
-            "prefs": sm.prefs,
-            "revision": sm.revision,
+            "file": Path(sm.path).name, "path": sm.path, "units_mm": sm.dr.units_mm, "extent": sm.dr.extent, "frame": lay.frame,
+            "opened_s": round(self.opened, 2), "entities": len(sm.dr.items), "notes": lay.notes + sm.dr.notes,
+            "groups": [{**g.to_dict(), "unit": sm.unit_of_view.get(g.id)} for g in lay.groups],
+            "furniture": {"frame": lay.frame_items, "rules": lay.rules, "stray": lay.stray, "watermark": lay.watermark},
+            "links": sm.links, "unlinked": sorted(list(k) for k in sm.unlinked), "units": units,
+            "shared": [{"id": p.id, "name": p.name, "label": p.label, "value": p.value, "unit": p.unit, "evidence": p.evidence,
+                        "bindings": [{"unit": b.unit, "param": b.param, "status": b.status, "reason": b.reason, "candidate": b.candidate,
+                                      "datums": b.datums, "views": sm.units[b.unit].views if b.unit in sm.units else []} for b in p.bindings]}
+                       for p in sm.shared.values()],
+            "values": sm.current(), "can_undo": bool(sm.history), "can_redo": bool(sm.future),
+            "relations": sm.relations, "questions": sm.questions, "accepted": sorted(list(k) for k in sm.accepted),
+            "ai_running": self.running(), "current_run": self.current_run, "prefs": sm.prefs, "revision": sm.revision,
         }
 
     def _prims(self, entities, sr: SheetRegen | None) -> list[dict]:
@@ -210,30 +163,16 @@ class SheetSession:
             radius = sr.reg.radius.get(i) if sr else None
             text = sr.reg.texts.get(i) if sr else None
             turn = sr.reg.turns.get(i, 0.0) if sr else 0.0
-            for p in primitives(
-                it, pts, radius, text, units_of.get(i, sm.dr.units_mm), turn
-            ):
+            for p in primitives(it, pts, radius, text, units_of.get(i, sm.dr.units_mm), turn):
                 out.append(self._compact(p, sm.layout.item_group.get(i, "")))
         return out
 
     def _style(self, st: dict) -> int:
-        key = (
-            st.get("color"),
-            st.get("fg"),
-            st.get("alpha"),
-            st.get("lw"),
-            st.get("lt"),
-            tuple(st.get("dash") or ()),
-            st.get("font", ""),
-        )
+        key = (st.get("color"), st.get("fg"), st.get("alpha"), st.get("lw"), st.get("lt"), tuple(st.get("dash") or ()), st.get("font", ""))
         ix = self._style_ix.get(key)
         if ix is None:
             ix = self._style_ix[key] = len(self.styles)
-            q = {
-                "c": st.get("color", "#ffffff"),
-                "w": st.get("lw", 0.25),
-                "lt": st.get("lt", "CONTINUOUS"),
-            }
+            q = {"c": st.get("color", "#ffffff"), "w": st.get("lw", 0.25), "lt": st.get("lt", "CONTINUOUS")}
             if st.get("fg"):
                 q["fg"] = 1
             if st.get("alpha", 1.0) < 1.0:
@@ -246,13 +185,7 @@ class SheetSession:
         return ix
 
     def _compact(self, p: dict, gid: str) -> dict:
-        q = {
-            "i": p["i"],
-            "k": p["k"],
-            "r": p.get("role", ""),
-            "l": p.get("layer", ""),
-            "v": gid,
-        }
+        q = {"i": p["i"], "k": p["k"], "r": p.get("role", ""), "l": p.get("layer", ""), "v": gid}
         if "pts" in p:
             q["p"] = [c for xy in p["pts"] for c in (_r(xy[0]), _r(xy[1]))]
         if p["k"] == "m":
@@ -287,30 +220,19 @@ class SheetSession:
         self.shown = set(sr.changed)
         self.drawing = sm.dr
         prims = self._prims(range(len(sm.dr.items)), sr)
-        return {
-            "prims": prims,
-            "styles": self.styles,
-            "extent": sm.dr.extent,
-            "frame": sm.layout.frame,
-        }
+        return {"prims": prims, "styles": self.styles, "extent": sm.dr.extent, "frame": sm.layout.frame}
 
     def _commit_delta(self) -> dict:
         """After a committed change: the entities that moved, and those that moved back, as they now stand."""
         sm = self._sm()
-        if (
-            self.drawing is not None and sm.dr is not self.drawing
-        ):  # another revision: no entity of the page's is this one's — it loads the sheet again
+        if self.drawing is not None and sm.dr is not self.drawing:  # another revision: no entity of the page's is this one's — it loads the sheet again
             self.drawing, self.shown, self.pictures = sm.dr, set(), None
             return {"reload": True, "delta": [], "errors": []}
         sr = sm.regenerate()
         now = set(sr.changed)
         touched = now | self.shown
         self.shown = now
-        return {
-            "delta": self._prims(touched, sr),
-            "styles": self.styles,
-            "errors": sr.errors,
-        }
+        return {"delta": self._prims(touched, sr), "styles": self.styles, "errors": sr.errors}
 
     # ── actions ───────────────────────────────────────────────────────────────
 
@@ -318,28 +240,15 @@ class SheetSession:
         sm = self._sm()
         sr = sm.preview({k: float(v) for k, v in changes.items()})
         delta = self._prims(set(sr.changed) | self.shown, sr)
-        return {
-            "ok": sr.ok,
-            "errors": sr.errors[:20],
-            "warnings": sr.warnings,
-            "by_view": sr.by_view,
-            "measured": sr.measured,
-            "changed": len(sr.changed),
-            "delta": delta,
-            "styles": self.styles,
-        }
+        return {"ok": sr.ok, "errors": sr.errors[:20], "warnings": sr.warnings, "by_view": sr.by_view, "measured": sr.measured,
+                "changed": len(sr.changed), "delta": delta, "styles": self.styles}
 
     def apply(self, changes: dict) -> dict:
         sm = self._sm()
         sr = sm.apply({k: float(v) for k, v in changes.items()})
         if not sr.ok:
             return {"ok": False, "errors": sr.errors[:20]}
-        return {
-            "ok": True,
-            **self._commit_delta(),
-            "summary": self.summary(),
-            "by_view": sr.by_view,
-        }
+        return {"ok": True, **self._commit_delta(), "summary": self.summary(), "by_view": sr.by_view}
 
     def history(self, which: str) -> dict:
         sm = self._sm()
@@ -351,20 +260,9 @@ class SheetSession:
         sm = self._sm()
         result = None
         if op == "share":
-            p = sm.share(
-                body["name"],
-                [tuple(t) for t in body["targets"]],
-                label=body.get("label", ""),
-                evidence=body.get("evidence"),
-                source=body.get("source", "person"),
-            )
-            result = {
-                "id": p.id,
-                "bindings": [
-                    {"unit": b.unit, "status": b.status, "reason": b.reason}
-                    for b in p.bindings
-                ],
-            }
+            p = sm.share(body["name"], [tuple(t) for t in body["targets"]], label=body.get("label", ""), evidence=body.get("evidence"),
+                         source=body.get("source", "person"))
+            result = {"id": p.id, "bindings": [{"unit": b.unit, "status": b.status, "reason": b.reason} for b in p.bindings]}
         elif op == "unshare":
             sm.unshare(body["name"])
         elif op == "rename":
@@ -374,28 +272,14 @@ class SheetSession:
         elif op == "link":
             sm.link(body["a"], body["b"], bool(body["linked"]))
         elif op == "view":
-            sm.set_view(
-                body["id"],
-                name=body.get("name"),
-                view_type=body.get("view_type"),
-                kind=body.get("kind"),
-            )
+            sm.set_view(body["id"], name=body.get("name"), view_type=body.get("view_type"), kind=body.get("kind"))
         elif op == "merge":
             result = {"id": sm.merge_views(body["ids"])}
         elif op == "split":
-            result = {
-                "id": sm.split_view(
-                    body["id"], tuple(body["box"]), body.get("name", "")
-                )
-            }
+            result = {"id": sm.split_view(body["id"], tuple(body["box"]), body.get("name", ""))}
         else:
             raise SheetError(f"no such edit: {op}")
-        return {
-            "ok": True,
-            "result": result,
-            **self._commit_delta(),
-            "summary": self.summary(),
-        }
+        return {"ok": True, "result": result, **self._commit_delta(), "summary": self.summary()}
 
     # ── the agent: one instruction, one session (ai/run.py) ─────────────────────
 
@@ -409,17 +293,11 @@ class SheetSession:
         if self.gem_factory is not None and self.gem_per_run:
             return self.gem_factory()  # an offline demo: every run gets its own script
         target = model or None
-        if self.gem_factory is None and (
-            target is not None or self.gem_model is not None
-        ):
+        if self.gem_factory is None and (target is not None or self.gem_model is not None):
             from .ai.vertex import model_choices
 
             target = target or model_choices()["default"]
-        if (
-            self.gem is not None
-            and (target is not None or self.gem_model is not None)
-            and self.gem_model != target
-        ):
+        if self.gem is not None and (target is not None or self.gem_model is not None) and self.gem_model != target:
             self.gem.close()  # another model was picked: the old client's caches belong to the old model
             self.gem = None
         if self.gem is None:
@@ -433,11 +311,7 @@ class SheetSession:
                 if choice and choice.get("provider") == "gateway":
                     from .ai.gateway import Gateway, GatewayConfig
 
-                    self.gem = Gateway(
-                        GatewayConfig(
-                            model=choice["gateway_model"], thinking=choice["thinking"]
-                        )
-                    )
+                    self.gem = Gateway(GatewayConfig(model=choice["gateway_model"], thinking=choice["thinking"]))
                     self.gem_model = target
                 else:
                     cfg = config(target)
@@ -454,27 +328,17 @@ class SheetSession:
         texts = library.drawing_texts(self.sm.dr.items) if self.sm is not None else []
         for name in library.domains():
             lib = library.open_domain(name)
-            if (
-                lib is None or domain.name_of(name) is None
-            ):  # a library works with the domain pack of the same name
+            if lib is None or domain.name_of(name) is None:  # a library works with the domain pack of the same name
                 continue
             out.append({"name": name, "title": lib.title, "skills": len(lib.skills)})
             top = lib.discover(texts, top=1) if texts else []
             if top and top[0]["strong"] and suggested is None:
-                suggested = {
-                    "domain": name,
-                    "skill": top[0]["skill"],
-                    "score": top[0]["score"],
-                    "because": list(
-                        dict.fromkeys(b["printed"] for b in top[0]["because"])
-                    ),
-                }
+                suggested = {"domain": name, "skill": top[0]["skill"], "score": top[0]["score"], "because": list(dict.fromkeys(b["printed"] for b in top[0]["because"]))}
         return {"domains": out, "suggested": suggested}
 
     def production_info(self) -> dict:
         """The production rule engines as this sheet stands: whether the knowledge and the bridge are available, the families the sheet's printed
-        words point at, and every binding kept on the sheet evaluated now (what the agent's bind_production_model kept; read only).
-        """
+        words point at, and every binding kept on the sheet evaluated now (what the agent's bind_production_model kept; read only)."""
         from .ai import library
         from .production import manifest, service
 
@@ -482,16 +346,8 @@ class SheetSession:
         if not st.get("knowledge"):
             return {"available": False, **st}
         texts = library.drawing_texts(self.sm.dr.items) if self.sm is not None else []
-        return {
-            "available": st["bridge"]["available"],
-            "status": st,
-            "match_this_drawing": manifest.knowledge().discover(texts) if texts else [],
-            "bindings": (
-                self.sm.domain_report()
-                if self.sm is not None and self.sm.domain
-                else []
-            ),
-        }
+        return {"available": st["bridge"]["available"], "status": st, "match_this_drawing": manifest.knowledge().discover(texts) if texts else [],
+                "bindings": self.sm.domain_report() if self.sm is not None and self.sm.domain else []}
 
     def models(self) -> dict:
         from .ai.vertex import model_choices
@@ -521,25 +377,12 @@ class SheetSession:
 
         sm = self._sm()
         if self.running():
-            raise SheetError(
-                "the agent is already working on this sheet: stop it, or wait for it"
-            )
-        for (
-            r
-        ) in (
-            self.runs.values()
-        ):  # a run left waiting is closed by a new one: it was decided on a sheet that is about to change
+            raise SheetError("the agent is already working on this sheet: stop it, or wait for it")
+        for r in self.runs.values():  # a run left waiting is closed by a new one: it was decided on a sheet that is about to change
             if r.status in RESUMABLE:
                 r.close("superseded by a newer run")
         self.get_pictures()
-        run = Run(
-            self,
-            f"R{self.run_n + 1}",
-            body.get("instruction", ""),
-            body.get("scope"),
-            body.get("options"),
-            parent=body.get("parent"),
-        )
+        run = Run(self, f"R{self.run_n + 1}", body.get("instruction", ""), body.get("scope"), body.get("options"), parent=body.get("parent"))
         self.run_n += 1  # an id is used up only by a run that exists
         self.runs[run.id] = run
         self.current_run = run.id
@@ -550,11 +393,7 @@ class SheetSession:
         run = self._run(body.get("run"))
         if self.running():
             raise SheetError("the agent is already working on this sheet")
-        run.resume(
-            answers=body.get("answers"),
-            note=body.get("note", ""),
-            more_turns=body.get("more_turns"),
-        )
+        run.resume(answers=body.get("answers"), note=body.get("note", ""), more_turns=body.get("more_turns"))
         self.current_run = run.id
         return {"ok": True, "run": run.id}
 
@@ -566,24 +405,12 @@ class SheetSession:
     def apply_run(self, body: dict) -> dict:
         run = self._run(body.get("run"))
         v = run.apply_valid()
-        return {
-            "ok": True,
-            "run": run.id,
-            "verdict": v,
-            **self._commit_delta(),
-            "summary": self.summary(),
-        }
+        return {"ok": True, "run": run.id, "verdict": v, **self._commit_delta(), "summary": self.summary()}
 
     def revert_run(self, body: dict) -> dict:
         run = self._run(body.get("run"))
         res = run.revert()
-        return {
-            "ok": True,
-            "run": run.id,
-            **res,
-            **self._commit_delta(),
-            "summary": self.summary(),
-        }
+        return {"ok": True, "run": run.id, **res, **self._commit_delta(), "summary": self.summary()}
 
     def run_progress(self, rid: str | None, since: int) -> dict:
         if not self.runs:
@@ -594,11 +421,7 @@ class SheetSession:
         """This session's runs (newest first), then the history saved with the project that this session did not make."""
         live = [r.summary() for r in self.runs.values()][::-1]
         have = {r["id"] for r in live}
-        saved = [
-            r
-            for r in reversed(self.sm.runs if self.sm else [])
-            if r.get("id") not in have
-        ]
+        saved = [r for r in reversed(self.sm.runs if self.sm else []) if r.get("id") not in have]
         return {"runs": live + saved, "current": self.current_run}
 
     def run_image(self, rid: str | None, img_id: str) -> bytes | None:
@@ -611,12 +434,8 @@ class SheetSession:
     def record_run(self, run) -> None:
         """A finished run goes into the project's history (a log: undo does not touch it)."""
         sm = self._sm()
-        sm.runs = [
-            r for r in sm.runs if r.get("id") != run.id or r.get("session") != id(self)
-        ] + [{**run.summary(), "session": id(self)}]
-        sm.runs = [{k: v for k, v in r.items() if k != "session"} for r in sm.runs][
-            -200:
-        ]
+        sm.runs = [r for r in sm.runs if r.get("id") != run.id or r.get("session") != id(self)] + [{**run.summary(), "session": id(self)}]
+        sm.runs = [{k: v for k, v in r.items() if k != "session"} for r in sm.runs][-200:]
 
     def status(self) -> dict:
         from .status import sheet_status
@@ -634,24 +453,14 @@ class SheetSession:
         sm = self._sm()
         sr = sm.regenerate()
         ents = range(len(sm.dr.items)) if everything else sr.changed
-        return {
-            "prims": self._prims(ents, None),
-            "styles": self.styles,
-            "changed": len(sr.changed),
-            "revision": sm.revision,
-            "deviation": sm.deviation(),
-        }
+        return {"prims": self._prims(ents, None), "styles": self.styles, "changed": len(sr.changed), "revision": sm.revision, "deviation": sm.deviation()}
 
     def agent_notes(self) -> dict:
         """The agent's checklist and the facts it recorded (stale ones marked) — what the agent panel shows."""
         from .ai.understanding_tools import learned_now, notes_of
 
         sm = self._sm()
-        return {
-            "checklist": notes_of(sm)["checklist"],
-            "learned": learned_now(sm),
-            "revision": sm.revision,
-        }
+        return {"checklist": notes_of(sm)["checklist"], "learned": learned_now(sm), "revision": sm.revision}
 
     def coverage(self) -> dict:
         """What the file held and what of it is read, drawn, editable and exportable (fidelity.coverage_report)."""
@@ -683,26 +492,14 @@ class SheetSession:
         from .understanding import layers, statuses
 
         st = statuses(self._sm())
-        return {
-            "layers": layers(self._sm()),
-            "status": {
-                "counts": st["counts"],
-                "learned_colours": st["learned_colours"],
-            },
-        }
+        return {"layers": layers(self._sm()), "status": {"counts": st["counts"], "learned_colours": st["learned_colours"]}}
 
     def statuses(self) -> dict:
         from .understanding import statuses
 
         st = statuses(self._sm())
-        return {
-            "counts": st["counts"],
-            "learned_colours": st["learned_colours"],
-            "entities": {
-                str(i): {"status": v["status"], "evidence": v["evidence"][:3]}
-                for i, v in st["entities"].items()
-            },
-        }
+        return {"counts": st["counts"], "learned_colours": st["learned_colours"],
+                "entities": {str(i): {"status": v["status"], "evidence": v["evidence"][:3]} for i, v in st["entities"].items()}}
 
     def duplicates(self, view: str | None = None) -> dict:
         from .understanding import duplicates
@@ -731,19 +528,11 @@ class SheetSession:
 
         if status not in STATUS:
             raise SheetError(f"status must be one of {', '.join(STATUS)}")
-        dec = {
-            "by": body.get("by", "entities"),
-            "key": body.get("key"),
-            "entities": [int(i) for i in body.get("entities", [])],
-            "status": status,
-            "who": body.get("who", "person"),
-            "why": (body.get("why") or "").strip() or "set in the workspace",
-            "revision": sm.revision,
-        }
+        dec = {"by": body.get("by", "entities"), "key": body.get("key"), "entities": [int(i) for i in body.get("entities", [])],
+               "status": status, "who": body.get("who", "person"), "why": (body.get("why") or "").strip() or "set in the workspace",
+               "revision": sm.revision}
         if dec["by"] in ("layer", "colour") and not dec["key"]:
-            raise SheetError(
-                "a layer or colour decision names the layer / colour (key)"
-            )
+            raise SheetError("a layer or colour decision names the layer / colour (key)")
         sm._push()
         sm.semantics.setdefault("status", []).append(dec)
         return {"ok": True, "decision": dec, "summary": self.summary()}
@@ -755,9 +544,7 @@ class SheetSession:
 
     def reset_drawing(self, body: dict) -> dict:
         if not body.get("confirm"):
-            raise SheetError(
-                "resetting the drawing returns it to the imported state: say confirm"
-            )
+            raise SheetError("resetting the drawing returns it to the imported state: say confirm")
         if self.running():
             raise SheetError("the agent is working on this sheet: stop it first")
         sm = self._sm()
@@ -769,11 +556,7 @@ class SheetSession:
         b = body.get("baseline") or {}
         if "on" in b:
             sm.prefs["baseline"]["on"] = bool(b["on"])
-        if (
-            isinstance(b.get("color"), str)
-            and b["color"].startswith("#")
-            and len(b["color"]) in (4, 7)
-        ):
+        if isinstance(b.get("color"), str) and b["color"].startswith("#") and len(b["color"]) in (4, 7):
             sm.prefs["baseline"]["color"] = b["color"]
         return {"ok": True, "prefs": sm.prefs}
 
@@ -785,12 +568,7 @@ class SheetSession:
         from .graph import affects
 
         reach = affects(u.prog)
-        bound = {
-            b.param: p.name
-            for p in sm.shared.values()
-            for b in p.bindings
-            if b.unit == uid
-        }
+        bound = {b.param: p.name for p in sm.shared.values() for b in p.bindings if b.unit == uid}
         params = []
         from .status import parameters_of
 
@@ -798,61 +576,23 @@ class SheetSession:
         for name, prm in u.prog.params.items():
             r = reach.get(name, {})
             ents = [u.back[k] for k in r.get("entities", [])]
-            params.append(
-                {
-                    "name": name,
-                    "key": bound.get(name) or f"{uid}.{name}",
-                    "shared": name in bound,
-                    "label": prm.label,
-                    "state": state.get(name, "named"),
-                    "changed": name in sm.values.get(uid, {}),
-                    "value": sm.values.get(uid, {}).get(name, prm.value),
-                    "drawn": prm.value,
-                    "unit": prm.unit,
-                    "kind": prm.kind,
-                    "source": prm.source,
-                    "measures": prm.measures,
-                    "confidence": prm.confidence,
-                    "evidence": prm.evidence[:4],
-                    "occurrences": prm.occurrences,
-                    "entities": len(ents),
-                    "views": sorted(
-                        {sm.layout.item_group.get(s, "") for s in ents} - {""}
-                    ),
-                    "parts": r.get("parts", [])[:12],
-                }
-            )
-        params.sort(
-            key=lambda q: (not q["shared"], q["source"] != "ai", -q["entities"])
-        )
+            params.append({"name": name, "key": bound.get(name) or f"{uid}.{name}", "shared": name in bound, "label": prm.label, "state": state.get(name, "named"),
+                           "changed": name in sm.values.get(uid, {}),
+                           "value": sm.values.get(uid, {}).get(name, prm.value), "drawn": prm.value, "unit": prm.unit, "kind": prm.kind,
+                           "source": prm.source, "measures": prm.measures, "confidence": prm.confidence, "evidence": prm.evidence[:4],
+                           "occurrences": prm.occurrences, "entities": len(ents), "views": sorted({sm.layout.item_group.get(s, "") for s in ents} - {""}),
+                           "parts": r.get("parts", [])[:12]})
+        params.sort(key=lambda q: (not q["shared"], q["source"] != "ai", -q["entities"]))
         rep = u.report
         checked = {r["id"]: r for r in u.prog.intent.get("plans", [])}
-        plans = [
-            {
-                "id": p.get("id"),
-                "status": p.get("status"),
-                "instruction": p.get("instruction", ""),
-                "driver": (p.get("driver") or {}).get("parameter"),
-                "requested": (p.get("driver") or {}).get("requested_value"),
-                "anchor": {
-                    k: (p.get("anchor") or {}).get(k)
-                    for k in ("policy", "centre", "source")
-                },
-                "directives": [
-                    f"{d['target']}: {d['mode']}"
-                    for d in p.get("directives", [])
-                    if d.get("status") == "accepted"
-                ][:20],
-                "questions": [q["text"] for q in p.get("questions", [])][:6],
-                "checks": (checked.get(p.get("id")) or {}).get("summary"),
-                "failed": [
-                    f"{c['check']} {c['target']}: {c['measured']}"
-                    for c in (checked.get(p.get("id")) or {}).get("checks", [])
-                    if c["status"] == "fail"
-                ][:6],
-            }
-            for p in (u.answer or {}).get("plans", [])
-        ]
+        plans = [{"id": p.get("id"), "status": p.get("status"), "instruction": p.get("instruction", ""),
+                  "driver": (p.get("driver") or {}).get("parameter"), "requested": (p.get("driver") or {}).get("requested_value"),
+                  "anchor": {k: (p.get("anchor") or {}).get(k) for k in ("policy", "centre", "source")},
+                  "directives": [f"{d['target']}: {d['mode']}" for d in p.get("directives", []) if d.get("status") == "accepted"][:20],
+                  "questions": [q["text"] for q in p.get("questions", [])][:6],
+                  "checks": (checked.get(p.get("id")) or {}).get("summary"),
+                  "failed": [f"{c['check']} {c['target']}: {c['measured']}" for c in (checked.get(p.get("id")) or {}).get("checks", []) if c["status"] == "fail"][:6]}
+                 for p in (u.answer or {}).get("plans", [])]
         return cast(
             dict[str, object],
             {
@@ -890,8 +630,7 @@ class SheetSession:
 
     def param(self, name: str) -> dict:
         """Everything a click on a value shows: what it moves (measured), how it grows, how far it can go, the geometry it belongs to by
-        category, what the imported drawing has, where it came from and whether it is validated.
-        """
+        category, what the imported drawing has, where it came from and whether it is validated."""
         sm = self._sm()
         impact = sm.impact(name)
         out: dict[str, object] = {"impact": impact}
@@ -903,20 +642,13 @@ class SheetSession:
         h = sm.highlight(name, impact["step"])
         out["highlight"] = h
         out["card"] = sm.card(name)
-        out["deviation"] = sm.deviation(
-            set(h["drives"]) | set(h["follows"]) | set(h["texts"])
-        )
+        out["deviation"] = sm.deviation(set(h["drives"]) | set(h["follows"]) | set(h["texts"]))
         return out
 
 
 def _gzip(handler, body: bytes, ctype: str, extra: dict | None = None) -> None:
     if "gzip" in (handler.headers.get("Accept-Encoding") or "") and len(body) > 4096:
-        handler._send(
-            200,
-            gzip.compress(body, 5),
-            ctype,
-            {**(extra or {}), "Content-Encoding": "gzip"},
-        )
+        handler._send(200, gzip.compress(body, 5), ctype, {**(extra or {}), "Content-Encoding": "gzip"})
     else:
         handler._send(200, body, ctype, extra)
 
@@ -928,50 +660,21 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
     if method == "GET" and path in ("/", "/workspace", "/index.html", "/app", "/app/"):
         # the interactive workspace (web/, built into static/app) when it is built; the previous page otherwise and at /legacy
         if (app / "index.html").exists() and path != "/workspace":
-            handler._send(
-                200,
-                (app / "index.html").read_bytes(),
-                "text/html; charset=utf-8",
-                {"Cache-Control": "no-cache"},
-            )
+            handler._send(200, (app / "index.html").read_bytes(), "text/html; charset=utf-8", {"Cache-Control": "no-cache"})
         else:
-            handler._send(
-                200,
-                (STATIC / "workspace.html").read_bytes(),
-                "text/html; charset=utf-8",
-            )
+            handler._send(200, (STATIC / "workspace.html").read_bytes(), "text/html; charset=utf-8")
         return True
     if method == "GET" and path == "/legacy":
-        handler._send(
-            200, (STATIC / "workspace.html").read_bytes(), "text/html; charset=utf-8"
-        )
+        handler._send(200, (STATIC / "workspace.html").read_bytes(), "text/html; charset=utf-8")
         return True
     if method == "GET" and path.startswith("/app/"):
-        target = (app / path[len("/app/") :]).resolve()
-        if (
-            not target.is_relative_to(app.resolve()) or not target.is_file()
-        ):  # nothing outside the built app is served
+        target = (app / path[len("/app/"):]).resolve()
+        if not target.is_relative_to(app.resolve()) or not target.is_file():  # nothing outside the built app is served
             handler._send(404, b"not found", "text/plain")
             return True
-        ctype = {
-            ".js": "text/javascript; charset=utf-8",
-            ".css": "text/css; charset=utf-8",
-            ".svg": "image/svg+xml",
-            ".png": "image/png",
-            ".woff2": "font/woff2",
-            ".json": "application/json",
-            ".html": "text/html; charset=utf-8",
-        }.get(target.suffix, "application/octet-stream")
-        handler._send(
-            200,
-            target.read_bytes(),
-            ctype,
-            {
-                "Cache-Control": (
-                    "max-age=31536000, immutable" if "/assets/" in path else "no-cache"
-                )
-            },
-        )
+        ctype = {".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".png": "image/png",
+                 ".woff2": "font/woff2", ".json": "application/json", ".html": "text/html; charset=utf-8"}.get(target.suffix, "application/octet-stream")
+        handler._send(200, target.read_bytes(), ctype, {"Cache-Control": "max-age=31536000, immutable" if "/assets/" in path else "no-cache"})
         return True
     if not path.startswith("/api/sheet"):
         return False
@@ -979,33 +682,12 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
     try:
         if method == "GET":
             if path == "/api/sheet/ai/progress":
-                return (
-                    handler._json(
-                        sheet.run_progress(
-                            q.get("run", [None])[0], int(q.get("since", ["0"])[0])
-                        )
-                    )
-                    or True
-                )
+                return handler._json(sheet.run_progress(q.get("run", [None])[0], int(q.get("since", ["0"])[0]))) or True
             if path == "/api/sheet/ai/image":
                 png = sheet.run_image(q.get("run", [None])[0], q.get("id", [""])[0])
                 if png is None:
-                    return (
-                        handler._json(
-                            {
-                                "ok": False,
-                                "error": "that picture is no longer kept: ask the agent to look again",
-                            },
-                            404,
-                        )
-                        or True
-                    )
-                return (
-                    handler._send(
-                        200, png, "image/png", {"Cache-Control": "max-age=3600"}
-                    )
-                    or True
-                )
+                    return handler._json({"ok": False, "error": "that picture is no longer kept: ask the agent to look again"}, 404) or True
+                return handler._send(200, png, "image/png", {"Cache-Control": "max-age=3600"}) or True
             if path == "/api/sheet/ai/usage":
                 from .ai.usage import summary
 
@@ -1023,31 +705,16 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
         with sheet.lock:
             if method == "GET":
                 if path == "/api/sheet":
-                    return (
-                        handler._json(sheet.summary() if sheet.sm else {"empty": True})
-                        or True
-                    )
+                    return handler._json(sheet.summary() if sheet.sm else {"empty": True}) or True
                 if path == "/api/sheet/geometry":
-                    return (
-                        _gzip(
-                            handler,
-                            json.dumps(sheet.geometry()).encode(),
-                            "application/json",
-                        )
-                        or True
-                    )
+                    return _gzip(handler, json.dumps(sheet.geometry()).encode(), "application/json") or True
                 if path == "/api/sheet/unit":
                     return handler._json(sheet.unit(q.get("id", [""])[0])) or True
                 if path == "/api/sheet/param":
                     return handler._json(sheet.param(q.get("name", [""])[0])) or True
                 if path == "/api/sheet/proposals":
                     units = [u for u in q.get("units", [""])[0].split(",") if u] or None
-                    return (
-                        handler._json(
-                            {"proposals": sheet._sm().shared_proposals(units)}
-                        )
-                        or True
-                    )
+                    return handler._json({"proposals": sheet._sm().shared_proposals(units)}) or True
                 if path == "/api/sheet/ai/runs":
                     return handler._json(sheet.run_list()) or True
                 if path == "/api/sheet/status":
@@ -1057,100 +724,40 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
                 if path == "/api/sheet/agent_notes":
                     return handler._json(sheet.agent_notes()) or True
                 if path == "/api/sheet/entity":
-                    return (
-                        handler._json(sheet.entity(int(q.get("i", ["-1"])[0]))) or True
-                    )
+                    return handler._json(sheet.entity(int(q.get("i", ["-1"])[0]))) or True
                 if path == "/api/sheet/resolve":
-                    return (
-                        handler._json(sheet.resolve(q.get("handle", [""])[0])) or True
-                    )
+                    return handler._json(sheet.resolve(q.get("handle", [""])[0])) or True
                 if path == "/api/sheet/annotations":
-                    return (
-                        handler._json(sheet.annotations(q.get("view", [None])[0]))
-                        or True
-                    )
+                    return handler._json(sheet.annotations(q.get("view", [None])[0])) or True
                 if path == "/api/sheet/layers":
                     return handler._json(sheet.layers()) or True
                 if path == "/api/sheet/statuses":
                     return handler._json(sheet.statuses()) or True
                 if path == "/api/sheet/duplicates":
-                    return (
-                        handler._json(sheet.duplicates(q.get("view", [None])[0]))
-                        or True
-                    )
+                    return handler._json(sheet.duplicates(q.get("view", [None])[0])) or True
                 if path == "/api/sheet/impact":
                     step = q.get("step", [None])[0]
-                    return (
-                        handler._json(
-                            sheet.impact(
-                                q.get("name", [""])[0], float(step) if step else None
-                            )
-                        )
-                        or True
-                    )
+                    return handler._json(sheet.impact(q.get("name", [""])[0], float(step) if step else None)) or True
                 if path == "/api/sheet/delta":
-                    return (
-                        handler._json(
-                            {
-                                "ok": True,
-                                **sheet._commit_delta(),
-                                "summary": sheet.summary(),
-                            }
-                        )
-                        or True
-                    )
+                    return handler._json({"ok": True, **sheet._commit_delta(), "summary": sheet.summary()}) or True
                 if path == "/api/sheet/baseline":
-                    return (
-                        handler._json(sheet.baseline(q.get("all", ["0"])[0] == "1"))
-                        or True
-                    )
+                    return handler._json(sheet.baseline(q.get("all", ["0"])[0] == "1")) or True
                 if path == "/api/sheet/export":
                     tmpdir = Path(tempfile.mkdtemp())
                     try:
                         out = tmpdir / (Path(sheet._sm().path).stem + "_parametric.dxf")
                         rep = sheet._sm().export(str(out))
                         if rep["audit"]["errors"] or rep["errors"]:
-                            return (
-                                handler._json(
-                                    {
-                                        "ok": False,
-                                        "error": "the export did not pass its checks",
-                                        "report": rep,
-                                    },
-                                    409,
-                                )
-                                or True
-                            )
+                            return handler._json({"ok": False, "error": "the export did not pass its checks", "report": rep}, 409) or True
                         data = out.read_bytes()
                     finally:
                         shutil.rmtree(tmpdir, ignore_errors=True)
-                    return (
-                        handler._send(
-                            200,
-                            data,
-                            "application/dxf",
-                            {
-                                "Content-Disposition": f'attachment; filename="{out.name}"',
-                                "X-Export-Report": json.dumps(rep)[:4000],
-                            },
-                        )
-                        or True
-                    )
+                    return handler._send(200, data, "application/dxf",
+                                         {"Content-Disposition": f'attachment; filename="{out.name}"', "X-Export-Report": json.dumps(rep)[:4000]}) or True
                 if path == "/api/sheet/project":
-                    body = json.dumps(
-                        sheet._sm().to_dict(), indent=1, default=list
-                    ).encode()
-                    return (
-                        handler._send(
-                            200,
-                            body,
-                            "application/json",
-                            {
-                                "Content-Disposition": f'attachment; filename="{Path(sheet._sm().path).stem}.autoparam.json"'
-                            },
-                        )
-                        or True
-                    )
+                    body = json.dumps(sheet._sm().to_dict(), indent=1, default=list).encode()
+                    return handler._send(200, body, "application/json",
+                                         {"Content-Disposition": f'attachment; filename="{Path(sheet._sm().path).stem}.autoparam.json"'}) or True
             if method == "POST":
                 raw = handler._body()
                 if path == "/api/sheet/open":
@@ -1167,9 +774,7 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
                 if path == "/api/sheet/apply":
                     return handler._json(sheet.apply(body.get("changes", {}))) or True
                 if path == "/api/sheet/behaviour":
-                    return (
-                        handler._json(sheet.behaviour(body.get("changes", {}))) or True
-                    )
+                    return handler._json(sheet.behaviour(body.get("changes", {}))) or True
                 if path == "/api/sheet/decide":
                     return handler._json(sheet.decide(body)) or True
                 if path in ("/api/sheet/undo", "/api/sheet/redo"):
@@ -1190,9 +795,7 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
                     return handler._json(sheet.set_prefs(body)) or True
                 if path == "/api/sheet/project":
                     if sheet.running():
-                        raise SheetError(
-                            "the agent is working on this sheet: stop it first"
-                        )
+                        raise SheetError("the agent is working on this sheet: stop it first")
                     tmpdir = Path(tempfile.mkdtemp())
                     try:
                         tmp = tmpdir / "project.json"
@@ -1205,25 +808,14 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
                         sheet.gem = None
                     sheet.gem_model = None
                     sheet.shown = set()
-                    sheet.pictures, sheet.runs, sheet.current_run = (
-                        None,
-                        {},
-                        None,
-                    )  # runs belong to the sheet model they worked on
-                    return (
-                        handler._json({"ok": True, "summary": sheet.summary()}) or True
-                    )
+                    sheet.pictures, sheet.runs, sheet.current_run = None, {}, None  # runs belong to the sheet model they worked on
+                    return handler._json({"ok": True, "summary": sheet.summary()}) or True
                 op = path.rsplit("/", 1)[1]
                 return handler._json(sheet.edit(op, body)) or True
     except SheetError as exc:
         handler._json({"ok": False, "error": str(exc)}, 409)
         return True
-    except (
-        KeyError,
-        ValueError,
-        TypeError,
-        IndexError,
-    ) as exc:  # a malformed request: said, never a crash of the server
+    except (KeyError, ValueError, TypeError, IndexError) as exc:  # a malformed request: said, never a crash of the server
         handler._json({"ok": False, "error": f"{type(exc).__name__}: {exc}"}, 400)
         return True
     handler._json({"ok": False, "error": f"no route {method} {path}"}, 404)
