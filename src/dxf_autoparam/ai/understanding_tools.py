@@ -87,8 +87,10 @@ UNDERSTANDING_TOOL_SPECS = [
      _obj({"status": {"type": "array", "items": _obj({"by": {"type": "string", "enum": ["layer", "colour", "entities"]}, "key": S, "entities": LIST,
                                                       "status": {"type": "string", "enum": ["existing", "proposed", "removed", "construction", "alternative"]},
                                                       "why": S}, ["by", "status", "why"])}}, ["status"])),
-    ("rename_values", ("Give values engineering names, several in one call: a shared name, or 'U….local' for one unit's value. Each rename keeps the "
-                       "value, its bindings, formulas, plans and history (undoable); refused when the name is taken or not PascalCase."),
+    ("rename_values", ("Give values engineering names, several in one call. `from`: the value's name as review_parameters lists it (a bare name, in the "
+                       "open unit), or 'U01.name' for another unit's value, or a shared name. `to`: the new name, bare and PascalCase (ClearHeadroom — no unit "
+                       "prefix). Each rename keeps the value, its bindings, formulas, plans and history (undoable). A name another unit already uses for its "
+                       "own value is fine — it is a separate value there; use share_sizes if it is the same size seen again."),
      _obj({"items": {"type": "array", "items": _obj({"from": S, "to": S, "why": S}, ["from", "to"])}}, ["items"])),
 ]
 UNDERSTANDING_READ = {"drawing_overview", "inspect_view", "inspect_component", "inspect_annotations", "inspect_layers", "find_duplicates",
@@ -446,8 +448,11 @@ def parameter_review(sm, uid: str) -> dict:
     counts = Counter(r["class"] for r in rows)
     cleanup = [{"value": r["name"], "class": r["class"], "suggest": "rename" if r.get("proposed_name") else "review",
                 "evidence": r["evidence"]} for r in rows if r["class"] in ("local_measurement", "duplicate_candidate", "generic_input")][:30]
+    kept = len((sm.units[uid].answer or {}).get("frozen", []))
     return {"unit": uid, "values": rows, "counts": dict(counts), "cleanup": cleanup,
-            "rules": ["a value is renamed, never re-made: rename_values keeps its bindings, formulas, plans and history",
+            **({"kept_as_drawn": f"{kept} more measured sizes nobody named are kept as drawn (not inputs; the drawing is as it was)"} if kept else {}),
+            "rules": ["rename_values takes a value's name here exactly as listed (bare, in the open unit); the new name is bare too",
+                      "a value is renamed, never re-made: rename_values keeps its bindings, formulas, plans and history",
                       "equal values stay separate inputs unless the drawing (a dimension, a note, a symmetry) says they are one",
                       "a value is removed only when nothing reads it and it is not the person's: removing an input freezes its geometry as drawn"]}
 
@@ -509,7 +514,9 @@ class UnderstandingSession:
                 if a.get("picture"):
                     pic = self.bench.zoom_view(view=a["view"], labels="none")
                     out["picture"] = {k: pic[k] for k in ("image", "box_mm", "size_px", "mm_per_px") if k in pic}
-                    out["_image"] = pic["_image"]
+                    for k in ("_image", "_images", "pictures_already_shown"):  # the picture itself, or the word that the model still has it
+                        if k in pic:
+                            out[k] = pic[k]
                 return out
             if name == "inspect_component":
                 rec, uid, _ents, box = component_context(sm, a.get("unit"), a.get("part"), a.get("region"), a.get("entities"), a.get("annotation"))
@@ -519,7 +526,7 @@ class UnderstandingSession:
                     pic = sm_picture(self.bench, uid, box_around([box], 0.25))
                     rec["picture"] = {"image": pic["id"], "frame": pic["meta"]["frame"], "labels": "entity ids, the same as in `entities`"}
                     rec["_image"] = {"png": pic["png"], "id": pic["id"], "meta": pic["meta"]}
-                    self.bench.run.note_image(pic)
+                    self.bench.run.note_image(pic, "inspect_component")
                 return rec
             if name == "inspect_annotations":
                 from ..understanding import sheet_annotations
@@ -612,23 +619,74 @@ class UnderstandingSession:
             self.results["semantics"] = {"ok": not refused, "accepted": len(rows), **({"rejected": refused} if refused else {})}
             return "semantics", f"{len(rows)} decision(s) kept"
         if name == "rename_values":
-            done, refused = [], []
+            done, refused, notes = [], [], []
             for r in a.get("items") or []:
                 old, new = (r.get("from") or "").strip(), (r.get("to") or "").strip()
                 try:
                     with self.bench._lock():
-                        sm.rename(old, new)
+                        old_key, new_name = resolve_rename(sm, old, new, self.bench.active)
+                        sm.rename(old_key, new_name)
                         self.bench.sync_revision()
-                    done.append(f"{old} → {new}")
+                        same = sm.namesakes(new_name, {old_key.split(".", 1)[0]} if "." in old_key else None)
+                    done.append(f"{old} → {new_name}")
+                    if same:
+                        notes.append(f"{new_name} is also a value of " + ", ".join(f"{u}{'' if v is None else f' ({v:g})'}" for u, v in same[:4])
+                                     + ": a separate value here — if it is the same size seen again, share_sizes joins them")
                 except (SheetError, KeyError, ValueError) as exc:  # the sheet's refusal (a taken or malformed name) is that item's result
                     refused.append(f"{old} → {new}: {exc}")
-            self.results["rename"] = {"ok": not refused, "renamed": done, **({"rejected": refused} if refused else {})}
+            self.results["rename"] = {"ok": not refused, "renamed": done, **({"rejected": refused} if refused else {}), **({"note": notes} if notes else {})}
             return "rename", "; ".join(done)[:200]
         raise KeyError(name)
 
     def verdict(self, item: str) -> dict:
         key = {"checklist": "checklist", "learned": "learned", "semantics": "semantics", "rename": "rename"}.get(item, item)
         return self.results.get(key, {"ok": True})
+
+
+def resolve_rename(sm, old: str, new: str, active: str | None) -> tuple[str, str]:
+    """What rename_values means by its two names, in the words review_parameters speaks: `from` may be a bare name (a value of the open unit — else
+    the one unit that has it), 'U01.name' or a shared name; `to` is a bare name, and a unit prefix copied from `from` is dropped. Returns (the name
+    SheetModel.rename takes, the bare new name) or raises SheetError saying which of the two names is wrong, and why."""
+    old, new = old.strip(), new.strip()
+    shared = {p.name for p in sm.shared.values()}
+
+    def has(uid: str, local: str) -> bool:
+        u = sm.unit(uid)
+        return u.prog is not None and (local in u.prog.params or any(r.name == local for r in u.prog.relations))
+
+    def kept(uid: str, local: str) -> bool:
+        return any(r.get("name") == local for r in (sm.units[uid].answer or {}).get("frozen", []))
+
+    if old in shared:
+        key, unit = old, None
+    elif "." in old:
+        uid, local = old.split(".", 1)
+        if uid not in sm.units:
+            raise SheetError(f"the OLD name {old!r}: there is no unit {uid} (units: {', '.join(list(sm.units)[:12])})")
+        if not has(uid, local):
+            raise SheetError(f"the OLD name {old!r}: {uid} has no value {local}"
+                             + (" — it is kept as drawn (nobody named it); define_parameters on its candidate to make it an input again" if kept(uid, local) else ""))
+        key, unit = old, uid
+    else:
+        if active in sm.units and has(active, old):
+            key, unit = f"{active}.{old}", active
+        else:
+            hits = [uid for uid, u in sm.units.items() if u.built and has(uid, old)]
+            if len(hits) == 1:
+                key, unit = f"{hits[0]}.{old}", hits[0]
+            elif len(hits) > 1:
+                raise SheetError(f"the OLD name {old!r} is a value of {', '.join(hits)}: say which one ('{hits[0]}.{old}')")
+            else:
+                raise SheetError(f"the OLD name {old!r} is no value of the open unit ({active or 'none is open'}) or of any unit read so far: "
+                                 "names come from review_parameters")
+    if "." in new:
+        prefix, bare = new.split(".", 1)
+        if unit is not None and prefix == unit:
+            new = bare  # the unit prefix of the old name, copied: not part of a name
+        else:
+            raise SheetError(f"the NEW name {new!r} must be bare (like {bare}): a value stays in its own unit"
+                             + (f", and {prefix} is not the unit of {old}" if unit and prefix in sm.units else ""))
+    return key, new
 
 
 def sm_picture(bench, uid: str, box) -> dict:

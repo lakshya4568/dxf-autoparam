@@ -6,8 +6,8 @@ Here the reasons a run stops are named and different:
 
   finished      the model called `finish` and the engine's gate let it end
   wants_person  a decision only the person can make is open (a plan's question, an ask_person)
-  soft_budget   one chunk of turns is used (only when the person asked for chunks): the run is PAUSED with everything it holds, and
-                can be continued
+  soft_budget   one chunk of turns is used (30 unless the person chose otherwise): the run is PAUSED with everything it holds, and
+                can be continued — a long run is a series of chunks, each one a point where the person can see what it cost
   hard_budget   the most turns / tool calls one run may take, whatever the chunks: it stops, incomplete, and says so
   tokens        the most tokens (output + thinking) the run may spend
   time          the most working time (time waiting for a person does not count)
@@ -30,16 +30,19 @@ import time
 from dataclasses import asdict, dataclass, field
 
 from .narrate import doing, phase_of, shrink, stage_of, summarise
+from .requestlog import CacheWatch, RequestLog
 from .vertex import GeminiStopped
 
 
 @dataclass
 class Budget:
-    """Limits of one run. `soft_turns` is the size of a chunk (the run pauses after it and may be continued); 0, the default, means
-    the run is never paused for a chunk. The others are absolute for the run, across its chunks — safety nets against a model that
-    loops, set high enough that a drawing of any size finishes inside them."""
+    """Limits of one run. `soft_turns` is the size of a chunk: the run pauses after it with everything it holds and may be continued (a person
+    sees what the chunk cost and says go on); 0 means the run is never paused for a chunk. `unit_turns` is how many turns one unit of a sheet may
+    take before the agent is told to wrap it up and move on (0: never told). The rest are absolute for the run, across its chunks — safety nets
+    against a model that loops, set high enough that a drawing of any size finishes inside them."""
 
-    soft_turns: int = 0
+    soft_turns: int = 30
+    unit_turns: int = 12
     max_turns: int = 1000
     max_tool_calls: int = 6000
     wall_s: float = 14400.0
@@ -49,7 +52,7 @@ class Budget:
 
     @classmethod
     def from_env(cls, **over) -> Budget:
-        env = {"soft_turns": os.environ.get("AUTOPARAM_SOFT_TURNS") or os.environ.get("VERTEX_AGENT_MAX_STEPS"),
+        env = {"soft_turns": os.environ.get("AUTOPARAM_SOFT_TURNS") or os.environ.get("VERTEX_AGENT_MAX_STEPS"), "unit_turns": os.environ.get("AUTOPARAM_UNIT_TURNS"),
                "max_turns": os.environ.get("AUTOPARAM_MAX_TURNS"), "max_tool_calls": os.environ.get("AUTOPARAM_MAX_TOOL_CALLS"),
                "wall_s": os.environ.get("AUTOPARAM_WALL_S"), "max_tokens": os.environ.get("AUTOPARAM_MAX_TOKENS") or os.environ.get("VERTEX_AGENT_MAX_OUTPUT_TOKENS"),
                "call_s": os.environ.get("AUTOPARAM_CALL_S")}
@@ -65,6 +68,7 @@ class Budget:
             if v is not None and hasattr(out, k):
                 setattr(out, k, type(getattr(out, k))(v))
         out.soft_turns = 0 if out.soft_turns <= 0 else min(out.soft_turns, out.max_turns)
+        out.unit_turns = max(0, out.unit_turns)
         return out
 
     def to_dict(self) -> dict:
@@ -98,6 +102,8 @@ class LoopState:
     reads_only: int = 0
     done: bool = False
     usages: list = field(default_factory=list)
+    last_calls: list = field(default_factory=list)  # the tools the last turn called, and whether any of them failed: what the next turn's thinking depends on
+    last_failed: bool = False
 
     def to_dict(self) -> dict:
         return {"turns": self.turns, "tool_calls": self.tool_calls, "tokens": self.tokens, "seconds": round(self.seconds, 1), "done": self.done}
@@ -113,13 +119,20 @@ def short(a: dict) -> str:
     return s if len(s) <= 140 else s[:137] + "…"
 
 
-def keep_pictures(history: list, keep: int = 3) -> None:
+def keep_pictures(history: list, keep: int = 3, batch: int = 1) -> int:
     """Every request re-sends the conversation: an old picture is paid for again each turn. Only the last `keep` pictures a
-    tool returned stay in it; older ones become a line saying so (the model can ask for the picture again)."""
+    tool returned stay in it; older ones become a line saying so (the model can ask for the picture again).
+
+    Changing an old entry changes the request from that entry on, and a provider's prompt cache serves a request only as far as it is the same as one
+    it has seen: so with `batch` > 1 the older pictures are dropped together, once `batch` of them are due, and in between the conversation only
+    grows. Returns how many results lost their pictures."""
     from google.genai import types
 
     idx = [k for k, c in enumerate(history) if c.role == "user" and any(getattr(getattr(p, "function_response", None), "parts", None) for p in c.parts or [])]
-    for k in idx[:-keep]:
+    due = idx[:-keep] if keep else idx
+    if len(due) < max(1, batch):
+        return 0
+    for k in due:
         parts = []
         for p in history[k].parts:
             fr = getattr(p, "function_response", None)
@@ -130,15 +143,24 @@ def keep_pictures(history: list, keep: int = 3) -> None:
             else:
                 parts.append(p)
         history[k] = types.Content(role="user", parts=parts)
+    return len(due)
 
 
-def trim(history: list, keep: int = 8) -> None:
+def _long_results(c) -> bool:
+    return any(len(json.dumps((p.function_response.response or {}).get("result"), default=str)) > 400 for p in c.parts if getattr(p, "function_response", None))
+
+
+def trim(history: list, keep: int = 8, batch: int = 1) -> int:
     """Tool results older than the last `keep` turns are cut to their verdict: a long inspect result from ten turns ago is
-    paid for again every turn, and the model can always ask again."""
+    paid for again every turn, and the model can always ask again. With `batch` > 1 the cuts are made together, once `batch` results are due (see
+    keep_pictures: an unchanged conversation is what a provider's cache can serve). Returns how many results were cut."""
     from google.genai import types
 
     answers = [k for k, c in enumerate(history) if c.role == "user" and c.parts and getattr(c.parts[0], "function_response", None)]
-    for k in answers[:-keep]:
+    due = [k for k in (answers[:-keep] if keep else answers) if _long_results(history[k])]
+    if len(due) < max(1, batch):
+        return 0
+    for k in due:
         parts = []
         for p in history[k].parts:
             fr = p.function_response
@@ -151,6 +173,7 @@ def trim(history: list, keep: int = 8) -> None:
                 short_.update({x: res[x] for x in ("ok", "rejected", "done") if x in res})
             parts.append(types.Part.from_function_response(name=fr.name, response={"result": short_}))
         history[k] = types.Content(role="user", parts=parts)
+    return len(due)
 
 
 def compact(history: list, state_text: str, keep: int = 6) -> int:
@@ -169,6 +192,34 @@ def compact(history: list, state_text: str, keep: int = 6) -> int:
     folded = sum(1 for k in model_idx if k < cut)
     history[:] = [types.Content(role="user", parts=[types.Part.from_text(text=state_text)]), *history[cut:]]
     return folded
+
+
+LEVELS = ("minimal", "low", "medium", "high")
+
+
+def _rank(level: str) -> int:
+    return LEVELS.index(level) if level in LEVELS else len(LEVELS) - 1
+
+
+def adaptive_thinking(cap: str, calls: list[str], failed: bool, kinds: dict[str, frozenset]) -> tuple[str, str]:
+    """The thinking level of a turn, from what the turn before it did — and why. Reading and bookkeeping turns do not need deep reasoning; the turns that
+    SYNTHESISE (after the candidates were inspected, after a plan was measured) and those that REPAIR what the engine refused do. Never above `cap`, the
+    level the person's model was chosen at. `kinds`: the bench's own sets of tool names — "mechanical", "heavy", "opening".
+
+    How much this saves is modest by design: in the one live run measured (164 calls) thinking was 1.2% of the tokens billed. It is here so a turn that only
+    reads a number back is not made to reason for as long as one that designs the unit's parts."""
+    names = set(calls)
+    if failed:
+        level, why = "high", f"repairing what the engine refused ({', '.join(calls[:3])})"
+    elif names & kinds.get("heavy", frozenset()):
+        level, why = "high", f"working out the model from {', '.join(sorted(names & kinds['heavy']))}"
+    elif names & kinds.get("opening", frozenset()):
+        level, why = "medium", "the first look at a unit"
+    elif names and names <= kinds.get("mechanical", frozenset()):
+        level, why = "low", f"reading and bookkeeping ({', '.join(calls[:3])})"
+    else:
+        level, why = "medium", f"carrying on after {', '.join(calls[:3]) or 'no tool'}"
+    return (cap, f"{why}; capped at the model's own level") if _rank(level) > _rank(cap) else (level, why)
 
 
 def history_size(history: list) -> dict:
@@ -193,14 +244,18 @@ def history_size(history: list) -> dict:
 
 
 def pack(call, res) -> object:
-    """The function response for one call. A result may carry a picture (`_image`: {"png": bytes, …}) — sent to the model as an
-    image part of the response, so the model sees it next to the metadata that says what it shows."""
+    """The function response for one call. A result may carry pictures (`_images`: [{"png": bytes, …}], or one as `_image`) — sent to the model as
+    image parts of the response, so the model sees them next to the metadata that says what each shows."""
     from google.genai import types
 
-    image = res.pop("_image", None) if isinstance(res, dict) else None
-    if image:
-        part = types.FunctionResponsePart(inline_data=types.FunctionResponseBlob(mime_type="image/png", data=image["png"]))
-        return types.Part.from_function_response(name=call.name, response={"result": res}, parts=[part])
+    images = []
+    if isinstance(res, dict):
+        one = res.pop("_image", None)
+        many = res.pop("_images", None) or []
+        images = ([one] if one else []) + list(many)
+    if images:
+        parts = [types.FunctionResponsePart(inline_data=types.FunctionResponseBlob(mime_type="image/png", data=im["png"])) for im in images]
+        return types.Part.from_function_response(name=call.name, response={"result": res}, parts=parts)
     return types.Part.from_function_response(name=call.name, response={"result": res})
 
 
@@ -229,6 +284,19 @@ class AgentLoop:
         self.trim_keep = max(2, keep_turns // 2 + 1) if compactor is not None else 8
         self.compacted = 0
         self.sizes: list[dict] = []  # what each request re-sent besides the cached prefix (measured on the contents)
+        # Every request is recorded (what it was made of, how much of it the call before already had, what the provider billed and cached): the person can
+        # look at any of them while the run goes on, and the run itself reads them — a saving that quietly became a cost is switched off.
+        self.requests = RequestLog()
+        self.watch = CacheWatch()
+        # Prompt caching. The provider's own (implicit) cache serves a request as far as it is the same as one it has seen, so a conversation that only
+        # GROWS is cached whole; an explicit cache of the first part would hold the rest at full price. The shared prefix is therefore left to the implicit
+        # cache, older results are cut in batches (not one by one: each cut changes everything after it), and the run takes an explicit cache only when
+        # the records show the provider is not caching (AUTOPARAM_AGENT_CACHE=explicit asks for it from the start).
+        self.explicit = os.environ.get("AUTOPARAM_AGENT_CACHE", "implicit").strip().lower() == "explicit"
+        self.prune_batch = 1 if self.explicit else 4
+        self._pruned: dict[str, int] = {}  # what the last turn's housekeeping changed in the older conversation: said in the next request's record
+        self.kinds = getattr(bench, "thinking_kinds", None)
+        self.adaptive = bool(self.kinds) and not step_thinking and not os.environ.get("VERTEX_AGENT_STEP_THINKING")
 
     # ── conversation ────────────────────────────────────────────────────────────
 
@@ -258,6 +326,42 @@ class AgentLoop:
         in_run = max(0, b.max_turns - s.turns)
         return {"in_chunk": max(0, b.soft_turns - s.chunk_turns) if b.soft_turns else in_run, "in_run": in_run}
 
+    def _thinking(self) -> tuple[str, str]:
+        s = self.state
+        if s.turns == 1:
+            return self.plan_thinking, "the first turn reads the whole task"
+        if not self.adaptive:
+            return self.step_thinking, "one level for every turn after the first"
+        return adaptive_thinking(self.plan_thinking, s.last_calls, s.last_failed, self.kinds)
+
+    def _record(self, label: str, level: str, why: str) -> dict | None:
+        """Describe the request about to be made. Looking at a request must never be able to stop the run: if it cannot be described (a bench or a model
+        that is not the real thing), that is said once and the run goes on without records."""
+        try:
+            rec = self.requests.record(turn=self.state.turns, label=label, model=getattr(getattr(self.gem, "cfg", None), "model", "") or "", thinking=level, why=why,
+                                       system=self.system, tools=self.tools, prefix_parts=self.prefix_parts, history=self.history, explicit=self.explicit,
+                                       pruned=self._pruned)
+        except (AttributeError, TypeError, ValueError) as exc:
+            if not getattr(self, "_record_said", False):
+                self._record_said = True
+                self.emit({"kind": "note", "text": f"the requests of this run are not recorded: {type(exc).__name__}: {exc}"})
+            return None
+        self._pruned = {}
+        return rec
+
+    def _after_call(self, rec: dict | None) -> None:
+        """Read what the provider said of the call just made: a saving that has turned into a cost is switched off, and said."""
+        if rec is None:
+            return
+        self.watch.observe(rec)
+        if not self.explicit and self.watch.silent():
+            self.explicit, self.prune_batch = True, 1
+            self.emit({"kind": "note", "text": f"the provider served next to nothing from its cache for the last {self.watch.need} requests although each was mostly the same as the one "
+                                               "before: from now on the shared first part of the request is kept in an explicit cache, and older results are cut one at a time"})
+        if self.adaptive and self.watch.level_broke():
+            self.adaptive = False
+            self.emit({"kind": "note", "text": "adaptive thinking is off for the rest of this run: a change of thinking level was followed by a collapse of the cached tokens"})
+
     # ── one chunk ───────────────────────────────────────────────────────────────
 
     def run(self) -> str:
@@ -278,16 +382,24 @@ class AgentLoop:
                 s.turns += 1
                 s.chunk_turns += 1
                 label = f"{self.label_prefix} {s.turns}"
-                self.emit({"kind": "turn", "turn": s.turns, "label": label, "turns_left": self.turns_left()})
+                level, why = self._thinking()
+                self.emit({"kind": "turn", "turn": s.turns, "label": label, "turns_left": self.turns_left(), "thinking": level, "thinking_why": why})
                 self.sizes.append({"turn": s.turns, **history_size(self.history)})
+                rec = self._record(label, level, why)
+                if hasattr(self.gem, "explicit_override"):
+                    self.gem.explicit_override = self.explicit  # which of the two caches this request leans on
                 try:
-                    content, usage = self.gem.step(self.system, self.tools, self.prefix_parts, self.prefix_key, self.history, label,
-                                                   self.plan_thinking if s.turns == 1 else self.step_thinking,
+                    content, usage = self.gem.step(self.system, self.tools, self.prefix_parts, self.prefix_key, self.history, label, level,
                                                    max_out=32768 if s.turns == 1 else 16384, stop=self.stop, on_event=self.emit)
                 except GeminiStopped:
                     s.turns -= 1  # that turn never happened: nothing was executed, the conversation is as it was
                     s.chunk_turns -= 1
+                    if rec is not None:
+                        rec["stopped"] = True  # the request was sent and what the provider generated until Stop is billed; it has no usage to report
                     return "stopped"
+                if rec is not None:
+                    self.requests.finish(rec, usage)
+                self._after_call(rec)
                 usage["thoughts"] = [p.text for p in content.parts or [] if getattr(p, "thought", False) and p.text]
                 s.usages.append(usage)
                 if not usage.get("cached"):
@@ -295,18 +407,28 @@ class AgentLoop:
                 self.history.append(content)
                 calls = [p.function_call for p in content.parts or [] if getattr(p, "function_call", None)]
                 if not calls:
+                    s.last_calls, s.last_failed = [], False
                     self.add_user("Use the tools (one small edit at a time); call finish when done.")
                     continue
                 s.tool_calls += len(calls)
-                parts, done = execute_calls(self.bench, calls, self.emit, s, self.budget, self.turns_left())
+                refused = {"any": False}
+
+                def emit(e: dict, refused: dict = refused) -> None:  # whether this turn had a call the engine refused: the next turn repairs it, and thinks accordingly
+                    if e.get("kind") == "tool" and e.get("ok") is False and not e.get("waiting"):
+                        refused["any"] = True
+                    self.emit(e)
+
+                parts, done = execute_calls(self.bench, calls, emit, s, self.budget, self.turns_left())
+                s.last_calls, s.last_failed = [c.name for c in calls], refused["any"]
                 from google.genai import types
 
                 self.history.append(types.Content(role="user", parts=parts))
-                trim(self.history, keep=self.trim_keep)
-                keep_pictures(self.history, keep=3)
+                self._pruned = {"trimmed": trim(self.history, keep=self.trim_keep, batch=self.prune_batch),
+                                "pictures": keep_pictures(self.history, keep=3, batch=self.prune_batch)}
                 if self.compactor is not None and sum(1 for c in self.history if c.role == "model") >= self.keep_turns + self.compact_every:
                     folded = compact(self.history, self.compactor(self.compacted + 1), self.keep_turns)
                     if folded:
+                        self._pruned["compacted"] = folded
                         self.compacted += folded
                         self.emit({"kind": "note", "text": f"context compacted: {folded} older turn(s) folded into the working state "
                                                            f"(the conversation keeps the last {self.keep_turns})"})
@@ -330,6 +452,8 @@ def execute_calls(bench, calls: list, emit, state: LoopState, budget: Budget, tu
     A call that does not parse comes back as an error the model can correct; nothing a call does can break the loop."""
     results: list[list] = []  # [call, result, args, t0]
     wrote, pending, done = False, [], False
+    if hasattr(bench, "set_turn"):
+        bench.set_turn(state.turns)  # a picture sent now is in the conversation for the next few turns: the bench does not send it again meanwhile
     before = bench.snapshot()
     for n, call in enumerate(calls):
         a = _args(call)
@@ -348,8 +472,8 @@ def execute_calls(bench, calls: list, emit, state: LoopState, budget: Budget, tu
                     emit(_tool_event(cid, call.name, a, False, "refused: edit first", res, t0, bench))
                 else:
                     res = bench.read(call.name, a)
-                    image = res.get("_image") if isinstance(res, dict) else None
-                    emit(_tool_event(cid, call.name, a, not (isinstance(res, dict) and res.get("error")), "", res, t0, bench, image=image))
+                    images = ([res["_image"]] if isinstance(res, dict) and res.get("_image") else []) + (list(res.get("_images") or []) if isinstance(res, dict) else [])
+                    emit(_tool_event(cid, call.name, a, not (isinstance(res, dict) and res.get("error")), "", res, t0, bench, images=images))
             elif call.name == "finish":
                 res, done = bench.finish(a)
                 ev = _tool_event(cid, "finish", a, done, "" if done else str(res.get("hint") or res.get("waiting_for") or "")[:200], res, t0, bench)
@@ -400,18 +524,31 @@ def execute_calls(bench, calls: list, emit, state: LoopState, budget: Budget, tu
             nudge = bench.nudge()
             if nudge and results:
                 results[-1][1] = {"result": results[-1][1], "nudge": nudge, "turns_left": turns_left}
+    notice = bench.budget_notice() if hasattr(bench, "budget_notice") and results else None
+    if notice:  # the unit has taken its share of turns: the agent is told in the result it reads next, the person in the activity
+        emit({"kind": "note", "text": notice["person"]})
+        results[-1][1] = _attach(results[-1][1], "unit_budget", notice["model"])
     parts = [pack(c, r) for c, r, *_ in results]
     return parts, done
 
 
-def _tool_event(cid: str, name: str, a: dict, ok: bool, why: str, res, t0: float, bench, image: dict | None = None) -> dict:
+def _attach(res, key: str, value):
+    """Add a field beside a turn's last result, in the wrapper the loop already uses for status and nudges (or in a new one)."""
+    if isinstance(res, dict) and "result" in res and ("status" in res or "nudge" in res):
+        return {**res, key: value}
+    return {"result": res, key: value}
+
+
+def _tool_event(cid: str, name: str, a: dict, ok: bool, why: str, res, t0: float, bench, images: list[dict] | None = None) -> dict:
     ev = {"kind": "tool", "id": cid, "name": name, "args": short(a), "args_full": shrink(a), "ok": bool(ok), "why": why, "doing": doing(name), "stage": stage_of(name), "phase": phase_of(stage_of(name)),
           "result": shrink(res), "summary": summarise(name, a, res), "ms": int((time.perf_counter() - t0) * 1000),
           "unit": bench.unit_label() if hasattr(bench, "unit_label") else None}
     why_text = a.get("why") if isinstance(a, dict) else None
     if isinstance(why_text, str) and why_text.strip():
         ev["said"] = why_text.strip()[:240]
-    if image:
-        ev["image"] = {k: v for k, v in (image.get("meta") or {}).items() if k in ("id", "revision", "unit", "view_ids", "box", "ids", "state")}
-        ev["image"]["id"] = image.get("id")
+    if images:
+        keep = ("id", "revision", "unit", "view_ids", "box", "ids", "state", "kind", "mm_per_px", "text_px", "legible", "tiles")
+        rows = [{**{k: v for k, v in (im.get("meta") or {}).items() if k in keep}, "id": im.get("id")} for im in images]
+        ev["image"] = rows[0]  # the first, as a row has always had it
+        ev["images"] = rows
     return ev

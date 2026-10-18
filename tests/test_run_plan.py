@@ -14,7 +14,6 @@ from test_crossview import two_views, view
 from test_run import Scripted, wait
 from test_sheet import built_sheet
 
-from dxf_autoparam.ai.loop import Budget
 from dxf_autoparam.ai.scripted import call
 from dxf_autoparam.crossview import EMPTY_ANSWER, SheetModel
 from dxf_autoparam.workspace import SheetSession
@@ -53,8 +52,8 @@ def two_unit_session(tmp_path, script):
     return sheet, sm, ua, ub, gem
 
 
-def run(sheet, **opts):
-    r = sheet.start_run({"instruction": INSTR, "scope": {"kind": "drawing"}, **({"options": opts} if opts else {})})
+def run(sheet, scope=None, **opts):
+    r = sheet.start_run({"instruction": INSTR, "scope": scope or {"kind": "drawing"}, **({"options": opts} if opts else {})})
     return r["run"], wait(sheet, r["run"])
 
 
@@ -247,7 +246,7 @@ def test_a_doubted_group_nobody_looked_at_is_said_and_one_that_was_looked_at_is_
     assert any(n.startswith("not examined: ") and tid in n for n in p["verdict"]["notes"])
 
     sheet, tid, _gem = sheet_with_a_doubted_table(tmp_path, [[reading(PLAIN)], [call("zoom_view", view=tid)], [call("finish", summary="x")]])
-    rid, p = run(sheet)
+    rid, p = run(sheet, scope={"views": ["V01"]})  # one view asked: no unit of the drawing is owed (the whole-drawing gate is tested in test_coverage)
     zoom = tools(p, "zoom_view")[0]
     assert zoom["ok"] and zoom["result"]["group"]["id"] == tid and "of " + tid in zoom["summary"]
     assert tools(p, "finish")[0]["ok"] and not any("not examined" in n for n in p["verdict"]["notes"])
@@ -264,20 +263,14 @@ def test_the_model_can_say_what_a_doubted_group_is_and_it_becomes_a_unit_that_ta
     assert any("never parametrized" in n and "UT01" in n for n in p["verdict"]["notes"])  # a view nobody parametrized is said
 
 
-# ── the budget never pauses a run that was not asked to be paused, and a reached limit is lifted ──
+# ── a reached limit is lifted when the run is continued ──
 
 
 def chatty(n: int) -> list:
     return [[call("find_values", value_mm=3000)] for _ in range(n)]
 
 
-def test_by_default_a_long_run_is_not_paused(tmp_path):
-    assert Budget().soft_turns == 0 and Budget.from_env().soft_turns == 0 and Budget().max_turns >= 1000
-    assert Budget().with_(soft_turns=5, max_turns=3).soft_turns == 3 and Budget().with_(soft_turns=0).soft_turns == 0
-    sheet, _sm, _ua, _ub, _gem = two_unit_session(tmp_path, [[reading(PLAIN)], [call("open_unit", unit="U01")], *chatty(60), [call("finish", summary="x")]])
-    _rid, p = run(sheet)
-    assert p["status"] == "completed" and p["usage"]["turns"] > 60 and p["usage"]["limits"]["soft_turns"] == 0
-    assert not any(e["kind"] == "state" and e["to"] == "paused" for e in p["events"])
+# a run is paused after 30 turns by default (and can be asked never to be): tests/test_cost_controls.py
 
 
 @pytest.mark.parametrize("limit", [{"max_turns": 4}, {"max_tokens": 40}, {"max_tool_calls": 4}])  # a scripted turn is one call and 10 tokens

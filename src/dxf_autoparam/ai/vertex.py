@@ -287,6 +287,10 @@ class Gemini:
                                   http_options=types.HttpOptions(timeout=timeout_ms))
         self.client = client
         self.step_timeout_s: float | None = None  # one agent turn's deadline, set from a run's budget (else VERTEX_STEP_TIMEOUT_MS)
+        # What the loop says about the explicit prefix cache for its next request: False sends the request whole and leaves the sharing to the provider's own
+        # (implicit) cache — which serves a conversation that only grows, to its end, where an explicit cache of the first part serves that part only; True
+        # (and None, the default) keep the explicit cache the configuration allows.
+        self.explicit_override: bool | None = None
         # (model, prefix hash) → cached-content name; None when Vertex refused a cache for that prefix
         self._prompt_caches: dict[tuple[str, str], str | None] = {}
 
@@ -373,7 +377,7 @@ class Gemini:
             for attempt in range(2):
                 if stop and stop():
                     raise GeminiStopped("stopped by the person")
-                cached, cache_state = self._prefix_cache(model, prefix_key, system, prefix_parts, est, tools, tool_config)
+                cached, cache_state = (None, "implicit") if self.explicit_override is False else self._prefix_cache(model, prefix_key, system, prefix_parts, est, tools, tool_config)
                 kw = {**base, "cached_content": cached} if cached else {**base, "system_instruction": system, "tools": tools, "tool_config": tool_config}
                 contents = history if cached else [types.Content(role="user", parts=prefix_parts), *history]
                 if on_event:

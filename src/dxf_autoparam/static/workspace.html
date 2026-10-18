@@ -1113,7 +1113,7 @@ async function loadProposals() {
 // The page holds no logic of its own about success: what it shows of a run is what the server reports (state, verdict,
 // questions, budget), and a poll for one run never overwrites another.
 const ACTIVE = new Set(["queued", "running", "stopping"]);
-let run = null, runs = [], runPoll = 0, aiDraft = "", aiScope = "auto", aiOpts = { confirm: false, soft: 0, max: 1000, model: "", domain: null }, aiModels = null, aiLibrary = null;
+let run = null, runs = [], runPoll = 0, aiDraft = "", aiScope = "auto", aiOpts = { confirm: false, soft: 30, max: 1000, model: "", domain: null }, aiModels = null, aiLibrary = null;
 const dur = (s) => s == null ? "" : s < 60 ? `${s.toFixed(s < 10 ? 1 : 0)} s` : `${Math.floor(s / 60)} min ${String(Math.round(s % 60)).padStart(2, "0")} s`;
 const TOOL_WORDS = { inspect_sheet: "looked at the sheet", open_unit: "opened a view", inspect_regions: "inspected regions", inspect_lines: "inspected lines", inspect_candidates: "inspected candidate sizes",
   inspect_dimensions: "inspected dimensions", resolve_labels: "resolved labels", find_values: "searched for sizes", knowledge: "consulted the knowledge pack", what_moves: "measured what a value moves",

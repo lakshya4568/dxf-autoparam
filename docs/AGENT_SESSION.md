@@ -11,7 +11,7 @@ a second set of instructions), **Run**, and while it works **Stop**. The agent d
 state of a machine, and the page shows only what the server reports:
 
 ```
-queued → running ⇄ paused (only if chunks were asked)  ⇄ awaiting_user (a decision is the person's)
+queued → running ⇄ paused (a chunk of 30 turns ended)  ⇄ awaiting_user (a decision is the person's)
                  → stopping → stopped                   ⇄ exhausted (a hard limit; continuing lifts it)
                  → completed | partial | failed         (failed by the model not answering can be retried)
 ```
@@ -43,14 +43,36 @@ not approximated.
 
 ## Budgets never cut good work (`ai/loop.py`)
 
-`Budget`: `soft_turns` (a chunk — only when a person asks for chunks: the run pauses and can be continued, nothing lost, nothing done twice;
-**0, the default, never pauses**), `max_turns` (1000), `max_tool_calls` (6000), `wall_s` (4 h of working time; waiting for a person does not
+`Budget`: `soft_turns` (a chunk: **30 turns by default** — the run pauses with everything it holds and is continued when the person says go on,
+nothing lost, nothing done twice; 0 never pauses), `unit_turns` (**12**: a unit that has taken that many turns is told, in the result it reads next, to
+keep what holds and move on — with the units still without work — and the person is told it was; a word, not a limit; 0 never says it), `max_turns` (1000), `max_tool_calls` (6000), `wall_s` (4 h of working time; waiting for a person does not
 count), `max_tokens` (2 M output + thinking), `call_s` (one model call), and a limit on turns of only looking. The hard limits are safety nets
 against a model that loops, set so that a sheet of any size finishes inside them. When a run does reach one, **continuing lifts exactly the
 limit that was reached** by another allowance of its own size (and says so in the timeline); nobody has to type a number. Set per run in the
-page (Options and budget) or by `AUTOPARAM_*` / `VERTEX_AGENT_MAX_STEPS`. Stop abandons the
+page (Options and budget) or by `AUTOPARAM_SOFT_TURNS` / `AUTOPARAM_UNIT_TURNS` / `AUTOPARAM_*` / `VERTEX_AGENT_MAX_STEPS`. Stop abandons the
 call in flight; the turn it would have made does not happen. A change made by a person while the run works is never overwritten silently:
 the run asks whether to apply its edits on top of it.
+
+### What a model call costs (`ai/requestlog.py`, `ai/loop.py`)
+
+A live run of ten units took 164 model calls and 4.1 M input tokens, and only half of them were served from the provider's cache — always the same
+13,225-token first part: every turn changed something old in the conversation, and a cache serves a request only as far as it is the same as one it has seen.
+So:
+
+- **The conversation only grows between cuts.** Older tool results and pictures are cut in batches (4), not one by one, so between cuts each request is the
+  last one plus the new turn. The shared first part is left to the provider's own (implicit) cache; an explicit cache is taken only when the records
+  show the provider is not caching (`AUTOPARAM_AGENT_CACHE=explicit` asks for it from the start; `VERTEX_EXPLICIT_CACHE=0` forbids it).
+- **Every call is recorded**: what it was made of (the system prompt, the tools, each content with its size and pictures), how much of it was the same as the
+  call before and — when it was not — which cut changed it, what the provider billed, how much of that it served from its cache, the thinking level and why.
+  `GET /api/sheet/ai/requests?run=R1` (the latest 50; `&since=n` to follow, `&brief=1` without each request's contents) and `&call=57` for that request whole,
+  the pictures' bytes left out (the last three calls only).
+- **A saving that turns into a cost is switched off, and said**: no caching although each of three requests was mostly the same as the one before (then
+  the explicit cache takes over); a change of thinking level followed, twice and more often than not, by a collapse of the cached tokens (then thinking is
+  fixed).
+- **Thinking follows the work**: a turn that follows reading and bookkeeping thinks `low`, the first look at a unit `medium`, a turn that follows the
+  candidates or a measured plan — or a refusal — `high`; never above the model's own level; `VERTEX_AGENT_STEP_THINKING` pins every turn after the first. In the
+  one live run measured, thinking was 1.2% of the tokens billed and the slow calls were provider latency (no correlation with thinking tokens): this is a
+  modest saving, not the lever. The lever is how much of each request is the same as the last.
 
 ## What a refused edit is, and what repairs it
 
@@ -106,6 +128,15 @@ by the id the tools use — all from `display.primitives`, so the picture is wha
 a fingerprint of the geometry drawn; a picture of an older revision is stale, the model is told, and `zoom_view` gives a new one. The
 tool result carries the exact position of each tagged entity (the picture is for understanding; the numbers are exact). Pictures go
 into the function response as image parts (older ones are dropped from the conversation to bound its cost).
+
+A picture is drawn at the size its own text needs (`viewplan.py`: the drawing's text height, a target of 14 px, never more than the model reads). A unit
+too wide for that comes as an **overview** (for structure) and up to six **TILE** pictures (closer crops marked on the overview) where the notes and
+dimensions can be read: placed where the notes are, at the ideal scale, when that holds nine tenths of them (else a 15%-overlap grid over the unit, the
+finest the model's limits allow, leaving out cells with next to nothing in them). On the live 20A sheet that read U01 at 14 px text (was 11.4 px in a grid) and U05 at
+14 px (was 8.6 px). The set-out lines are drawn under the drawing in the margin, labelled by the most salient first, and
+labels that would collide are packed along four tracks with leaders. A picture the model still has in its conversation is named, not sent again. The person's
+Agent panel lists every picture the model was given (**Pictures** in its header; one large, with its scale, text height, revision and turn) — read from the run's
+`image` events. For a size nothing states (`candidate` / `weak`), `inspect_candidates` says which `zoom_view` to ask for, with the box.
 
 ## Value, original, reset, highlight
 

@@ -28,11 +28,13 @@ from itertools import pairwise
 
 from PIL import Image, ImageDraw, ImageFont
 
+from . import viewplan as vp
 from .cadjson import entity_id
 from .display import primitives
 from .regen import regenerate_program
 
 MAX_PX = 2400
+PNG_BUDGET = 96 * 1024 * 1024  # bytes of pictures kept for the person's gallery (a 1600 px picture is ~0.1–0.3 MB: several hundred)
 
 
 @dataclass
@@ -173,6 +175,7 @@ class Pictures:
         self._n = 0
         self._sr = None
         self._sr_rev = None
+        self._salience: dict[tuple, tuple] = {}
 
     # ── state ───────────────────────────────────────────────────────────────────
 
@@ -180,6 +183,7 @@ class Pictures:
         if self.sm.revision != self._rev:
             self._rev = self.sm.revision
             self._cache.clear()
+            self._salience.clear()
             self._sr = None
 
     def regenerated(self):
@@ -248,33 +252,63 @@ class Pictures:
     # ── drawing ─────────────────────────────────────────────────────────────────
 
     def picture(self, *, box: tuple[float, float, float, float], unit: str | None = None, state: str = "current", ids: str = "none",
-                highlight: Iterable[int] = (), baseline: bool = False, caption: str = "", sheet: bool = False, width: int = 1600) -> dict:
+                highlight: Iterable[int] = (), baseline: bool = False, caption: str = "", sheet: bool = False, width: int | None = 1600,
+                kind: str = "", tiles: Iterable[tuple[float, float, float, float]] = ()) -> dict:
         """Draw (or recall) a picture. `ids`: none | lines (the unit's set-out lines x… y…) | entities (the unit's entity ids)
         | regions (R…, as drawn). `highlight`: sheet entity indices drawn in orange. `baseline`: the original geometry of
-        what moved, dotted. `sheet`: the views boxed and named. Returns {"id", "png", "meta"}."""
+        what moved, dotted. `sheet`: the views boxed and named. `width`: pixels, or None for the width at which this box's own text is readable
+        (viewplan: never more than the model reads). `kind`: overview | tile | zoom | sheet (what the picture is for). `tiles`: boxes marked on it
+        as TILE_1… Returns {"id", "png", "meta"}."""
         self._sync()
         if state not in ("current", "drawn"):
             raise ValueError("state is current or drawn")
         hl = tuple(sorted({int(i) for i in highlight}))
-        key = (tuple(round(v, 3) for v in box), unit, state, ids, hl, baseline, sheet, width, caption)
+        tiles = tuple(tuple(round(v, 3) for v in b) for b in tiles)
+        key = (tuple(round(v, 3) for v in box), unit, state, ids, hl, baseline, sheet, width, caption, kind, tiles)
         if key in self._cache:
             png, meta = self._cache[key]
             return {"id": meta["id"], "png": png, "meta": self.meta(meta["id"])}
         pid = f"IMG{self._n + 1}"  # drawn on the picture itself, so the id the model reads in a message is the one it sees
-        png, meta = self._draw(box, unit, state, ids, set(hl), baseline, f"{pid} · {caption}" if caption else pid, sheet, width)
+        png, meta = self._draw(box, unit, state, ids, set(hl), baseline, f"{pid} · {caption}" if caption else pid, sheet, width, kind or ("sheet" if sheet else "zoom"), tiles)
         self._n += 1
         meta["id"] = pid
+        meta["caption"] = caption  # what the picture is OF, in words, without the id drawn on it: the person's gallery names it so
         self._made[meta["id"]] = meta
         self._png[meta["id"]] = png
-        for old_id in list(self._png)[:-80]:  # the last pictures only: a long run does not fill memory
-            del self._png[old_id]
+        held = sum(len(b) for b in self._png.values())
+        for old_id in list(self._png)[:-1]:  # the person's gallery keeps what the model was shown, oldest let go first; the newest always stays
+            if held <= PNG_BUDGET:
+                break
+            held -= len(self._png.pop(old_id))
         self._cache[key] = (png, meta)
         return {"id": meta["id"], "png": png, "meta": self.meta(meta["id"])}
 
-    def _draw(self, box, unit, state, ids, highlight, baseline, caption, sheet, width) -> tuple[bytes, dict]:
+    def text_heights(self, box, state: str = "drawn") -> list[float]:
+        """The heights (drawing units) of the texts in a box: what its own text size is, and so how big a picture of it has to be."""
+        cur, _g, _d = self._prims(box, state)
+        return [p["h"] for p in cur if p["k"] == "t" and (p.get("text") or "").strip() and p.get("h")]
+
+    def text_points(self, box, state: str = "drawn") -> list[tuple[float, float]]:
+        """Where the notes and dimensions are (their anchor points) inside a box."""
+        cur, _g, _d = self._prims(box, state)
+        x0, y0, x1, y1 = box
+        return [(p["at"][0], p["at"][1]) for p in cur if p["k"] == "t" and (p.get("text") or "").strip() and x0 <= p["at"][0] <= x1 and y0 <= p["at"][1] <= y1]
+
+    def plan(self, box, state: str = "drawn") -> vp.Plan:
+        """How to show a box so that its text can be read: the overview and, when that cannot be, the tiles (viewplan.plan_pictures) — placed where the
+        text is, so that a unit with little text is still read at the scale its text needs."""
+        return vp.plan_pictures(box, vp.text_height(self.text_heights(box, state), box), texts=self.text_points(box, state))
+
+    def _draw(self, box, unit, state, ids, highlight, baseline, caption, sheet, width, kind: str = "zoom", tiles=()) -> tuple[bytes, dict]:
         sm = self.sm
-        fr = make_frame(box, width)
         cur, ghost, drawn = self._prims(box, state)
+        heights = [p["h"] for p in cur if p["k"] == "t" and (p.get("text") or "").strip() and p.get("h")]
+        text_h = vp.text_height(heights, box)
+        labelled = ids == "lines"  # the labels live in the margin: it is made big enough for them, and the drawing never gets them on top of it
+        pad = vp.GUTTER if labelled else 56
+        if width is None:
+            width = vp.picture_width(box, vp.TEXT_PX / max(text_h, 1e-12), pad=pad)
+        fr = make_frame(box, min(int(width), vp.MODEL_SIDE) if kind in ("overview", "tile") else int(width), pad)
         img = Image.new("RGB", (fr.width, fr.height), "white")
         d = ImageDraw.Draw(img, "RGBA")
         furniture = set(sm.layout.furniture())
@@ -289,6 +323,11 @@ class Pictures:
             xs, ys = [p[0] for p in pts], [p[1] for p in pts]
             return not (max(xs) < clip[0] - 40 or min(xs) > clip[2] + 40 or max(ys) < clip[1] - 40 or min(ys) > clip[3] + 40)
 
+        under = None
+        u0 = sm.unit(unit) if unit in sm.units else None  # built if it was not yet: a picture of a unit needs its analysis
+        if u0 is not None and ids == "lines":  # the set-out lines: which ones, and faint hairlines UNDER the drawing (never over a note)
+            under = self._plan_lines(u0, fr, box, state, 44.0 if kind == "overview" else vp.MIN_LINE_PX)
+            self._hairlines(d, fr, under)
         if baseline and ghost:  # what the drawing was, dotted, under what it is
             for p in ghost:
                 if p["k"] == "p" and len(p["pts"]) >= 2:
@@ -353,11 +392,19 @@ class Pictures:
         for p in cur:
             if p["k"] == "t" and (p.get("text") or "").strip():
                 self._text(img, d, fr, p, highlight)
+        if labelled:  # the margin is the labels': whatever the drawing ran on into it (a long line, a note cut by the crop) is painted out first
+            w_, h_, pd = fr.width, fr.height, fr.pad
+            for box_ in ((0, 0, w_, pd - 1), (0, h_ - pd + 1, w_, h_), (0, 0, pd - 1, h_), (w_ - pd + 1, 0, w_, h_)):
+                d.rectangle(box_, fill=(255, 255, 255, 255))
         # what the labels name
         meta_ids: dict = {}
-        u = sm.units.get(unit) if unit else None
-        if u is not None and ids != "none":
+        u = u0
+        if u is not None and ids == "lines" and under is not None:
+            meta_ids = self._margin_labels(img, d, fr, under)
+        elif u is not None and ids != "none":
             meta_ids = self._overlay(d, fr, u, ids, state, box, drawn)
+        if tiles:
+            meta_ids["tiles"] = self._mark_tiles(d, fr, tiles)
         if sheet:
             self._view_boxes(d, fr, box)
         self._scale_bar(d, fr)
@@ -371,10 +418,93 @@ class Pictures:
         for i in sorted(drawn):
             pts = sr.reg.pts.get(i, sm.dr.items[i].pts) if sr else sm.dr.items[i].pts
             h.update(f"{i}:{[(round(a, 3), round(b, 3)) for a, b in pts]}".encode())
+        text_px = text_h * fr.scale
         meta = {"revision": sm.revision, "state": state, "unit": unit, "view_ids": self._views_in(box), "box": [round(v, 3) for v in box],
                 "frame": fr.to_dict(), "mm_per_unit": sm.dr.units_mm, "entities_drawn": len(drawn),
-                "differs_from_drawn": bool(sr and sr.changed), "fingerprint": h.hexdigest()[:16], "ids": ids, "baseline": baseline, **meta_ids}
+                "differs_from_drawn": bool(sr and sr.changed), "fingerprint": h.hexdigest()[:16], "ids": ids, "baseline": baseline,
+                "kind": kind, "mm_per_px": round(sm.dr.units_mm / fr.scale, 3), "text_px": round(text_px, 1),
+                "legible": text_px >= vp.LEGIBLE * vp.TEXT_PX, **meta_ids}
         return buf.getvalue(), meta
+
+    def content_box(self, box, state: str = "drawn", margin: float = 0.03) -> tuple[float, float, float, float]:
+        """The box of what is drawn in `box`: the geometry without the few long stray lines that stretch a view's box (the points inside the box, the
+        extreme half-percent of them on each side set aside), and every note and dimension text kept. Blank space costs pixels: a picture of a
+        section that is mostly sky is a picture whose text is small."""
+        cur, _g, _d = self._prims(box, state)
+        furniture = set(self.sm.layout.furniture())
+        x0, y0, x1, y1 = box
+        xs: list[float] = []
+        ys: list[float] = []
+        tx: list[float] = []
+        ty: list[float] = []
+        for p in cur:
+            if p["i"] in furniture:
+                continue
+            if p["k"] in ("p", "g"):
+                for q in p["pts"]:
+                    if x0 <= q[0] <= x1 and y0 <= q[1] <= y1:
+                        xs.append(q[0])
+                        ys.append(q[1])
+            elif p["k"] == "t" and (p.get("text") or "").strip() and x0 <= p["at"][0] <= x1 and y0 <= p["at"][1] <= y1:
+                tx.append(p["at"][0])
+                ty.append(p["at"][1])
+        if len(xs) < 20:
+            return box
+        cx0, cx1 = vp.percentile(xs, 0.5), vp.percentile(xs, 99.5)
+        cy0, cy1 = vp.percentile(ys, 0.5), vp.percentile(ys, 99.5)
+        if tx:
+            cx0, cx1, cy0, cy1 = min(cx0, min(tx)), max(cx1, max(tx)), min(cy0, min(ty)), max(cy1, max(ty))
+        m = margin * max(cx1 - cx0, cy1 - cy0, 1e-9)
+        out = (max(x0, cx0 - m), max(y0, cy0 - m), min(x1, cx1 + m), min(y1, cy1 + m))
+        if (out[2] - out[0]) < 0.1 * (x1 - x0) or (out[3] - out[1]) < 0.1 * (y1 - y0):
+            return box
+        return out
+
+    def count_texts(self, box, state: str = "drawn") -> int:
+        x0, y0, x1, y1 = box
+        cur, _g, _d = self._prims(box, state)
+        return sum(1 for p in cur if p["k"] == "t" and (p.get("text") or "").strip() and x0 <= p["at"][0] <= x1 and y0 <= p["at"][1] <= y1)
+
+    def dense_text_boxes(self, box, ideal_scale: float, state: str = "drawn", k: int = 3) -> list[tuple[float, float, float, float]]:
+        """Where the notes crowd: boxes of a size at which the text reaches its ideal scale, centred on the densest clusters of texts — ready to give
+        zoom_view. At most k, the densest first, no two overlapping by more than a third."""
+        cur, _g, _d = self._prims(box, state)
+        x0, y0, x1, y1 = box
+        pts = [p["at"] for p in cur if p["k"] == "t" and (p.get("text") or "").strip() and x0 <= p["at"][0] <= x1 and y0 <= p["at"][1] <= y1]
+        if len(pts) < 6:
+            return []
+        h = min(x1 - x0, y1 - y0, (vp.MODEL_SIDE - 2 * vp.GUTTER) / max(ideal_scale, 1e-12) * 0.85)  # a box the ideal scale fits in a picture
+        w = min(h * 1.25, x1 - x0)
+        cells: dict[tuple[int, int], int] = {}
+        for x, y in pts:
+            cell = (int((x - x0) // (w / 2)), int((y - y0) // (h / 2)))
+            cells[cell] = cells.get(cell, 0) + 1
+        out: list[tuple[float, float, float, float]] = []
+        for (i, j), n in sorted(cells.items(), key=lambda kv: -kv[1]):
+            if n < 4 or len(out) >= k:
+                break
+            cx, cy = x0 + (i + 0.5) * w / 2, y0 + (j + 0.5) * h / 2
+            b = (max(x0, cx - w / 2), max(y0, cy - h / 2), min(x1, cx + w / 2), min(y1, cy + h / 2))
+            if all(min(b[2], o[2]) - max(b[0], o[0]) < w / 3 or min(b[3], o[3]) - max(b[1], o[1]) < h / 3 for o in out):
+                out.append(b)
+        return out
+
+    def unit_set(self, uid: str, box, state: str = "drawn") -> dict:
+        """The pictures a unit needs to be read: its overview (the structure and the set-out lines that matter) and, when its text would be a blur
+        there, the tiles — each at the scale that makes its text readable — marked on the overview as TILE_1… The box is cropped to what is drawn;
+        a tile with no note or dimension in it is not made (its geometry is in the overview, its numbers in the tables)."""
+        box = self.content_box(box, state)
+        plan = self.plan(box, state)
+        tiles = plan.tiles
+        if tiles and not plan.placed:  # a grid tile with next to nothing to read is not made: its geometry is in the overview, its numbers in the tables
+            tiles = vp.with_text(tiles, self.text_points(box, state))
+        plan.tiles = tiles
+        overview = self.picture(box=box, unit=uid, state=state, ids="lines", caption=f"{uid} · " + ("overview" if tiles else "set-out lines"), width=plan.width,
+                                kind="overview", tiles=tiles)
+        shots = [self.picture(box=tb, unit=uid, state=state, ids="lines", caption=f"{uid} · TILE_{k}", width=vp.picture_width(tb, plan.ideal_scale), kind="tile")
+                 for k, tb in enumerate(tiles, 1)]
+        zoom = self.dense_text_boxes(box, plan.ideal_scale, state) if (not plan.legible and not plan.tile_legible) else []
+        return {"plan": plan, "box": box, "overview": overview, "tiles": shots, "zoom": zoom}
 
     def _views_in(self, box) -> list[str]:
         x0, y0, x1, y1 = box
@@ -443,6 +573,148 @@ class Pictures:
 
     # ── what the labels name ────────────────────────────────────────────────────
 
+    def _salience_inputs(self, u) -> tuple[dict[str, tuple[bool, bool, int, int]], int]:
+        """Per set-out line of a unit: does a dimension or a named size stand on it, is it an axis or a stated level, how many entities are drawn on it,
+        how many major regions it bounds (viewplan.salience). Once per unit and revision."""
+        key = (u.id, self._rev)
+        got = self._salience.get(key)
+        if got is not None:
+            return got
+        from .topology import DatumIndex
+        from .topology import of as topology_of
+
+        an = u.an
+        named = {m for p in (u.prog.params.values() if u.prog is not None else []) for m in (p.measures or ())}
+        dims: set[str] = set()
+        for c in an.clusters.values():
+            if c.kind.value == "dim":
+                for g in c.gaps:
+                    gap = an.gaps.get(g)
+                    if gap is not None and gap.axis in ("x", "y"):
+                        dims |= {gap.a, gap.b}
+        axes = {dd for dd, *_ in an.stated_levels} | set(an.axes)
+        regions: dict[str, int] = {}
+        topo = topology_of(an)
+        if topo.regions:
+            big = 0.0025 * max((abs(r.area) for r in topo.regions), default=0.0) * 4
+            dix = DatumIndex(an)
+            for r in topo.regions:
+                if abs(r.area) >= big:
+                    for axis, v in (("x", r.bbox[0]), ("x", r.bbox[2]), ("y", r.bbox[1]), ("y", r.bbox[3])):
+                        d = dix.at(axis, v)
+                        if d:
+                            regions[d] = regions.get(d, 0) + 1
+        out = {d.id: (d.id in dims or d.id in named, d.id in axes, len(d.items), regions.get(d.id, 0)) for d in an.datums.values()}
+        top = max((v[2] for v in out.values()), default=0)
+        self._salience[key] = (out, top)
+        return out, top
+
+    def _plan_lines(self, u, fr: Frame, box, state: str, min_gap: float = vp.MIN_LINE_PX) -> dict:
+        """Which of the unit's set-out lines this picture labels, and which crowd into a band: scored (viewplan.salience), at most as many as fit."""
+        pos = self._datum_positions(u, state)
+        inputs, top = self._salience_inputs(u)
+        x0, y0, x1, y1 = box
+        xs: list[vp.Line] = []
+        ys: list[vp.Line] = []
+        for did, (axis, v) in pos.items():
+            if axis == "x" and x0 <= v <= x1:
+                target, p = xs, fr.pad + (v - fr.x0) * fr.scale
+            elif axis == "y" and y0 <= v <= y1:
+                target, p = ys, fr.height - fr.pad - (v - fr.y0) * fr.scale
+            else:
+                continue
+            anchored, axis_line, drawn_on, regions = inputs.get(did, (False, False, 0, 0))
+            target.append(vp.Line(did, p, vp.salience(anchored, axis_line, drawn_on, top, regions), anchored or axis_line))
+        keep_x, bands_x = vp.admit(xs, fr.width - 2 * fr.pad, min_gap)
+        keep_y, bands_y = vp.admit(ys, fr.height - 2 * fr.pad, min_gap)
+        return {"x": keep_x, "y": keep_y, "bands_x": bands_x, "bands_y": bands_y, "total_x": len(xs), "total_y": len(ys), "pos": pos}
+
+    @staticmethod
+    def _hairlines(d: ImageDraw.ImageDraw, fr: Frame, plan: dict) -> None:
+        """The labelled set-out lines inside the drawing: faint dashed hairlines, drawn FIRST so geometry and notes lie over them (a line of the
+        drawing is never hidden by a construction line, and a note is never struck through)."""
+        for x in plan["x"]:
+            _dashed(d, [(x.pos, fr.pad), (x.pos, fr.height - fr.pad)], (0, 120, 255, 44), 1, (7.0, 6.0))
+        for y in plan["y"]:
+            _dashed(d, [(fr.pad, y.pos), (fr.width - fr.pad, y.pos)], (0, 160, 80, 44), 1, (7.0, 6.0))
+
+    def _margin_labels(self, img: Image.Image, d: ImageDraw.ImageDraw, fr: Frame, plan: dict) -> dict:
+        """Ticks at full strength in the margin, labels on tracks outside the drawing, moved the least that stops them touching (isotonic regression)
+        and joined to their tick by a leader; crowded lines that were left out are a bracket and one label. Nothing here lies on the drawing."""
+        font, small = _font(13), _font(11)
+        blue, green, grey = (0, 90, 220), (0, 130, 60), (110, 110, 110)
+        # ── x lines: ticks along the top edge, labels on four tracks above ───────────────────────
+        xs = plan["x"]
+        tracks = vp.assign_tracks(len(xs), vp.TRACKS)
+        for r in range(vp.TRACKS):
+            mine = [x for x, tr in zip(xs, tracks, strict=True) if tr == r]
+            widths = [d.textlength(x.id, font=font) + 10 for x in mine]
+            centres = vp.pack_labels([x.pos for x in mine], widths, 2.0, fr.width - 2.0)
+            ty = fr.pad - 22 - 16 * r
+            for x, cx, w in zip(mine, centres, widths, strict=True):
+                d.line([(x.pos, fr.pad - 9), (x.pos, fr.pad)], fill=(*blue, 255), width=2)  # the tick: where the line is
+                if abs(cx - x.pos) > 2:  # the dogleg to a label that had to move
+                    d.line([(x.pos, fr.pad - 9), (x.pos, ty + 9), (cx, ty + 7)], fill=(*blue, 150), width=1)
+                elif r:
+                    d.line([(x.pos, fr.pad - 9), (x.pos, ty + 8)], fill=(*blue, 110), width=1)
+                d.rounded_rectangle([cx - w / 2, ty - 8, cx + w / 2, ty + 8], radius=4, fill=(255, 255, 255, 238), outline=(*blue, 110))
+                d.text((cx, ty), x.id, fill=blue, font=font, anchor="mm")
+        # ── y lines: ticks down the left edge, labels in two columns beside it ─────────────────
+        ys = plan["y"]
+        cols = vp.assign_tracks(len(ys), 2)
+        for c in range(2):
+            mine = [y for y, col in zip(ys, cols, strict=True) if col == c]
+            centres = vp.pack_labels([y.pos for y in mine], [16.0] * len(mine), 2.0, fr.height - 2.0, gap=1.0)
+            rx = fr.pad - 16 - 54 * c
+            for y, cy in zip(mine, centres, strict=True):
+                w = d.textlength(y.id, font=font) + 10
+                d.line([(fr.pad - 9, y.pos), (fr.pad, y.pos)], fill=(*green, 255), width=2)
+                if abs(cy - y.pos) > 2:
+                    d.line([(fr.pad - 9, y.pos), (rx + 8, cy)], fill=(*green, 150), width=1)
+                elif c:
+                    d.line([(fr.pad - 9, y.pos), (rx + 2, y.pos)], fill=(*green, 110), width=1)
+                d.rounded_rectangle([rx - w, cy - 8, rx + 2, cy + 8], radius=4, fill=(255, 255, 255, 238), outline=(*green, 110))
+                d.text((rx - w / 2 + 1, cy), y.id, fill=green, font=font, anchor="mm")
+        # ── the lines left out where they crowd: a bracket in the margin, and the legend says which (a label there would lie on the others) ──
+        for b in plan["bands_y"]:
+            d.line([(fr.pad - 12, b.lo), (fr.pad - 12, b.hi)], fill=(*grey, 230), width=3)
+        for b in plan["bands_x"]:
+            d.line([(b.lo, fr.pad - 12), (b.hi, fr.pad - 12)], fill=(*grey, 230), width=3)
+        bands = plan["bands_x"] + plan["bands_y"]
+        if bands:
+            words = [f"{b.first}..{b.last} ({b.count} lines)" for b in sorted(bands, key=lambda b: -b.count)]
+            text = "grey brackets: lines left out where they crowd - " + ", ".join(words[:7]) + (f", +{len(words) - 7} more" if len(words) > 7 else "") + " - zoom_view a box to label them"
+            row, line = [], ""
+            for w in text.split(" "):
+                if d.textlength((line + " " + w).strip(), font=small) > fr.width - 2 * fr.pad:
+                    row.append(line)
+                    line = w
+                else:
+                    line = (line + " " + w).strip()
+            row.append(line)
+            for k, ln in enumerate(row[:2]):
+                d.text((fr.pad, fr.height - 70 + 14 * k), ln, fill=grey, font=small, anchor="ls")
+        pos = plan["pos"]
+        shown = [x.id for x in xs] + [y.id for y in ys]
+        return {"lines_labelled": [{"id": k, "axis": pos[k][0], "at": round(pos[k][1], 3)} for k in shown],
+                "lines_in_frame": plan["total_x"] + plan["total_y"],
+                "lines_banded": [{"from": b.first, "to": b.last, "count": b.count} for b in plan["bands_x"] + plan["bands_y"]]}
+
+    @staticmethod
+    def _mark_tiles(d: ImageDraw.ImageDraw, fr: Frame, tiles) -> list[dict]:
+        """The boxes of the detail tiles, dashed and named on the overview — so a picture of a part says which part of the whole it is."""
+        out = []
+        font = _font(15)
+        for k, b in enumerate(tiles, 1):
+            a, c = fr.px(b[0], b[3]), fr.px(b[2], b[1])
+            _dashed(d, [a, (c[0], a[1]), c, (a[0], c[1]), a], (225, 105, 0, 255), 3, (12.0, 6.0))
+            name = f"TILE_{k}"
+            w = d.textlength(name, font=font) + 12
+            d.rounded_rectangle([a[0] + 4, a[1] + 4, a[0] + 4 + w, a[1] + 26], radius=5, fill=(225, 105, 0, 235))
+            d.text((a[0] + 10, a[1] + 15), name, fill=(255, 255, 255), font=font, anchor="lm")
+            out.append({"name": name, "box": [round(v, 3) for v in b]})
+        return out
+
     def _datum_positions(self, u, state: str) -> dict[str, tuple[str, float]]:
         """Set-out lines of the unit (id → (axis, position)): as drawn, or as the unit regenerates now."""
         an = u.an
@@ -481,28 +753,7 @@ class Pictures:
 
     def _overlay(self, d: ImageDraw.ImageDraw, fr: Frame, u, ids: str, state: str, box, drawn: set[int]) -> dict:
         info: dict = {}
-        if ids == "lines":
-            pos = self._datum_positions(u, state)
-            shown = self._wanted_lines(u, pos, box)
-            lab = _font(13)
-            used_x: list[float] = []
-            used_y: list[float] = []
-            for did in sorted(shown, key=lambda k: pos[k][1]):
-                axis, v = pos[did]
-                if axis == "x":
-                    px = fr.pad + (v - fr.x0) * fr.scale
-                    d.line([(px, fr.pad - 8), (px, fr.height - fr.pad + 8)], fill=(0, 120, 255, 80), width=1)
-                    row = sum(1 for q in used_x if abs(q - px) < 34) % 3
-                    d.text((px, fr.pad - 12 - 15 * row), did, fill=(0, 90, 220), font=lab, anchor="ms")
-                    used_x.append(px)
-                else:
-                    py = fr.height - fr.pad - (v - fr.y0) * fr.scale
-                    d.line([(fr.pad - 8, py), (fr.width - fr.pad + 8, py)], fill=(0, 160, 80, 80), width=1)
-                    col = sum(1 for q in used_y if abs(q - py) < 15) % 3
-                    d.text((fr.pad - 12 - 40 * col, py), did, fill=(0, 130, 60), font=lab, anchor="rm")
-                    used_y.append(py)
-            info["lines_labelled"] = [{"id": k, "axis": pos[k][0], "at": round(pos[k][1], 3)} for k in shown]
-        elif ids == "entities":
+        if ids == "entities":
             inv = {s: k for k, s in enumerate(u.back)}
             font = _font(11)
             taken: set[tuple[int, int]] = set()

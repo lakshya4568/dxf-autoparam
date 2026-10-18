@@ -105,6 +105,25 @@ def test_a_candidates_occurrences_are_inspected_one_by_one():
     assert bench.inspect_candidates(["c999"])["c999"] == "no such candidate"
 
 
+def test_a_size_nothing_states_is_told_where_to_look_and_a_stated_one_is_not():
+    """A model that works from numbers alone never reads the dimensions and notes around a size: for a size the engine could only call a candidate or weak
+    (nothing on the drawing states it), the result says which picture to ask for — the call, with the box — and a size a dimension states says nothing of it."""
+    *_, an = box_ids()
+    bench = Workbench(BOX)
+    unstated = [c for c in an.clusters.values() if c.status.value in ("candidate", "weak") and any(an.gaps[g].sample for g in c.gaps)]
+    stated = [c for c in an.clusters.values() if c.status.value in ("confirmed", "probable")]
+    assert unstated and stated
+    got = bench.inspect_candidates([c.id for c in unstated[:6]] + [stated[0].id])
+    for c in unstated[:6]:
+        look = got[c.id]["look_closer"]
+        x0, y0, x1, y1 = look["zoom_view"]["box_mm"]
+        pts = [o["seen_at_mm"] for o in got[c.id]["occurrences"] if o.get("seen_at_mm")]
+        assert look["zoom_view"]["around"] == [c.id] and look["zoom_view"]["labels"] == "entities" and x0 < x1 and y0 < y1
+        assert all(x0 <= px <= x1 and y0 <= py <= y1 for px, py in pts), "the box holds every occurrence it names"
+        assert c.status.value in look["why"] and "nothing on the drawing states it" in look["why"]
+    assert "look_closer" not in got[stated[0].id]
+
+
 # ── 3, 4, 5, 7. binding, invalid references, equal values, cycles / ownership, measured behaviour ──
 
 
@@ -173,7 +192,10 @@ def test_a_dimension_binds_the_one_occurrence_it_is_tied_to_and_an_untied_note_i
 # ── 6. held / fixed geometry ───────────────────────────────────────────────────
 
 
-def test_a_part_kept_as_drawn_never_moves_and_binding_its_size_needs_the_person():
+def test_a_part_kept_as_drawn_keeps_its_lines_and_a_size_on_it_is_accepted_and_says_what_follows():
+    """Binding a size on a part kept as drawn used to be refused as 'would move what must not move' — a test that moved EVERY line of the part
+    through the set-out chain, lines the hold freezes at the end. It is accepted now (a size of existing work is a value the engine must be able
+    to name), the hold still decides what moves, and the engine says when a held part follows a size through lines a free part also uses."""
     concrete, cell_l, cell_r, span, left, right, _an = box_ids()
     script = [
         [call("define_parts", items=[{"name": "Box", "type": "box", "level": "assembly", "regions": [concrete]},
@@ -187,13 +209,36 @@ def test_a_part_kept_as_drawn_never_moves_and_binding_its_size_needs_the_person(
     gem = ScriptedGemini(script)
     prog, _rep, info = agent_parametrize(BOX, gem=gem, log=lambda *a: None)
     v = by_item(batch(gem.seen[0], 1))
-    assert not v["RightSpan"]["ok"] and v["RightSpan"]["failure"]["code"] == "FIXED" and v["RightSpan"]["failure"]["repair"] == "person"
-    assert v["RightSpan"]["taken_back"] and "RightSpan" not in [p["name"] for p in info["answer"]["parameters"]]
-    assert v["LeftSpan"]["ok"]
+    assert v["RightSpan"]["ok"] and v["LeftSpan"]["ok"] and "failure" not in v["RightSpan"]
+    assert "CellRight" in v["RightSpan"]["moves_held"] and "moves_held" not in v["LeftSpan"], "the held cell is carried by its own size, not by the other cell's"
+    assert {p["name"] for p in info["answer"]["parameters"]} == {"RightSpan", "LeftSpan"}
     # with the person's hold applied, changing the left span leaves every line of the held cell where it is drawn
     cell = prog.intent["parts"]["CellRight"]
     v0, v1 = prog.datum_values(), prog.datum_values({"LeftSpan": 4000.0})
     assert cell.datums and all(abs(v1[d] - v0[d]) < 1e-12 for d in cell.datums if d in v0)
+
+
+def test_a_size_of_existing_work_between_lines_only_it_uses_is_kept_as_a_named_measured_value_not_refused(tmp_path):
+    """A size between two lines only a held part uses cannot drive anything once the hold makes them constants. It is not refused and not lost: it
+    stays a named quantity measured between its lines — the way a reference dimension is — and says why."""
+    sm = SheetModel.open(mini_gad(tmp_path / "mini.dxf"))
+    uid = next(k for k, u in sm.units.items() if len(u.views) == 2)
+    an = sm.pristine_analysis(uid)
+    u = an.drawing.units_mm
+    span = next(c.id for c in an.clusters.values() if round(c.value * u) == 2400 and "x" in c.axes)
+    outer = max(of(an).regions, key=lambda r: (r.bbox[2] - r.bbox[0]) * (r.bbox[3] - r.bbox[1]))
+    bench = Workbench(sm.path, analysis=an, scope=SheetScope(sm, uid))
+    bench.write("define_part", {"name": "ExistingBox", "type": "box", "level": "assembly", "regions": [outer.id], "existing": True, "parametrize": False})
+    bench.write("define_parameter", {"name": "ExistingSpan", "part": "ExistingBox", "candidate": span, "occurrences": ["all"]})
+    bench.validate()
+    _info, failure = bench.binding_check("ExistingSpan")
+    assert failure is None, failure
+    assert bench.verdict("ExistingSpan", "define_parameters")["ok"]
+    bench.validate(final=True)  # the hold, as at commit
+    assert "ExistingSpan" not in bench.prog.params, "no input: the lines are constants"
+    rel = next(r for r in bench.prog.relations if r.name == "ExistingSpan")
+    assert abs(bench.prog.relation_value(rel) - 2400) < 1e-6, "the name is kept, with the value the geometry measures"
+    assert any("kept as drawn" in f.message and "ExistingSpan" in f.message for f in bench.rep.findings if f.code == "V9")
 
 
 # ── 8, 10. the sheet path: scripted agent on a unit, cross-view propagation, transactional refusal ──

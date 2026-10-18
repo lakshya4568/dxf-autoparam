@@ -26,9 +26,10 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from .. import viewplan as vp
 from ..cadjson import entity_id, entity_index
 from ..graph import affects
-from ..intent import _boxes, _geometry, classify, delta_of, resolve_parts
+from ..intent import _boxes, _geometry, classify, delta_of, held_and_free_lines, resolve_parts
 from ..ir import GapKind, Role
 from ..plan import MAX_REPAIRS, MODES, accept, build_plan, with_plan
 from ..program import ExprError, names_in
@@ -396,7 +397,16 @@ class Workbench:
     # ── authoritative inspection: occurrences, annotations, labels ────────────────
 
     def _fixed(self) -> dict[str, str]:
+        """Every line a size had better not move, as a HINT for the model: site levels, existing / held lines, and the lines of the parts it
+        marked keep-as-drawn (what the hold at the end will freeze)."""
         return fixed_lines(self.prog, held_part_names(self.answer))
+
+    def _hard_fixed(self) -> dict[str, str]:
+        """The lines that really must not move, for the check that REFUSES: site levels and lines already held or existing. NOT the lines of a part
+        marked keep-as-drawn — the hold applied at the end freezes the lines only held parts use (a size's +1 mm test moves them through the
+        set-out chain, but they are constants by then) and splits or follows the lines held and free parts share (V15 says so). Refusing on
+        them turned every size of the proposed work into 'would move the existing structure'."""
+        return fixed_lines(self.prog, None)
 
     def _views(self, items) -> list[str]:
         return self.scope.views_of_items(items) if self.scope else []
@@ -429,6 +439,7 @@ class Workbench:
         ring_lines = {r.id: set().union(*dix.of_ring(r.ring)) for r in topo.regions}
         parts = prog.intent.get("parts") or {}
         out = {}
+        text_mm = self._text_mm()
         for cid in ids[:12]:
             c = an.clusters.get(cid)
             if c is None:
@@ -462,7 +473,32 @@ class Workbench:
                         **({"named": c.name} if c.name in prog.params and prog.params[c.name].source == "ai" else {}),
                         "occurrences": rows,
                         "bind": "define_parameters {candidate, occurrences: [the g… you mean]} — each occurrence drives with that name only"}
+            closer = self._look_closer(cid, c, rows, text_mm)
+            if closer:
+                out[cid]["look_closer"] = closer
         return out
+
+    def _text_mm(self) -> float:
+        """The drawing's own text height in this unit, in mm (what a picture has to resolve for its notes and dimensions to be read)."""
+        an = self.an
+        box = self.region or (an.drawing.extent if hasattr(an.drawing, "extent") else (0.0, 0.0, 1.0, 1.0))
+        heights = [it.text_height for it in an.drawing.items if it.text and it.text_height]
+        return vp.text_height(heights, tuple(box)) * an.drawing.units_mm
+
+    def _look_closer(self, cid: str, c, rows: list[dict], text_mm: float) -> dict | None:
+        """For a size nothing states (a candidate the engine could only call `candidate` or `weak`): where to look, as the call to make. The dimensions and notes
+        around its occurrences are what would settle it, and a model that works from numbers alone never reads them — it is told which picture to ask for."""
+        if c.status.value in ("confirmed", "probable"):
+            return None
+        pts = [r["seen_at_mm"] for r in rows if r.get("seen_at_mm")]
+        if not pts:
+            return None
+        xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+        x0, x1, y0, y1 = min(xs), max(xs), min(ys), max(ys)
+        pad = max(0.25 * max(x1 - x0, y1 - y0), 12.0 * text_mm)  # room for the text around it, and for what the occurrences are spread over
+        box = [round(x0 - pad), round(y0 - pad), round(x1 + pad), round(y1 + pad)]
+        return {"why": f"only {c.status.value} (confidence {round(c.confidence, 2)}): nothing on the drawing states it. Read the dimensions and notes around its occurrences before you name it.",
+                "zoom_view": {"around": [cid], "box_mm": box, "labels": "entities"}}
 
     def _annotation(self, it, pairs) -> dict:
         an, prog = self.an, self.prog
@@ -727,8 +763,16 @@ class Workbench:
         if name == "propose_plan":
             return self._propose(a)
         if name == "set_structure":
+            note = ""
+            if a.get("views") is not None and self.scope is not None:  # the views of THIS unit: not the sheet's, whatever the model listed
+                mine = list(self.scope.sm.units[self.scope.uid].views)
+                listed = [v for v in a["views"] if isinstance(v, str)]
+                outside = [v for v in listed if v not in mine]
+                a = {**a, "views": [v for v in listed if v in mine] or mine}
+                if outside:
+                    note = f"views limited to this unit's own ({', '.join(mine)}): {', '.join(outside[:6])}{' …' if len(outside) > 6 else ''} belong to other units"
             A.update({k: a.get(k, A.get(k)) for k in ("structure_type", "family", "views", "summary")})
-            return "structure", ""
+            return "structure", note
         if name == "define_part":
             pname, parent = pascal(a["name"]), pascal(a["parent"]) if a.get("parent") else None
             regions = list(dict.fromkeys(a.get("regions", [])))
@@ -1021,9 +1065,13 @@ class Workbench:
                                    f"occurrences: [the g… you mean] — or ['all'] if every one of them is {name}")
         return a, None
 
-    def binding_check(self, name: str) -> tuple[dict, dict | None]:
+    def binding_check(self, name: str, _narrowed: bool = False) -> tuple[dict, dict | None]:
         """Measured, after validation: does the named size drive EVERY occurrence it was bound to (1 mm per mm), which end
-        grows, does it move a fixed line, which views follow. A failure here means the binding is taken back."""
+        grows, does it move a fixed line, which views follow. A failure here means the binding is taken back.
+
+        A size that follows at some of its occurrences and cannot at others (equal sizes are not one design input: two lines that move together
+        keep their distance) is bound to the ones that follow, and the others are said to stay as drawn — one round, not a refusal the model
+        has to learn the answer to by sending the batch again."""
         row = next((q for q in self.answer["parameters"] if q.get("name") == name), None)
         p = self.prog.params.get(name)
         if row is None or p is None:
@@ -1047,7 +1095,16 @@ class Workbench:
                              else f"both ends move ({lo} {dlo:+.2g} mm, {hi} {dhi:+.2g} mm per mm)")
         if self.scope and moved:
             info["views"] = self._views(set().union(*(an.datums[d].items for d in moved if d in an.datums)))
-        fixed = self._fixed()
+        held = held_part_names(self.answer)
+        if held and moved:  # said, not refused: a part kept as drawn that is drawn on lines a free part also uses follows them where they touch
+            parts = self.prog.intent.get("parts") or {}
+            names, _held_d, free_d = held_and_free_lines(parts, held)
+            carried = {n: sorted(d for d in moved if d in parts[n].datums and d in free_d) for n in sorted(names) if n in parts}
+            carried = {n: ds for n, ds in carried.items() if ds}
+            if carried:
+                info["moves_held"] = {n: f"{len(ds)} shared line(s) ({', '.join(ds[:3])}) follow {name}: the part is kept as drawn, but it is drawn on lines "
+                                         "a free part also uses" for n, ds in carried.items()}
+        fixed = self._hard_fixed()
         hit = [d for d in moved if d in fixed]
         if hit:
             why = {d: fixed[d] for d in hit}
@@ -1058,6 +1115,14 @@ class Workbench:
                                   "a held / existing / level decision is the person's: ask_person, or bind occurrences off those lines")
         if not_driven:
             cause = "; ".join(f"{g or a + '-' + b}: {a} is set by {owner(prog, a)}, {b} by {owner(prog, b)}" for g, a, b in not_driven[:3])
+            if driven and not _narrowed and row.get("candidate") and all(g for g, _a, _b in driven):
+                row["occurrences"] = [g for g, _a, _b in driven]
+                self.validate()
+                info2, failure = self.binding_check(name, _narrowed=True)
+                if failure is None:
+                    info2["left_as_drawn"] = [f"{g or a + '-' + b} stays its own size — {a} is set by {owner(prog, a)}, {b} by {owner(prog, b)}, so their distance "
+                                              f"cannot follow {name}" for g, a, b in not_driven[:6]]
+                return info2, failure
             return info, _failure("DRIVE", name, [g for g, _a, _b in not_driven if g][:8] or [x for _g, a, b in not_driven[:2] for x in (a, b)],
                                   f"each of its {len(pairs)} occurrence(s) grows 1 mm per mm of {name}",
                                   f"{len(driven)} do, {len(not_driven)} do not", cause, "agent",

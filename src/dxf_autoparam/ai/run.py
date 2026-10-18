@@ -29,6 +29,7 @@ import traceback
 from pathlib import Path
 from typing import Any
 
+from .. import viewplan as vp
 from ..cadjson import entity_id, entity_index
 from ..crossview import SheetError
 from ..status import parameters_of, sheet_status
@@ -38,6 +39,7 @@ from . import agent as A
 from . import domain, library, production
 from . import understanding_tools as UT
 from .context import SheetScope
+from .coverage import sentence, table_md, unit_rows
 from .loop import AgentLoop, Budget
 from .narrate import STAGE_OF, phase_of
 from .sheet_ai import apply_shared, apply_views, commit_unit
@@ -81,13 +83,17 @@ SHEET_TOOL_SPECS = [
                        "Read it first when the task is about more than the open view."),
      {"type": "object", "properties": {"why": WHY}, "required": []}),
     ("open_unit", ("Open a unit (or the unit of a view) so the edit tools work on it. The previous unit's edits are applied to the sheet first "
-                   "(checked on the whole sheet; a refusal is said and the edits stay pending). Returns its overview and a picture with its set-out lines."),
+                   "(checked on the whole sheet; a refusal is said and the edits stay pending). Returns its overview (the two big tables are bounded: what "
+                   "is left out is counted, inspect_lines / inspect_regions give it) and its pictures: one overview and, where the drawing's text would "
+                   "be unreadable in one picture, TILE_1… — closer crops, boxed on the overview, whose text you can read. A picture you were already "
+                   "given is named, not sent again."),
      {"type": "object", "properties": {"unit": S, "view": S, "why": WHY}, "required": []}),
     ("zoom_view", ("Look at the drawing: a picture of the open unit, a view, any other group of the sheet (a table, notes — give its id as `view`), "
                    "the whole sheet, or a crop. `around`: entity / region / line / part / "
                    "candidate ids to frame; or `box_mm`: [x0, y0, x1, y1] in the same mm as the overview's lines. `labels`: entities (every entity tagged "
                    "with the id the tools use — default for a crop), lines (set-out lines x… y…), regions (R…) or none. `state`: drawn (what ids and "
                    "numbers describe — default) or current (with the person's values applied; `baseline`: the imported geometry dotted where it moved). "
+                   "The picture is drawn at the size its own text needs: the result says text_px, and text under about 9 px is a blur — go closer. "
                    "Coordinates read off a picture are approximate; the result lists the exact position of each tagged entity."),
      {"type": "object", "properties": {"view": S, "unit": S, "sheet": B, "around": LIST, "box_mm": {"type": "array", "items": N},
                                        "margin": N, "labels": {"type": "string", "enum": ["entities", "lines", "regions", "none"]},
@@ -130,6 +136,13 @@ SHEET_TOOL_SPECS = [
 SHEET_READ = {"inspect_sheet", "open_unit", "zoom_view"}
 SHEET_WRITE = {"describe_views", "share_sizes", "state_plan"}
 
+# Which tools say how hard the NEXT turn has to think (loop.adaptive_thinking): a turn that follows reading and bookkeeping is mechanical; one that follows
+# a tool whose result must be worked into a model (the candidates, a measured plan, a view's meaning) synthesises; the first look at a unit sits between.
+THINKING_HEAVY = frozenset({"inspect_candidates", "propose_plan", "state_plan", "impact_plan", "check_behaviour", "describe_views", "share_sizes"})
+THINKING_OPENING = frozenset({"open_unit"})
+THINKING_BOOKKEEPING = frozenset({"account_instruction", "rename_values", "update_checklist", "record_learned"})
+THINKING_MECHANICAL = (frozenset(A.READ_TOOLS) | frozenset(SHEET_READ) | frozenset(UT.UNDERSTANDING_READ) | THINKING_BOOKKEEPING) - THINKING_HEAVY - THINKING_OPENING
+
 SESSION = """THIS IS A SESSION ON A WHOLE SHEET of an existing, fully digitised General Arrangement Drawing (a DXF with several views).
 You never draw anything new: you turn what is drawn into a parametric model, as the person's ONE instruction asks. You decide which
 stages the task needs and skip the rest; use the tools for each:
@@ -142,6 +155,9 @@ stages the task needs and skip the rest; use the tools for each:
     is (describe_views, kind). zoom_view looks at anything closer — a region, a joint, a
     dimension — as often as you need; the ids drawn on its pictures are the ids every other tool takes. A coordinate read off a picture
     is approximate: the numbers tools return are exact. A picture older than the sheet revision is stale: ask for a new one.
+    A wide unit comes as an OVERVIEW and TILE pictures: the overview is for structure (its text is a blur), the tiles are where you read
+    dimensions and notes. Text under about 9 px is not readable: zoom_view a smaller box_mm for it. Never name a value from text you could
+    not read — go closer, or leave it as drawn.
   • UNDERSTAND THE VIEWS (describe_views) when they are unnamed, mistyped or unrelated and the task needs it. Not otherwise.
   • PARAMETRIZE: open_unit(unit or view) opens the unit the edit tools work on (define_parts, define_parameters, set_levels, set_formulas,
     constraints, behaviours). Opening another unit applies the previous one's edits to the sheet, checked on the whole sheet.
@@ -157,8 +173,10 @@ stages the task needs and skip the rest; use the tools for each:
   • FINISH. The engine checks every edit, plan and view and commits only what holds. It reports what is complete and what is not:
     never say more than it does.
 
-A session may take as many turns as the drawing needs; every status says how many are left. If the person has the run work in chunks and
-one ends, you are paused and continued with everything you have — nothing is lost, nothing is done twice. Keep each turn small and checked.
+A session takes as many turns as the drawing needs, in chunks of 30: when a chunk ends you are paused and, once the person says go on,
+continued with everything you have — nothing is lost, nothing is done twice. Every status says how many turns are left. Pace yourself:
+a unit has a budget of about 12 turns. Keep what holds, name the sizes that matter and leave the rest as drawn (the engine keeps it as
+drawn), then open the next unit; a drawing whose last units were never opened is not done. Keep each turn small and checked.
 
 """
 
@@ -253,6 +271,12 @@ class SheetBench:
         self.understanding = UT.UnderstandingSession(self)
         self._reads: dict[tuple, dict] = {}  # (read tool, its arguments) → the turn its result was last sent, and a digest of it
         self.reads_deduped = 0
+        self.turn = 0  # the model turn whose calls are running (the loop says)
+        self._seen_pics: dict[str, int] = {}  # picture id → the turn it was last sent whole to the model
+        self.pictures_deduped = 0
+        self.unit_turns: dict[str, int] = {}  # unit → the model turns spent with it open (across the times it was opened)
+        self._noticed: dict[str, int] = {}  # unit → the turn count a budget notice was last made at
+        self.thinking_kinds = {"mechanical": THINKING_MECHANICAL, "heavy": THINKING_HEAVY, "opening": THINKING_OPENING}
 
     # ── units ───────────────────────────────────────────────────────────────────
 
@@ -313,13 +337,17 @@ class SheetBench:
             res = {"ok": False, "error": str(exc)}
             self.commit_results[uid] = res
             return res
+        kept = done["commit"].get("kept_as_drawn") or []
+        if kept:  # the measured sizes nobody named are kept as drawn on the sheet: the bench's own answer says so too, or its next commit would hand them back
+            wb.answer = {**wb.answer, "frozen": copy.deepcopy(self.sm.units[uid].answer.get("frozen", []))}
+            wb.validate()
         self.committed[uid] = copy.deepcopy(wb.answer)
         if uid not in self.touched:
             self.touched.append(uid)
         self.run.emit({"kind": "applied", "unit": uid, "revision": done["revision"], "values": [x["name"] for x in done["values_applied"]],
-                       "refused_values": [x["name"] for x in done["values_refused"]]})
+                       "refused_values": [x["name"] for x in done["values_refused"]], "kept_as_drawn": len(kept)})
         res = {"ok": True, "revision": done["revision"], "values_applied": done["values_applied"], "values_refused": done["values_refused"],
-               "values_dropped": done["commit"]["values_dropped"]}
+               "values_dropped": done["commit"]["values_dropped"], "kept_as_drawn": len(kept)}
         self.commit_results[uid] = res
         return res
 
@@ -680,29 +708,96 @@ class SheetBench:
         u = sm.units[uid]
         with self._lock():
             box = box_around([sm.layout.group(v).bbox for v in u.views])
-            pic = self.pictures.picture(box=box, unit=uid, state="drawn", ids="lines", caption=f"{uid} · set-out lines", width=1500)
-        out = {"unit": uid, "views": u.views, "committed_previous": prev, "overview": _trim_overview(ov), "image": pic["id"],
-               "revision": sm.revision, "note": "the picture is this unit AS DRAWN with its set-out lines labelled; the numbers in the overview describe the same geometry",
-               "_image": {"png": pic["png"], "id": pic["id"], "meta": pic["meta"]}}
-        self.run.note_image(pic)
+            ps = self.pictures.unit_set(uid, box)
+            inputs, top = self.pictures._salience_inputs(sm.unit(uid))
+        score = {d: vp.salience(a, ax, n, top, r) for d, (a, ax, n, r) in inputs.items()}
+        anchors = {d for d, (a, ax, _n, _r) in inputs.items() if a or ax}
+        overview, bounded = _bound_tables(_trim_overview(ov), score, anchors)
+        pics = [ps["overview"], *ps["tiles"]]
+        out = {"unit": uid, "views": u.views, "committed_previous": prev, "overview": overview, "image": ps["overview"]["id"],
+               "revision": sm.revision, "pictures": self._look(ps, u.sub.units_mm),
+               "note": "the pictures show this unit AS DRAWN with its main set-out lines labelled; the numbers in the overview describe the same geometry"}
+        if bounded:
+            out["tables_bounded"] = bounded
+        self._deliver(out, pics, f"open_unit {uid}")
         return out
+
+    def _look(self, ps: dict, um: float) -> dict:
+        """What the unit's pictures are and how to read them: the overview is for structure, the tiles carry the text — and where even they are
+        too coarse the densest notes are named as boxes ready for zoom_view. Said in numbers, so a model does not have to guess what it can read."""
+        ov = ps["overview"]["meta"]
+        out: dict = {"overview": {"image": ps["overview"]["id"], "mm_per_px": ov["mm_per_px"], "text_px": ov["text_px"], "legible": ov["legible"]}}
+        if ps["tiles"]:
+            out["tiles"] = [{"name": f"TILE_{k}", "image": t["id"], "box_mm": [round(v * um) for v in t["meta"]["box"]], "mm_per_px": t["meta"]["mm_per_px"],
+                             "text_px": t["meta"]["text_px"], "legible": t["meta"]["legible"]} for k, t in enumerate(ps["tiles"], 1)]
+            out["how_to_read"] = (f"the overview is for structure: its text is {ov['text_px']:g} px, a blur. Read dimensions and notes from the TILE pictures "
+                                  f"({ps['tiles'][0]['meta']['mm_per_px']:g} mm/px, their text about {ps['tiles'][0]['meta']['text_px']:g} px) — the tile boxes are drawn on the overview.")
+        else:
+            out["how_to_read"] = ("this one picture is readable as it is" if ov["legible"] else
+                                  f"the text in this picture is only {ov['text_px']:g} px: zoom_view a smaller box_mm for anything you cannot read")
+        if ps["zoom"]:
+            out["zoom_next"] = [{"box_mm": [round(v * um) for v in b], "why": "dense notes: too small to read in the tiles — zoom_view(box_mm=…)"} for b in ps["zoom"]]
+        return out
+
+    def set_turn(self, turn: int) -> None:
+        if turn != self.turn and self.active is not None:
+            self.unit_turns[self.active] = self.unit_turns.get(self.active, 0) + 1
+        self.turn = turn
+
+    def budget_notice(self) -> dict | None:
+        """When one unit has taken `unit_turns` turns (and again every six): the agent is told in its next result to keep what holds and move on — with the
+        units that still have no work, from the sheet — and the person is told it was. A unit is never cut off: this is a word, not a limit."""
+        limit = self.run.budget.unit_turns
+        uid = self.active
+        if not limit or uid is None:
+            return None
+        n = self.unit_turns.get(uid, 0)
+        if n < limit or (n - limit) % 6 or self._noticed.get(uid) == n:
+            return None
+        self._noticed[uid] = n
+        rows, asked = self.coverage()
+        left = [r["unit"] for r in rows if not r["covered"] and r["unit"] != uid] if asked else []
+        more = f" Units still without work: {', '.join(left[:12])}." if left else ""
+        return {"person": f"{uid}: {n} turns spent on this unit (a unit's budget is {limit}): the agent was told to keep what holds and move on.",
+                "model": f"You have spent {n} turns on {uid}; one unit's budget is {limit}. Keep what holds: name the sizes that matter and leave the rest as drawn "
+                         f"(the engine keeps it as drawn), then open the next unit — or say on the checklist why this one needs more.{more}"}
+
+    def _deliver(self, res: dict, pics: list[dict], why: str = "") -> None:
+        """Attach pictures to a tool result — except those the model has in front of it: an identical picture (the same id is the same unit, box, state,
+        labels and revision) sent in one of the last few turns, while the conversation still holds it, is named and not sent again. A picture is
+        about 1100 tokens, in every request for as long as it stays. The person's page is told of the pictures that were sent, not of those named."""
+        fresh, held = [], []
+        for pic in pics:
+            last = self._seen_pics.get(pic["id"])
+            if last is not None and self.turn - last <= 3 and not self.pictures.is_stale(pic["id"]):
+                held.append(pic["id"])
+            else:
+                fresh.append(pic)
+                self._seen_pics[pic["id"]] = self.turn
+        if fresh:
+            res["_images"] = [{"png": q["png"], "id": q["id"], "meta": q["meta"]} for q in fresh]
+        if held:
+            res["pictures_already_shown"] = {"ids": held, "note": "identical to pictures sent a moment ago and still in your conversation: not sent again"}
+            self.pictures_deduped += len(held)
+        for pic in fresh:
+            self.run.note_image(pic, why)
 
     def zoom_view(self, view: str | None = None, unit: str | None = None, sheet: bool = False, around: list | None = None, box_mm: list | None = None,
                   margin: float = 0.18, labels: str | None = None, state: str = "drawn", baseline: bool = False, highlight: list | None = None,
-                  width: float = 1400) -> dict:
+                  width: float | None = None) -> dict:
         sm = self.sm
         around = list(around or [])
         if view and view not in sm.unit_of_view and not unit and any(g.id == view for g in sm.layout.groups):
-            return self._zoom_group(view, margin, int(width))  # a table, a note, a label — any group of the sheet, as it is drawn
+            return self._zoom_group(view, margin, int(width or 1400))  # a table, a note, a label — any group of the sheet, as it is drawn
         uid = unit or (sm.unit_of_view.get(view) if view else None) or (self.active if not sheet else None)
         with self._lock():
             if sheet or uid is None:
                 box = box_around([sm.layout.frame or sm.dr.extent])
-                pic = self.pictures.picture(box=box, state="current" if state == "current" else "drawn", sheet=True, caption="the whole sheet", width=int(width))
+                pic = self.pictures.picture(box=box, state="current" if state == "current" else "drawn", sheet=True, caption="the whole sheet", width=int(width or 1800))
                 res = {"image": pic["id"], "sheet": True, "views": pic["meta"]["view_ids"], "revision": sm.revision, "size_px": pic["meta"]["frame"]["size"],
                        "box_mm": [round(v * sm.dr.units_mm) for v in box], "frame": pic["meta"]["frame"], "entities_labelled_count": 0,
-                       "state": pic["meta"]["state"], "differs_from_drawn": pic["meta"]["differs_from_drawn"], "_image": {"png": pic["png"], "id": pic["id"], "meta": pic["meta"]}}
-                self.run.note_image(pic)
+                       "state": pic["meta"]["state"], "differs_from_drawn": pic["meta"]["differs_from_drawn"]}
+                self._deliver(res, [pic], "zoom_view: the whole sheet")
                 return res
             u = sm.unit(uid)
             wb = self.units.get(uid)
@@ -721,7 +816,8 @@ class SheetBench:
             labels = labels or ("entities" if focus else "lines")
             hl = self._highlight_items(u, highlight or [])
             pic = self.pictures.picture(box=box, unit=uid, state="current" if state == "current" else "drawn", ids="none" if labels == "none" else labels,
-                                        highlight=hl, baseline=baseline, caption=f"{uid}" + (f" · around {', '.join(around[:3])}" if around else ""), width=int(width))
+                                        highlight=hl, baseline=baseline, caption=f"{uid}" + (f" · around {', '.join(around[:3])}" if around else ""),
+                                        width=int(width) if width else None, kind="zoom")
             meta = pic["meta"]
         fr = meta["frame"]
         tagged = [{"id": t["id"], "kind": t["kind"], "at_mm": [round(t["at"][0] * um, 1), round(t["at"][1] * um, 1)]} for t in meta.get("entities_labelled", [])]
@@ -733,11 +829,10 @@ class SheetBench:
                "lines_labelled": meta.get("lines_labelled", [])[:60], "regions_labelled": meta.get("regions_labelled", []), "fingerprint": meta["fingerprint"],
                "differs_from_drawn": bool(cur.changed),
                "note": ("this picture shows the drawing AS DRAWN: the ids and numbers of the tools describe it" if meta["state"] == "drawn" else
-                        "this picture shows the sheet with the person's values applied; ids and positions in tool results describe the drawing as drawn"),
-               "_image": {"png": pic["png"], "id": pic["id"], "meta": meta}}
+                        "this picture shows the sheet with the person's values applied; ids and positions in tool results describe the drawing as drawn")}
         if meta.get("regions_note"):
             res["regions_note"] = meta["regions_note"]
-        self.run.note_image(pic)
+        self._deliver(res, [pic], f"zoom_view: {uid}")
         return res
 
     def _zoom_group(self, gid: str, margin: float, width: int) -> dict:
@@ -753,7 +848,7 @@ class SheetBench:
                    "note": f"{gid} is a group of kind {g.kind}, not a unit: describe_views (kind, view_type, name) says what it is; as a view it becomes a unit to parametrize",
                    "_image": {"png": pic["png"], "id": pic["id"], "meta": pic["meta"]}}
         self.looked.add(gid)
-        self.run.note_image(pic)
+        self.run.note_image(pic, f"zoom_view: {gid}")
         return res
 
     def _highlight_items(self, u, ids: list[str]) -> list[int]:
@@ -996,9 +1091,17 @@ class SheetBench:
             return []
         return [f["doubt"] for f in group_facts(self.sm) if f.get("doubt") and f["id"] not in self.looked]
 
+    def coverage(self) -> tuple[list[dict], bool]:
+        """Which units of the run's scope the sheet really holds work for (coverage.py), and whether that is asked of this run: a run over the whole
+        drawing that is not carrying out a change. A change asked of one value is not a promise to parametrize every unit."""
+        scope_units = list(self.run.scope.get("units") or [])
+        rows = unit_rows(self.sm, scope_units, {uid: w.answer for uid, w in self.units.items()}, UT.notes_of(self.sm)["checklist"], self.open_refusals())
+        change_asked = any(i.get("kind") in ("change_value", "keep") and i.get("handled_by") == "plan" for i in self.ledger)
+        return rows, self.run.scope.get("kind") == "drawing" and len(scope_units) > 1 and not change_asked
+
     def open_matters(self) -> list[str]:
         """What the engine knows is still open, as sentences for the model's first `finish`: refusals nobody repaired, commitments not kept,
-        what the plan leaves out, a doubted group nobody looked at."""
+        what the plan leaves out, a doubted group nobody looked at, units of the drawing nobody covered."""
         out = [f"refused and never repaired: {r['item']} ({r['why'][:100]}) — repair it, or leave it out on purpose (remove it; or say in the plan it is only noted)"
                for r in self.open_refusals()[:6]]
         out += [f"you said “{c['clause'][:70]}” is handled by {c['handled_by']}: {c['why']}" for c in self.commitments() if not c["ok"]]
@@ -1007,6 +1110,11 @@ class SheetBench:
             if plan.get("links") or plan.get("summary"):
                 out += [f"plan: {g}" for g in gap_lines(plan_gaps(self.sm, plan))]
         out += self.unexamined_doubts()
+        rows, asked = self.coverage()  # last: what the model can still repair comes first, and the units nobody covered are said in full after it
+        if asked and any(not r["covered"] for r in rows):
+            todo = [r for r in rows if not r["covered"]]
+            out.append(f"{sentence(rows)} — open_unit each of {', '.join(r['unit'] for r in todo[:12])} and parametrize it; where a unit has nothing to parametrize, "
+                       "say so on the checklist (update_checklist: status 'skipped', its id and the reason in the text) — not only in your closing words")
         return out
 
     def notes(self) -> list[str]:
@@ -1093,6 +1201,41 @@ def _trim_overview(ov: dict, limit: int = 30000) -> dict:
     return out
 
 
+def _bound_tables(ov: dict, score: dict[str, float], anchors: set[str], limit: int = 30000) -> tuple[dict, dict | None]:
+    """The two big tables of an overview, bounded by what matters instead of listed whole: a unit can have 550 set-out lines (a staircase, hatch
+    edges) and 380 regions (stones of a pitching) — 70 000 characters, in the conversation for every turn it stays. The lines kept are the anchors
+    (a dimension, a named size, a level or an axis stands on them) and the highest-scoring (the same score the pictures label by); the regions kept
+    are those with a note inside and the largest. The rest is counted, and inspect_lines / inspect_regions / zoom_view give it on request.
+    Returns (the overview, what was left out — or None when nothing was)."""
+    lk = next((k for k in ov if k.startswith("lines [")), None)
+    rk = next((k for k in ov if k.startswith("regions [")), None)
+    if (lk is None and rk is None) or len(json.dumps(ov, separators=(",", ":"), default=str)) <= limit:
+        return ov, None
+    out = dict(ov)
+    lines = list(out[lk]) if lk else []
+    regions = list(out[rk]) if rk else []
+    by_line = sorted(lines, key=lambda r: (r[0] not in anchors, -score.get(r[0], 0.0)))
+    by_region = sorted(regions, key=lambda r: (not r[-1], -((r[1] or 0) * (r[2] or 0))))
+    cap_l, cap_r = min(len(lines), 220), min(len(regions), 160)
+    while True:
+        if lk:
+            keep = {r[0] for r in by_line[:cap_l]}
+            more_l = f"{len(lines) - cap_l} more set-out lines are not listed (the fine steps of a stair or a hatch): inspect_lines(ids) or zoom_view(box_mm, labels='lines') gives them"
+            out[lk] = [r for r in lines if r[0] in keep] + ([["…", None, more_l]] if len(lines) > cap_l else [])
+        if rk:
+            keep = {r[0] for r in by_region[:cap_r]}
+            more_r = f"{len(regions) - cap_r} smaller regions are not listed: inspect_regions(ids) or zoom_view(box_mm, labels='regions') gives them"
+            out[rk] = [r for r in regions if r[0] in keep] + ([["…", None, None, "", "", "", "", more_r]] if len(regions) > cap_r else [])
+        if len(json.dumps(out, separators=(",", ":"), default=str)) <= limit or (cap_l <= 60 and cap_r <= 60):
+            break
+        if cap_l > 60 and (cap_l >= cap_r or cap_r <= 60):
+            cap_l = max(60, cap_l - 20)
+        else:
+            cap_r = max(60, cap_r - 20)
+    left = {"lines_left_out": len(lines) - cap_l if lk else 0, "regions_left_out": len(regions) - cap_r if rk else 0}
+    return out, (left if left["lines_left_out"] or left["regions_left_out"] else None)
+
+
 # ── the run itself ───────────────────────────────────────────────────────────────
 
 
@@ -1159,9 +1302,26 @@ class Run:
             return {}
         return {uid: ("parametrizing" if w.answer.get("parameters") else "analyzing") for uid, w in self.bench.units.items()}
 
-    def note_image(self, pic: dict) -> None:
-        self.images[pic["id"]] = {"id": pic["id"], "revision": pic["meta"]["revision"], "unit": pic["meta"].get("unit"), "views": pic["meta"].get("view_ids"),
-                                  "state": pic["meta"].get("state"), "size": pic["meta"]["frame"]["size"]}
+    def requests_listing(self, since: int = 0, limit: int = 50, brief: bool = False) -> dict:
+        """The model calls of this run: what each was made of, how much was the same as the call before, what the provider billed and cached."""
+        return {"run": self.id, **(self.loop.requests.listing(since, limit, brief) if self.loop is not None else {"requests": [], "next": since, "totals": {}})}
+
+    def request_payload(self, n: int) -> str | None:
+        return self.loop.requests.payload(n) if self.loop is not None else None
+
+    def note_image(self, pic: dict, why: str = "") -> None:
+        """A picture the model was given: kept in the run's record and told to the person's page, as an event, with what they need to judge it —
+        what it is of, at what scale, whether its text could be read, which sheet revision it shows and on which turn it was given."""
+        m = pic["meta"]
+        um = m.get("mm_per_unit") or 1.0
+        row = {"id": pic["id"], "revision": m["revision"], "unit": m.get("unit"), "views": m.get("view_ids"), "state": m.get("state"),
+               "size": m["frame"]["size"], "kind": m.get("kind", ""), "mm_per_px": m.get("mm_per_px"), "text_px": m.get("text_px"),
+               "legible": m.get("legible"), "box_mm": [round(v * um) for v in m.get("box", [])], "turn": getattr(self.bench, "turn", 0) if self.bench else 0,
+               "tiles": [t["name"] for t in m.get("tiles", [])], "caption": m.get("caption", "")}
+        self.images[pic["id"]] = row
+        # the event's own `kind` is "image": the picture's kind (overview / tile / zoom / sheet) travels inside `pic`
+        self.emit({"kind": "image", "id": row["id"], "revision": row["revision"], "unit": row["unit"], "views": row["views"], "state": row["state"],
+                   "ids": m.get("ids"), "why": why, "pic": {k: row[k] for k in ("kind", "size", "mm_per_px", "text_px", "legible", "box_mm", "turn", "tiles", "caption")}})
 
     # ── start / resume / stop ───────────────────────────────────────────────────
 
@@ -1302,9 +1462,7 @@ class Run:
                                                            caption=f"{uid} now (the person's values applied; the original dotted)", width=1800))
                 pics.append(self.host.pictures.picture(box=box, unit=uid, state="drawn", ids="regions", caption=f"{uid} as drawn · regions", width=1800))
         for pic in pics:
-            self.note_image(pic)
-            self.emit({"kind": "image", "id": pic["id"], "revision": pic["meta"]["revision"], "unit": pic["meta"].get("unit"), "views": pic["meta"].get("view_ids"),
-                       "state": pic["meta"]["state"], "ids": pic["meta"]["ids"], "why": "given to the model at the start"})
+            self.note_image(pic, "given to the model at the start")
         ov = None
         if uid is not None:
             wb = bench.open(uid)
@@ -1450,6 +1608,11 @@ class Run:
         committed_bad = {u: r for u, r in results.items() if not r.get("ok")}
         add("finished", ended_by == "finished", "the model finished and the engine's gate accepted it" if ended_by == "finished" else
             f"the run ended without a finish ({ended_by}): what was valid was applied, the rest was not worked on")
+        with b._lock():
+            coverage, coverage_asked = b.coverage()
+        if coverage_asked:  # said by the sheet, not by the model: a unit the run left untouched is not "left as drawn"
+            add("all_units_covered", all(r["covered"] for r in coverage),
+                sentence(coverage) + ("" if all(r["covered"] for r in coverage) else " — no named value was kept for them, and no reason is on the checklist"))
         add("committed", not committed_bad, "every unit's edits were applied to the sheet" if not committed_bad else
             "; ".join(f"{u}: refused — {r['error'][:160]}" for u, r in committed_bad.items()))
         pending = [u for u in b.units if b.dirty(u)]
@@ -1505,8 +1668,12 @@ class Run:
         applied_any = any(r.get("ok") and not r.get("nothing_to_apply") for r in results.values())
         state = "completed" if not failed else "partial" if applied_any or not committed_bad else "failed"
         remaining = [c["detail"] for c in failed]
+        others = [c for c in failed if c["id"] != "all_units_covered"]
+        lead = sentence(coverage) if coverage_asked and any(not r["covered"] for r in coverage) else ""
+        word = "Partly done" if state == "partial" else "Failed"
         headline = ("Complete: " + "every criterion holds." if not failed else
-                    f"{'Partly done' if state == 'partial' else 'Failed'}: {len(failed)} thing(s) remain — {remaining[0][:140]}")
+                    f"{word}: {lead}" + (f" · {len(others)} more thing(s) remain — {others[0]['detail'][:120]}" if others else "") if lead else
+                    f"{word}: {len(failed)} thing(s) remain — {remaining[0][:140]}")
         if notes:
             headline += f" ({len(notes)} note{'s' if len(notes) != 1 else ''} to read)"
         return {"state": state, "ended_by": ended_by, "criteria": crit, "remaining": remaining, "headline": headline, "plans": plan_rows,
@@ -1516,6 +1683,8 @@ class Run:
                 "applied": {u: r.get("revision") for u, r in results.items() if r.get("ok") and not r.get("nothing_to_apply")},
                 "values_applied": [x for r in results.values() for x in r.get("values_applied", [])], "values_refused": [x for _u, x in refused_vals],
                 "refused": refused, "unaccounted": gaps, "questions": [{"id": q["id"], "text": q["text"][:200]} for q in qs],
+                # the engine's own record of the units, whatever the model's closing words say
+                "coverage": coverage, "coverage_sentence": sentence(coverage), "engine_summary": table_md(coverage) if coverage else "",
                 "units": {uid: {"parts": len(w.answer.get("components", [])), "parameters": sum(1 for p in w.prog.params.values() if p.source == "ai")}
                           for uid, w in b.units.items()}}
 

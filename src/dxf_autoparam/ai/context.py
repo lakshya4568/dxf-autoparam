@@ -45,10 +45,23 @@ def level_lines(prog: Program) -> dict[str, str]:
 
 
 def owner(prog: Program, d: str) -> str:
+    """Who sets a line, by name where there is one: the named size, the constraint, or — for a line set out by the geometry — the values it follows."""
     o = prog.origin.get(d, "geometry")
     lv = level_lines(prog).get(d)
     if lv:
         return f"level {lv}"
+    why = prog.origin_why.get(d)
+    if o == "dimension" and why:
+        return f"the named size {why}"
+    if o == "constraint" and why:
+        return f"the constraint '{why[:50]}'"
+    if o == "geometry":
+        try:
+            follows = sorted(n for n in names_in(prog.formulas.get(d, "")) if n in prog.params)
+        except ExprError:
+            follows = []
+        if follows:
+            return f"the set-out ({d} follows {', '.join(follows[:3])})"
     return OWNER_WORDS.get(o, o)
 
 
