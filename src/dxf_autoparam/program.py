@@ -390,6 +390,7 @@ class Program:
     params: dict[str, Param]
     formulas: dict[str, str]  # datum id → expression (mm)
     origin: dict[str, str]  # datum id → "geometry" | "ai"
+    origin_why: dict[str, str] = field(default_factory=dict)  # datum id → what set it, by name (the named size, the constraint): for messages
     radius: dict[int, str] = field(default_factory=dict)  # circle item → radius expression (mm)
     relations: list[Relation] = field(default_factory=list)
     components: list[Component] = field(default_factory=list)

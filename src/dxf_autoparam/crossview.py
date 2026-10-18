@@ -30,6 +30,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
 
+from . import generic
 from .analyse import analyse
 from .cadjson import entity_id
 from .display import primitives
@@ -209,6 +210,7 @@ class SheetModel:
         self.values: dict[str, dict[str, float]] = {}  # unit → parameter → value (only what differs from its defaults)
         self.history: list[dict] = []
         self.future: list[dict] = []
+        self._live: tuple[frozenset[str], int] | None = None  # (values, revision) of the last live step: the next one of them joins it
         self.accepted: set[tuple[str, str]] = set()  # projection links a person (or the AI, checked) took although weak
         self.relations: list[dict] = []  # views that show the same structure / a detail of another (semantic, not set-out)
         # The plan an agent run STATED for the sheet: what it took to be the same component or dimension in more than one view, how they
@@ -337,8 +339,8 @@ class SheetModel:
             for gid, cl in u.gap_clusters.items():
                 u.an.gaps[gid].cluster = cl
         assert u.an is not None
-        if u.answer:
-            u.prog, u.report = apply(u.an, u.answer, selection={"hold": [], "exclude": [], "drop": []})
+        if u.answer:  # the answer's own selection applies: parts it keeps as drawn are held, sizes it keeps as drawn are not inputs (unlock_part undoes it)
+            u.prog, u.report = apply(u.an, u.answer)
         else:
             u.report = Report()
             u.prog = baseline(u.an, rep=u.report)
@@ -605,12 +607,20 @@ class SheetModel:
     def preview(self, changes: dict[str, float]) -> SheetRegen:
         return self.regenerate(changes)
 
-    def apply(self, changes: dict[str, float]) -> SheetRegen:
-        """Commit a change only if the whole sheet regenerates cleanly; otherwise nothing changes."""
+    def apply(self, changes: dict[str, float], live: bool = False) -> SheetRegen:
+        """Commit a change only if the whole sheet regenerates cleanly; otherwise nothing changes.
+
+        `live` is one person stepping a value up and down: every step is committed (the drawing follows), but steps of the same values in a row
+        are ONE undoable step, so a single undo goes back to where the stepping began."""
         r = self.regenerate(changes)
         if not r.ok:
             return r
-        self._push()
+        keys = frozenset(changes)
+        if live and self._live == (keys, self.revision):
+            self.revision += 1  # same session: the history already holds the state before it
+        else:
+            self._push()
+        self._live = (keys, self.revision) if live else None
         shared = self._shared_by_name()
         for name, v in changes.items():
             if "." in name:
@@ -1008,51 +1018,90 @@ class SheetModel:
         self._push()
         del self.shared[p.id]
 
+    def _unit_names(self, uid: str) -> set[str]:
+        u = self.unit(uid)
+        assert u.prog is not None
+        return set(u.prog.params) | set(u.prog.formulas) | {r.name for r in u.prog.relations}
+
+    def namesakes(self, name: str, besides: set[str] | None = None) -> list[tuple[str, float | None]]:
+        """The other units that have a value (or a measured quantity) of this name, with its number: the same word for the same size seen again
+        (to be shared) or for a different size (which stays the unit's own) — the engine cannot tell, and says so."""
+        out = []
+        for uid, u in self.units.items():
+            if not u.built or uid in (besides or set()) or u.prog is None:
+                continue
+            if name in u.prog.params:
+                out.append((uid, round(self.values.get(uid, {}).get(name, u.prog.params[name].value), 3)))
+            else:
+                rel = next((r for r in u.prog.relations if r.name == name), None)
+                if rel is not None:
+                    out.append((uid, None))
+        return out
+
     def rename(self, old: str, new: str) -> None:
         """A parameter's name, everywhere it is used (formulas, relations, behaviours, every view it is bound in). Its
-        value and what it drives do not change. Refused when the new name is taken or not an engineering name."""
+        value and what it drives do not change. Refused — and nothing changes, not even the revision — when the NEW name is not an engineering
+        name, is a shared size, or is already a value of a unit it would land in; a name another unit uses for ITS value is no obstacle (a
+        unit's values are its own: U01.ClearSpan and U02_03.ClearSpan are two values), and `namesakes` says so to whoever asks."""
         if not PASCAL.match(new or "") or GENERIC.match(new):
-            raise SheetError(f"{new!r} is not a PascalCase engineering name")
-        if new in self._names_in_use():
-            raise SheetError(f"{new} is already used on this sheet")
+            raise SheetError(f"the NEW name {new!r} is not a PascalCase engineering name — it must look like ClearHeadroom: words each starting with a capital, "
+                             "letters and digits only, no unit prefix, and not one of the analysis' own names (GapX6, ThkY1 …)")
         shared = self._shared_by_name().get(old)
         if "." in old and shared is None:
             uid, local = old.split(".", 1)
+            if uid not in self.units:
+                raise SheetError(f"the OLD name {old!r} names no unit {uid}: use a shared name, 'U01.name', or the bare name of a value of the open unit")
             targets = [(uid, local)]
         elif shared is not None:
             targets = [(b.unit, b.param) for b in shared.bindings]
         else:
-            raise SheetError(f"no parameter {old}: a shared name, or unit.name")
-        self._push()
+            raise SheetError(f"the OLD name {old!r} is not a shared name or 'unit.name': use a shared name, 'U01.name', or the bare name of a value of the open unit")
+        if new in self._shared_by_name():
+            raise SheetError(f"the NEW name {new} is already a shared size; use another name, or share_sizes to bring this one under it")
         for uid, local in targets:
-            u = self.unit(uid)
-            assert u.an is not None
-            assert u.prog is not None
-            if local not in u.prog.params and not any(r.name == local for r in u.prog.relations):
-                raise SheetError(f"{uid} has no parameter {local}")
-            if not u.answer or not any(p.get("name") == local for p in u.answer.get("parameters", []) + u.answer.get("levels", [])):
-                # a value the geometry found: name it by its candidate (or its lines) so the name survives a rebuild
-                prm = u.prog.params.get(local)
-                if prm is None:
-                    raise SheetError(f"{local} in {uid} is not a parameter")
-                cid = next((c.id for c in u.an.clusters.values() if c.name == local), None)
-                ans = copy.deepcopy(u.answer) if u.answer else copy.deepcopy(EMPTY_ANSWER)
-                entry = {"candidate": cid} if cid else {"from_datum": prm.measures[0], "to_datum": prm.measures[1]} if prm and prm.measures else None
-                if entry is None:
-                    raise SheetError(f"{local} in {uid} is not measured between two lines: it cannot be named")
-                ans["parameters"].append({"name": new, "label": new, "component": "", "value": round(prm.value, 6), **entry, "reason": "named by a person"})
-                u.answer = ans
-            else:
-                u.answer = rename_in_answer(u.answer, local, new)
-            if local in self.values.get(uid, {}):
-                self.values[uid][new] = self.values[uid].pop(local)
-            u.prog = None
-        if shared is not None:
-            shared.name = new
-            for b in shared.bindings:
-                b.param = new
-        for uid, _ in targets:
-            self.unit(uid)
+            if new == local:
+                raise SheetError(f"{old} already has the name {new}")
+            if new in self._unit_names(uid):
+                raise SheetError(f"the NEW name {new} is already a value of {uid}: one unit cannot have two values of one name")
+        state, rev = self._state(), self.revision
+        self._push()
+        try:
+            for uid, local in targets:
+                u = self.unit(uid)
+                assert u.an is not None
+                assert u.prog is not None
+                if local not in u.prog.params and not any(r.name == local for r in u.prog.relations):
+                    raise SheetError(f"{uid} has no value {local}")
+                if not u.answer or not any(p.get("name") == local for p in u.answer.get("parameters", []) + u.answer.get("levels", [])):
+                    # a value the geometry found: name it by its candidate (or its lines) so the name survives a rebuild
+                    prm = u.prog.params.get(local)
+                    if prm is None:
+                        raise SheetError(f"{local} in {uid} is not a parameter")
+                    cid = next((c.id for c in u.an.clusters.values() if c.name == local), None)
+                    ans = copy.deepcopy(u.answer) if u.answer else copy.deepcopy(EMPTY_ANSWER)
+                    entry = {"candidate": cid} if cid else {"from_datum": prm.measures[0], "to_datum": prm.measures[1]} if prm and prm.measures else None
+                    if entry is None:
+                        raise SheetError(f"{local} in {uid} is not measured between two lines: it cannot be named")
+                    ans["parameters"].append({"name": new, "label": new, "component": "", "value": round(prm.value, 6), **entry, "reason": "named by a person"})
+                    u.answer = ans
+                else:
+                    u.answer = rename_in_answer(u.answer, local, new)
+                if local in self.values.get(uid, {}):
+                    self.values[uid][new] = self.values[uid].pop(local)
+                u.prog = None
+            if shared is not None:
+                shared.name = new
+                for b in shared.bindings:
+                    b.param = new
+            for uid, _ in targets:
+                self.unit(uid)
+        except (SheetError, KeyError, ExprError, ArithmeticError):  # a refused rename leaves nothing behind: not a half-renamed unit, not a revision
+            self._restore(state)
+            self.history.pop()
+            self.revision = rev
+            for uid, _l in targets:
+                self.units[uid].prog = None
+            raise
 
     def accept_link(self, a: str, b: str) -> None:
         """Take a projection link the geometry shows but too weakly to take alone (a person, or the AI, confirmed it)."""
@@ -1094,13 +1143,17 @@ class SheetModel:
         an.cache.clear()
         return an
 
-    def commit_answer(self, uid: str, answer: dict, expected_revision: int | None = None, discard_values: bool = False) -> dict:
+    def commit_answer(self, uid: str, answer: dict, expected_revision: int | None = None, discard_values: bool = False,
+                      keep_unnamed_as_drawn: bool = False) -> dict:
         """Replace a unit's parametrization only if the WHOLE sheet still holds; otherwise nothing changes.
 
         Refused (SheetError, the state untouched) when: the sheet changed since the work began (`expected_revision`);
         the unit no longer regenerates; a size it shares with other views stops driving here (that view would stop
         following); an accepted plan's promise does not measure right (V16); or a value a person set would be lost
-        (unless `discard_values`: the person said so) — a person's edit is never dropped silently."""
+        (unless `discard_values`: the person said so) — a person's edit is never dropped silently.
+
+        `keep_unnamed_as_drawn`: in the same step, the measured sizes nobody named or used are kept as drawn (generic.py) — the unit is
+        left with the values somebody chose. Only when the drawing comes out exactly as it was; otherwise they stay inputs, and it is said."""
         if expected_revision is not None and expected_revision != self.revision:
             raise SheetError(f"stale: the sheet changed while this was being worked out (revision {expected_revision} → {self.revision}); "
                              "nothing was applied — run it again on the current sheet")
@@ -1168,7 +1221,127 @@ class SheetModel:
             raise SheetError("refused, nothing changed: " + "; ".join(problems[:4]))
         if lost:  # the person confirmed: the values fall back to the drawing
             self.values[uid] = {k: v for k, v in self.values[uid].items() if k not in lost}
-        return {"unit": uid, "revision": self.revision, "values_dropped": lost}
+        kept = self._keep_unnamed_as_drawn(uid)[0] if keep_unnamed_as_drawn else []
+        return {"unit": uid, "revision": self.revision, "values_dropped": lost, "kept_as_drawn": kept}
+
+    # ── the measured sizes nobody named (generic.py) ──────────────────────────────
+
+    def unclaimed_generic(self, uid: str) -> list[str]:
+        """The generated values of a built unit that nobody named or used: not set by a person, not shared, not in anything the agent wrote."""
+        u = self.unit(uid)
+        assert u.prog is not None
+        shared = {b.param for p in self.shared.values() for b in p.bindings if b.unit == uid}
+        return generic.unclaimed(u.prog, u.answer, set(self.values.get(uid, {})), shared)
+
+    def _drawing_of(self, units: set[str]) -> SheetRegen:
+        return self.regenerate(units=units)
+
+    def _keep_unnamed_as_drawn(self, uid: str) -> tuple[list[str], str]:
+        """Inside a step the caller has begun (`_push`): keep this unit's unclaimed generated values as drawn, recorded in its answer. Applied only
+        when the unit and everything it shares comes out EXACTLY as it was — otherwise nothing changes and the reason is returned."""
+        u = self.units[uid]
+        names = self.unclaimed_generic(uid)
+        if not names or not u.answer:
+            return [], ""
+        assert u.prog is not None
+        others = {x.unit for p in self.shared.values() if any(b.unit == uid for b in p.bindings) for x in p.bindings}
+        scope = {uid} | others
+        before = self._drawing_of(scope).reg
+        old_answer, old_prog = u.answer, u.prog
+        rows = [generic.frozen_row(u.prog, n) for n in names]
+        u.answer = {**u.answer, "frozen": [*u.answer.get("frozen", []), *rows]}
+        u.prog = None
+        try:
+            self.unit(uid)
+            after_sr = self._drawing_of(scope)
+        except (KeyError, ExprError, ArithmeticError) as exc:
+            u.answer, u.prog = old_answer, old_prog
+            return [], f"kept as drawn did not build: {exc}"
+        a = after_sr.reg
+        gone = sorted(n for n in names if u.prog is not None and n in u.prog.params)
+        moved = {i for i, pts in a.pts.items() if i not in before.pts or any(abs(x[0] - y[0]) > 1e-9 or abs(x[1] - y[1]) > 1e-9
+                                                                         for x, y in zip(pts, before.pts[i], strict=False))}
+        moved |= {i for i in set(a.texts) | set(before.texts)  # the note as it reads (an entry that merely says what is drawn is no change)
+                  if a.texts.get(i, self.dr.items[i].text) != before.texts.get(i, self.dr.items[i].text)}
+        moved |= {i for i, r in a.radius.items() if abs(before.radius.get(i, r) - r) > 1e-9}
+        unlinked = sorted(set(old_prog.text_links) - set(u.prog.text_links)) if u.prog is not None else []  # a note that stated a size must still follow it
+        if after_sr.errors or moved or gone or unlinked:
+            u.answer, u.prog = old_answer, old_prog
+            self.unit(uid)
+            why = (f"{len(moved)} entities would move" if moved else after_sr.errors[0] if after_sr.errors else
+                   f"{len(unlinked)} note(s) would stop following their size" if unlinked else f"{gone[0]} would still be an input")
+            return [], f"kept as drawn would change the drawing ({why}): they stay inputs"
+        return names, ""
+
+    def purge_unclaimed_generic_values(self, uid: str | None = None, dry_run: bool = False) -> dict:
+        """Keep every measured size nobody named or used as drawn, in one undoable step: `uid`'s unit, or every parametrized unit. The drawing
+        does not change (checked: a unit whose points, notes or radii would move is left alone and said). Idempotent. `dry_run`: say what
+        would be kept, change nothing."""
+        todo = [uid] if uid else [k for k, u in self.units.items() if u.answer and u.built]
+        for k in todo:
+            if k not in self.units:
+                raise SheetError(f"no unit {k}")
+            if not self.units[k].answer:
+                raise SheetError(f"{k} is not parametrized: its measured sizes are all it has — nothing to keep as drawn")
+        plan = {k: n for k in todo if (n := self.unclaimed_generic(k))}
+        out: dict[str, Any] = {"dry_run": dry_run, "units": {k: len(v) for k, v in plan.items()}, "names": {k: v[:12] for k, v in plan.items()},
+                               "kept": 0, "left_as_inputs": {}}
+        if dry_run or not plan:
+            out["would_keep"] = sum(len(v) for v in plan.values())
+            out["revision"] = self.revision
+            return out
+        rev = self.revision
+        self._push()
+        for k in plan:
+            kept, why = self._keep_unnamed_as_drawn(k)
+            out["kept"] += len(kept)
+            if why:
+                out["left_as_inputs"][k] = why
+        if not out["kept"]:  # nothing changed: no step
+            self.history.pop()
+            self.revision = rev
+        out["revision"] = self.revision
+        return out
+
+    def unlock_part(self, uid: str, part: str) -> dict:
+        """A person asks to edit work that was kept as drawn: the part (and what it is made of) stops being held, the sizes named on it are
+        inputs again. One transaction like any other answer: refused, with nothing changed, if the sheet would no longer hold."""
+        from .intent import descendants
+
+        u = self.unit(uid)
+        assert u.prog is not None
+        parts = u.prog.intent.get("parts") or {}
+        if part not in parts or not u.answer:
+            raise SheetError(f"{uid} has no part {part}")
+        names = {part} | descendants(parts, part)
+        answer = copy.deepcopy(u.answer)
+        was = {r.name for r in u.prog.relations if not r.name.startswith("R_")}
+        for c in answer.get("components", []):
+            if c.get("name") in names:
+                c["parametrize"] = True
+        for p in answer.get("parameters", []):
+            if p.get("component") in names and p.get("recommended") is False:
+                p["recommended"] = True
+        self.commit_answer(uid, answer)
+        assert self.units[uid].prog is not None
+        now = {n for n in was if n in self.units[uid].prog.params}
+        return {"unit": uid, "part": part, "unlocked": sorted(names), "inputs_again": sorted(now), "revision": self.revision}
+
+    def release_frozen(self, uid: str, names: list[str] | None = None) -> dict:
+        """Give kept-as-drawn sizes back as inputs (all of the unit's, or the ones named), one undoable step. The drawing does not change."""
+        u = self.unit(uid)
+        rows = list((u.answer or {}).get("frozen", []))
+        if not rows:
+            raise SheetError(f"{uid} has no sizes kept as drawn")
+        want = set(names) if names else {r["name"] for r in rows}
+        unknown = sorted(want - {r["name"] for r in rows})
+        if unknown:
+            raise SheetError(f"{', '.join(unknown)}: not kept as drawn in {uid}")
+        self._push()
+        u.answer = {**u.answer, "frozen": [r for r in rows if r["name"] not in want]}
+        u.prog = None
+        self.unit(uid)
+        return {"unit": uid, "released": sorted(want), "revision": self.revision}
 
     def link(self, a: str, b: str, linked: bool) -> None:
         """Take or refuse a projection link between two views (their units are re-formed; a unit whose views changed
@@ -1428,7 +1601,7 @@ class SheetModel:
                 row.update({"items": g.items, "bbox": list(g.bbox), "titles": g.titles, "scale": g.scale, "units_mm": g.units_mm,
                             "confidence": g.confidence, "evidence": g.evidence, "questions": g.questions, "counts": g.counts})
             views.append(row)
-        return {"format": "dxf-autoparam/sheet-1", "dxf": self.path, "fingerprint": self.fingerprint(),
+        return {"format": "dxf-autoparam/sheet-1", "dxf": self.path, "fingerprint": self.fingerprint(), "revision": self.revision,
                 "unlinked": sorted(list(k) for k in self.unlinked),
                 "answers": {uid: u.answer for uid, u in self.units.items() if u.answer},
                 "shared": [asdict(p) for p in self.shared.values()], "values": self.values, "originals": originals,
@@ -1485,5 +1658,6 @@ class SheetModel:
         sm.values = {u: dict(v) for u, v in d.get("values", {}).items()}
         sm.prefs = {**sm.prefs, **(d.get("prefs") or {})}
         sm.runs = list(d.get("runs") or [])
+        sm.revision = int(d.get("revision") or 0)  # the page and the pictures stamp what they show with it: a reopened sheet goes on from where it was
         return sm
 

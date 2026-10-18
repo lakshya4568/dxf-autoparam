@@ -238,6 +238,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--port", type=int, default=8765)
     p.add_argument("--answer", default=None, help="open with a saved Gemini answer (validated again, no AI call)")
     p.add_argument("--project", default=None, help="open the workspace with a saved parametric project (.autoparam.json)")
+    p.add_argument("--fresh", action="store_true", help="start from the drawing as drawn: the work saved for it is kept aside under a dated name, not opened")
+    p.add_argument("--no-autosave", action="store_true", help="do not keep the work on disk while it is made (and do not open saved work)")
+    p.add_argument("--state-dir", default=None, help="where the work is kept (default ~/.local/state/dxf-autoparam, or $DXF_AUTOPARAM_STATE)")
     p = sub.add_parser("library", help="the engineering library the agent retrieves from (read-only, no model, no cost)")
     p.add_argument("action", choices=["list", "search", "show", "discover"])
     p.add_argument("arg", nargs="?", default=None, help="search: words · show: a skill id or a record id · discover: a DXF")
@@ -356,7 +359,7 @@ def main(argv: list[str] | None = None) -> int:
     if a.cmd == "serve":
         from .server import serve
 
-        serve(a.dxf, a.domain, port=a.port, answer=a.answer, project=a.project)
+        serve(a.dxf, a.domain, port=a.port, answer=a.answer, project=a.project, autosave=not a.no_autosave, fresh=a.fresh, state_dir=a.state_dir)
         return 0
     if a.cmd == "plan-bench":
         from .plan_bench import run as plan_run

@@ -46,7 +46,7 @@ from .assembly import (
     symmetric_about,
 )
 from .intent import Part, _depends_on, delta_of, descendants
-from .program import ExprError, Program, names_in
+from .program import ExprError, Program, _num, names_in
 from .regen import regenerate_program
 from .topology import of
 
@@ -1214,7 +1214,7 @@ def _pin(prog: Program, lines: set[str], drivers: list[Driver]) -> dict[str, str
     for d in sorted(moving):
         if prog.origin.get(d) in ("ai", "held", "existing", "slope"):
             continue
-        prog.formulas[d] = f"{v[d] * u:.6f}".rstrip("0").rstrip(".")
+        prog.formulas[d] = _num(v[d] * u)
         prog.origin[d] = "plan"
         out[d] = prog.formulas[d]
     if out:

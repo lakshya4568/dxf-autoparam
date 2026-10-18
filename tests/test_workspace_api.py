@@ -151,6 +151,26 @@ def test_open_preview_apply_undo_share_rename_export(server):
     assert back["ok"] and back["summary"]["values"]["MainOpening"] == pytest.approx(14000)
 
 
+def test_live_steps_are_one_undo_and_the_original_is_asked_for_separately(server):
+    """A person steps a value: each step commits (the drawing follows), the steps are one undo, and the dotted original is its own request."""
+    base, path = server
+    summary = j(call(base, f"/api/sheet/open?name={path.name}", raw=path.read_bytes()))
+    uid = next(g["unit"] for g in summary["groups"] if g["name"] == "ELEVATION")
+    cand = next(c for c in j(call(base, f"/api/sheet/unit?id={uid}"))["candidates"] if abs(c["value"] - 12000) < 1 and c["kind"] == "void")
+    j(call(base, "/api/sheet/share", {"name": "ClearSpan", "targets": [[uid, cand["id"]]]}))
+    j(call(base, "/api/sheet/geometry", gz=True))
+    assert j(call(base, "/api/sheet/original", gz=True))["prims"] == []  # nothing differs from the drawing yet
+    for v in (12100, 12200, 12300):
+        ap = j(call(base, "/api/sheet/apply", {"changes": {"ClearSpan": v}, "live": True}))
+        assert ap["ok"] and ap["delta"] and ap["summary"]["values"]["ClearSpan"] == pytest.approx(v)
+    orig = j(call(base, "/api/sheet/original", gz=True))
+    assert {p["i"] for p in orig["prims"]} == {p["i"] for p in ap["delta"]}  # the entities that moved, as the drawing had them
+    assert orig["prims"] != ap["delta"]
+    un = j(call(base, "/api/sheet/undo", {}))
+    assert un["summary"]["values"]["ClearSpan"] == pytest.approx(12000)
+    assert j(call(base, "/api/sheet/original", gz=True))["prims"] == []  # and back on the drawing: nothing to show dotted
+
+
 def test_a_malformed_request_is_answered_not_crashed(server):
     base, path = server
     call(base, f"/api/sheet/open?name={path.name}", raw=path.read_bytes())

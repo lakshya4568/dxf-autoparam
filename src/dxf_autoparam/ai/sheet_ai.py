@@ -257,7 +257,7 @@ def commit_unit(sm: SheetModel, uid: str, answer: dict, expected_revision: int |
     from contextlib import nullcontext
 
     with lock or nullcontext():
-        commit = sm.commit_answer(uid, answer, expected_revision=expected_revision, discard_values=discard_values)
+        commit = sm.commit_answer(uid, answer, expected_revision=expected_revision, discard_values=discard_values, keep_unnamed_as_drawn=True)
         applied, refused = [], []
         for plan in (p for p in (answer.get("plans") or []) if p.get("status") == "accepted"):
             want = (plan.get("driver") or {}).get("requested_value")

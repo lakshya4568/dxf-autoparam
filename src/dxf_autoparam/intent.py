@@ -22,7 +22,7 @@ from dataclasses import dataclass, field
 
 from .cadjson import entity_index
 from .ir import Datum
-from .program import ExprError, Program, names_in
+from .program import ExprError, Program, Relation, _num, names_in
 from .regen import regenerate_program
 from .topology import DatumIndex, of
 
@@ -471,7 +471,7 @@ def _enforce(prog: Program, c: dict, protected: set[str]) -> str | None:
     elif t == "equal" and len(ds) >= 4:
         options = [(ds[3], f"{ds[2]} + ({ds[1]} - {ds[0]})"), (ds[2], f"{ds[3]} - ({ds[1]} - {ds[0]})")]
     elif t == "fixed":
-        options = [(d, f"{dmm[d]:.6f}".rstrip("0").rstrip(".")) for d in ds if d in dmm]
+        options = [(d, _num(dmm[d])) for d in ds if d in dmm]
     done = None
     for d, expr in options:
         if d not in prog.formulas or d in protected:
@@ -490,6 +490,7 @@ def _enforce(prog: Program, c: dict, protected: set[str]) -> str | None:
             ok = False
         if ok:
             prog.origin[d] = "constraint"
+            prog.origin_why[d] = str(c.get("description") or t)
             done = d
             if t != "fixed":
                 break
@@ -905,6 +906,7 @@ def drive_dimensions(prog: Program, dims: dict[str, list[tuple[str, str, str | N
                 break
             for d, _e, _w in chosen:
                 prog.origin[d] = "dimension"
+                prog.origin_why[d] = name
                 protected.add(d)  # a line a named value drives is not taken over by the next one
     return problems
 
@@ -957,7 +959,9 @@ def _substitute(expr: str, values: dict[str, float]) -> str:
 
 
 def freeze_params(prog: Program, names: set[str], rep) -> None:
-    """Keep these values as drawn: they stop being inputs; everything that used them keeps the number."""
+    """Keep these values as drawn: they stop being inputs; everything that used them keeps the number. A value somebody NAMED (the agent's
+    design input kept as built) stays a named, measured quantity between its lines — a relation, like any worked-out size — so its name and
+    value are still there to read; it is never silently lost. Many measured sizes nobody named are said in one line, not one each."""
     vals = {n: prog.params[n].value for n in names if n in prog.params}
     if not vals:
         return
@@ -970,10 +974,58 @@ def freeze_params(prog: Program, names: set[str], rep) -> None:
     for r in prog.relations:
         if names_in(r.expr) & vals.keys():
             r.expr = _substitute(r.expr, vals)
+    an = prog.analysis
+    anonymous = []
     for n, v in vals.items():
-        prog.params.pop(n)
-        rep.findings.append(_finding("SEL", "info", n, f"{n} kept as drawn ({v:g}) by your selection"))
+        p = prog.params.pop(n)
+        if p.source == "ai" and p.measures and all(d in an.datums for d in p.measures) and not any(r.name == n for r in prog.relations):
+            a, b = sorted(p.measures, key=lambda d: an.datums[d].value)
+            prog.relations.append(Relation(name=n, expr=f"{b} - {a}", label=p.label or n, check=f"{b} - {a}", enforced=True))
+            rep.findings.append(_finding("SEL", "info", n, f"{n} kept as drawn ({v:g}): still a named quantity, measured between {a} and {b}, not an input"))
+        elif p.source == "ai":
+            rep.findings.append(_finding("SEL", "info", n, f"{n} kept as drawn ({v:g}) by your selection"))
+        else:
+            anonymous.append(n)
+    if len(anonymous) > 4:
+        rep.findings.append(_finding("SEL", "info", "kept as drawn", f"{len(anonymous)} measured sizes nobody named are kept as drawn "
+                                     f"({', '.join(anonymous[:6])} …): not inputs, the drawing is as it was"))
+    else:
+        for n in anonymous:
+            rep.findings.append(_finding("SEL", "info", n, f"{n} kept as drawn ({vals[n]:g}) by your selection"))
     prog.invalidate()
+
+
+def held_and_free_lines(parts: dict[str, Part], names: set[str]) -> tuple[set[str], set[str], set[str]]:
+    """For the parts to be held: every held part (with what it is made of), the set-out lines they use, and the lines the free parts use.
+    The two sets of lines decide the hold — the lines only held parts use become constants, the lines both use are split or follow — and
+    decide, before the hold is applied, which lines a named size must not be set out by moving."""
+    held_names = set(names)
+    for n in names:
+        held_names |= descendants(parts, n)
+    held_d: set[str] = set()
+    for n in held_names:
+        held_d |= parts[n].datums if n in parts else set()
+    free_d: set[str] = set()
+    for p in parts.values():
+        if p.name not in held_names and p.datums and not any(a in held_names for a in _ancestors(parts, p.name)):
+            free_d |= p.own_datums  # an assembly's gathered lines include its held parts' lines: only its own count
+    return held_names, held_d, free_d
+
+
+def held_own_entities(an, parts: dict[str, Part], held: set[str]) -> set[int]:
+    """The entities of the held side: those that belong ONLY to held parts. An entity belongs to the held side when most of its length borders held
+    regions — an existing outline that touches the new work along one short edge is still the existing outline, and keeps its drawn place."""
+    topo = of(an)
+    held_regions = {r for n in held if n in parts for r in parts[n].regions}
+    own = {i for i, border in topo.item_border.items()
+           if sum(L for r, L in border.items() if r in held_regions) > sum(L for r, L in border.items() if r not in held_regions)}
+    return own | {i for n in held if n in parts for i in parts[n].entities}
+
+
+def held_only_lines(parts: dict[str, Part], names: set[str]) -> set[str]:
+    """The lines only held parts use: at the end of a build they are constants (hold_parts), so while a named size is set out they are fixed ends."""
+    _held, held_d, free_d = held_and_free_lines(parts, names)
+    return held_d - free_d
 
 
 def hold_parts(prog: Program, parts: dict[str, Part], names: set[str], rep) -> int:
@@ -981,22 +1033,22 @@ def hold_parts(prog: Program, parts: dict[str, Part], names: set[str], rep) -> i
     shares with a free part follow the free part, so the two stay connected."""
     an = prog.analysis
     u = an.drawing.units_mm
-    held_names = set(names)
-    for n in names:
-        held_names |= descendants(parts, n)
-    free = [p for p in parts.values() if p.name not in held_names and p.datums]
-    held_d, free_d = set(), set()
-    for n in held_names:
-        held_d |= parts[n].datums if n in parts else set()
-    for p in free:
-        if not any(a in held_names for a in _ancestors(parts, p.name)):
-            free_d |= p.own_datums  # an assembly's gathered lines include its held parts' lines: only its own count
+    held_names, held_d, free_d = held_and_free_lines(parts, names)
     count = 0
     levels = {n for n, p in prog.params.items() if p.kind == "level"}
-    count += _split_shared_lines(prog, parts, held_names, held_d & free_d, levels)
-    for d in held_d - free_d:
+    # A line no part claims (an extension line, a stray edge) is held by the entities on it: only held entities sit on it → a constant; held and
+    # free entities share it → split like any shared line. Otherwise such an entity would follow whatever its unclaimed line is set out from.
+    own = held_own_entities(an, parts, held_names)
+    users: dict[str, list[int]] = {}
+    for (i, _k, _ax), (d, _off) in an.slot_datum.items():
+        if d not in held_d and d not in free_d:
+            users.setdefault(d, [0, 0])[0 if i in own else 1] += 1
+    unclaimed_shared = {d for d, (mine, others) in users.items() if mine and others}
+    unclaimed_held = {d for d, (mine, others) in users.items() if mine and not others}
+    count += _split_shared_lines(prog, parts, held_names, (held_d & free_d) | unclaimed_shared, levels)
+    for d in (held_d - free_d) | unclaimed_held:
         if d in prog.formulas and not (names_in(prog.formulas[d]) & levels) and prog.origin.get(d) != "existing":
-            prog.formulas[d] = f"{an.datums[d].value * u:.6f}".rstrip("0").rstrip(".")
+            prog.formulas[d] = _num(an.datums[d].value * u)
             prog.origin[d] = "held"
             count += 1
     if count:
@@ -1012,13 +1064,7 @@ def _split_shared_lines(prog: Program, parts: dict[str, Part], held: set[str], s
     """A line a held part shares with a free one (an extension drawn on the old box's soffit) is split: entities
     that belong ONLY to held parts move to a copy of the line that stays put; the free part keeps the original."""
     an = prog.analysis
-    topo = of(an)
-    held_regions = {r for n in held if n in parts for r in parts[n].regions}
-    # An entity belongs to the held side when most of its length borders held regions: an existing outline that
-    # touches the new work along one short edge is still the existing outline, and it keeps its drawn place.
-    own = {i for i, border in topo.item_border.items()
-           if sum(L for r, L in border.items() if r in held_regions) > sum(L for r, L in border.items() if r not in held_regions)}
-    own |= {i for n in held if n in parts for i in parts[n].entities}
+    own = held_own_entities(an, parts, held)
     u = an.drawing.units_mm
     split = 0
     for d in sorted(shared):
@@ -1032,7 +1078,7 @@ def _split_shared_lines(prog: Program, parts: dict[str, Part], held: set[str], s
         an.datums[nd] = Datum(id=nd, axis=src.axis, value=src.value, source="held", items={k[0] for k in slots})
         for key in slots:
             an.slot_datum[key] = (nd, an.slot_datum[key][1])
-        prog.formulas[nd] = f"{src.value * u:.6f}".rstrip("0").rstrip(".")
+        prog.formulas[nd] = _num(src.value * u)
         prog.origin[nd] = "held"
         for n in held:  # the held parts are now drawn on the copy
             q = parts.get(n)

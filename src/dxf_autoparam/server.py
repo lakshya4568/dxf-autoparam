@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import errno
 import json
+import signal
 import tempfile
 import threading
 import time
@@ -592,9 +593,28 @@ def make_handler(session: Session, sheet=None):
     return Handler
 
 
+def _say(message: str) -> None:
+    try:
+        print(message, flush=True)
+    except OSError:  # the terminal is gone (it was closed): the message has nowhere to go, and the work is already saved
+        return
+
+
+def _end_like_ctrl_c() -> None:
+    """Closing the terminal (SIGHUP) or `kill` (SIGTERM) end the server the way Ctrl+C does, so the work is saved first. A SIGHUP that was set to be
+    ignored (nohup) stays ignored: whoever started the server that way wants it to outlive its terminal."""
+    def stop(_signum, _frame) -> None:
+        raise SystemExit(0)
+
+    for name in ("SIGTERM", "SIGHUP"):
+        sig = getattr(signal, name, None)
+        if sig is not None and signal.getsignal(sig) == signal.SIG_DFL:
+            signal.signal(sig, stop)
+
+
 def serve(path: str | None, domain: str | None = None, host: str = "127.0.0.1", port: int = 8765, answer: str | None = None,
-          project: str | None = None) -> None:
-    from .crossview import SheetModel
+          project: str | None = None, autosave: bool = True, fresh: bool = False, state_dir: str | None = None) -> None:
+    from . import autosave as keep
     from .workspace import SheetSession
 
     if answer and path:
@@ -603,9 +623,21 @@ def serve(path: str | None, domain: str | None = None, host: str = "127.0.0.1", 
     else:
         session = Session(None)
         session.pending = path  # the classic page opens it when it is first used
-    sheet = SheetSession(path)
-    if project and path:  # a saved parametric project (parts, sizes, plans) opened with its drawing
-        sheet.sm = SheetModel.load(project, dxf=path)
+    sheet = SheetSession()
+    if autosave:  # the work is kept on disk while it is made, and opened again with the same drawing
+        sheet.autosave = keep.Autosave(sheet, root=Path(state_dir).expanduser() if state_dir else None)
+    if path:  # a saved parametric project (parts, sizes, plans) opens with its drawing; else the work kept for it
+        sheet.open(path, project=project, fresh=fresh)
+        info = sheet.autosave.restored if sheet.autosave is not None else None
+        if info and info.get("from"):
+            _say(f"opened the saved work on this drawing ({info['from']}): revision {info.get('revision')}")
+        elif info and info.get("kept_as"):
+            _say(f"starting from the drawing as drawn; the saved work is kept as {info['kept_as']}")
+        for problem in (info or {}).get("problems", []):
+            _say(f"could not open saved work: {problem}")
+    if sheet.autosave is not None:
+        sheet.autosave.start()
+        _say(f"the work is kept in {sheet.autosave.root or keep.state_dir()}")
     for candidate in range(port, port + 20):
         try:
             httpd = ThreadingHTTPServer((host, candidate), make_handler(session, sheet))
@@ -613,11 +645,16 @@ def serve(path: str | None, domain: str | None = None, host: str = "127.0.0.1", 
         except OSError as exc:
             if exc.errno != errno.EADDRINUSE:
                 raise
-            print(f"port {candidate} is in use, trying {candidate + 1}")
+            _say(f"port {candidate} is in use, trying {candidate + 1}")
     else:
         raise SystemExit(f"no free port between {port} and {port + 19}; pass --port")
-    print(f"dxf-autoparam on http://{host}:{candidate}  ({path or 'open a DXF in the page'})")
+    _end_like_ctrl_c()  # before the address is announced: whoever reads it may close the terminal that very moment
+    _say(f"dxf-autoparam on http://{host}:{candidate}  ({path or 'open a DXF in the page'})")
     try:
         httpd.serve_forever()
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, SystemExit):
         pass
+    finally:
+        if sheet.autosave is not None:
+            sheet.autosave.stop()  # the last look: what was changed in the final second is written too
+            _say(f"the work is saved in {sheet.autosave.path}" if sheet.autosave.saved_at else "nothing was changed since the drawing was opened: nothing new to save")

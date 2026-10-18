@@ -33,6 +33,7 @@ from .intent import (
     drive_dimensions,
     freeze_params,
     heal_growth_breaks,
+    held_only_lines,
     hold_parts,
     impact_summary,
     measure_impact,
@@ -49,6 +50,7 @@ from .program import (
     Param,
     Program,
     Relation,
+    _num,
     check_dims,
     dim_of_unit,
     evaluate,
@@ -368,6 +370,10 @@ def apply(an: Analysis, answer: dict, base_decisions: Decisions | None = None, h
             dims[name] = [(*prog.params[name].measures, None)]
     drive_protected = {d for d, o in prog.origin.items() if o in ("ai", "slope", "held", "existing", "constraint")} \
         | {d for d, e in prog.formulas.items() if names_in(e) & levels_now}
+    # The lines only held parts use are constants at the end of the build (hold_parts below), so a named size is never set out by moving
+    # one: the free end moves, and a size between two held lines is a worked-out quantity — whether or not the hold is applied yet.
+    will_hold = {p.name for p in parts.values() if not p.parametrize} | ({p.name for p in parts.values() if p.existing} if hold_existing else set())
+    drive_protected |= held_only_lines(parts, will_hold)
     cannot = drive_dimensions(prog, dims, drive_protected)
 
     # ── parameters must drive something (V9) ──────────────────────────────────────
@@ -457,7 +463,8 @@ def apply(an: Analysis, answer: dict, base_decisions: Decisions | None = None, h
         hold_parts(prog, parts, hold, rep)
     for comp in prog.components:
         comp.held = comp.name in held_all
-    freeze_params(prog, set(selection.get("exclude", [])) & set(prog.params), rep)
+    frozen = {r.get("name") for r in answer.get("frozen", []) if isinstance(r, dict)}  # measured sizes nobody named, kept as drawn (generic.py)
+    freeze_params(prog, (set(selection.get("exclude", [])) | frozen) & set(prog.params), rep)
 
     # ── the engine's own rules, whatever was proposed ─────────────────────────────
     enforce_slopes(prog, rep)
@@ -511,7 +518,7 @@ def apply(an: Analysis, answer: dict, base_decisions: Decisions | None = None, h
     review += [{"kind": "constraint", "name": r["label"], "confidence": r["confidence"], "evidence": []}
                for r in constraint_rows if (r.get("confidence") or 1) < REVIEW_BELOW]
     prog.intent = {"parts": parts, "line_roles": roles, "constraints": constraint_rows, "behaviours": behaviour_rows,
-                   "impact": impact_summary(impact, parts), "selection": {"hold": sorted(hold), "exclude": sorted(selection.get("exclude", [])), "drop": sorted(dropped)},
+                   "impact": impact_summary(impact, parts), "selection": {"hold": sorted(hold), "exclude": sorted(selection.get("exclude", [])), "drop": sorted(dropped), "frozen": len(frozen)},
                    "review": review, "uncovered_regions": loose}
 
     # ── every value regenerates a valid drawing (V8) ──────────────────────────────
@@ -553,7 +560,10 @@ def _retire_undriven(prog: Program, rep: Report, dims: dict, cannot: dict, why: 
             a, b = sorted(pair[0][:2], key=lambda d: an.datums[d].value)
             if not any(r.name == name for r in prog.relations):
                 prog.relations.append(Relation(name=name, expr=f"{b} - {a}", label=p.label or name, check=f"{b} - {a}", enforced=True))
-            reason = cannot.get(name) or (f"{name}: {why}" if why else f"{name} is not set out by any line")
+            if all(prog.origin.get(d) in ("held", "existing") for d in (a, b)):
+                reason = f"{name}: both its lines belong to parts kept as drawn, so it cannot drive anything"
+            else:
+                reason = cannot.get(name) or (f"{name}: {why}" if why else f"{name} is not set out by any line")
             rep.findings.append(Finding("V9", "info", name, reason + f" — kept as a worked-out quantity ({b} - {a}), not an input"))
         else:
             rep.bad("parameter", "V9", name, f"{name} drives nothing and measures no two lines: name a candidate or two lines")
@@ -728,7 +738,7 @@ def hold_existing_fixed(prog: Program, answer: dict, rep: Report) -> None:
     held = 0
     for d in existing - proposed:
         if d in prog.formulas and not any(n in prog.params for n in names_in(prog.formulas[d]) if prog.params.get(n) and prog.params[n].kind == "level"):
-            prog.formulas[d] = f"{an.datums[d].value * u:.6f}".rstrip("0").rstrip(".")
+            prog.formulas[d] = _num(an.datums[d].value * u)
             prog.origin[d] = "existing"
             held += 1
     if held:

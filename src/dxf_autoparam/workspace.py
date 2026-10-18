@@ -6,9 +6,11 @@ shares, anchors, links and view corrections are transactions with undo / redo.
 
     GET  /api/sheet                       the views, units, links, shared and local values, what to review
     GET  /api/sheet/geometry              every primitive (once; gzip)
-    POST /api/sheet/open?name=…           a DXF (its bytes) — the sheet is read and its views found
+    POST /api/sheet/open?name=…[&fresh=1] a DXF (its bytes) — the sheet is read and its views found; work saved for the same drawing is
+                                          opened with it (fresh=1: not — it is kept aside under a dated name)
     POST /api/sheet/preview  {changes}    regenerated, checked, NOT committed: the entities that would change
-    POST /api/sheet/apply    {changes}    committed only if the whole sheet holds
+    POST /api/sheet/apply    {changes[,live]} committed only if the whole sheet holds (live: one person stepping a value — the steps are one undo)
+    GET  /api/sheet/original              the entities that differ from the drawing as read, as that drawing has them (the dotted original)
     POST /api/sheet/undo | redo
     GET  /api/sheet/unit?id=…             one unit's values, parts, findings (analysed on first use)
     GET  /api/sheet/param?name=…          what a value moves (per view), how it grows, how far it can go
@@ -19,6 +21,7 @@ shares, anchors, links and view corrections are transactions with undo / redo.
     GET  /api/sheet/status                how far each view, part and value really is (derived from the model, never from a message)
     GET  /api/sheet/coverage              what the DXF held and what of it is read, drawn, editable, exported (by type, by handle)
     GET  /api/sheet/agent_notes           the agent's checklist and the facts it recorded (stale ones marked)
+    GET  /api/sheet/autosave              where the work is kept, when it was last written, what was opened from there (null: autosave is off)
     GET  /  (and /app/…)                  the interactive workspace (web/, built into static/app); /legacy the previous page
     GET  /api/sheet/entity?i=…            one entity: source handle / block / properties, style, view, unit, set-out lines, parameters
     GET  /api/sheet/resolve?handle=…      a DXF handle → the sheet entities read from it
@@ -43,6 +46,8 @@ The agent — ONE instruction, one session (ai/run.py):
     POST /api/sheet/ai/continue {run, answers, note}       after it asked, or after a budget pause
     POST /api/sheet/ai/stop | apply | revert {run}
     GET  /api/sheet/ai/runs                                the history; GET /api/sheet/ai/image?run=R1&id=IMG3
+    GET  /api/sheet/ai/requests?run=R1&since=0&limit=50    (&brief=1) every model call: what it was made of, what was the same as the call before, what it cost and
+                                                           how much of it the provider cached; &call=57 is that request whole (pictures' bytes left out)
 """
 
 from __future__ import annotations
@@ -77,6 +82,7 @@ class SheetSession:
         self.gem_model: str | None = None  # the model the client was made for
         self.gem_factory = None  # a test (or another provider) supplies the model here
         self.gem_per_run = False
+        self.autosave = None  # autosave.Autosave: keeps the work on disk while it is made (the server sets it; a test or script does without)
         self.pictures = None
         self.runs: dict = {}
         self.run_n = 0
@@ -90,7 +96,11 @@ class SheetSession:
 
     # ── state ─────────────────────────────────────────────────────────────────
 
-    def open(self, path: str) -> dict:
+    def open(self, path: str, project: str | None = None, fresh: bool = False) -> dict:
+        """Read a DXF. With `project`, the saved parametric project opens with it; otherwise the work kept for this same drawing (autosave) does —
+        unless `fresh`, which keeps that work aside under a dated name and starts from the drawing as drawn."""
+        from . import autosave as keep
+
         if self.running():
             raise SheetError("the agent is working on this sheet: stop it first")
         if self.gem is not None:
@@ -98,7 +108,19 @@ class SheetSession:
             self.gem = None
         self.gem_model = None
         t = time.perf_counter()
-        self.sm = SheetModel.open(path)
+        sm, restored = None, None
+        if project:
+            sm = SheetModel.load(project, dxf=path)
+            restored = {"from": "a project file", "path": project, "revision": sm.revision, "problems": []}
+        elif self.autosave is not None and fresh:
+            kept = keep.set_aside(path, self.autosave.root)
+            restored = {"from": None, "kept_as": str(kept) if kept else None, "problems": []}
+        elif self.autosave is not None:
+            sm, restored = keep.restore(path, self.autosave.root)
+        self.sm = sm or SheetModel.open(path)
+        if self.autosave is not None:
+            self.autosave.restored = restored if restored and (restored.get("from") or restored.get("problems")) else None
+            self.autosave.rebase()
         self.pictures = None
         self.runs, self.current_run, self.run_n = {}, None, 0
         self.shown = set()
@@ -128,6 +150,7 @@ class SheetSession:
                         if u.built
                         else None
                     ),
+                    "kept_as_drawn": len((u.answer or {}).get("frozen", [])),
                     "dropped": u.dropped,
                 }
             )
@@ -144,6 +167,7 @@ class SheetSession:
             "values": sm.current(), "can_undo": bool(sm.history), "can_redo": bool(sm.future),
             "relations": sm.relations, "questions": sm.questions, "accepted": sorted(list(k) for k in sm.accepted),
             "ai_running": self.running(), "current_run": self.current_run, "prefs": sm.prefs, "revision": sm.revision,
+            "autosave": self.autosave.status() if self.autosave is not None else None,
         }
 
     def _prims(self, entities, sr: SheetRegen | None) -> list[dict]:
@@ -243,12 +267,17 @@ class SheetSession:
         return {"ok": sr.ok, "errors": sr.errors[:20], "warnings": sr.warnings, "by_view": sr.by_view, "measured": sr.measured,
                 "changed": len(sr.changed), "delta": delta, "styles": self.styles}
 
-    def apply(self, changes: dict) -> dict:
+    def apply(self, changes: dict, live: bool = False) -> dict:
         sm = self._sm()
-        sr = sm.apply({k: float(v) for k, v in changes.items()})
+        sr = sm.apply({k: float(v) for k, v in changes.items()}, live=live)
         if not sr.ok:
             return {"ok": False, "errors": sr.errors[:20]}
         return {"ok": True, **self._commit_delta(), "summary": self.summary(), "by_view": sr.by_view}
+
+    def original(self) -> dict:
+        """The entities that now differ from the drawing as it was read, as that drawing has them (the dotted original a person can show)."""
+        self._sm()
+        return {"prims": self._prims(self.shown, None), "styles": self.styles}
 
     def history(self, which: str) -> dict:
         sm = self._sm()
@@ -277,6 +306,15 @@ class SheetSession:
             result = {"id": sm.merge_views(body["ids"])}
         elif op == "split":
             result = {"id": sm.split_view(body["id"], tuple(body["box"]), body.get("name", ""))}
+        elif op in ("purge_generic", "release_frozen", "unlock_part"):
+            if self.running():
+                raise SheetError("the agent is working on this sheet: stop it first")
+            if op == "purge_generic":
+                result = sm.purge_unclaimed_generic_values(body.get("unit"), bool(body.get("dry_run")))
+            elif op == "release_frozen":
+                result = sm.release_frozen(body["unit"], body.get("names"))
+            else:
+                result = sm.unlock_part(body["unit"], body["part"])
         else:
             raise SheetError(f"no such edit: {op}")
         return {"ok": True, "result": result, **self._commit_delta(), "summary": self.summary()}
@@ -416,6 +454,14 @@ class SheetSession:
         if not self.runs:
             return {"run": None, "status": "idle", "events": [], "next": 0}
         return self._run(rid).progress(since)
+
+    def run_requests(self, rid: str | None, since: int = 0, limit: int = 50, brief: bool = False) -> dict:
+        if not self.runs:
+            return {"run": None, "requests": [], "next": 0, "totals": {}}
+        return self._run(rid).requests_listing(since, limit, brief)
+
+    def run_request_payload(self, rid: str | None, n: int) -> str | None:
+        return self._run(rid).request_payload(n) if self.runs else None
 
     def run_list(self) -> dict:
         """This session's runs (newest first), then the history saved with the project that this session did not make."""
@@ -565,6 +611,7 @@ class SheetSession:
         u = sm.unit(uid)
         assert u.prog is not None
         assert u.an is not None
+        from .generic import is_generated
         from .graph import affects
 
         reach = affects(u.prog)
@@ -579,10 +626,12 @@ class SheetSession:
             params.append({"name": name, "key": bound.get(name) or f"{uid}.{name}", "shared": name in bound, "label": prm.label, "state": state.get(name, "named"),
                            "changed": name in sm.values.get(uid, {}),
                            "value": sm.values.get(uid, {}).get(name, prm.value), "drawn": prm.value, "unit": prm.unit, "kind": prm.kind,
-                           "source": prm.source, "measures": prm.measures, "confidence": prm.confidence, "evidence": prm.evidence[:4],
+                           "source": prm.source, "generic": prm.source != "ai" and is_generated(name),  # the engine's own measurement, nobody named it
+                           "measures": prm.measures, "confidence": prm.confidence, "evidence": prm.evidence[:4],
                            "occurrences": prm.occurrences, "entities": len(ents), "views": sorted({sm.layout.item_group.get(s, "") for s in ents} - {""}),
                            "parts": r.get("parts", [])[:12]})
         params.sort(key=lambda q: (not q["shared"], q["source"] != "ai", -q["entities"]))
+        measured = self._measured(u)
         rep = u.report
         checked = {r["id"]: r for r in u.prog.intent.get("plans", [])}
         plans = [{"id": p.get("id"), "status": p.get("status"), "instruction": p.get("instruction", ""),
@@ -597,8 +646,11 @@ class SheetSession:
             dict[str, object],
             {
                 "id": uid,
+                "revision": sm.revision,
                 "views": u.views,
                 "params": params,
+                "measured": measured,
+                "frozen": list((u.answer or {}).get("frozen", []))[:600],
                 "plans": plans,
                 "relations": [
                     {"name": r.name, "label": r.label, "expr": r.expr}
@@ -627,6 +679,27 @@ class SheetSession:
                 )[:200],
             },
         )
+
+    @staticmethod
+    def _measured(u) -> list[dict]:
+        """The named quantities that are measured, not inputs: a size of work kept as drawn, a size the set-out fixes at both ends, a sum the agent
+        wrote down. Each says what it is measured between and which part it belongs to (so the page can offer to unlock a held part)."""
+        from .program import ExprError
+
+        out = []
+        assert u.prog is not None
+        for r in u.prog.relations:
+            if r.name.startswith("R_"):  # the engine's own sums of sizes: not something a person names
+                continue
+            try:
+                value = u.prog.relation_value(r)
+            except ExprError:
+                continue
+            ends = [x.strip() for x in (r.check or "").split(" - ")] if r.check else []
+            part = next((c for c in u.prog.components if len(ends) == 2 and ends[0] in c.datums and ends[1] in c.datums), None)
+            out.append({"name": r.name, "label": r.label or r.name, "value": value, "unit": "mm", "expr": r.expr, "between": ends if len(ends) == 2 else None,
+                        "part": part.name if part else None, "held": bool(part and part.held), "existing": bool(part and part.existing)})
+        return out
 
     def param(self, name: str) -> dict:
         """Everything a click on a value shows: what it moves (measured), how it grows, how far it can go, the geometry it belongs to by
@@ -683,11 +756,20 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
         if method == "GET":
             if path == "/api/sheet/ai/progress":
                 return handler._json(sheet.run_progress(q.get("run", [None])[0], int(q.get("since", ["0"])[0]))) or True
+            if path == "/api/sheet/ai/requests":
+                if q.get("call"):
+                    body = sheet.run_request_payload(q.get("run", [None])[0], int(q["call"][0]))
+                    if body is None:
+                        return handler._json({"ok": False, "error": "that request is no longer kept whole: only the last few calls are"}, 404) or True
+                    return handler._send(200, body.encode(), "application/json") or True
+                return handler._json(sheet.run_requests(q.get("run", [None])[0], int(q.get("since", ["0"])[0]), int(q.get("limit", ["50"])[0]), q.get("brief", ["0"])[0] == "1")) or True
             if path == "/api/sheet/ai/image":
                 png = sheet.run_image(q.get("run", [None])[0], q.get("id", [""])[0])
                 if png is None:
                     return handler._json({"ok": False, "error": "that picture is no longer kept: ask the agent to look again"}, 404) or True
                 return handler._send(200, png, "image/png", {"Cache-Control": "max-age=3600"}) or True
+            if path == "/api/sheet/autosave":
+                return handler._json(sheet.autosave.status() if sheet.autosave is not None else None) or True
             if path == "/api/sheet/ai/usage":
                 from .ai.usage import summary
 
@@ -708,6 +790,8 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
                     return handler._json(sheet.summary() if sheet.sm else {"empty": True}) or True
                 if path == "/api/sheet/geometry":
                     return _gzip(handler, json.dumps(sheet.geometry()).encode(), "application/json") or True
+                if path == "/api/sheet/original":
+                    return _gzip(handler, json.dumps(sheet.original()).encode(), "application/json") or True
                 if path == "/api/sheet/unit":
                     return handler._json(sheet.unit(q.get("id", [""])[0])) or True
                 if path == "/api/sheet/param":
@@ -767,12 +851,12 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
                         fname = "upload.dxf"
                     tmp = Path(tempfile.mkdtemp()) / fname
                     tmp.write_bytes(raw)
-                    return handler._json(sheet.open(str(tmp))) or True
+                    return handler._json(sheet.open(str(tmp), fresh=q.get("fresh", ["0"])[0] == "1")) or True
                 body = json.loads(raw or b"{}")
                 if path == "/api/sheet/preview":
                     return handler._json(sheet.preview(body.get("changes", {}))) or True
                 if path == "/api/sheet/apply":
-                    return handler._json(sheet.apply(body.get("changes", {}))) or True
+                    return handler._json(sheet.apply(body.get("changes", {}), live=bool(body.get("live")))) or True
                 if path == "/api/sheet/behaviour":
                     return handler._json(sheet.behaviour(body.get("changes", {}))) or True
                 if path == "/api/sheet/decide":

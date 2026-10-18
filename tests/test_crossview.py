@@ -95,6 +95,45 @@ def test_undo_and_redo_values(sheet):
     assert sheet.current()["ClearSpan"] == pytest.approx(13500)
 
 
+def test_live_steps_of_one_value_are_one_undo(sheet):
+    """A person stepping a value: every step is committed (the drawing follows) but a single undo goes back to where the stepping began."""
+    uid = sheet.unit_of_view[view(sheet, "ELEVATION")]
+    sheet.share("ClearSpan", [(uid, opening(sheet, uid, 12000, "void"))])
+    depth, rev = len(sheet.history), sheet.revision
+    for v in (12100, 12200, 12300):
+        assert sheet.apply({"ClearSpan": v}, live=True).ok
+        assert sheet.current()["ClearSpan"] == pytest.approx(v)
+    assert len(sheet.history) == depth + 1 and sheet.revision == rev + 3  # one undo step; the revision still moves with every step
+    assert sheet.undo()
+    assert sheet.current()["ClearSpan"] == pytest.approx(12000)
+
+
+def test_live_steps_do_not_join_other_changes(sheet):
+    uid = sheet.unit_of_view[view(sheet, "ELEVATION")]
+    sheet.share("ClearSpan", [(uid, opening(sheet, uid, 12000, "void"))])
+    depth = len(sheet.history)
+    sheet.apply({"ClearSpan": 12100}, live=True)
+    sheet.apply({"ClearSpan": 12200}, live=False)  # an applied change is its own step
+    sheet.apply({"ClearSpan": 12300}, live=True)  # and a live step after it starts again
+    sheet.apply({"ClearSpan": 12400}, live=True)
+    assert len(sheet.history) == depth + 3
+    sheet.undo()
+    assert sheet.current()["ClearSpan"] == pytest.approx(12200)
+    sheet.redo()
+    assert sheet.current()["ClearSpan"] == pytest.approx(12400)
+
+
+def test_a_refused_live_step_changes_nothing_and_keeps_the_session(sheet):
+    uid = sheet.unit_of_view[view(sheet, "ELEVATION")]
+    sheet.share("ClearSpan", [(uid, opening(sheet, uid, 12000, "void"))])
+    sheet.apply({"ClearSpan": 12100}, live=True)
+    depth, rev = len(sheet.history), sheet.revision
+    assert not sheet.apply({"ClearSpan": 0}, live=True).ok
+    assert sheet.current()["ClearSpan"] == pytest.approx(12100) and len(sheet.history) == depth and sheet.revision == rev
+    assert sheet.apply({"ClearSpan": 12200}, live=True).ok
+    assert len(sheet.history) == depth  # still the same stepping
+
+
 def two_views(path: Path) -> Path:
     """Two views NOT drawn in line (one beside and below the other), each stating 3000 for its opening."""
     doc = ezdxf.new("R2010", setup=True)
