@@ -8,7 +8,7 @@
 // By default it generates a two-cell box GAD with its known parametrization (e2e/make_fixture.py: no model call), so a unit is
 // parametrized and a value can be previewed, applied and undone.
 import { spawn, spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { requireFreePort } from "./harness.mjs";
@@ -42,7 +42,9 @@ const sameCam = (a, b) => a && b && Math.abs(a.cx - b.cx) < 1e-9 * Math.max(1, M
   && Math.abs(a.s - b.s) < 1e-12 * Math.max(1, a.s) && a.rot === b.rot;
 
 await requireFreePort(base);
-const server = spawn("uv", ["run", "dxf-autoparam", "serve", dxf, "--port", String(port), ...(project ? ["--project", project] : [])], { cwd: root, stdio: ["ignore", "pipe", "pipe"] });
+// --state-dir: a test server keeps its work in the test's own folder, never in the person's (where the work on a real drawing is kept)
+const stateDir = join(out, "state");
+const server = spawn("uv", ["run", "dxf-autoparam", "serve", dxf, "--port", String(port), "--state-dir", stateDir, ...(project ? ["--project", project] : [])], { cwd: root, stdio: ["ignore", "pipe", "pipe"] });
 let serverLog = "";
 server.stdout.on("data", (d) => (serverLog += d));
 server.stderr.on("data", (d) => (serverLog += d));
@@ -180,7 +182,7 @@ try {
     for (const u of s.units.filter(u => u.parametrized)) {
       const info = await (await fetch('/api/sheet/unit?id=' + encodeURIComponent(u.id))).json();
       const p = (info.params || []).find(p => p.unit === 'mm' && p.value > 50 && p.kind !== 'level');
-      if (p) return { key: p.key, value: p.value, unit: u.id };
+      if (p) return { key: p.key, name: p.name, value: p.value, unit: u.id };
     }
     return null;
   })()`);
@@ -210,6 +212,118 @@ try {
       const valueBack = await js(`(async () => { const info = await (await fetch('/api/sheet/unit?id=${encodeURIComponent(param.unit)}')).json(); return (info.params.find(p => p.key === ${JSON.stringify(param.key)}) || {}).value; })()`);
       check("undo restores the value", Math.abs(valueBack - param.value) < 1e-6 && rev2 !== rev1, `${param.key} = ${valueBack}, revision ${rev2}`);
       check("undo does not move the camera", sameCam(camBefore, await cam()));
+    }
+  }
+
+  // 6b · the person's own path: the Values tab, a click on a value opens its editor, typing previews it. (Once a click on a value did nothing and said
+  // nothing: the engine sent {} where the page iterated a list, and the rejection was swallowed. Every other check here went through window.__ws.)
+  if (param) {
+    const rev = await js("window.__ws.state().revision");
+    await js("document.querySelector('[data-testid=tab-values]').click()");
+    await js(`window.__ws.openUnit(${JSON.stringify(param.unit)})`);
+    // a value shared across views is listed once, under "Shared across views"; one that only this unit has is under its named values
+    const row = `[data-testid="param-${param.name}"], [data-testid="shared-${param.name}"]`;
+    check("the Values panel lists the unit's values", await until(`!!document.querySelector(${JSON.stringify(row)})`, 8000), `${param.unit}.${param.name}`);
+    await js(`document.querySelector(${JSON.stringify(row)}).click()`);
+    check("a click on a value opens its editor", await until("!!document.querySelector('[data-testid=param-editor]')", 60000), param.key);
+    check("a click on a value says what it moves", await until("!!window.__ws.state().highlight", 5000));
+    // the editor is a spinner: no Apply, no slider; a step changes the drawing at once and the original is not shown unless it is switched on
+    check("the editor has a spinner and no Apply, Reset or slider", await js("!!document.querySelector('[data-testid=param-inc]') && !!document.querySelector('[data-testid=param-dec]') && !document.querySelector('[data-testid=apply]') && !document.querySelector('[data-testid=param-reset]') && !document.querySelector('[data-testid=param-editor] [data-testid=show-original]') && !document.querySelector('[data-testid=param-editor] input[type=range]')"));
+    const val = () => js(`window.__ws.state().summary.values[${JSON.stringify(param.key)}]`);
+    const sig = () => js("JSON.stringify(window.__ws.state().prims.map((p) => [p.i, p.p, p.at]).sort((a, b) => a[0] - b[0] || String(a[1]).localeCompare(String(b[1]))))");
+    const v0 = await val(), sig0 = await sig();
+    await js("document.querySelector('[data-testid=param-inc]').click()");
+    check("one step up changes the value and the geometry, with nothing applied by hand", await until(`window.__ws.state().revision > ${rev}`, 60000) && (await val()) > v0 && (await sig()) !== sig0, `${param.key}: ${v0} → ${await val()}`);
+    check("the original is not shown, nor even fetched, while a value is stepped", (await js("window.__ws.state().original === null && window.__ws.state().overlays.original === false")));
+    const step1 = (await val()) - v0;
+    await js("document.querySelector('[data-testid=param-inc]').click()");
+    await js("document.querySelector('[data-testid=param-inc]').click()");
+    check("three steps up in a row add three equal steps", await until(`Math.abs(window.__ws.state().summary.values[${JSON.stringify(param.key)}] - ${v0 + 3 * step1}) < 1e-6`, 60000) && !(await js("!!document.querySelector('[data-testid=param-error]')")), `${v0} + 3 × ${step1}`);
+    const v3 = await val();
+    await shot("04b_value_editor");
+    await js("document.querySelector('[data-testid=show-original]').click()");
+    check("the Original switch is in the top bar, over the whole drawing, and shows it dotted only when switched on", await until("window.__ws.state().overlays.original && (window.__ws.state().original?.prims.length ?? 0) > 0", 20000));
+    await sleep(150);
+    await shot("04c_original_dotted");
+    await js("document.querySelector('[data-testid=show-original]').click()");
+    check("and gone when switched off again", await until("window.__ws.state().original === null", 5000) && (await val()) === v3);
+    await js("document.querySelector('[data-testid=param-dec]').click()");
+    check("a step down shrinks it again", await until(`window.__ws.state().summary.values[${JSON.stringify(param.key)}] < ${v3}`, 60000));
+    // the stepping above (up, up, up, down) is ONE undo: it goes back to where the stepping began
+    await js("window.__ws.undo()");
+    check("a single undo goes back to where the stepping began", await until(`Math.abs(window.__ws.state().summary.values[${JSON.stringify(param.key)}] - ${v0}) < 1e-6`, 60000) && (await sig()) === sig0);
+    await js("document.querySelector('[data-testid=param-inc]').click()");
+    await until(`window.__ws.state().summary.values[${JSON.stringify(param.key)}] !== ${v0}`, 60000);
+    // typing is taken on Enter, not half-typed: the digits on the way change nothing
+    const v4 = await val(), revT = await js("window.__ws.state().revision");
+    const target = Math.round(param.value * 1.1);
+    await js(`(() => { const i = document.querySelector('[data-testid=param-input]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, ${JSON.stringify(String(target))}); i.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+    await sleep(600);
+    check("a typed number changes nothing until Enter", (await js("window.__ws.state().revision")) === revT && (await val()) === v4);
+    await js("document.querySelector('[data-testid=param-input]').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))");
+    check("Enter takes it and the drawing follows", await until(`Math.abs(window.__ws.state().summary.values[${JSON.stringify(param.key)}] - ${target}) < 1e-6`, 60000), `${param.key} → ${target}`);
+    await js(`document.querySelector(${JSON.stringify(row)}).click()`);
+    check("a second click closes the editor", await until("!document.querySelector('[data-testid=param-editor]')", 5000));
+    await js("window.__ws.state().preview && document.querySelector('[data-testid=tab-values]').click()");
+  }
+
+  // 6b2 · the other kind of value opens its editor too: a unit's own named value (the first one the panel lists under the unit's named values)
+  if (param) {
+    await js("document.querySelector('[data-testid=tab-values]').click()");
+    await js(`window.__ws.openUnit(${JSON.stringify(param.unit)})`);
+    await until("!!document.querySelector('[data-testid=named-group] [data-testid^=param-]')", 8000);
+    const own = await js("document.querySelector('[data-testid=named-group] [data-testid^=param-]')?.dataset.testid || null");
+    if (own) {
+      await js(`document.querySelector('[data-testid=${JSON.stringify(own).slice(1, -1)}]').click()`);
+      check("a unit's own named value opens its editor too", await until("!!document.querySelector('[data-testid=param-editor]')", 60000), own);
+      await js(`document.querySelector('[data-testid=${JSON.stringify(own).slice(1, -1)}]').click()`);
+      await until("!document.querySelector('[data-testid=param-editor]')", 5000);
+    }
+  }
+
+  // 6c · what each value IS: named inputs first, readings of work kept as drawn (with the way to unlock it), measured sizes nobody named
+  // (kept as drawn on request: the drawing does not change, one click gives them back). Written for the generated fixture, whose part kept as drawn is known.
+  if (param && !args.dxf) {
+    await js("document.querySelector('[data-testid=tab-values]').click()");
+    await js(`window.__ws.openUnit(${JSON.stringify(param.unit)})`);
+    await until("!!document.querySelector('[data-testid=named-group]')", 8000);
+    const groups = await js(`(() => ({ named: document.querySelectorAll('[data-testid=named-group] [data-testid^=param-]').length,
+      generic: !!document.querySelector('[data-testid=generic-group]'), genericOpen: !!document.querySelector('[data-testid=generic-group]')?.open,
+      measured: [...document.querySelectorAll('[data-testid^=measured-]')].map((e) => e.dataset.testid.slice(9)).filter((n) => n !== "group"), kept: !!document.querySelector('[data-testid=kept-group]') }))()`);
+    check("named values are listed on their own, the unnamed measured sizes are folded away", groups.named > 0 && groups.generic && !groups.genericOpen, JSON.stringify(groups));
+    check("work kept as drawn shows its named size as a reading, with the part to unlock", groups.measured.includes("FoundationWidth") && (await js("!!document.querySelector('[data-testid=unlock-FoundationWidth]')")));
+    const geometry = async () => JSON.stringify((await (await fetch(`${base}/api/sheet/geometry`)).json()).prims.map((p) => [p.i, p.p, p.m, p.at]));
+    const before6c = await geometry();
+    const rev6c = await js("window.__ws.state().revision");
+    const loose = () => js("document.querySelectorAll('[data-testid=generic-group] [data-testid^=param-]').length");
+    const looseBefore = await loose();
+    await js("document.querySelector('[data-testid=keep-as-drawn]').click()");
+    check("keeping the unnamed sizes as drawn is one step; they move to their own list (the ones a note states stay inputs)",
+      (await until("!!document.querySelector('[data-testid=kept-group]')", 20000)) && (await loose()) < looseBefore && (await js("window.__ws.state().revision")) === rev6c + 1,
+      `${looseBefore} → ${await loose()} unnamed, revision ${rev6c} → ${await js("window.__ws.state().revision")}`);
+    check("and the drawing is exactly what it was", (await geometry()) === before6c);
+    const kept = await js("document.querySelectorAll('[data-testid=kept-group] [title]').length");
+    await js("document.querySelector('[data-testid=release-all]').click()");
+    check("releasing them gives every one back as an input", (await until("!document.querySelector('[data-testid=kept-group]')", 20000)) && (await loose()) === looseBefore, `${kept} were kept`);
+    await js("document.querySelector('[data-testid=unlock-FoundationWidth]').click()");
+    check("unlocking existing work turns its named size into an input, and moves nothing", await until("!document.querySelector('[data-testid=measured-FoundationWidth]') && !!document.querySelector('[data-testid=param-FoundationWidth]')", 20000)
+      && (await geometry()) === before6c);
+    // the work is kept on disk as it changes: the badge says when, and the file is there
+    check("the page says when the work was last written to disk", await until("/saved \\d/.test(document.querySelector('[data-testid=autosave]')?.textContent || '')", 20000), await js("document.querySelector('[data-testid=autosave]')?.textContent"));
+    let saved = [];
+    for (let k = 0; k < 50 && !saved.length; k++) {
+      try { saved = readdirSync(stateDir).filter((f) => f.endsWith(".autoparam.json") && !f.includes(".prev.")); } catch { /* the folder is made by the first save */ }
+      if (!saved.length) await sleep(200);
+    }
+    check("a project file is kept in the state folder", saved.length > 0, saved.join(", "));
+    if (saved.length) {
+      const pageRev = await js("window.__ws.state().revision");
+      let body = {};
+      for (let k = 0; k < 60 && body.revision !== pageRev; k++) {  // the file is written within a couple of seconds of the last change
+        try { body = JSON.parse(readFileSync(join(stateDir, saved[0]), "utf8")); } catch { /* being replaced: look again */ }
+        if (body.revision !== pageRev) await sleep(250);
+      }
+      check("it holds the revision the page shows and the unlocked part", body.revision === pageRev && JSON.stringify(body.answers).includes("FoundationWidth"), `file rev ${body.revision}, page rev ${pageRev}`);
     }
   }
 

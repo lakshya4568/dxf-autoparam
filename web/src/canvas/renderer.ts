@@ -20,10 +20,12 @@ export interface Overlays {
   holds: boolean;
   texts: boolean;
   issues: boolean;
+  /** The drawing as it was read, dotted, under what has changed: only when asked for, never as a side effect of editing a value. */
+  original: boolean;
 }
 
 export const DEFAULT_OVERLAYS: Overlays = {
-  dims: true, text: true, hatch: true, hatchTint: false, construction: true, drives: true, follows: true, holds: true, texts: true, issues: true,
+  dims: true, text: true, hatch: true, hatchTint: false, construction: true, drives: true, follows: true, holds: true, texts: true, issues: true, original: false,
 };
 
 export interface HighlightSets {
@@ -49,6 +51,7 @@ export interface RenderInput {
   hover: number | null;
   highlight: HighlightSets | null;
   preview: { ents: Set<number>; prims: Prim[] } | null;
+  original?: Prim[] | null; // as the drawing was read, for the entities that now differ
   issues: Set<number>;
   focusView: string | null;
 }
@@ -274,18 +277,18 @@ export function render(ctx: CanvasRenderingContext2D, inp: RenderInput): FrameSt
     if (drawText(ctx, p, inp, color, fontFamily(st))) texts++;
   }
   ctx.globalAlpha = 1;
-  // 7. a previewed change: the original ghosted, the proposal bright
-  if (preview) {
-    ctx.setLineDash([4, 3]);
-    ctx.strokeStyle = theme.dark ? "#5f6b7a" : "#a3acb9";
+  // 7a. the original geometry, dotted — only when the person turned it on
+  if (overlays.original && inp.original?.length) {
+    ctx.setLineDash([2, 3]);
+    ctx.strokeStyle = theme.dark ? "#8b97a7" : "#6b7685";
     ctx.lineWidth = 1;
     ctx.beginPath();
-    for (const n of ids) {
-      const p = prims[n];
-      if (preview.ents.has(p.i) && p.k === "p" && p.p) path(ctx, p.p, !!p.c, cam, W, H);
-    }
+    for (const p of inp.original) if (p.k === "p" && p.p && ok(p)) path(ctx, p.p, !!p.c, cam, W, H);
     ctx.stroke();
     ctx.setLineDash([]);
+  }
+  // 7b. a proposed change that is not applied (the API's preview): bright
+  if (preview) {
     ctx.strokeStyle = "#f97316";
     ctx.lineWidth = 1.6;
     ctx.beginPath();

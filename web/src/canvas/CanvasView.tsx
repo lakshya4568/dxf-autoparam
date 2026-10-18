@@ -37,7 +37,7 @@ export function CanvasView() {
       const stats = render(ctx, {
         prims: s.prims, styles: s.styles, index: s.index, cam: s.cam, W: s.W, H: s.H, theme: s.theme === "dark" ? DARK : LIGHT,
         hiddenLayers: s.hiddenLayers, hiddenStatus: s.hiddenStatus, statusOf: s.statusOf, overlays: s.overlays, selection: s.selection,
-        hover: s.hover, highlight: s.highlight, preview: s.preview ? { ents: s.preview.ents, prims: s.preview.prims } : null, issues: s.issues,
+        hover: s.hover, highlight: s.highlight, preview: s.preview ? { ents: s.preview.ents, prims: s.preview.prims } : null, original: s.original?.prims ?? null, issues: s.issues,
         focusView: s.focusView,
       });
       (window as unknown as { __frame?: unknown }).__frame = stats;

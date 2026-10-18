@@ -69,6 +69,8 @@ export interface UnitRow {
   entities: number;
   parametrized: boolean;
   params: number | null;
+  /** Measured sizes nobody named, kept as drawn (not inputs; released one by one or all). */
+  kept_as_drawn?: number;
   dropped: string;
 }
 
@@ -99,7 +101,18 @@ export interface Summary {
   ai_running: boolean;
   current_run: string | null;
   revision: number;
+  /** Where the work is kept while it is made, and what was opened from there (null: autosave is off). */
+  autosave?: AutosaveInfo | null;
   empty?: boolean;
+}
+
+export interface AutosaveInfo {
+  path: string | null;
+  saved_at: number | null; // epoch seconds of the last write this session
+  saved_revision: number | null;
+  revision: number | null;
+  restored: { from?: string | null; revision?: number; path?: string; saved_at?: number; kept_as?: string; problems?: string[] } | null;
+  error: string | null;
 }
 
 export interface ParamRow {
@@ -114,16 +127,47 @@ export interface ParamRow {
   unit: string;
   kind: string;
   source: string;
+  /** The engine's own measurement (GapX6, ThkY1 …) that nobody named. */
+  generic?: boolean;
   entities: number;
   views: string[];
   parts: string[];
   evidence: string[];
 }
 
+/** A named quantity that is measured, not an input: a size of work kept as drawn, or a size the set-out fixes at both ends. */
+export interface MeasuredRow {
+  name: string;
+  label: string;
+  value: number;
+  unit: string;
+  expr: string;
+  between: string[] | null;
+  part: string | null;
+  held: boolean;
+  existing: boolean;
+}
+
+/** A measured size nobody named, kept as drawn: not an input, the drawing is as it was. */
+export interface FrozenRow {
+  name: string;
+  value: number;
+  unit: string;
+  label: string;
+  kind: string;
+  occurrences: number;
+  measures: string[] | null;
+  why: string;
+}
+
 export interface UnitInfo {
   id: string;
+  /** The sheet revision this was read at: the panel reads the unit again when the sheet has moved on. */
+  revision?: number;
   views: string[];
   params: ParamRow[];
+  measured?: MeasuredRow[];
+  frozen?: FrozenRow[];
   findings: { code: string; severity: string; item: string; message: string }[];
   components: { name: string; type: string; regions: string[] }[];
 }
@@ -132,8 +176,10 @@ export interface Highlight {
   drives: number[];
   follows: number[];
   texts: number[];
-  holds: { label: string; set: number[] }[] | number[];
-  open?: unknown;
+  /** The parts a plan keeps fixed, by label → their entities ({} when none). Read through entitySet (api/normalize): the engine sends an
+   * object, the page once took it for a list, and a click on a value did nothing. */
+  holds: Record<string, number[]> | { label: string; set: number[] }[] | number[] | null;
+  open?: Record<string, number[]> | null;
 }
 
 export interface ParamInfo {
@@ -275,6 +321,19 @@ export interface AgentNotes {
   revision?: number;
 }
 
+/** What the engine says about a picture it gave the model (run.py `note_image`). The event's own `kind` is "image": the picture's kind travels here. */
+export interface PictureMeta {
+  kind: string; // overview · tile · zoom · sheet
+  size: [number, number]; // pixels
+  mm_per_px: number | null;
+  text_px: number | null; // how tall the drawing's own text is in this picture: under about 9 px it is a blur
+  legible: boolean | null;
+  box_mm: number[]; // the part of the sheet it shows, x0 y0 x1 y1
+  turn: number; // the model turn it was given on
+  tiles: string[]; // the tiles marked on it (an overview)
+  caption: string;
+}
+
 /** One event of a run, as the engine emitted it (src/dxf_autoparam/ai/run.py, loop.py, narrate.py). Fields depend on `kind`. */
 export interface RunEvent {
   kind: string; // run_start · user · stage · turn · call · thought · retry · tool_start · tool · image · applied · state · question · verdict · error · note · budget · status
@@ -296,6 +355,7 @@ export interface RunEvent {
   ms?: number;
   unit?: string | null;
   image?: { id?: string; revision?: number; unit?: string; view_ids?: string[]; state?: string };
+  pic?: PictureMeta; // an `image` event: what the picture is
   text?: string;
   instruction?: string;
   scope?: Record<string, unknown>;
@@ -330,11 +390,28 @@ export interface Criterion {
   detail: string;
 }
 
+/** What the sheet holds for one unit at the end of a run — read off the sheet, never off what the model said. */
+export interface CoverageRow {
+  unit: string;
+  views: string[];
+  state: "parametrized" | "skipped" | "looked_at" | "untouched";
+  covered: boolean;
+  parts?: number;
+  inputs?: number;
+  measured?: number;
+  kept_as_drawn?: number;
+  reason?: string;
+  refused?: string[];
+}
+
 export interface RunVerdict {
   state?: string;
   headline?: string;
   remaining?: unknown;
   criteria?: Criterion[];
+  coverage?: CoverageRow[];
+  coverage_sentence?: string;
+  engine_summary?: string;
   finish_summary?: string;
   values_applied?: { name: string; value: number; already?: boolean }[];
   notes?: string[];

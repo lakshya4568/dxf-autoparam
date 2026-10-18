@@ -3,6 +3,7 @@
 import type {
   AgentNotes,
   Annotation,
+  AutosaveInfo,
   BehaviourReport,
   Coverage,
   DeltaResult,
@@ -10,12 +11,17 @@ import type {
   Geometry,
   LayerRow,
   ParamInfo,
+  Prim,
   RunProgress,
   RunSummary,
   Statuses,
+  Style,
   Summary,
   UnitInfo,
 } from "./types";
+
+/** What an edit answers: the changed entities (if any), the sheet's summary, and the engine's own account of what it did. */
+export type EditResult = DeltaResult & { result: Record<string, unknown> };
 
 export class EngineError extends Error {
   constructor(message: string, readonly status: number, readonly body?: unknown) {
@@ -49,12 +55,14 @@ const q = (o: Record<string, string | number | undefined | null>) =>
 
 export const api = {
   summary: () => call<Summary>("GET", "/api/sheet"),
+  autosave: () => call<AutosaveInfo | null>("GET", "/api/sheet/autosave"),
   geometry: () => call<Geometry>("GET", "/api/sheet/geometry"),
   open: (name: string, bytes: ArrayBuffer) => call<Summary>("POST", `/api/sheet/open?${q({ name })}`, undefined, bytes),
   unit: (id: string) => call<UnitInfo>("GET", `/api/sheet/unit?${q({ id })}`),
   param: (name: string) => call<ParamInfo>("GET", `/api/sheet/param?${q({ name })}`),
   preview: (changes: Record<string, number>) => call<DeltaResult>("POST", "/api/sheet/preview", { changes }),
-  apply: (changes: Record<string, number>) => call<DeltaResult>("POST", "/api/sheet/apply", { changes }),
+  apply: (changes: Record<string, number>, live = false) => call<DeltaResult>("POST", "/api/sheet/apply", { changes, ...(live ? { live } : {}) }),
+  original: () => call<{ prims: Prim[]; styles: Style[] }>("GET", "/api/sheet/original"),
   undo: () => call<DeltaResult>("POST", "/api/sheet/undo", {}),
   redo: () => call<DeltaResult>("POST", "/api/sheet/redo", {}),
   delta: () => call<DeltaResult>("GET", "/api/sheet/delta"),
@@ -67,6 +75,9 @@ export const api = {
   impact: (name: string, step?: number) => call<Record<string, unknown>>("GET", `/api/sheet/impact?${q({ name, step })}`),
   decide: (body: Record<string, unknown>) => call<{ ok: boolean; summary: Summary }>("POST", "/api/sheet/decide", body),
   notes: () => call<AgentNotes>("GET", "/api/sheet/agent_notes"),
+  purgeGeneric: (unit?: string, dry_run = false) => call<EditResult>("POST", "/api/sheet/purge_generic", { unit, dry_run }),
+  releaseFrozen: (unit: string, names?: string[]) => call<EditResult>("POST", "/api/sheet/release_frozen", { unit, names }),
+  unlockPart: (unit: string, part: string) => call<EditResult>("POST", "/api/sheet/unlock_part", { unit, part }),
   rename: (old: string, name: string) => call<{ ok: boolean; summary: Summary }>("POST", "/api/sheet/rename", { old, new: name }),
   resetValue: (name: string) => call<DeltaResult>("POST", "/api/sheet/reset_value", { name }),
   runs: () => call<{ runs: RunSummary[]; current: string | null }>("GET", "/api/sheet/ai/runs"),

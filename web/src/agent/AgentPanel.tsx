@@ -7,6 +7,7 @@ import { agent, currentRun, dismissError, initAgent, isActive, setDraft, setMode
 import { AgentBubble, EarlierBubble, UserBubble } from "./Messages";
 import { Composer } from "./Composer";
 import { buildConversation, lifecycle, type Life } from "./model";
+import { Gallery, Lightbox, PicturesButton } from "./Pictures";
 import { Spinner } from "./StatusMark";
 import { store as workspace } from "../state/workspace";
 
@@ -57,7 +58,7 @@ function Empty() {
 }
 
 export function AgentPanel() {
-  const s = useStore(agent, (x) => ({ mode: x.mode, runs: x.runs, order: x.order, currentId: x.currentId, busy: x.busy, error: x.error, model: x.model }));
+  const s = useStore(agent, (x) => ({ mode: x.mode, runs: x.runs, order: x.order, currentId: x.currentId, busy: x.busy, error: x.error, model: x.model, gallery: x.gallery.open }));
   const hasSheet = useStore(workspace, (x) => !!x.summary);
   const run = currentRun({ ...agent.get(), runs: s.runs, currentId: s.currentId });
   const life = lifecycle(run, s.busy === "starting");
@@ -80,6 +81,7 @@ export function AgentPanel() {
         {run && <span className="font-mono text-[11px] text-slate-400" title={run.progress?.instruction}>{run.id}</span>}
         <span className="min-w-0 flex-1 truncate text-[12px] text-slate-500" title={life.detail}>{life.detail}</span>
         {isActive(run) && <button className="rounded border border-red-300 px-1.5 text-[11px] text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30" onClick={() => void stop()}>Stop</button>}
+        <PicturesButton />
         <div className="flex overflow-hidden rounded border border-slate-300 dark:border-slate-600 text-[11px]" role="group" aria-label="Detail level">
           {(["compact", "verbose"] as const).map((m) => (
             <button key={m} className={`px-2 py-0.5 ${s.mode === m ? "bg-slate-200 dark:bg-slate-700 font-medium" : "text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"}`} onClick={() => setMode(m)} aria-pressed={s.mode === m} data-testid={`mode-${m}`}>{m === "compact" ? "Compact" : "Verbose"}</button>
@@ -87,14 +89,17 @@ export function AgentPanel() {
         </div>
       </header>
       <Plan />
-      <div ref={scroller} className="relative min-h-0 flex-1 overflow-y-auto px-3 py-3" data-testid="thread" onScroll={(e) => { const el = e.currentTarget; setStuck(el.scrollHeight - el.scrollTop - el.clientHeight < 80); }}>
-        {!hasSheet ? <p className="text-center text-[12px] text-slate-500">Open a DXF to work with the agent.</p>
-          : messages.length === 0 ? <Empty />
-          : (
-            <div className="space-y-3">
-              {messages.map((m) => m.type === "user" ? <UserBubble key={m.key} m={m} /> : m.type === "earlier" ? <EarlierBubble key={m.key} m={m} /> : <AgentBubble key={m.key} m={m} life={life} />)}
-            </div>
-          )}
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <div ref={scroller} className="relative min-h-0 flex-1 overflow-y-auto px-3 py-3" data-testid="thread" onScroll={(e) => { const el = e.currentTarget; setStuck(el.scrollHeight - el.scrollTop - el.clientHeight < 80); }}>
+          {!hasSheet ? <p className="text-center text-[12px] text-slate-500">Open a DXF to work with the agent.</p>
+            : messages.length === 0 ? <Empty />
+            : (
+              <div className="space-y-3">
+                {messages.map((m) => m.type === "user" ? <UserBubble key={m.key} m={m} /> : m.type === "earlier" ? <EarlierBubble key={m.key} m={m} /> : <AgentBubble key={m.key} m={m} life={life} />)}
+              </div>
+            )}
+        </div>
+        {s.gallery && <Gallery />}
       </div>
       {!stuck && messages.length > 0 && (
         <button className="mx-auto -mt-8 mb-1 rounded-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2.5 py-0.5 text-[11px] shadow" onClick={() => { setStuck(true); const el = scroller.current; if (el) el.scrollTop = el.scrollHeight; }}>Jump to latest ↓</button>
@@ -111,6 +116,7 @@ export function AgentPanel() {
         </div>
       )}
       <Composer life={life} />
+      <Lightbox />
     </div>
   );
 }

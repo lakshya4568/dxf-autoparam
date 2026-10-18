@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { RunEvent, RunProgress } from "../src/api/types";
+import type { PictureMeta, RunEvent, RunProgress } from "../src/api/types";
 import {
-  buildConversation, buildRunMessages, countCalls, currentCall, latestFinding, lifecycle, plainError, type AgentMessage, type RunData, type ToolCall,
+  buildConversation, buildRunMessages, countCalls, currentCall, latestFinding, lifecycle, pictureStale, picturesOf, pictureTitle, plainError, type AgentMessage, type RunData,
+  type ToolCall,
 } from "../src/agent/model";
 
 let seq = 0;
@@ -157,5 +158,55 @@ describe("errors", () => {
     expect(plainError("429 RESOURCE_EXHAUSTED")).toMatch(/out of capacity/);
     expect(plainError("403 permission denied")).toMatch(/credentials/);
     expect(plainError("ValueError: x")).toBeNull();
+  });
+});
+
+describe("the pictures the agent was given", () => {
+  const img = (id: string, pic: Partial<PictureMeta> = {}, rest: Partial<RunEvent> = {}) =>
+    ev("image", {
+      id, revision: 102, unit: "U01", state: "drawn", why: "", pic: { kind: "tile", size: [1200, 800], mm_per_px: 4.2, text_px: 11.4, legible: true, box_mm: [0, 0, 5000, 3000], turn: 3, tiles: [], caption: "U01 · TILE_2", ...pic },
+      ...rest,
+    });
+  const pictureItems = (r: RunData) => agentOf(r).flatMap((m) => m.groups.flatMap((g) => g.items)).flatMap((i) => (i.type === "picture" ? [i] : []));
+
+  it("lists every picture in the order given, with what the engine said about it, and each id once", () => {
+    const pics = picturesOf(run([start(), turn(1), img("IMG1", { kind: "overview", caption: "U01 · overview", legible: false, text_px: 6.1, tiles: ["TILE_1", "TILE_2"] }), img("IMG2"), img("IMG2")]));
+    expect(pics.map((p) => p.id)).toEqual(["IMG1", "IMG2"]);
+    expect(pics[0]).toMatchObject({ runId: "R1", kind: "overview", legible: false, textPx: 6.1, tiles: ["TILE_1", "TILE_2"], unit: "U01", revision: 102 });
+    expect(pics[1]).toMatchObject({ kind: "tile", mmPerPx: 4.2, boxMm: [0, 0, 5000, 3000], turn: 3, size: [1200, 800], state: "drawn" });
+    expect(pictureTitle(pics[1])).toBe("U01 · TILE_2");
+  });
+
+  it("no run, or a run that was given none, has none", () => {
+    expect(picturesOf(null)).toEqual([]);
+    expect(picturesOf(run([start(), turn(1), ts("c1", "inspect_sheet", "looking", "inspecting")]))).toEqual([]);
+  });
+
+  it("an event without the picture's details (an older engine) still lists the picture, and claims nothing about it", () => {
+    const [p] = picturesOf(run([start(), ev("image", { id: "IMG9", revision: 7, state: "current" })]));
+    expect(p).toMatchObject({ id: "IMG9", kind: "picture", textPx: null, legible: null, mmPerPx: null, unit: null, boxMm: [], size: null });
+    expect(pictureTitle(p)).toBe("picture");
+  });
+
+  it("a picture is stale when the sheet has moved on past the revision it shows — and never when the page does not know the revision", () => {
+    const [p] = picturesOf(run([start(), img("IMG1")]));
+    expect(pictureStale(p, 103)).toBe(true);
+    expect(pictureStale(p, 102)).toBe(false);
+    expect(pictureStale(p, null)).toBe(false);
+    expect(pictureStale(p, undefined)).toBe(false);
+  });
+
+  it("pictures given together are one line of the activity — counted, named, and the first is the one it opens", () => {
+    const r = run([start(), turn(1), ts("c1", "open_unit", "looking", "inspecting"), img("IMG1", { kind: "overview" }), img("IMG2"), img("IMG3"), img("IMG4"), img("IMG5"), tr("c1", "open_unit", "looking", "inspecting")]);
+    const items = pictureItems(r);
+    expect(items).toHaveLength(1);
+    expect(items[0].ids).toEqual(["IMG1", "IMG2", "IMG3", "IMG4", "IMG5"]);
+    expect(items[0].text).toBe("5 pictures given to the model — IMG1 … IMG5");
+  });
+
+  it("one picture is named with the state and revision it shows; pictures after another tool call are a new line", () => {
+    const r = run([start(), turn(1), img("IMG1"), ts("c1", "zoom_view", "looking", "inspecting"), img("IMG2", {}, { state: "current", revision: 103 }), tr("c1", "zoom_view", "looking", "inspecting")]);
+    const items = pictureItems(r);
+    expect(items.map((i) => i.text)).toEqual(["Picture IMG1 given to the model — drawn, revision 102", "Picture IMG2 given to the model — current, revision 103"]);
   });
 });

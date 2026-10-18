@@ -29,6 +29,8 @@ export interface AgentState {
   loaded: boolean;
   /** group / tool keys the person opened or closed by hand (they win over the mode's default) */
   folds: Record<string, boolean>;
+  /** the pictures the agent was given: the gallery open over the thread, and the picture shown large (independent of each other) */
+  gallery: { open: boolean; shown: string | null };
 }
 
 const MODE_KEY = "dxf-autoparam.agent.mode";
@@ -43,7 +45,7 @@ function savedMode(): Mode {
 
 export const agent = new Store<AgentState>({
   runs: {}, order: [], currentId: null, mode: savedMode(), models: [], model: "", paidFor: null, draft: "", scopeKind: "auto", busy: null, confirm: null, error: null, notes: null,
-  loaded: false, folds: {},
+  loaded: false, folds: {}, gallery: { open: false, shown: null },
 });
 
 const POLL_MS = 600;
@@ -92,6 +94,19 @@ export function setScopeKind(scopeKind: ScopeKind): void {
 
 export function toggleFold(key: string, now: boolean): void {
   agent.set((s) => ({ folds: { ...s.folds, [key]: !now } }));
+}
+
+export function toggleGallery(): void {
+  agent.set((s) => ({ gallery: { ...s.gallery, open: !s.gallery.open } }));
+}
+
+export function closeGallery(): void {
+  agent.set((s) => ({ gallery: { ...s.gallery, open: false } }));
+}
+
+/** Show one picture large (null closes it). The gallery behind it stays as it is. */
+export function showPicture(id: string | null): void {
+  agent.set((s) => ({ gallery: { ...s.gallery, shown: id } }));
 }
 
 export function acceptCost(model: string): void {

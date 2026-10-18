@@ -2,6 +2,7 @@
 // kept here is presentation — the camera, what is selected, what is hidden — and the primitives the engine last sent.
 // The camera changes only when the person pans, zooms or asks to fit something: an edit, a preview, an undo never move it.
 import { api, EngineError } from "../api/client";
+import { entitySet } from "../api/normalize";
 import type { BehaviourReport, Box, DeltaResult, EntityRecord, Geometry, ParamInfo, Prim, Style, Summary, UnitInfo } from "../api/types";
 import { DEFAULT_OVERLAYS, type HighlightSets, type Overlays } from "../canvas/renderer";
 import { GridIndex, primBox } from "../canvas/spatial";
@@ -42,6 +43,8 @@ export interface WorkspaceState {
   param: { key: string; info: ParamInfo | null } | null;
   unit: UnitInfo | null;
   preview: Preview | null;
+  /** The entities that differ from the drawing as it was read, as it had them — fetched only while the Original overlay is on. */
+  original: { prims: Prim[]; revision: number } | null;
   behaviour: BehaviourReport | null;
   issues: Set<number>;
   entity: EntityRecord | null;
@@ -62,7 +65,7 @@ export const store = new Store<WorkspaceState>({
   summary: null, prims: [], styles: [], index: null, revision: 0, cam: DEFAULT_CAMERA, fitted: false, W: 800, H: 600,
   theme: typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light",
   hiddenLayers: new Set(), hiddenStatus: new Set(), statusOf: null, overlays: { ...DEFAULT_OVERLAYS }, selection: new Set(), hover: null,
-  focusView: null, highlight: null, param: null, unit: null, preview: null, behaviour: null, issues: new Set(), entity: null, message: null,
+  focusView: null, highlight: null, param: null, unit: null, preview: null, original: null, behaviour: null, issues: new Set(), entity: null, message: null,
   busy: null, leftTab: "views", rightTab: "inspect", leftWidth: 320, rightWidth: 360, leftOpen: true, rightOpen: true, agentOpen: false, agentWidth: 440, frameMs: 0,
 });
 
@@ -77,6 +80,7 @@ async function guard<T>(what: string, fn: () => Promise<T>): Promise<T | undefin
   try {
     return await fn();
   } catch (e) {
+    console.error(`${what} failed`, e); // the banner says it to the person; the console keeps the stack for whoever fixes it
     say(e instanceof EngineError || e instanceof Error ? e.message : String(e), "bad");
     return undefined;
   } finally {
@@ -110,6 +114,30 @@ function afterCommit(res: DeltaResult): void {
     prims, styles, index: new GridIndex(prims, (res.summary?.frame ?? s.summary?.frame ?? s.summary?.extent) as Box),
     summary: res.summary ?? s.summary, revision: res.summary?.revision ?? s.revision, preview: null,
   });
+  void loadOriginal();
+}
+
+/** The dotted original, read again from the engine (nothing when the overlay is off). */
+export async function loadOriginal(): Promise<void> {
+  if (!store.get().overlays.original) return;
+  try {
+    const r = await api.original();
+    if (store.get().overlays.original) store.set({ original: { prims: r.prims, revision: store.get().revision } });
+  } catch (e) {
+    console.error("Reading the original geometry failed", e);
+    say(e instanceof Error ? e.message : String(e), "bad");
+  }
+}
+
+let announcedRestore = false;
+
+/** Say once what was opened from the saved work (or why it could not be), so nobody wonders where the values came from. */
+function announceRestore(summary: Summary): void {
+  const r = summary.autosave?.restored;
+  if (announcedRestore || !r) return;
+  announcedRestore = true;
+  if (r.problems?.length && !r.from) say(`Saved work could not be opened: ${r.problems[0]}`, "bad");
+  else if (r.from) say(`Opened your saved work (${r.from}): revision ${r.revision ?? "?"}${r.saved_at ? `, saved ${new Date(r.saved_at * 1000).toLocaleString()}` : ""}.`, "info");
 }
 
 export async function loadAll(fit: boolean): Promise<void> {
@@ -119,11 +147,13 @@ export async function loadAll(fit: boolean): Promise<void> {
       store.set({ summary: null, prims: [], index: null });
       return;
     }
+    announceRestore(summary);
     const g = await api.geometry();
     store.set({ summary, revision: summary.revision });
     setGeometry(g);
     if (fit || !store.get().fitted) fitSheet(false);
     void loadStatuses();
+    void loadOriginal();
   });
 }
 
@@ -142,6 +172,7 @@ export async function refreshSheet(): Promise<void> {
     store.set({ summary, revision: summary.revision });
     setGeometry(g);
     void loadStatuses();
+    void loadOriginal();
     const u = store.get().unit;
     if (u) void openUnit(u.id);
   } catch (e) {
@@ -261,16 +292,47 @@ export async function openUnit(uid: string): Promise<void> {
   if (u) store.set({ unit: u });
 }
 
+/** Pick a value: the editor opens FIRST, then what the value moves is drawn. What a value moves is a drawing aid; a failure in drawing it is said
+ * in the banner and must never keep a person from changing the value. Nothing here rejects: every caller may `void` it. */
 export async function focusParam(key: string): Promise<void> {
-  const info = await guard("Measuring what the value moves…", () => api.param(key));
-  if (!info) return;
-  const h = info.highlight;
-  const holds = new Set<number>();
-  for (const g of (h.holds as unknown[]) ?? []) {
-    if (typeof g === "number") holds.add(g);
-    else if (g && typeof g === "object" && "set" in (g as Record<string, unknown>)) for (const i of (g as { set: number[] }).set) holds.add(i);
-  }
-  store.set({ param: { key, info }, highlight: { drives: new Set(h.drives), follows: new Set(h.follows), texts: new Set(h.texts), holds } });
+  await guard("Measuring what the value moves…", async () => {
+    const info = await api.param(key);
+    store.set({ param: { key, info }, highlight: null });
+    const h = info.highlight;
+    store.set({ highlight: { drives: entitySet(h?.drives), follows: entitySet(h?.follows), texts: entitySet(h?.texts), holds: entitySet(h?.holds) } });
+  });
+}
+
+/** Keep every measured size nobody named (or used) as drawn: one undoable step, and the drawing does not change. */
+export async function keepUnnamedAsDrawn(uid?: string): Promise<void> {
+  const res = await guard("Keeping the unnamed sizes as drawn…", () => api.purgeGeneric(uid));
+  if (!res) return;
+  afterCommit(res);
+  const r = res.result as { kept?: number; left_as_inputs?: Record<string, string> };
+  const left = Object.keys(r.left_as_inputs ?? {});
+  say(r.kept ? `${r.kept} measured sizes nobody named are kept as drawn; the drawing is as it was${left.length ? ` (left as inputs in ${left.join(", ")}: ${Object.values(r.left_as_inputs ?? {})[0]})` : ""}.`
+    : "Nothing to keep as drawn: every value here was named or is in use.", r.kept ? "ok" : "info");
+  const open = uid ?? store.get().unit?.id; // the unit asked about, or the one on show: the list is the engine's, read again
+  if (open) void openUnit(open);
+}
+
+/** Give kept-as-drawn sizes back as inputs (all of a unit's, or the ones named). */
+export async function releaseKept(uid: string, names?: string[]): Promise<void> {
+  const res = await guard("Releasing…", () => api.releaseFrozen(uid, names));
+  if (!res) return;
+  afterCommit(res);
+  say(`${(res.result.released as string[] | undefined)?.length ?? 0} size(s) are inputs again; the drawing did not change.`, "ok");
+  void openUnit(uid);
+}
+
+/** A person asks to edit work that was kept as drawn: the part stops being held and the sizes named on it are inputs again. */
+export async function unlockHeldPart(uid: string, part: string): Promise<void> {
+  const res = await guard(`Unlocking ${part}…`, () => api.unlockPart(uid, part));
+  if (!res) return;
+  afterCommit(res);
+  const again = (res.result.inputs_again as string[] | undefined) ?? [];
+  say(`${part} can be edited now${again.length ? `: ${again.join(", ")} ${again.length === 1 ? "is an input" : "are inputs"} again` : ""}. Nothing moved.`, "ok");
+  void openUnit(uid);
 }
 
 export function clearParam(): void {
@@ -286,6 +348,54 @@ export async function previewChange(changes: Record<string, number>): Promise<vo
     styles: res.styles ?? store.get().styles,
   });
   if (!res.ok) say(`The change would break the sheet: ${(res.errors ?? [])[0] ?? ""}`, "bad");
+}
+
+export interface LiveResult {
+  ok: boolean;
+  error?: string;
+}
+
+let liveRun: Promise<LiveResult> | null = null;
+let livePending: Record<string, number> | null = null;
+
+/** One step of a value being stepped: committed at once, the drawing follows. One request at a time; while one is out only the latest
+ * following step is kept (the sheet goes to where the person is, not through every number on the way). The steps are one undo. */
+export function liveChange(changes: Record<string, number>): Promise<LiveResult> {
+  livePending = changes;
+  if (!liveRun) liveRun = drainLive();
+  return liveRun;
+}
+
+async function drainLive(): Promise<LiveResult> {
+  let last: LiveResult = { ok: true };
+  try {
+    while (livePending) {
+      const next = livePending;
+      livePending = null;
+      last = await commitLive(next);
+    }
+  } finally {
+    liveRun = null;
+  }
+  return last;
+}
+
+async function commitLive(changes: Record<string, number>): Promise<LiveResult> {
+  try {
+    const res = await api.apply(changes, true);
+    if (!res.ok) {
+      const error = (res.errors ?? [])[0] ?? res.error ?? "the engine refused it";
+      say(`Refused, the drawing stays as it was: ${error}`, "bad");
+      return { ok: false, error };
+    }
+    afterCommit(res);
+    return { ok: true };
+  } catch (e) {
+    console.error("Changing a value failed", e); // the banner says it to the person; the console keeps the stack
+    const error = e instanceof Error ? e.message : String(e);
+    say(error, "bad");
+    return { ok: false, error };
+  }
 }
 
 export function cancelPreview(): void {
@@ -351,12 +461,17 @@ export function toggleStatus(name: string): void {
 
 export function setOverlay<K extends keyof Overlays>(k: K, v: Overlays[K]): void {
   store.set({ overlays: { ...store.get().overlays, [k]: v } });
+  if (k === "original") {
+    if (v) void loadOriginal();
+    else store.set({ original: null });
+  }
 }
 
 // for the end-to-end tests (web/e2e): the state and the actions, nothing more
 if (typeof window !== "undefined") {
   (window as unknown as Record<string, unknown>).__ws = {
     state: () => store.get(),
-    select, fitView, fitSheet, fitSelection, back, previewChange, applyChange, undo, redo, focusParam, toggleLayer, setOverlay, checkBehaviour, loadAll,
+    select, fitView, fitSheet, fitSelection, back, previewChange, applyChange, liveChange, undo, redo, focusParam, openUnit, toggleLayer, setOverlay, checkBehaviour, loadAll,
+    keepUnnamedAsDrawn, releaseKept, unlockHeldPart,
   };
 }

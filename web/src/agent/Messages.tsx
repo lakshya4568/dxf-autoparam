@@ -1,6 +1,7 @@
 // The conversation's messages: what the person said (with where it applies), what the agent did (its folded activity, then — when the
 // work has ended — its result: the engine's headline, the model's own summary, the criteria it checked, what it applied), a pending
 // decision, and the actions that make sense for the run's state.
+import type { CoverageRow } from "../api/types";
 import { useStore } from "../state/store";
 import { agent, applyHeld, currentRun, requestResume, revert } from "../state/agent";
 import { fitView } from "../state/workspace";
@@ -49,6 +50,37 @@ export function EarlierBubble({ m }: { m: EarlierRun }) {
   );
 }
 
+const STATE_MARK: Record<CoverageRow["state"], { mark: string; words: string; cls: string }> = {
+  parametrized: { mark: "✓", words: "parametrized", cls: "text-emerald-700 dark:text-emerald-400" },
+  skipped: { mark: "○", words: "skipped, reason on the checklist", cls: "text-slate-500" },
+  looked_at: { mark: "◐", words: "looked at, nothing kept", cls: "text-amber-700 dark:text-amber-400" },
+  untouched: { mark: "✗", words: "untouched", cls: "text-red-700 dark:text-red-400" },
+};
+
+/** The sheet's own record of the units, unit by unit: what the model said it did is one thing, this is what the drawing holds. */
+function Coverage({ rows }: { rows: CoverageRow[] }) {
+  const open = rows.some((r) => !r.covered);
+  return (
+    <details className="mt-1" open={open} data-testid="coverage">
+      <summary className="cursor-pointer text-[12px] text-slate-500">What the drawing holds, unit by unit</summary>
+      <ul className="mt-1 space-y-0.5">
+        {rows.map((r) => {
+          const s = STATE_MARK[r.state];
+          return (
+            <li key={r.unit} className="text-[12px]" data-testid={`coverage-${r.unit}`} data-state={r.state}>
+              <span className={`${s.cls} mr-1`}>{s.mark}</span><span className="font-mono">{r.unit}</span>
+              <span className="text-slate-400"> · {r.views.join(" + ")} · </span>{s.words}
+              {r.state === "parametrized" && <span className="text-slate-500"> — {r.inputs} named input{r.inputs === 1 ? "" : "s"}{r.measured ? `, ${r.measured} measured` : ""}{r.kept_as_drawn ? `, ${r.kept_as_drawn} kept as drawn` : ""}</span>}
+              {r.reason && <span className="block pl-4 text-[11px] text-slate-500">{r.reason}</span>}
+              {r.refused && r.refused.length > 0 && <span className="block pl-4 text-[11px] text-red-700 dark:text-red-300">refused: {r.refused.join(", ")}</span>}
+            </li>
+          );
+        })}
+      </ul>
+    </details>
+  );
+}
+
 function Result({ m }: { m: AgentMessage }) {
   const run = useStore(agent, (s) => currentRun(s));
   const v = verdictOf(run);
@@ -59,7 +91,8 @@ function Result({ m }: { m: AgentMessage }) {
     <div className="text-[13px]" data-testid="result" data-state={state}>
       <div className={`font-medium ${tone}`}>{STATE_WORDS[state] ?? state}</div>
       {v?.headline && <div>{v.headline}</div>}
-      {v?.finish_summary && <details className="mt-1"><summary className="cursor-pointer text-[12px] text-slate-500">What the model says it did</summary><Prose text={v.finish_summary} className="mt-1 text-[12px]" /></details>}
+      {v?.coverage && v.coverage.length > 0 && <Coverage rows={v.coverage} />}
+      {v?.finish_summary && <details className="mt-1"><summary className="cursor-pointer text-[12px] text-slate-500">What the model says it did (its own words — the engine's record is above)</summary><Prose text={v.finish_summary} className="mt-1 text-[12px]" /></details>}
       {v?.criteria && v.criteria.length > 0 && (
         <details className="mt-1" open={state !== "completed"}>
           <summary className="cursor-pointer text-[12px] text-slate-500">{v.criteria.filter((c) => c.ok).length} of {v.criteria.length} checks hold</summary>

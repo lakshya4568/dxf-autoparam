@@ -1,7 +1,9 @@
 // The workspace: a top bar, the views / layers / values / agent / fidelity panel on the left, the drawing in the middle, the
 // inspector and the validation on the right. Both side panels resize by their edge and collapse, so the drawing can take the
 // whole window when a sheet needs it.
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { api } from "./api/client";
+import type { AutosaveInfo } from "./api/types";
 import { CanvasView } from "./canvas/CanvasView";
 import { AgentPanel } from "./agent/AgentPanel";
 import { lifecycle } from "./agent/model";
@@ -14,7 +16,7 @@ import { ValuesPanel } from "./panels/ValuesPanel";
 import { ViewsPanel } from "./panels/ViewsPanel";
 import { agent, currentRun } from "./state/agent";
 import { useStore } from "./state/store";
-import { back, fitSheet, loadAll, openFile, redo, store, toggleAgent, undo, type LeftTab, type RightTab } from "./state/workspace";
+import { back, fitSheet, loadAll, openFile, redo, setOverlay, store, toggleAgent, undo, type LeftTab, type RightTab } from "./state/workspace";
 
 const LEFT: [LeftTab, string][] = [["views", "Views"], ["layers", "Layers"], ["values", "Values"], ["fidelity", "Fidelity"]];
 const RIGHT: [RightTab, string][] = [["inspect", "Inspector"], ["validate", "Validation"]];
@@ -67,8 +69,25 @@ function AgentButton({ btn }: { btn: string }) {
   );
 }
 
+/** Where the work is kept: the page never owns it, the engine writes it to disk as it changes, so closing the server loses nothing. The badge asks
+ * the engine every few seconds; a server that does not answer is a server that cannot save, and it says so. */
+function AutosaveBadge({ initial }: { initial: AutosaveInfo }) {
+  const [a, setA] = useState(initial);
+  useEffect(() => setA(initial), [initial]);
+  useEffect(() => {
+    const t = window.setInterval(() => {
+      api.autosave().then((x) => x && setA(x)).catch(() => setA((cur) => ({ ...cur, error: "the server did not answer" })));
+    }, 4000);
+    return () => window.clearInterval(t);
+  }, []);
+  const time = (sec: number) => new Date(sec * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const text = a.error ? "not saved" : a.saved_at ? `saved ${time(a.saved_at)}` : a.restored?.from ? "opened from saved work" : "autosave on";
+  const tip = [a.path ? `kept in ${a.path}` : "kept on disk as it changes", a.restored?.from ? `opened from ${a.restored.from}, revision ${a.restored.revision ?? "?"}` : "", a.error ? `FAILED: ${a.error}` : ""].filter(Boolean).join(" · ");
+  return <span className={`text-[12px] ${a.error ? "text-red-600" : "text-slate-400"}`} data-testid="autosave" title={tip}>· {text}</span>;
+}
+
 function TopBar() {
-  const s = useStore(store, (x) => ({ summary: x.summary, busy: x.busy, message: x.message, theme: x.theme, revision: x.revision, leftOpen: x.leftOpen, rightOpen: x.rightOpen }));
+  const s = useStore(store, (x) => ({ summary: x.summary, busy: x.busy, message: x.message, theme: x.theme, revision: x.revision, leftOpen: x.leftOpen, rightOpen: x.rightOpen, original: x.overlays.original }));
   const file = useRef<HTMLInputElement>(null);
   const btn = "px-2.5 py-1 rounded border border-slate-300 dark:border-slate-600 text-[13px] hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40";
   return (
@@ -82,11 +101,14 @@ function TopBar() {
       <button className={btn} disabled={!s.summary?.can_redo} onClick={() => void redo()}>Redo</button>
       <button className={btn} onClick={() => fitSheet()} title="Fit the sheet (F)">Fit</button>
       <button className={btn} onClick={() => back()} title="Back to the previous view (Backspace)">Back</button>
+      <button className={`${btn} ${s.original ? "bg-slate-100 dark:bg-slate-800" : ""}`} aria-pressed={s.original} data-testid="show-original" disabled={!s.summary}
+        title="Show the drawing as it was read, dotted, under what has changed (switch off to hide it)" onClick={() => setOverlay("original", !s.original)}>Original</button>
       {s.summary && <a className={btn} href="/api/sheet/export" data-testid="export">Export DXF</a>}
       <span className="ml-2 text-[12px] text-slate-400 num" data-testid="revision">rev {s.revision}</span>
+      {s.summary?.autosave && <AutosaveBadge initial={s.summary.autosave} />}
       <div className="flex-1 min-w-0 px-2">
-        {s.busy ? <span className="text-[13px] text-slate-500">{s.busy}</span>
-          : s.message && <span data-testid="message" className={`text-[13px] truncate ${s.message.kind === "bad" ? "text-red-600" : s.message.kind === "ok" ? "text-emerald-600" : "text-slate-600"}`}>{s.message.text}</span>}
+        {s.busy ? <span className="block truncate text-[13px] text-slate-500">{s.busy}</span>
+          : s.message && <span data-testid="message" title={s.message.text} className={`block text-[13px] truncate ${s.message.kind === "bad" ? "text-red-600" : s.message.kind === "ok" ? "text-emerald-600" : "text-slate-600"}`}>{s.message.text}</span>}
       </div>
       <button className={btn} onClick={() => store.set({ theme: s.theme === "dark" ? "light" : "dark" })}>{s.theme === "dark" ? "Light" : "Dark"}</button>
       <AgentButton btn={btn} />

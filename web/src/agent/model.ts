@@ -33,7 +33,7 @@ export type Item =
   | { type: "thought"; turn: number; text: string }
   | { type: "notice"; tone: Tone; text: string; detail?: string }
   | { type: "applied"; text: string }
-  | { type: "picture"; id: string; text: string }
+  | { type: "picture"; ids: string[]; text: string } // consecutive pictures given together (an overview and its tiles) are one line
   | { type: "budget"; text: string };
 
 /** Consecutive items that belong to one stage of the work (inspecting, binding values, validating …). */
@@ -108,6 +108,55 @@ function stageLabel(stage: string | null | undefined): string {
   const s = (stage ?? "working").trim();
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
+
+function pictureLine(ids: string[], e: RunEvent): string {
+  if (ids.length === 1) return `Picture ${ids[0]} given to the model — ${str(e.state)}, revision ${str(e.revision)}`;
+  return `${ids.length} pictures given to the model — ${ids.length <= 3 ? ids.join(", ") : `${ids[0]} … ${ids[ids.length - 1]}`}`;
+}
+
+/** One picture the agent was given, as the person's gallery shows it: read off the run's `image` events, never invented. */
+export interface PictureInfo {
+  id: string;
+  runId: string;
+  seq: number;
+  turn: number;
+  unit: string | null;
+  kind: string; // overview · tile · zoom · sheet
+  caption: string;
+  revision: number; // the sheet revision the picture shows
+  state: string; // drawn · current
+  why: string;
+  mmPerPx: number | null;
+  textPx: number | null;
+  legible: boolean | null;
+  boxMm: number[];
+  size: [number, number] | null;
+  tiles: string[];
+}
+
+/** Every picture a run gave the model, in the order given (an id the engine reported twice is listed once). */
+export function picturesOf(run: RunData | null): PictureInfo[] {
+  if (!run) return [];
+  const seen = new Set<string>();
+  const out: PictureInfo[] = [];
+  for (const e of run.events) {
+    if (e.kind !== "image" || !e.id || seen.has(e.id)) continue;
+    seen.add(e.id);
+    const p = e.pic;
+    out.push({
+      id: e.id, runId: run.id, seq: e.seq ?? out.length, turn: p?.turn ?? 0, unit: typeof e.unit === "string" ? e.unit : null, kind: p?.kind || "picture",
+      caption: p?.caption ?? "", revision: Number(e.revision ?? 0), state: str(e.state), why: str(e.why), mmPerPx: p?.mm_per_px ?? null, textPx: p?.text_px ?? null,
+      legible: p?.legible ?? null, boxMm: p?.box_mm ?? [], size: p?.size ?? null, tiles: p?.tiles ?? [],
+    });
+  }
+  return out;
+}
+
+/** A picture shows an older sheet than the one now open: the person is told, the picture stays viewable. */
+export const pictureStale = (p: PictureInfo, revision: number | null | undefined): boolean => revision !== null && revision !== undefined && p.revision < revision;
+
+/** What the picture is of, in words: the engine's caption (e.g. "U01 · TILE_2"), else its kind. */
+export const pictureTitle = (p: PictureInfo): string => p.caption || p.kind;
 
 /** Events → messages. `active`: the run is still working (a call with no result is then in flight or queued, otherwise interrupted). */
 export function buildRunMessages(run: RunData, isLastRun: boolean): Message[] {
@@ -211,9 +260,16 @@ export function buildRunMessages(run: RunData, isLastRun: boolean): Message[] {
         call.image = e.image;
         break;
       }
-      case "image":
-        push(m, { type: "picture", id: str(e.id), text: `Picture ${str(e.id)} given to the model — ${str(e.state)}, revision ${str(e.revision)}` });
+      case "image": {
+        const id = str(e.id);
+        const lastGroup = m.groups[m.groups.length - 1];
+        const prev = lastGroup?.items[lastGroup.items.length - 1];
+        if (prev?.type === "picture") {
+          prev.ids.push(id);
+          prev.text = pictureLine(prev.ids, e);
+        } else push(m, { type: "picture", ids: [id], text: pictureLine([id], e) });
         break;
+      }
       case "applied": {
         const what = e.feature ? `feature ${str(e.feature)}` : Array.isArray(e.values) && e.values.length ? `values ${(e.values as string[]).join(", ")}` : e.views ? `${str(e.views)} view(s)` : e.shared ? `${str(e.shared)} shared value(s)` : "changes";
         const unit = e.unit ? str(e.unit) : "";

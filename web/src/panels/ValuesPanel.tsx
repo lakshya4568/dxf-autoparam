@@ -1,55 +1,107 @@
-// The values of a unit (and the values shared across views): pick one to see what it drives, type a value to preview the
-// regenerated sheet (nothing is applied), check the whole assembly, apply. The camera never moves: you keep looking where you were.
+// The values of a unit (and the values shared across views): pick one to see what it drives, step it up or down and the drawing follows
+// at once, check the whole assembly. The camera never moves: you keep looking where you were.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
-import type { ParamRow } from "../api/types";
+import { entityList } from "../api/normalize";
+import type { FrozenRow, MeasuredRow, ParamRow } from "../api/types";
 import { useStore } from "../state/store";
-import { applyChange, cancelPreview, checkBehaviour, clearParam, fitEntities, focusParam, openUnit, previewChange, store } from "../state/workspace";
+import { checkBehaviour, clearParam, fitEntities, focusParam, keepUnnamedAsDrawn, liveChange, openUnit, releaseKept, store, unlockHeldPart } from "../state/workspace";
 
 function fmt(v: number, unit: string): string {
   return unit === "m" ? v.toFixed(3) : Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(2);
 }
 
+/** A step that suits the size of the value: a tenth of its power of ten (600 → 10, 4.85 → 0.1, 0.5 → 0.01). Shift takes ten of them, Alt a tenth. */
+function stepFor(v: number): number {
+  const mag = Math.abs(v);
+  return mag > 0 && isFinite(mag) ? 10 ** (Math.floor(Math.log10(mag)) - 1) : 1;
+}
+
+/** The number as typed into the field: as exact as the engine has it, without trailing noise. */
+const plain = (v: number): string => String(Math.round(v * 1000) / 1000);
+
+/** A value is a number you step: each step changes the drawing at once (one undo goes back to where you started). A typed number is taken on
+ * Enter or when you leave the field, never half-typed. The original geometry is a switch in the top bar, not part of this editor. */
 function ParamEditor({ row }: { row: { key: string; label: string; value: number; drawn: number; unit: string } }) {
-  const { param, preview } = useStore(store, (s) => ({ param: s.param, preview: s.preview }));
-  const [text, setText] = useState(fmt(row.value, row.unit));
+  const param = useStore(store, (s) => s.param);
+  const [text, setText] = useState(plain(row.value));
+  const [error, setError] = useState<string | null>(null);
   const timer = useRef<number | null>(null);
+  const latest = useRef<number | null>(null); // the value a step asked for, until it is sent
+  const sending = useRef(false);
   const [impact, setImpact] = useState<Record<string, unknown> | null>(null);
-  useEffect(() => setText(fmt(row.value, row.unit)), [row.value, row.unit]);
   const range = param?.key === row.key ? param.info?.range : undefined;
+  const lo = range?.min, hi = range?.max;
   const value = Number(text);
-  const changed = isFinite(value) && Math.abs(value - row.value) > 1e-9;
-  const schedule = (v: number) => {
-    if (timer.current) window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => void previewChange({ [row.key]: v }), 350);
+  const valid = text.trim() !== "" && isFinite(value);
+  const atDrawn = Math.abs(row.value - row.drawn) < 1e-9;
+  const Chevron = ({ up }: { up: boolean }) => (
+    <svg viewBox="0 0 8 5" className="h-1.5 w-2" aria-hidden="true"><path d={up ? "M1 4.2 4 1.2 7 4.2" : "M1 0.8 4 3.8 7 0.8"} fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+  );
+
+  // what the engine holds is what the field shows — except while a step of this editor is on its way
+  useEffect(() => {
+    if (!sending.current && latest.current === null) setText(plain(row.value));
+  }, [row.value, row.unit]);
+
+  const send = () => {
+    timer.current = null;
+    const v = latest.current;
+    if (v === null) return;
+    latest.current = null;
+    sending.current = true;
+    void liveChange({ [row.key]: v }).then((r) => {
+      sending.current = false;
+      setError(r.ok ? null : r.error ?? "refused");
+      if (!r.ok) setText(plain(store.get().summary?.values[row.key] ?? row.value)); // the drawing stayed: so does the number
+    });
   };
+  // a step still waiting when the editor closes is not lost
+  useEffect(() => () => { if (timer.current !== null) { window.clearTimeout(timer.current); send(); } }, []);
+  const go = (v: number, soon = true) => {
+    const clamped = Math.min(hi ?? Infinity, Math.max(lo ?? -Infinity, v));
+    const v2 = Math.round(clamped * 1e6) / 1e6;
+    setText(plain(v2));
+    latest.current = v2;
+    if (timer.current !== null) window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(send, soon ? 120 : 0);
+  };
+  const stepBy = (dir: 1 | -1, e: { shiftKey: boolean; altKey: boolean }) => {
+    const base = valid ? value : row.value;
+    go(base + dir * stepFor(row.drawn || row.value) * (e.shiftKey ? 10 : e.altKey ? 0.1 : 1));
+  };
+  const take = () => { if (valid && Math.abs(value - row.value) > 1e-9) go(value, false); else setText(plain(row.value)); };
   return (
     <div className="mt-2 rounded border border-blue-200 dark:border-blue-900 bg-blue-50/60 dark:bg-blue-950/30 p-2" data-testid="param-editor">
       <div className="flex items-center gap-2">
-        <input className="w-28 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-1.5 py-0.5 num text-right" value={text} data-testid="param-input"
-          onChange={(e) => { setText(e.target.value); const v = Number(e.target.value); if (isFinite(v) && e.target.value.trim()) schedule(v); }} />
-        <span className="text-slate-500">{row.unit}</span>
-        <button className="ml-auto rounded bg-blue-600 px-2 py-0.5 text-white disabled:opacity-40" disabled={!changed || (preview !== null && !preview.ok)} data-testid="apply"
-          onClick={() => void applyChange({ [row.key]: value })}>Apply</button>
-        <button className="rounded border border-slate-300 dark:border-slate-600 px-2 py-0.5" onClick={() => { setText(fmt(row.value, row.unit)); cancelPreview(); }}>Cancel</button>
-      </div>
-      {range && range.min !== undefined && range.max !== undefined && (
-        <div className="mt-1">
-          <input type="range" className="w-full" min={range.min} max={range.max} step={(range.max - range.min) / 400} value={isFinite(value) ? value : row.value}
-            onChange={(e) => { setText(e.target.value); schedule(Number(e.target.value)); }} />
-          <div className="flex justify-between text-[11px] text-slate-500 num"><span title={range.min_reason}>{fmt(range.min, row.unit)}</span><span>drawn {fmt(row.drawn, row.unit)}</span><span title={range.max_reason}>{fmt(range.max, row.unit)}</span></div>
+        <div className="flex items-stretch">
+          <input className="h-8 w-24 rounded-l border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 num text-right focus:outline-none focus:ring-2 focus:ring-blue-500" inputMode="decimal" value={text}
+            data-testid="param-input" aria-label={`${row.label || row.key} in ${row.unit}`} aria-invalid={!valid || undefined}
+            onChange={(e) => setText(e.target.value)} onBlur={take}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowUp" || e.key === "ArrowDown") { e.preventDefault(); stepBy(e.key === "ArrowUp" ? 1 : -1, e); }
+              else if (e.key === "Enter") take();
+              else if (e.key === "Escape") setText(plain(row.value));
+            }} />
+          <div className="flex w-6 flex-col divide-y divide-slate-300 dark:divide-slate-600 overflow-hidden rounded-r border border-l-0 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 text-slate-500">
+            <button className="flex flex-1 items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40" tabIndex={-1} aria-label={`Increase ${row.label || row.key}`} title="Bigger (Shift: ×10, Alt: ÷10)"
+              data-testid="param-inc" disabled={hi !== undefined && valid && value >= hi} onClick={(e) => stepBy(1, e)}><Chevron up /></button>
+            <button className="flex flex-1 items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40" tabIndex={-1} aria-label={`Decrease ${row.label || row.key}`} title="Smaller (Shift: ×10, Alt: ÷10)"
+              data-testid="param-dec" disabled={lo !== undefined && valid && value <= lo} onClick={(e) => stepBy(-1, e)}><Chevron up={false} /></button>
+          </div>
         </div>
-      )}
-      {preview && (
-        <p className={`mt-1 text-[12px] ${preview.ok ? "text-slate-600 dark:text-slate-300" : "text-red-600"}`} data-testid="preview-status">
-          {preview.ok ? `Preview: ${preview.ents.size} entities change (orange); nothing is applied yet.` : `Would break: ${preview.errors[0] ?? ""}`}
-        </p>
-      )}
+        <span className="text-slate-500">{row.unit}</span>
+      </div>
+      <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-slate-500 num">
+        <span>drawn {fmt(row.drawn, row.unit)}</span>
+        {lo !== undefined && hi !== undefined && <span title={`${range?.min_reason ?? ""}${range?.max_reason ? ` · ${range.max_reason}` : ""}`}>{fmt(lo, row.unit)} – {fmt(hi, row.unit)}</span>}
+      </div>
+      {error && <p className="mt-1 text-[12px] text-red-600" role="alert" data-testid="param-error">Refused, the drawing stays as it was: {error}</p>}
       <div className="mt-1 flex gap-2 text-[12px]">
-        <button className="underline text-blue-700 dark:text-blue-300" onClick={() => void checkBehaviour({ [row.key]: isFinite(value) && changed ? value : row.value * 1.05 })}>Check the assembly</button>
+        <button className="underline text-blue-700 dark:text-blue-300" onClick={() => void checkBehaviour({ [row.key]: atDrawn ? row.value * 1.05 : row.value })}>Check the assembly</button>
         <button className="underline text-blue-700 dark:text-blue-300" onClick={() => void api.impact(row.key).then(setImpact)}>What would it change?</button>
         {param?.key === row.key && param.info && (
-          <button className="underline text-blue-700 dark:text-blue-300" onClick={() => fitEntities(new Set([...param.info!.highlight.drives, ...param.info!.highlight.follows]))}>Zoom to it</button>
+          <button className="underline text-blue-700 dark:text-blue-300" onClick={() => fitEntities(new Set([...entityList(param.info!.highlight.drives), ...entityList(param.info!.highlight.follows)]))}>Zoom to it</button>
         )}
       </div>
       {impact && <ImpactSummary data={impact} />}
@@ -71,6 +123,90 @@ function ImpactSummary({ data }: { data: Record<string, unknown> }) {
   );
 }
 
+const link = "underline text-blue-700 dark:text-blue-300";
+
+/** One group of values: a heading with its count; `fold` makes it a collapsed list (nothing is hidden for good, it is one click away). */
+function Group({ title, count, children, fold, open, testid, action }: { title: string; count: number; children: React.ReactNode; fold?: boolean; open?: boolean; testid?: string; action?: React.ReactNode }) {
+  const head = (
+    <>
+      <span>{title}</span>
+      <span className="ml-1 normal-case tracking-normal text-slate-400">{count}</span>
+    </>
+  );
+  const cls = "px-1 mb-1 text-[11px] uppercase tracking-wide text-slate-400";
+  return fold ? (
+    <details className="mb-3" open={open} data-testid={testid}>
+      <summary className={`${cls} cursor-pointer select-none`}>{head}</summary>
+      {action && <div className="px-1 pb-1 text-[12px]">{action}</div>}
+      {children}
+    </details>
+  ) : (
+    <section className="mb-3" data-testid={testid}>
+      <h3 className={cls}>{head}</h3>
+      {children}
+    </section>
+  );
+}
+
+function ParamRows({ rows, param, pick }: { rows: ParamRow[]; param: { key: string } | null; pick: (key: string) => void }) {
+  return (
+    <>
+      {rows.map((p) => (
+        <div key={p.key}>
+          <button data-testid={`param-${p.name}`} className={`w-full flex items-center gap-2 rounded px-1.5 py-1 text-left hover:bg-slate-100 dark:hover:bg-slate-800 ${param?.key === p.key ? "bg-blue-50 dark:bg-blue-950/40" : ""}`} onClick={() => pick(p.key)}>
+            <span className="min-w-0 flex-1">
+              <span className={`block truncate ${p.generic ? "text-slate-500" : "font-medium"}`}>{p.name}{p.shared && <span className="ml-1 text-[10px] text-blue-600">shared</span>}</span>
+              {p.label && p.label !== p.name && <span className="block truncate text-[11px] text-slate-400">{p.label}</span>}
+            </span>
+            <span className={`num ${p.changed ? "text-orange-600" : "text-slate-600 dark:text-slate-300"}`}>{fmt(p.value, p.unit)}</span>
+            <span className="text-[11px] text-slate-400 w-6">{p.unit}</span>
+          </button>
+          {param?.key === p.key && <ParamEditor row={p} />}
+        </div>
+      ))}
+    </>
+  );
+}
+
+/** Named quantities that are read from the drawing, not set: a size of work that is kept as drawn says so and offers to unlock the part. */
+function MeasuredRows({ rows, uid }: { rows: MeasuredRow[]; uid: string }) {
+  return (
+    <>
+      {rows.map((m) => (
+        <div key={m.name} data-testid={`measured-${m.name}`} className="flex items-center gap-2 rounded px-1.5 py-1">
+          <span className="min-w-0 flex-1">
+            <span className="block truncate font-medium">{m.name}</span>
+            <span className="block truncate text-[11px] text-slate-400" title={m.between ? `measured between ${m.between.join(" and ")}` : m.expr}>
+              {m.held ? `${m.part} is kept as drawn: a reading, not an input` : m.part ? `in ${m.part}` : "worked out by the set-out"}
+            </span>
+          </span>
+          <span className="num text-slate-600 dark:text-slate-300">{fmt(m.value, m.unit)}</span>
+          <span className="text-[11px] text-slate-400 w-6">{m.unit}</span>
+          {m.held && m.part && (
+            <button className={`text-[11px] ${link}`} data-testid={`unlock-${m.name}`} title={`Stop keeping ${m.part} as drawn: ${m.name} becomes an input you can change. Nothing moves until you change it.`}
+              onClick={() => void unlockHeldPart(uid, m.part as string)}>Unlock</button>
+          )}
+        </div>
+      ))}
+    </>
+  );
+}
+
+function KeptRows({ rows, uid }: { rows: FrozenRow[]; uid: string }) {
+  return (
+    <>
+      {rows.map((f) => (
+        <div key={f.name} className="flex items-center gap-2 px-1.5 py-0.5 text-slate-500" title={`${f.label}${f.measures ? ` · between ${f.measures.join(" and ")}` : ""} — ${f.why}`}>
+          <span className="min-w-0 flex-1 truncate">{f.name}</span>
+          <span className="num">{fmt(f.value, f.unit)}</span>
+          <span className="text-[11px] text-slate-400 w-6">{f.unit}</span>
+          <button className={`text-[11px] ${link}`} onClick={() => void releaseKept(uid, [f.name])}>Release</button>
+        </div>
+      ))}
+    </>
+  );
+}
+
 export function ValuesPanel() {
   const { summary, unit, param, focus } = useStore(store, (s) => ({ summary: s.summary, unit: s.unit, param: s.param, focus: s.focusView }));
   const [filter, setFilter] = useState("");
@@ -80,9 +216,26 @@ export function ValuesPanel() {
     const uid = g?.unit ?? summary.units.find((u) => u.parametrized)?.id ?? summary.units[0]?.id;
     if (uid) void openUnit(uid);
   }, [summary, unit, focus]);
-  const rows = useMemo(() => (unit?.params ?? []).filter((p) => !filter || `${p.name} ${p.label}`.toLowerCase().includes(filter.toLowerCase())), [unit, filter]);
+  // The list is the engine's, as of the revision it was read at. When the sheet moves on (an apply, an undo, the agent's commit, a reopened
+  // session) the open unit is read again: a value the agent just named is there without a click.
+  useEffect(() => {
+    if (summary && unit && unit.revision !== undefined && unit.revision !== summary.revision) void openUnit(unit.id);
+  }, [summary?.revision, unit?.revision]);
+  const match = (text: string) => !filter || text.toLowerCase().includes(filter.toLowerCase());
+  const groups = useMemo(() => {
+    const rows = unit?.params ?? [];
+    return {
+      named: rows.filter((p) => !p.generic && !p.shared && match(`${p.name} ${p.label}`)),
+      loose: rows.filter((p) => p.generic && match(`${p.name} ${p.label}`)),
+      shared: rows.filter((p) => p.shared).length,
+      measured: (unit?.measured ?? []).filter((m) => match(`${m.name} ${m.label}`)),
+      kept: (unit?.frozen ?? []).filter((f) => match(`${f.name} ${f.label}`)),
+    };
+  }, [unit, filter]);
   if (!summary) return <p className="p-3 text-sm text-slate-500">No drawing open.</p>;
   const pick = (key: string) => { if (param?.key === key) clearParam(); else void focusParam(key); };
+  const here = summary.units.find((u) => u.id === unit?.id);
+  const anyParametrized = summary.units.some((u) => u.parametrized);
   return (
     <div className="p-2 text-[13px]" data-testid="values-panel">
       <div className="flex items-center gap-2 mb-2">
@@ -92,32 +245,52 @@ export function ValuesPanel() {
         <input className="flex-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-1.5 py-0.5" placeholder="filter" value={filter} onChange={(e) => setFilter(e.target.value)} />
       </div>
       {summary.shared.length > 0 && (
-        <section className="mb-3">
-          <h3 className="px-1 mb-1 text-[11px] uppercase tracking-wide text-slate-400">Shared across views</h3>
+        <Group title="Shared across views" count={summary.shared.length} testid="shared-group">
           {summary.shared.map((p) => (
             <div key={p.id}>
-              <button className={`w-full flex justify-between rounded px-1.5 py-1 hover:bg-slate-100 dark:hover:bg-slate-800 ${param?.key === p.name ? "bg-blue-50 dark:bg-blue-950/40" : ""}`} onClick={() => pick(p.name)}>
+              <button data-testid={`shared-${p.name}`} className={`w-full flex justify-between rounded px-1.5 py-1 hover:bg-slate-100 dark:hover:bg-slate-800 ${param?.key === p.name ? "bg-blue-50 dark:bg-blue-950/40" : ""}`} onClick={() => pick(p.name)}>
                 <span className="font-medium">{p.name}</span><span className="num text-slate-500">{fmt(summary.values[p.name] ?? p.value, p.unit)} {p.unit}</span>
               </button>
               {param?.key === p.name && <ParamEditor row={{ key: p.name, label: p.label, value: summary.values[p.name] ?? p.value, drawn: p.value, unit: p.unit }} />}
             </div>
           ))}
-        </section>
+        </Group>
       )}
-      <h3 className="px-1 mb-1 text-[11px] uppercase tracking-wide text-slate-400">{unit ? `${unit.id} — ${unit.params.length} values` : "values"}</h3>
-      {rows.map((p: ParamRow) => (
-        <div key={p.key}>
-          <button data-testid={`param-${p.name}`} className={`w-full flex items-center gap-2 rounded px-1.5 py-1 text-left hover:bg-slate-100 dark:hover:bg-slate-800 ${param?.key === p.key ? "bg-blue-50 dark:bg-blue-950/40" : ""}`} onClick={() => pick(p.key)}>
-            <span className="min-w-0 flex-1">
-              <span className={`block truncate ${/^(Gap|Thk|Off|Step|Leg|Pitch)[XYR]?\d+$/.test(p.name) ? "text-slate-500" : "font-medium"}`}>{p.name}{p.shared && <span className="ml-1 text-[10px] text-blue-600">shared</span>}</span>
-              {p.label && p.label !== p.name && <span className="block truncate text-[11px] text-slate-400">{p.label}</span>}
-            </span>
-            <span className={`num ${p.changed ? "text-orange-600" : "text-slate-600 dark:text-slate-300"}`}>{fmt(p.value, p.unit)}</span>
-            <span className="text-[11px] text-slate-400 w-6">{p.unit}</span>
+      <Group title={unit ? `${unit.id} — named values` : "named values"} count={groups.named.length} testid="named-group">
+        <ParamRows rows={groups.named} param={param} pick={pick} />
+        {unit && groups.named.length === 0 && !filter && (
+          <p className="px-1.5 text-[12px] text-slate-500">
+            {here?.parametrized ? "Every value of this unit that somebody named is shared across views (listed above)." : "Nobody has named this unit's values yet: the sizes below are what the analysis measured."}
+          </p>
+        )}
+      </Group>
+      {unit && groups.measured.length > 0 && (
+        <Group title="Measured, not inputs" count={groups.measured.length} testid="measured-group">
+          <MeasuredRows rows={groups.measured} uid={unit.id} />
+        </Group>
+      )}
+      {groups.loose.length > 0 && (
+        <Group title="Measured sizes nobody named" count={groups.loose.length} fold open={groups.named.length === 0} testid="generic-group"
+          action={here?.parametrized && unit && (
+            <button className={link} data-testid="keep-as-drawn" title="They stop being inputs and keep the numbers they have: the drawing does not change. One undo brings them back; Release gives any of them back."
+              onClick={() => void keepUnnamedAsDrawn(unit.id)}>Keep these as drawn</button>
+          )}>
+          <ParamRows rows={groups.loose} param={param} pick={pick} />
+        </Group>
+      )}
+      {unit && groups.kept.length > 0 && (
+        <Group title="Kept as drawn" count={groups.kept.length} fold testid="kept-group"
+          action={<button className={link} data-testid="release-all" onClick={() => void releaseKept(unit.id)}>Release all</button>}>
+          <KeptRows rows={groups.kept} uid={unit.id} />
+        </Group>
+      )}
+      {anyParametrized && !filter && (
+        <p className="mt-2 px-1 text-[12px] text-slate-500">
+          <button className={link} data-testid="keep-all-as-drawn" title="Every unit the agent parametrized: the measured sizes nobody named are kept as drawn; the drawing does not change." onClick={() => void keepUnnamedAsDrawn()}>
+            Keep every unit's unnamed sizes as drawn
           </button>
-          {param?.key === p.key && <ParamEditor row={p} />}
-        </div>
-      ))}
+        </p>
+      )}
     </div>
   );
 }

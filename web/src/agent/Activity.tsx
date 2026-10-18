@@ -2,7 +2,7 @@
 // opened it is the chronological record, grouped by stage: tool calls, the model's own summaries of its thinking (never its raw
 // reasoning), what the engine applied, notices, errors. Compact keeps technical details shut; verbose opens them — the same data.
 import { useStore } from "../state/store";
-import { agent, toggleFold } from "../state/agent";
+import { agent, showPicture, toggleFold } from "../state/agent";
 import { Prose } from "./Inline";
 import { countCalls, currentCall, latestFinding, type AgentMessage, type Group, type Item, type Life, type Tone } from "./model";
 import { Spinner, ToolMark } from "./StatusMark";
@@ -51,7 +51,12 @@ function ItemView({ item, k, runId, verbose }: { item: Item; k: string; runId: s
     case "applied":
       return <div className="py-0.5 text-[12px] text-emerald-700 dark:text-emerald-400" data-testid="applied">✓ {item.text}</div>;
     case "picture":
-      return <div className="py-0.5 text-[12px] text-slate-500">▣ {item.text}</div>;
+      return (
+        <div className="flex items-baseline gap-2 py-0.5 text-[12px] text-slate-500" data-testid="picture-item">
+          <span className="min-w-0 flex-1 break-words">▣ {item.text}</span>
+          <button className="shrink-0 text-[11px] text-sky-700 dark:text-sky-400 hover:underline" onClick={() => showPicture(item.ids[0])}>View</button>
+        </div>
+      );
     case "budget":
       return verbose ? <div className="py-0.5 text-[11px] text-slate-400">{item.text}</div> : null;
   }

@@ -120,6 +120,32 @@ try {
   check("the camera did not move during the whole run", (await cam()) === cam0);
   await b.shot("06_completed_verbose");
 
+  // 6b · the pictures the agent was given: a gallery with what the engine says of each, and one shown large
+  const given = [...new Map((await api("/api/sheet/ai/progress?run=R1&since=0")).events.filter((e) => e.kind === "image").map((e) => [e.id, e])).values()];
+  check("the engine told the page of every picture it gave the model, with what each is", given.length >= 2 && given.every((e) => e.pic && e.pic.kind && e.pic.size && e.pic.caption !== undefined), `${given.length} pictures: ${given.map((e) => e.pic?.kind).join(", ")}`);
+  check("the header counts them", (await text("[data-testid=pictures-toggle]")).replace(/\s+/g, "").endsWith(String(given.length)), await text("[data-testid=pictures-toggle]"));
+  await b.click("[data-testid=pictures-toggle]");
+  check("the gallery opens over the thread with one card per picture", await b.until(`document.querySelectorAll('[data-testid=gallery-item]').length === ${given.length}`, 5000), `${await count("[data-testid=gallery-item]")} cards`);
+  check("the thumbnails are the engine's pictures (they load)", await b.until("[...document.querySelectorAll('[data-testid=gallery-item] img')].filter(i => i.getBoundingClientRect().top < innerHeight).every(i => i.complete && i.naturalWidth > 0) && document.querySelectorAll('[data-testid=gallery-item] img').length > 0", 15000));
+  check("each card says what it is, its turn and whether the text could be read", await b.js("[...document.querySelectorAll('[data-testid=gallery-item]')].every(c => /IMG\\d+/.test(c.textContent) && /(turn \\d+|at the start)/.test(c.textContent))"));
+  await b.shot("06b_gallery");
+  const firstId = await b.js("document.querySelector('[data-testid=gallery-item]').dataset.id");
+  await b.click("[data-testid=gallery-item]");
+  check("a picture opens large, as a dialog", await b.until(`!!document.querySelector('[data-testid=lightbox][role=dialog][aria-modal=true][data-id="${firstId}"]')`, 5000));
+  check("the large picture loads and its metadata is the engine's", await b.until("(() => { const i = document.querySelector('[data-testid=lightbox-image]'); return !!i && i.complete && i.naturalWidth > 0; })()", 15000) && /per pixel/.test(await text("[data-testid=lightbox-info]")) && (await text("[data-testid=lightbox-info]")).includes(firstId), (await text("[data-testid=lightbox-info]")).slice(0, 120));
+  check("a picture of the sheet before the run changed it says so", given[0].revision < (await b.js("window.__ws.state().revision")) ? /older drawing/.test(await text("[data-testid=lightbox-info]")) : true, await text("[data-testid=lightbox-stale]"));
+  await b.shot("06c_lightbox");
+  await b.key("ArrowRight", "ArrowRight", 39);
+  check("the arrow keys move between pictures", await b.until(`document.querySelector('[data-testid=lightbox]')?.dataset.id !== "${firstId}"`, 3000), await b.js("document.querySelector('[data-testid=lightbox]')?.dataset.id"));
+  check("the canvas did not pan behind the picture", (await cam()) === cam0);
+  await b.key("Escape", "Escape", 27);
+  check("Escape closes the picture and focus returns to its card", await b.until("!document.querySelector('[data-testid=lightbox]')", 3000) && (await b.js("document.activeElement?.dataset?.testid")) === "gallery-item");
+  await b.click("[data-testid=gallery-close]");
+  check("the gallery closes and the thread is where it was", await b.until("!document.querySelector('[data-testid=gallery]')", 3000) && (await count("[data-testid=thread]")) === 1);
+  await b.click("[data-testid=picture-item] button");
+  check("the line in the activity that says pictures were given opens one", await b.until("!!document.querySelector('[data-testid=lightbox]')", 5000));
+  await b.key("Escape", "Escape", 27);
+
   // 7 · a follow-up continues the conversation, and Stop ends it cleanly
   await b.click("[data-testid=composer-input]");
   await b.js("document.querySelector('[data-testid=composer-input]').select()");
