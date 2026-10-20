@@ -48,8 +48,10 @@ class VertexConfig:
     location: str
     model: str
     thinking: str  # low | medium | high
+    thinking_budget: int | None = None  # thinking tokens budget, or None for dynamic/model default
     fallback_model: str = ""
     fallback_thinking: str = "high"
+    fallback_thinking_budget: int | None = None
     explicit_cache: bool = True
     cache_ttl_s: int = 1200
     max_output_tokens: int = 65536  # thinking counts against it: high thinking on a big drawing needs room
@@ -237,13 +239,26 @@ def config(model: str | None = None) -> VertexConfig:
             project = ""
     if not project:
         raise RuntimeError("No Google Cloud project: set GOOGLE_CLOUD_PROJECT in .env or run `gcloud config set project <id>`.")
+    raw_budget = os.environ.get("VERTEX_THINKING_BUDGET") or os.environ.get("VERTEX_THINKING_TOKENS")
+    thinking_level = os.environ.get("VERTEX_THINKING_LEVEL", "high")
+    thinking_budget = int(raw_budget) if raw_budget and raw_budget.strip().lstrip("-").isdigit() else None
+    if thinking_level.isdigit():
+        thinking_budget = int(thinking_level)
+        thinking_level = "high"
+    fallback_level = os.environ.get("VERTEX_FALLBACK_THINKING_LEVEL", "high")
+    fallback_budget = thinking_budget
+    if fallback_level.isdigit():
+        fallback_budget = int(fallback_level)
+        fallback_level = "high"
     cfg = VertexConfig(
         project=project,
         location=os.environ.get("VERTEX_LOCATION") or os.environ.get("GOOGLE_CLOUD_LOCATION") or "global",
         model=os.environ.get("VERTEX_MODEL") or os.environ.get("GEMINI_MODEL") or "gemini-3.8-flash",
-        thinking=os.environ.get("VERTEX_THINKING_LEVEL", "high"),
+        thinking=thinking_level,
+        thinking_budget=thinking_budget,
         fallback_model=os.environ.get("VERTEX_FALLBACK_MODEL", "gemini-3.7-flash"),
-        fallback_thinking=os.environ.get("VERTEX_FALLBACK_THINKING_LEVEL", "high"),
+        fallback_thinking=fallback_level,
+        fallback_thinking_budget=fallback_budget,
         explicit_cache=os.environ.get("VERTEX_EXPLICIT_CACHE", "1") != "0",
         cache_ttl_s=int(os.environ.get("VERTEX_CACHE_TTL_S", "1200")),
         max_output_tokens=int(os.environ.get("VERTEX_MAX_OUTPUT_TOKENS", "65536")),
@@ -253,6 +268,8 @@ def config(model: str | None = None) -> VertexConfig:
         if choice is None:
             raise ValueError(f"unknown model {model!r}: choose one of {[m['id'] for m in MODEL_CHOICES]}")
         cfg.model, cfg.thinking = choice["id"], choice["thinking"]
+        if "thinking_budget" in choice:
+            cfg.thinking_budget = choice["thinking_budget"]
         if choice.get("explicit_cache") is False:
             cfg.explicit_cache = False
         if choice["fallback"] is not None:
@@ -260,6 +277,23 @@ def config(model: str | None = None) -> VertexConfig:
         if cfg.fallback_model == cfg.model:
             cfg.fallback_model = ""
     return cfg
+
+
+def _thinking_config(thinking: str | int | None, budget: int | None = None):
+    """Build types.ThinkingConfig with thinking_level and thinking_budget (thinking tokens)."""
+    from google.genai import types
+
+    budget_val = budget
+    level_val = thinking
+    if isinstance(thinking, int) or (isinstance(thinking, str) and thinking.isdigit()):
+        budget_val = int(thinking)
+        level_val = "high"
+    kw = {"include_thoughts": True}
+    if level_val:
+        kw["thinking_level"] = level_val
+    if budget_val is not None:
+        kw["thinking_budget"] = budget_val
+    return types.ThinkingConfig(**kw)
 
 
 def _transient(exc: Exception) -> bool:
@@ -342,7 +376,7 @@ class Gemini:
     # ── one turn of a tool-using agent ────────────────────────────────────────────
 
     def step(self, system: str, tools: list, prefix_parts: list, prefix_key: str, history: list, label: str, thinking: str,
-             max_out: int = 16384, stop=None, on_event=None):
+             max_out: int | None = None, stop=None, on_event=None, thinking_budget: int | None = None):
         """One agent turn: the cached prefix (system, tools, pictures, overview) + the conversation so far → the
         model's next content (thought summaries and function calls). Turns are cached on disk by everything sent, so
         replaying an identical run is free. Returns (content, usage)."""
@@ -350,8 +384,10 @@ class Gemini:
         from google.genai import types
 
         tool_config = types.ToolConfig(function_calling_config=types.FunctionCallingConfig(mode="ANY"))
+        budget = self.cfg.thinking_budget if thinking_budget is None else thinking_budget
+        budget_key = f"@{budget}" if budget is not None else ""
         h = hashlib.sha256()
-        for part in (self.cfg.model, thinking, system, prefix_key, json.dumps([t.model_dump(mode="json", exclude_none=True) for t in tools], sort_keys=True)):
+        for part in (self.cfg.model, f"{thinking}{budget_key}", system, prefix_key, json.dumps([t.model_dump(mode="json", exclude_none=True) for t in tools], sort_keys=True)):
             h.update(part.encode())
         for c in history:
             h.update(json.dumps(c.model_dump(mode="json", exclude_none=True), sort_keys=True).encode())
@@ -366,14 +402,15 @@ class Gemini:
                     on_event({"kind": "thought", "text": part.text, "cached": True})
             return content, {**data["usage"], "cached": True}
         est = len(system) // 4 + sum(len(getattr(p, "text", "") or "") // 4 if getattr(p, "text", None) else IMAGE_TOKENS for p in prefix_parts)
-        base = {"temperature": 0.0, "max_output_tokens": max_out, "automatic_function_calling": types.AutomaticFunctionCallingConfig(disable=True)}
-        plan = [(self.cfg.model, thinking)]
+        effective_max_out = self.cfg.max_output_tokens if max_out is None else max_out
+        base = {"temperature": 0.0, "max_output_tokens": effective_max_out, "automatic_function_calling": types.AutomaticFunctionCallingConfig(disable=True)}
+        plan = [(self.cfg.model, thinking, budget)]
         if self.cfg.fallback_model and self.cfg.fallback_model != self.cfg.model:
-            plan.append((self.cfg.fallback_model, self.cfg.fallback_thinking))
+            plan.append((self.cfg.fallback_model, self.cfg.fallback_thinking, self.cfg.fallback_thinking_budget))
         t0, last = time.perf_counter(), None
         # Vertex ends the call itself at this deadline (sent as its server timeout); the worker thread backs it up
         step_ms = int((self.step_timeout_s or 0) * 1000) or int(os.environ.get("VERTEX_STEP_TIMEOUT_MS", "240000"))
-        for model, think in plan:
+        for model, think, tb in plan:
             for attempt in range(2):
                 if stop and stop():
                     raise GeminiStopped("stopped by the person")
@@ -383,7 +420,7 @@ class Gemini:
                 if on_event:
                     on_event({"kind": "call", "label": label, "model": model, "thinking": think, "prompt_cache": cache_state, "attempt": attempt + 1})
                 try:
-                    cfg = types.GenerateContentConfig(**kw, thinking_config=types.ThinkingConfig(thinking_level=think, include_thoughts=True),
+                    cfg = types.GenerateContentConfig(**kw, thinking_config=_thinking_config(think, tb),
                                                       http_options=types.HttpOptions(timeout=step_ms))
                     got: list = []
                     _pumped(lambda put, c=contents, g=cfg, m=model: put(self.client.models.generate_content(model=m, contents=c, config=g)),
@@ -412,7 +449,7 @@ class Gemini:
                 hit.write_text(json.dumps({"content": content.model_dump(mode="json", exclude_none=True), "usage": usage}))
                 _log({**usage, "key": key})
                 return content, usage
-        raise GeminiUnavailable(f"Vertex AI did not answer ({', '.join(m for m, _ in plan)}): {last}")
+        raise GeminiUnavailable(f"Vertex AI did not answer ({', '.join(m for m, *_ in plan)}): {last}")
 
     # ── a structured question ─────────────────────────────────────────────────────
 
@@ -433,8 +470,10 @@ class Gemini:
 
         image_ids = [image_keys[k] if image_keys and k < len(image_keys) and image_keys[k] else hashlib.sha256(img).hexdigest()
                      for k, img in enumerate(images)]
+        budget = self.cfg.thinking_budget
+        budget_key = f"@{budget}" if budget is not None else ""
         h = hashlib.sha256()
-        for part in (self.cfg.model, self.cfg.thinking, system, json.dumps(schema.model_json_schema(), sort_keys=True), *texts):
+        for part in (self.cfg.model, f"{self.cfg.thinking}{budget_key}", system, json.dumps(schema.model_json_schema(), sort_keys=True), *texts):
             h.update(part.encode())
         for key_part in image_ids:
             h.update(key_part.encode())
@@ -460,29 +499,29 @@ class Gemini:
         base = {"response_mime_type": "application/json", "response_schema": schema, "temperature": 0.0,
                 "automatic_function_calling": types.AutomaticFunctionCallingConfig(disable=True)}
 
-        def gen_config(thinking: str, cached: str | None, max_out: int):
+        def gen_config(thinking: str, cached: str | None, max_out: int, tb: int | None = None):
             # with a cached prefix the system prompt lives in the cache and may not be sent again
             kw = {**base, "max_output_tokens": max_out}
             kw.update({"cached_content": cached} if cached else {"system_instruction": system})
             try:
-                return types.GenerateContentConfig(**kw, thinking_config=types.ThinkingConfig(thinking_level=thinking, include_thoughts=True))
+                return types.GenerateContentConfig(**kw, thinking_config=_thinking_config(thinking, tb))
             except (TypeError, ValueError):  # an SDK without thinking levels (pydantic rejects the field)
                 return types.GenerateContentConfig(**kw)
 
         # The primary model, then the fallback (e.g. 3.8 Flash → 3.7 Flash @high) when the primary is out of
         # capacity or past its deadline. Each gets one retry after a short back-off. A prompt cache belongs to one
         # model, so the fallback gets its own.
-        plan = [(self.cfg.model, self.cfg.thinking)]
+        plan = [(self.cfg.model, self.cfg.thinking, self.cfg.thinking_budget)]
         if self.cfg.fallback_model and self.cfg.fallback_model != self.cfg.model:
-            plan.append((self.cfg.fallback_model, self.cfg.fallback_thinking))
+            plan.append((self.cfg.fallback_model, self.cfg.fallback_thinking, self.cfg.fallback_thinking_budget))
         t0 = time.perf_counter()
         last: Exception | None = None
         answer, used, used_thinking, cache_state, resp = None, None, None, "off", None
         thoughts_all: list[str] = []
         max_out = self.cfg.max_output_tokens
         wasted = {"input_tokens": 0, "output_tokens": 0, "thinking_tokens": 0}
-        for model, thinking in plan:
-            think = thinking
+        for model, thinking, tb in plan:
+            think, think_budget = thinking, tb
             for attempt in range(2):
                 cached, cache_state = (self._prefix_cache(model, prefix_key, system, image_parts + text_parts[:shared], est)
                                        if shared else (None, "off"))
@@ -492,7 +531,7 @@ class Gemini:
                 if on_event:
                     on_event({"kind": "call", "label": label, "model": model, "thinking": think, "prompt_cache": cache_state, "attempt": attempt + 1})
                 try:
-                    resp = _stream(self.client, model, contents, gen_config(think, cached, max_out), on_event, stop)
+                    resp = _stream(self.client, model, contents, gen_config(think, cached, max_out, think_budget), on_event, stop)
                 except GeminiStopped:
                     # Vertex reports no usage for a cut stream; what it generated until then is billed all the same
                     _log({"model": model, "thinking": think, "label": label, "stopped": True, "prompt_cache": cache_state, "key": key})
@@ -522,16 +561,17 @@ class Gemini:
                 for k in wasted:
                     wasted[k] += tok[k]
                 _log({"model": model, "thinking": think, "label": label, "error": f"no complete JSON (finish {finish})",
-                      "chars": len(getattr(resp, "text", "") or ""), "prompt_cache": cache_state, **tok, "key": key})
+                       "chars": len(getattr(resp, "text", "") or ""), "prompt_cache": cache_state, **tok, "key": key})
                 last = GeminiUnavailable(f"{model} @{think}: no complete JSON (finish {finish})")
                 if on_event:
                     on_event({"kind": "retry", "label": label, "model": model, "why": f"reply not complete JSON (finish {finish})"})
                 if finish == "MAX_TOKENS" and think == "high":
                     think = "medium"  # the thinking ate the output budget: think less, keep the answer
+                    think_budget = None
             if answer is not None:
                 break
         if answer is None:
-            raise GeminiUnavailable(f"Vertex AI gave no usable answer ({', '.join(m for m, _ in plan)}): {last}")
+            raise GeminiUnavailable(f"Vertex AI gave no usable answer ({', '.join(m for m, *_ in plan)}): {last}")
         usage = {"model": used, "thinking": used_thinking, "fallback": used != self.cfg.model, "label": label,
                  "seconds": round(time.perf_counter() - t0, 1), **_tokens(resp), "finish": resp.finish,
                  "prompt_cache": cache_state, "cached": False, "thoughts": thoughts_all}

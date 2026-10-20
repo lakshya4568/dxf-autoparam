@@ -229,3 +229,38 @@ def test_the_real_agent_step_sends_a_picture_inside_a_function_response_and_repl
     assert sent[0]["system"] == "system" and sent[0]["contents"][0].parts[0].text == "OVERVIEW"  # the cached-prefix material comes first
     content2, usage2 = g.step("system", tools, [types.Part.from_text(text="OVERVIEW")], "key1", history, "turn 2", "high")
     assert usage2["cached"] and len(sent) == 1 and content2.parts[0].function_call.name == "finish"  # the identical conversation is replayed from disk
+
+
+def test_step_headroom_and_thinking_budget(gem, monkeypatch):
+    """Step defaults to cfg.max_output_tokens (65536) for maximum thinking headroom, and thinking_budget passes through to ThinkingConfig."""
+    from google.genai import types
+
+    g, fake = gem()
+    sent = []
+
+    def generate_content(model, contents, config):
+        sent.append({"model": model, "config": config})
+        reply = types.Content(role="model", parts=[types.Part(function_call=types.FunctionCall(name="finish", args={}))])
+        return SimpleNamespace(candidates=[SimpleNamespace(content=reply, finish_reason=SimpleNamespace(name="STOP"))],
+                               usage_metadata=SimpleNamespace(prompt_token_count=10, candidates_token_count=5, thoughts_token_count=8, cached_content_token_count=0))
+
+    fake.models.generate_content = generate_content
+    tools = [types.Tool(function_declarations=[types.FunctionDeclaration(name="finish", description="", parameters_json_schema={"type": "object"})])]
+    history = [types.Content(role="user", parts=[types.Part.from_text(text="hi")])]
+
+    # Default step has 65536 max_output_tokens
+    g.step("system", tools, [], "k1", history, "turn 1", "high")
+    assert sent[0]["config"].max_output_tokens == 65536
+    level0 = sent[0]["config"].thinking_config.thinking_level
+    assert str(getattr(level0, "value", level0)).lower() == "high"
+
+    # With numeric thinking tokens / thinking budget
+    g.cfg.thinking_budget = 32768
+    g.step("system", tools, [], "k2", history, "turn 2", "high")
+    assert sent[1]["config"].thinking_config.thinking_budget == 32768
+
+    # config() loads VERTEX_THINKING_BUDGET
+    monkeypatch.setenv("VERTEX_THINKING_BUDGET", "49152")
+    c = vertex.config()
+    assert c.thinking_budget == 49152
+
