@@ -29,7 +29,7 @@ from typing import Any
 from .. import viewplan as vp
 from ..cadjson import entity_id, entity_index
 from ..graph import affects
-from ..intent import _boxes, _geometry, classify, delta_of, held_and_free_lines, resolve_parts
+from ..intent import _boxes, _geometry, classify, delta_of, grows_with, held_and_free_lines, resolve_parts
 from ..ir import GapKind, Role
 from ..plan import MAX_REPAIRS, MODES, accept, build_plan, with_plan
 from ..program import ExprError, names_in
@@ -71,9 +71,10 @@ PLAYBOOK — small steps, each checked at once:
      Equal values are NOT one size until you say so: a candidate with several occurrences needs `occurrences` — the
      ones that are one design input (["all"] only when every one of them is: the equal cells of one box). Two members
      that only happen to be equal = two parameters, each with its own occurrences.
-  4. set_levels for the stated levels (site_input / check_only / derived).
-  5. A named size DRIVES its lines by itself: the engine sets one end out from the other (both ends about the axis
-     when the size is centred on one). Use set_formulas only for intent sizes do not give (a line that should follow
+  4. set_levels for the stated levels (site_input / check_only / derived). site_input and check_only both HOLD their
+     line: the lines the structure is drawn on are derived.
+  5. A named size DRIVES its lines by itself: the engine sets one end out from the other, and decides WHICH end moves
+     (see GROWTH below). Use set_formulas only for intent sizes do not give (a line that should follow
      a different line, a slope). Between two fixed levels one size in the chain is the result: the engine keeps it
      as a worked-out quantity and tells you; set_formulas makes it an input instead if that is the design intent.
   6. Verify with what_moves(parameter): the parts that should grow grow, the rest stay. Fix with set_formulas.
@@ -98,6 +99,15 @@ yours to decide: a directive without their words is a proposal they accept or no
 stays a question (propose_plan `questions`, with the options you see). The engine compiles an accepted plan into the
 set-out and measures it (grow, shrink, restore): a failed check comes back with expected / measured / cause; re-propose at
 most {MAX_REPAIRS} times, then ask_person. set_formulas / add_constraints / state_behaviours for a change wait until its plan exists.
+
+GROWTH IS DESIGN INTENT. A size that changes moves one side of what it measures, both sides, or the far one — and which
+it is, is a decision about the structure, never an accident of where the set-out happened to start. The engine decides it for
+every named size from the drawing, tries it for real, and writes it as a plan marked `design intent`: faces that mirror about an
+axis (a centre line, the middle of a closed outline) grow EQUALLY on both sides about it; a line pinned by a level, a held part or
+existing work stays, and the size grows away from it; new work that abuts existing work grows away from it; with no evidence at all the
+left / lower side stays and the plan is marked provisional. What touches a side or hangs on it moves with that side. That plan is
+only a default: a plan the person asks for (propose_plan) always replaces it, and `fixed` constraints are kept. So do not flip a side
+with set_formulas to get a direction — say what you know (the person's words, a constraint) and let the engine measure it.
 
 EVERY VERDICT is ok, or rejected with a `failure`: {{code, binding, refs, expected, measured, cause, repair}}. repair
 "agent" = yours to fix (another occurrence, the other end, a formula); repair "person" = a decision that is not yours
@@ -180,7 +190,9 @@ TOOL_SPECS = [
      "goes with it. One transform per entity; the engine checks kinds of quantity (a pivot is a length, an angle is an angle)."),
      _batch({"name": S, "kind": _enum("rotate", "translate", "scale"), "part": S, "entities": LIST, "pivot": LIST, "angle": S, "dx": S, "dy": S,
              "sx": S, "sy": S, "nonuniform": B, "why": S}, ["name", "kind"])),
-    ("set_levels", "Name the horizontal lines stated levels are drawn at (all of them in one call).",
+    ("set_levels", ("Name the horizontal lines stated levels are drawn at (all of them in one call). site_input and check_only both HOLD the "
+                    "line fixed (check_only: a level the structure is only checked against, such as a water level); a line the structure is drawn "
+                    "on, which follows the structure's own sizes, is derived."),
      _batch({"line": S, "name": S, "role": _enum("site_input", "check_only", "derived")}, ["line", "name", "role"])),
     ("set_formulas", ("Set lines out from others: each an expression in mm over line ids and parameter names, e.g. "
      "{line: 'y18', expr: 'y10 + Height'}. An empty expression removes your formula (the engine's own comes back)."),
@@ -423,10 +435,7 @@ class Workbench:
         return out
 
     def _drives_pair(self, v0: dict, v1: dict, a: str, b: str) -> bool:
-        u = self.an.drawing.units_mm
-        da = (v1.get(a, v0.get(a, 0.0)) - v0.get(a, 0.0)) * u
-        db = (v1.get(b, v0.get(b, 0.0)) - v0.get(b, 0.0)) * u
-        return abs(abs(db - da) - 1.0) < 1e-6
+        return grows_with(v0, v1, a, b, self.an.drawing.units_mm)
 
     def inspect_candidates(self, ids: list[str]) -> dict:
         an, prog = self.an, self.prog
@@ -1116,10 +1125,12 @@ class Workbench:
         if not_driven:
             cause = "; ".join(f"{g or a + '-' + b}: {a} is set by {owner(prog, a)}, {b} by {owner(prog, b)}" for g, a, b in not_driven[:3])
             if driven and not _narrowed and row.get("candidate") and all(g for g, _a, _b in driven):
+                row["occurrences_asked"] = [g for g, _a, _b in pairs if g]  # what was asked for: the design intent tries to make the others follow too
                 row["occurrences"] = [g for g, _a, _b in driven]
                 self.validate()
                 info2, failure = self.binding_check(name, _narrowed=True)
                 if failure is None:
+                    info2["asked"], info2["following"] = len(pairs), len(driven)
                     info2["left_as_drawn"] = [f"{g or a + '-' + b} stays its own size — {a} is set by {owner(prog, a)}, {b} by {owner(prog, b)}, so their distance "
                                               f"cannot follow {name}" for g, a, b in not_driven[:6]]
                 return info2, failure

@@ -99,7 +99,16 @@ def test_the_thinking_level_follows_what_the_last_turn_did_and_never_exceeds_the
     assert LoopState().last_calls == [] and LoopState().last_failed is False
 
 
-def test_a_run_thinks_at_the_level_the_last_turn_calls_for(tmp_path):
+def test_a_run_thinks_at_one_level_unless_levels_that_follow_the_last_turn_are_asked_for(tmp_path):
+    """A changed level costs the provider's cache more than a lower level saves, so every turn after the first thinks at one level by default."""
+    script = [[reading(PLAIN)], [call("open_unit", unit="U01")], [call("find_values", value_mm=3000)], [call("find_values", value_mm=3000)]]
+    sheet, _sm, _ua, _ub, _gem = two_unit_session(tmp_path, script)
+    _rid, p = run(sheet, budget={"soft_turns": 0, "max_turns": 4})
+    assert [e["thinking"] for e in p["events"] if e["kind"] == "call"] == ["high"] * 4
+
+
+def test_a_run_thinks_at_the_level_the_last_turn_calls_for(tmp_path, monkeypatch):
+    monkeypatch.setenv("AUTOPARAM_AGENT_ADAPTIVE_THINKING", "1")  # opt-in
     script = [[reading(PLAIN)], [call("open_unit", unit="U01")], [call("find_values", value_mm=3000)], [call("open_unit", unit="NOPE")], [call("find_values", value_mm=3000)],
               [call("find_values", value_mm=3000)]]
     sheet, _sm, _ua, _ub, _gem = two_unit_session(tmp_path, script)
@@ -270,10 +279,21 @@ def test_a_change_of_thinking_level_that_cost_the_cache_is_noticed_only_when_it_
     assert not fine.level_broke() and fine.level_ok == 4, "levels changed and the cache held: nothing to switch off"
 
 
+def test_the_level_changes_of_a_live_run_are_noticed_although_each_one_started_from_an_already_collapsed_cache():
+    """The first paid run on the raw sheet (calls 4-8 of R1): the cache followed the level, and the first version of this watch compared each call
+    with the call before's own cached tokens, so after the first collapse it counted the next changes as harmless and never switched anything off."""
+    w = CacheWatch()
+    for rec in (_call("medium", 45655, 41207, share=0.976), _call("low", 47181, 15872, share=0.957), _call("high", 48310, 19037, share=0.971),
+                _call("medium", 51265, 44339, share=0.926)):
+        w.observe(rec)
+    assert w.level_breaks == 2 and w.level_ok == 1 and w.level_broke()
+
+
 # ── the run and the page ─────────────────────────────────────────────────────────
 
 
-def test_every_model_call_of_a_run_is_recorded_and_the_page_can_ask_for_any_of_them(tmp_path):
+def test_every_model_call_of_a_run_is_recorded_and_the_page_can_ask_for_any_of_them(tmp_path, monkeypatch):
+    monkeypatch.setenv("AUTOPARAM_AGENT_ADAPTIVE_THINKING", "1")  # the record shows the level of each call: here they differ
     sheet, _sm, _ua, _ub, _gem = two_unit_session(tmp_path, [[reading(PLAIN)], [call("open_unit", unit="U01")], [call("find_values", value_mm=3000)], [call("finish", summary="x")]])
     rid, p = run(sheet, budget={"soft_turns": 0})
     got = sheet.run_requests(rid)

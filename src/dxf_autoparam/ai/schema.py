@@ -41,7 +41,7 @@ class AILevel(BaseModel):
     datum: str = Field(description="y datum id the level line is drawn at")
     name: str = Field(description="PascalCase, ends in Level (or Hfl/Lwl): the name the drawing gives it")
     role: Literal["site_input", "check_only", "derived"] = Field(
-        description="site_input: given by the site and held fixed (bed, formation, rail, ground); check_only: a water level the structure is checked against (HFL, LWL); derived: follows the structure (top of slab, soffit, foundation)")
+        description="site_input: given by the site and held fixed (bed, formation, rail, ground); check_only: a level the structure is only checked against, also held fixed and never set out from (a water level: HFL, LWL); derived: follows the structure's own sizes and stays free (top of slab, soffit, foundation) — a line the structure is drawn on is never check_only")
 
 
 class AIParameter(BaseModel):

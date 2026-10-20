@@ -296,7 +296,11 @@ class AgentLoop:
         self.prune_batch = 1 if self.explicit else 4
         self._pruned: dict[str, int] = {}  # what the last turn's housekeeping changed in the older conversation: said in the next request's record
         self.kinds = getattr(bench, "thinking_kinds", None)
-        self.adaptive = bool(self.kinds) and not step_thinking and not os.environ.get("VERTEX_AGENT_STEP_THINKING")
+        # A level that follows the turn before is opt-in (AUTOPARAM_AGENT_ADAPTIVE_THINKING=1). In the live run measured, thinking was 1.2% of the tokens billed, and
+        # a run with the levels changing had about half of its prompt served from the provider's cache: what a lower level saves does not pay for what a changed
+        # level loses. Every turn after the first thinks at one level, which keeps the conversation the cache already holds.
+        self.adaptive = (bool(self.kinds) and not step_thinking and not os.environ.get("VERTEX_AGENT_STEP_THINKING")
+                         and os.environ.get("AUTOPARAM_AGENT_ADAPTIVE_THINKING", "").strip().lower() in ("1", "true", "yes", "on"))
 
     # ── conversation ────────────────────────────────────────────────────────────
 
@@ -389,8 +393,9 @@ class AgentLoop:
                 if hasattr(self.gem, "explicit_override"):
                     self.gem.explicit_override = self.explicit  # which of the two caches this request leans on
                 try:
+                    max_out = getattr(getattr(self.gem, "cfg", None), "max_output_tokens", 65536)
                     content, usage = self.gem.step(self.system, self.tools, self.prefix_parts, self.prefix_key, self.history, label, level,
-                                                   max_out=32768 if s.turns == 1 else 16384, stop=self.stop, on_event=self.emit)
+                                                   max_out=max_out, stop=self.stop, on_event=self.emit)
                 except GeminiStopped:
                     s.turns -= 1  # that turn never happened: nothing was executed, the conversation is as it was
                     s.chunk_turns -= 1

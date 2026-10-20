@@ -156,6 +156,33 @@ def _key(what: str) -> str:
     return " ".join((what or "").lower().split())
 
 
+def places_of(sm: SheetModel, raw: dict) -> list[list[str]]:
+    """The (unit, view) spots a link names, as far as they can be told: a refused link is kept with them, because what it said is that these
+    places belong together — and that can hold whatever names the model gave the parts."""
+    out: list[list[str]] = []
+    for ref in raw.get("appears_in") if isinstance(raw.get("appears_in"), list) else []:
+        if not isinstance(ref, dict):
+            continue
+        vid = _s(ref.get("view"))
+        uid = _s(ref.get("unit")) or sm.unit_of_view.get(vid) or ""
+        if uid and [uid, vid] not in out:
+            out.append([uid, vid])
+    return out
+
+
+def covered(places: list, links: list[dict]) -> bool:
+    """Whether what a refused link said — these places belong together — is stated anyway: every two of its places are in one unit (the sheet
+    already holds them as one drawing, there is nothing to state) or are named together by a link of the plan that was kept."""
+    spots = [tuple(x) for x in places]
+    if len(spots) < 2:
+        return False
+
+    def named(link: dict, spot: tuple) -> bool:
+        return any(q.get("unit") == spot[0] and (not spot[1] or not q.get("view") or q["view"] == spot[1]) for q in link.get("appears_in", []))
+
+    return all(a[0] == b[0] or any(named(x, a) and named(x, b) for x in links) for i, a in enumerate(spots) for b in spots[i + 1:])
+
+
 def apply_plan(sm: SheetModel, run_id: str, a: dict) -> dict:
     """Take the links that hold, keep them in the sheet's plan (one undoable step), and say what was refused and why. A call adds to the plan
     of THIS run, link by link (a link with the same `what` is replaced); a plan of an earlier run is not carried over."""
@@ -188,7 +215,8 @@ def apply_plan(sm: SheetModel, run_id: str, a: dict) -> dict:
         key = f"plan:{_key(what)}"
         if problems:
             refused.append(f"{what}: " + "; ".join(problems))
-            refused_items.append({"key": key, "why": refused[-1], "what": what, "shared_value": link["shared_value"], "bound_by": link["bound_by"]})
+            refused_items.append({"key": key, "why": refused[-1], "what": what, "shared_value": link["shared_value"], "bound_by": link["bound_by"],
+                                  "places": places_of(sm, raw)})
             continue
         plan["links"] = [x for x in plan["links"] if _key(x["what"]) != _key(what)] + [link]
         applied.append(f"{what}: {link['relation'].replace('_', ' ')} — " + ", ".join(f"{p['unit']}" + (f" {p['part']}" if p["part"] else "") + (f" {p['value']}" if p["value"] else "")

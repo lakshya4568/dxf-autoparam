@@ -14,13 +14,13 @@ goes through the model's undoable edits.
 
 from __future__ import annotations
 
-import copy
 import hashlib
 import json
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from .. import design_intent
 from ..crossview import SheetError, SheetModel
 from ..render import layout_png
 from ..sheet import TEXT_TYPES
@@ -286,7 +286,7 @@ def parametrize_unit(sm: SheetModel, uid: str, gem, instructions: str = "", on_e
         u = sm.unit(uid)
         scope = SheetScope(sm, uid)
         analysis = sm.pristine_analysis(uid)
-        start = copy.deepcopy(u.answer)
+        start = design_intent.strip(u.answer) if u.answer else u.answer  # the plans the engine derived are not the agent's to see: it starts from what was written
     x0 = min(sm.layout.group(v).bbox[0] for v in u.views)
     y0 = min(sm.layout.group(v).bbox[1] for v in u.views)
     x1 = max(sm.layout.group(v).bbox[2] for v in u.views)

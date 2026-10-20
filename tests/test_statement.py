@@ -13,7 +13,7 @@ import pytest
 from test_crossview import two_views, view
 from test_sheet import FIXTURES, built_sheet, rect, text
 
-from dxf_autoparam.ai.statement import apply_plan, check_link, gap_lines, group_facts, plan_gaps, plan_report
+from dxf_autoparam.ai.statement import apply_plan, check_link, covered, gap_lines, group_facts, plan_gaps, plan_report
 from dxf_autoparam.baseline import reset_drawing
 from dxf_autoparam.crossview import EMPTY_ANSWER, SheetModel
 from dxf_autoparam.dxf_read import read_dxf
@@ -111,6 +111,22 @@ def test_a_malformed_statement_is_refused_in_words_and_never_crashes_the_run(two
                                         {"what": "y", "appears_in": "nope", "bound_by": "noted_only", "evidence": "text"}]})
     assert len(r["refused"]) == 3 and "is an object" in r["refused"][0] and "a place is an object" in r["refused"][1]
     assert [a["text"] for a in sm.stated_plan["assumptions"]] == ["just words", "3", "kept"] and sm.stated_plan["summary"] == "7"
+
+
+# ── what a refused link said can be stated anyway ────────────────────────────────────────────────
+
+
+def test_a_refused_link_is_kept_with_the_places_it_named_and_covered_by_a_link_or_by_one_unit(two):
+    sm, ua, ub = two
+    r = apply_plan(sm, "R1", {"links": [link("claimed", places(ua, ub), "shared_value", shared_value="Nobody")]})  # no such shared value
+    item = r["refused_items"][0]
+    assert item["places"] == [[ua, ""], [ub, ""]]
+    assert not covered(item["places"], sm.stated_plan.get("links", []))  # nothing in the plan relates the two views
+    apply_plan(sm, "R1", {"links": [link("the same, in other words", places(ua, ub))]})
+    assert covered(item["places"], sm.stated_plan["links"])  # now a kept link names both places
+    assert not covered([[ua, ""], ["U99", ""]], sm.stated_plan["links"])  # a place no link names is not covered
+    assert not covered([[ua, ""]], sm.stated_plan["links"])  # one place says nothing about how places relate
+    assert covered([[ua, "V01"], [ua, "V02"]], [])  # two views of one unit are held together by the sheet itself
 
 
 # ── a binding a link claims must be on the sheet ─────────────────────────────────────────────────

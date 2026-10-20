@@ -109,6 +109,18 @@ def test_a_link_that_claims_a_binding_the_sheet_does_not_hold_is_refused_and_sta
     assert not criterion(p, "refusals_repaired")["ok"] and p["verdict"]["refused"][0]["item"] == "plan:opening"
 
 
+def test_a_refused_link_is_repaired_when_the_plan_states_the_same_relation_under_other_words(tmp_path):
+    """The model's first statement named a shared value nobody made; its second one relates the same two views under another name. The refused
+    link is not 'never repaired': what it said — these places belong together — is in the plan."""
+    again = plan_call(what="the opening, as the views state it", bound_by="noted_only", shared_value="", note="the views do not share one value")
+    sheet, _sm, _ua, _ub, _gem = two_unit_session(tmp_path, [[reading()], [plan_call()], [again], [call("finish", summary="stated")]])
+    _rid, p = run(sheet)
+    first, second = tools(p, "state_plan")
+    assert not first["ok"] and "no shared value 'OpeningWidth'" in first["why"] and second["ok"]
+    assert criterion(p, "refusals_repaired")["ok"] and p["verdict"]["refused"] == []
+    assert p["status"] == "completed", p["verdict"]
+
+
 def test_a_link_the_model_says_is_only_noted_closes_a_refused_share_and_says_so(tmp_path):
     bad_share = {"items": [{"name": "Missing", "targets": [["U01", "c1"], ["U02", "c4"]]}]}  # 3000 against 1000: not one size
     noted = {"what": "pier", "relation": "same_dimension", "bound_by": "noted_only", "shared_value": "Missing",

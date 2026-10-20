@@ -29,10 +29,12 @@ import traceback
 from pathlib import Path
 from typing import Any
 
+from .. import design_intent
 from .. import viewplan as vp
 from ..cadjson import entity_id, entity_index
 from ..crossview import SheetError
-from ..status import parameters_of, sheet_status
+from ..program import ExprError
+from ..status import dimension_drive, parameters_of, sheet_status
 from ..topology import of as topology_of
 from ..viewimg import box_around
 from . import agent as A
@@ -43,7 +45,7 @@ from .coverage import sentence, table_md, unit_rows
 from .loop import AgentLoop, Budget
 from .narrate import STAGE_OF, phase_of
 from .sheet_ai import apply_shared, apply_views, commit_unit
-from .statement import BOUND, KINDS, RELATIONS, apply_plan, gap_lines, group_facts, plan_gaps, plan_report
+from .statement import BOUND, KINDS, RELATIONS, apply_plan, covered, gap_lines, group_facts, plan_gaps, plan_report
 from .vertex import GeminiStopped, GeminiUnavailable
 
 STATES = ("queued", "running", "stopping", "paused", "awaiting_user", "stopped", "exhausted", "completed", "partial", "failed")
@@ -297,7 +299,7 @@ class SheetBench:
             u = self.sm.unit(uid)
             scope = SheetScope(self.sm, uid)
             analysis = self.sm.pristine_analysis(uid)
-            start = copy.deepcopy(u.answer)
+            start = design_intent.strip(u.answer) if u.answer else u.answer  # the agent never sees the plans the engine derived: it starts from what was written
             region = box_around([self.sm.layout.group(v).bbox for v in u.views], 0.0)
         wb = A.Workbench(self.sm.path, region=region, start=start, drawing=u.sub, analysis=analysis, scope=scope, instructions=self.original,
                          confirm_plan=self.run.options.get("confirm_plan", False), pack=self.run.pack)
@@ -347,7 +349,8 @@ class SheetBench:
         self.run.emit({"kind": "applied", "unit": uid, "revision": done["revision"], "values": [x["name"] for x in done["values_applied"]],
                        "refused_values": [x["name"] for x in done["values_refused"]], "kept_as_drawn": len(kept)})
         res = {"ok": True, "revision": done["revision"], "values_applied": done["values_applied"], "values_refused": done["values_refused"],
-               "values_dropped": done["commit"]["values_dropped"], "kept_as_drawn": len(kept)}
+               "values_dropped": done["commit"]["values_dropped"], "kept_as_drawn": len(kept),
+               "intent": done["commit"].get("intent"), "intent_skipped": done["commit"].get("intent_skipped")}
         self.commit_results[uid] = res
         return res
 
@@ -526,7 +529,8 @@ class SheetBench:
             return any(g.id == rest for g in sm.layout.groups)
         if kind == "plan":
             plan = sm.stated_plan if sm.stated_plan.get("run") == self.run.id else {}
-            return any(" ".join(x["what"].lower().split()) == rest for x in plan.get("links", []))
+            # a link the engine refused is repaired by the link itself, or by the plan stating the same relation under other words
+            return any(" ".join(x["what"].lower().split()) == rest for x in plan.get("links", [])) or covered(r.get("places") or [], plan.get("links", []))
         return False  # a merge: repaired only by a later merge that is applied (it clears itself)
 
     def _record_sheet(self, tool: str, res: dict) -> None:
@@ -1117,10 +1121,47 @@ class SheetBench:
                        "say so on the checklist (update_checklist: status 'skipped', its id and the reason in the text) — not only in your closing words")
         return out
 
+    def intent_notes(self, limit: int = 8) -> list[str]:
+        """Which side of each size stays when it changes (design intent) wherever that is not settled by evidence — a convention, or nothing that
+        held — and the sizes it had to leave out of a structure's growth. The person chooses otherwise in the Values panel."""
+        out: list[str] = []
+        for uid, r in self.commit_results.items():
+            if r.get("intent_skipped"):
+                out.append(f"design intent not kept in {uid}: {str(r['intent_skipped'])[:200]}")
+            for ax in (r.get("intent") or {}).get("axes", []):
+                if ax.get("status") == "provisional":
+                    out.append(f"design intent, {uid}: {design_intent.sentence(ax)} — a convention, not evidence: choose the side that stays if it is not this one")
+                elif ax.get("status") == "undecided":
+                    out.append(f"design intent, {uid}: {design_intent.sentence(ax)} — no side could be chosen")
+                for d in ax.get("dropped", []):
+                    out.append(f"design intent, {uid}: {d.get('name')} is left out of the structure's growth — {str(d.get('why', ''))[:160]}")
+        return out[:limit] + ([f"… and {len(out) - limit} more design-intent note(s)"] if len(out) > limit else [])
+
+    def dimension_notes(self, limit: int = 6) -> list[str]:
+        """How much of each parametrized unit is parametric, measured: the dimensions no named value changes stay as drawn. Not a failure — some
+        sizes are constants on purpose — but the person should know it, with the sizes, to say which of them they wanted driven."""
+        out: list[str] = []
+        with self._lock():
+            for uid, u in self.sm.units.items():
+                if not u.answer or not u.answer.get("parameters"):
+                    continue
+                try:
+                    d = dimension_drive(self.sm.unit(uid).prog)
+                except (ExprError, ArithmeticError, KeyError, ValueError) as exc:  # a note that cannot be worked out is said, not a failed verdict
+                    out.append(f"{uid}: how many of its dimensions are driven could not be measured ({type(exc).__name__}: {exc})")
+                    continue
+                if d["constant"]:
+                    shown = ", ".join(f"{c['mm']:g}" for c in d["constants"][:6])
+                    out.append(f"{uid}: {d['driven']} of {d['total']} dimensions are driven by a named value; {d['constant']} state a size nothing named changes, "
+                               f"so they stay as drawn ({shown}{', …' if d['constant'] > 6 else ''} mm)")
+        return out[:limit] + ([f"… and {len(out) - limit} more unit(s) with dimensions that stay as drawn"] if len(out) > limit else [])
+
     def notes(self) -> list[str]:
         """Things the person should read next to the verdict, that are not failures: what was left out on purpose, what the plan leaves out, what
         the engine doubted and the model never looked at, units never opened."""
         out = [f"left out on purpose: {g['item']} — {g.get('how', '')}; the engine had refused it: {g.get('why', '')[:140]}" for g in self.given_up]
+        out += self.intent_notes()
+        out += self.dimension_notes()
         with self._lock():
             plan = self.sm.stated_plan if self.sm.stated_plan.get("run") == self.run.id else {}
             if plan.get("links") or plan.get("summary"):

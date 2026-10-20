@@ -182,8 +182,8 @@ class CacheWatch:
     """Reads the records and says when a saving has turned into a cost.
 
     silent()       the provider cached next to nothing of what each of the last `need` requests shared with the one before it
-    level_broke()  a change of thinking level was followed by a collapse of the cached tokens (to under half of the call before, which had
-                   them) at least twice and more often than not — while the request itself was mostly unchanged, so pruning cannot be the reason
+    level_broke()  a change of thinking level was followed by a collapse of the cached tokens (to under half of what the request shared with
+                   the one before) at least twice and more often than not — while the request itself was mostly unchanged, so pruning cannot be the reason
     """
 
     def __init__(self, min_input: int = 8000, min_share: float = 0.8, low: float = 0.30, need: int = 3, floor: int = 4096):
@@ -198,11 +198,16 @@ class CacheWatch:
         if informative:
             self.bad = self.bad + 1 if float(rec["usage"]["cached_share"] or 0.0) < self.low else 0
         prev, self._last = self._last, rec
-        if informative and prev is not None and rec["thinking"] != prev["thinking"] and _billed(prev, self.min_input) and prev["usage"]["cached_tokens"] >= self.floor:
-            if rec["usage"]["cached_tokens"] < 0.5 * prev["usage"]["cached_tokens"]:
-                self.level_breaks += 1
-            else:
-                self.level_ok += 1
+        if informative and prev is not None and rec["thinking"] != prev["thinking"]:
+            # what the request shared with the one before is what the provider could have served from its cache; a call that got under half of
+            # that right after a change of level lost it to the change. (Not compared with the call before's own cached tokens: once a change
+            # has cost them, that baseline is already small and the next change would look harmless — a live run went through six changes so.)
+            shared = float(rec["prefix_reuse"].get("share") or 0.0) * rec["usage"]["input_tokens"]
+            if shared >= self.floor:
+                if rec["usage"]["cached_tokens"] < 0.5 * shared:
+                    self.level_breaks += 1
+                else:
+                    self.level_ok += 1
 
     def silent(self) -> bool:
         return self.bad >= self.need

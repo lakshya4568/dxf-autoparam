@@ -50,7 +50,8 @@ Your job — say WHAT things are, WHICH sizes drive which, and WHAT must stay tr
      (inner face, outer face, top, bottom, soffit, centre line, toe …).
   D. levels: every y-datum that carries a stated level. role = site_input for levels the site gives (bed, formation, rail,
      ground, …), check_only for water levels (HFL, LWL, danger), derived for levels that follow the structure (top of slab,
-     soffit, foundation bottom, any bare R.L.).
+     soffit, foundation bottom, any bare R.L.). site_input and check_only both HOLD the line fixed: a line the structure is
+     drawn on is derived, never check_only — its own sizes would not be able to move it.
   E. parameters: the design inputs a draftsman would type to make the next drawing of this type. Name each one in
      PascalCase the way the designer of this structure would — what the size is, and of which part — from what the drawing
      shows (a domain pack, when one is on, offers names: use one only when it is what the drawing shows).
