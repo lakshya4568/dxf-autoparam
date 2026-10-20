@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import os
 import signal
+import socket
 import subprocess
 import sys
 import time
@@ -78,6 +79,71 @@ def test_the_thread_saves_what_changed_and_stop_writes_the_last_second(tmp_path)
     assert json.loads(path.read_text())["plan"]["summary"] == "two"
 
 
+def test_opening_a_drawing_while_the_thread_is_looking_does_not_deadlock(tmp_path, monkeypatch):
+    """`serve` with no drawing, then a DXF uploaded in the page: the request holds the sheet for the whole read (seconds on a big drawing) and
+    calls rebase(), while the autosave thread looks every 1.5 s. Once the file lock and the sheet lock were taken in opposite orders the two
+    waited for each other for ever: the page said "Reading…" for ten minutes, every other request queued behind it, and nothing used any CPU."""
+    import threading
+
+    from dxf_autoparam.crossview import SheetModel
+
+    dxf = built_sheet(tmp_path / "sheet.dxf")
+    real_open = SheetModel.open
+    monkeypatch.setattr(SheetModel, "open", classmethod(lambda cls, *a, **k: (time.sleep(0.6), real_open(*a, **k))[1]))  # a read longer than many looks
+    sheet = SheetSession()
+    sheet.autosave = keep.Autosave(sheet, root=tmp_path / "state", every=0.02).start()
+    done = threading.Event()
+    failure: list[BaseException] = []
+
+    def upload():  # what the HTTP handler does: the whole request under the sheet's lock
+        try:
+            with sheet.lock:
+                sheet.open(str(dxf))
+        except BaseException as exc:  # noqa: BLE001 — reported by the assert below
+            failure.append(exc)
+        finally:
+            done.set()
+
+    threading.Thread(target=upload, daemon=True, name="upload").start()
+    assert done.wait(20), "the upload never finished: the autosave thread and the open request are waiting for each other"
+    assert not failure and sheet.sm is not None
+    sheet.sm.set_plan({"summary": "after the upload"})
+    path = keep.project_path(str(dxf), tmp_path / "state")
+    assert wait_for(path.exists), "and the thread still saves afterwards"
+    sheet.autosave.stop()
+
+
+def test_a_look_at_a_sheet_that_is_being_opened_waits_for_the_request_and_the_request_never_waits_for_a_look(tmp_path, monkeypatch):
+    """The same order in the other direction: flush() from another thread (a SIGTERM, a stop) while an open request is in progress."""
+    import threading
+
+    from dxf_autoparam.crossview import SheetModel
+
+    dxf = built_sheet(tmp_path / "sheet.dxf")
+    real_open = SheetModel.open
+    monkeypatch.setattr(SheetModel, "open", classmethod(lambda cls, *a, **k: (time.sleep(0.4), real_open(*a, **k))[1]))
+    sheet = SheetSession()
+    sheet.autosave = keep.Autosave(sheet, root=tmp_path / "state", every=3600)
+    finished = []
+
+    def upload():
+        with sheet.lock:
+            sheet.open(str(dxf))
+        finished.append("open")
+
+    def look():
+        time.sleep(0.1)  # inside the read
+        sheet.autosave.flush()
+        finished.append("flush")
+
+    threads = [threading.Thread(target=f, daemon=True) for f in (upload, look)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(20)
+    assert sorted(finished) == ["flush", "open"], f"finished: {finished}"
+
+
 def test_a_clean_start_keeps_the_old_work_aside_under_a_dated_name(tmp_path):
     sheet, dxf = session(tmp_path)
     sheet.sm.set_plan({"summary": "work that took an hour"})
@@ -91,6 +157,19 @@ def test_a_clean_start_keeps_the_old_work_aside_under_a_dated_name(tmp_path):
     assert len(kept) == 1 and json.loads(kept[0].read_text())["plan"]["summary"] == "work that took an hour"
     assert fresh.summary()["autosave"]["restored"] is None
     assert fresh.autosave.flush() is False, "the clean start is the baseline too: the old work is not overwritten by it"
+
+
+def test_a_clean_start_on_the_open_sheet_keeps_even_what_was_changed_a_moment_ago_and_nothing_of_it_comes_back(tmp_path):
+    """The drawing is read without the sheet lock, so the old sheet can still be written meanwhile: the work is set aside at the swap, after the last look at
+    the old sheet, and the old sheet is never written over the clean one."""
+    sheet, dxf = session(tmp_path)
+    sheet.sm.set_plan({"summary": "changed a moment ago"})  # not written yet: the thread has not looked
+    sheet.open(str(dxf), fresh=True)
+    state = tmp_path / "state"
+    aside = list(state.glob("*.replaced.json"))
+    assert len(aside) == 1 and json.loads(aside[0].read_text())["plan"]["summary"] == "changed a moment ago"
+    assert sheet.sm.stated_plan == {} and not keep.project_path(str(dxf), state).exists()
+    assert sheet.autosave.flush() is False and not keep.project_path(str(dxf), state).exists(), "nothing of the old sheet is written over the clean one"
 
 
 def test_the_same_drawing_is_the_same_work_wherever_it_sits_and_an_edited_drawing_is_another(tmp_path):
@@ -246,3 +325,92 @@ def test_a_server_left_running_with_nohup_outlives_its_terminal_and_still_saves_
             proc.kill()
     path = keep.project_path(str(dxf), state)
     assert path.exists() and json.loads(path.read_text())["plan"]["summary"] == "made just before the terminal closed"
+
+
+# ── one server keeps one drawing's work ───────────────────────────────────────────────────────────
+
+
+def a_server_elsewhere(tmp_path: Path, dxf: Path, port: int | None = None) -> subprocess.Popen:
+    """A live process that says, in the owner file, that it keeps this drawing's work (a process that only waits: it is what another server is to this one)."""
+    proc = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(120)"])
+    path = keep.project_path(str(dxf), tmp_path / "state")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    keep.owner_path(path).write_text(json.dumps({"pid": proc.pid, "port": port, "started": time.time()}))
+    return proc
+
+
+def test_a_second_server_on_the_same_drawing_reads_the_work_and_never_writes_over_it_until_the_first_is_gone(tmp_path):
+    dxf = built_sheet(tmp_path / "sheet.dxf")
+    other = a_server_elsewhere(tmp_path, dxf)
+    try:
+        sheet, _ = session(tmp_path, dxf=dxf)
+        path = keep.project_path(str(dxf), tmp_path / "state")
+        sheet.sm.set_plan({"summary": "a change made on the second server"})
+        assert sheet.autosave.flush() is False and not path.exists(), "the first server keeps the work: nothing is written from here"
+        info = sheet.summary()["autosave"]
+        assert info["owner"]["pid"] == other.pid and "another server" in info["error"] and f"pid {other.pid}" in info["error"]
+        other.kill()
+        other.wait()
+        assert sheet.autosave.flush() is True and path.exists(), "it is gone: this server keeps the work from now on, change included"
+        assert json.loads(keep.owner_path(path).read_text())["pid"] == os.getpid()
+        info = sheet.summary()["autosave"]
+        assert info["owner"] is None and info["error"] is None
+        sheet.autosave.stop()
+        assert not keep.owner_path(path).exists(), "a server that ends lets go of the drawing"
+    finally:
+        other.kill()
+
+
+def test_an_owner_that_is_gone_is_replaced_and_so_is_one_whose_process_number_was_taken_by_another_program(tmp_path):
+    dxf = built_sheet(tmp_path / "sheet.dxf")
+    path = keep.project_path(str(dxf), tmp_path / "state")
+    dead = subprocess.Popen([sys.executable, "-c", "pass"])
+    dead.wait()
+    path.parent.mkdir(parents=True)
+    keep.owner_path(path).write_text(json.dumps({"pid": dead.pid, "port": None}))
+    sheet, _ = session(tmp_path, dxf=dxf)
+    assert sheet.autosave.foreign is None
+    sheet.sm.set_plan({"summary": "kept"})
+    assert sheet.autosave.flush() is True
+    # a live process that is not serving the port the owner file names is not that server
+    with socket.socket() as free:
+        free.bind(("127.0.0.1", 0))
+        quiet = free.getsockname()[1]
+    other = a_server_elsewhere(tmp_path, dxf, port=quiet)
+    try:
+        again, _ = session(tmp_path, dxf=dxf)
+        assert again.autosave.foreign is None, "its port does not answer"
+    finally:
+        other.kill()
+
+
+def test_an_owner_that_still_answers_on_its_port_is_the_server_that_keeps_the_work(tmp_path):
+    dxf = built_sheet(tmp_path / "sheet.dxf")
+    with socket.socket() as listening:
+        listening.bind(("127.0.0.1", 0))
+        listening.listen()
+        other = a_server_elsewhere(tmp_path, dxf, port=listening.getsockname()[1])
+        try:
+            sheet, _ = session(tmp_path, dxf=dxf)
+            assert sheet.autosave.foreign is not None and sheet.autosave.foreign["pid"] == other.pid
+            assert "port" in sheet.summary()["autosave"]["error"]
+        finally:
+            other.kill()
+            other.wait()
+
+
+def test_a_server_announces_its_port_and_never_removes_an_owner_file_that_is_not_its_own(tmp_path):
+    dxf = built_sheet(tmp_path / "sheet.dxf")
+    sheet, _ = session(tmp_path, dxf=dxf)
+    file = keep.owner_path(keep.project_path(str(dxf), tmp_path / "state"))
+    assert not file.exists(), "nothing is written before the first change"
+    sheet.autosave.announce(8765)  # said before the first write: it goes in with it
+    sheet.sm.set_plan({"summary": "a change"})
+    assert sheet.autosave.flush() is True and json.loads(file.read_text())["port"] == 8765
+    sheet.autosave.announce(8766)  # and after
+    assert json.loads(file.read_text())["port"] == 8766
+    sheet.autosave.announce(8765)
+    assert json.loads(file.read_text()) | {"started": 0} == {"pid": os.getpid(), "port": 8765, "started": 0}
+    file.write_text(json.dumps({"pid": os.getpid() + 1, "port": None}))  # someone else's now
+    sheet.autosave.stop()
+    assert file.exists(), "only its own owner file is removed"

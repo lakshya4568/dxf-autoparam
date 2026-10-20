@@ -111,6 +111,77 @@ def test_the_workspace_page_and_an_empty_sheet(server):
     assert st == 200 and b"DXF" in body
 
 
+def test_a_drawing_is_read_outside_the_sheet_lock_and_the_page_can_ask_what_is_going_on(server, monkeypatch):
+    """The read of a big drawing takes many seconds. It used to hold the sheet's lock, so every other request (even 'is there a sheet?') queued behind
+    it and the page could only say 'Reading…'. Now the sheet answers meanwhile, says what is being read and for how long, and a second read is refused."""
+    from dxf_autoparam import workspace as W
+
+    base, path = server
+    gate, reading = threading.Event(), threading.Event()
+    real = W.SheetModel.open
+
+    def slow(p):
+        reading.set()
+        assert gate.wait(20), "the test never let the read go on"
+        return real(p)
+
+    monkeypatch.setattr(W.SheetModel, "open", staticmethod(slow))
+    out: dict = {}
+    t = threading.Thread(target=lambda: out.setdefault("r", call(base, f"/api/sheet/open?name={path.name}", raw=path.read_bytes())))
+    t.start()
+    try:
+        assert reading.wait(20)
+        status = j(call(base, "/api/sheet/loading"))
+        assert status["loading"] is True and status["name"] == path.name and status["elapsed_s"] >= 0
+        assert j(call(base, "/api/sheet")) == {"empty": True}, "a request that needs the sheet is not queued behind the read"
+        st, body, _ = call(base, "/api/sheet/open?name=second.dxf", raw=path.read_bytes())
+        assert st == 409 and "already being read" in json.loads(body)["error"], "one drawing is read at a time"
+    finally:
+        gate.set()
+        t.join(30)
+    assert out["r"][0] == 200 and j(call(base, "/api/sheet/loading")) == {"loading": False}
+    assert j(call(base, "/api/sheet"))["file"] == path.name
+
+
+def test_a_drawing_that_cannot_be_read_says_so_and_the_next_one_opens(server, monkeypatch):
+    from dxf_autoparam import workspace as W
+
+    base, path = server
+    real = W.SheetModel.open
+
+    def broken(p):
+        raise ValueError("the drawing cannot be read")
+
+    monkeypatch.setattr(W.SheetModel, "open", staticmethod(broken))
+    st, body, _ = call(base, "/api/sheet/open?name=broken.dxf", raw=b"x")
+    assert st == 400 and "cannot be read" in json.loads(body)["error"]
+    assert j(call(base, "/api/sheet/loading")) == {"loading": False}, "a failed read is not left 'reading' for ever"
+    assert j(call(base, "/api/sheet")) == {"empty": True}
+    monkeypatch.setattr(W.SheetModel, "open", staticmethod(real))
+    assert call(base, f"/api/sheet/open?name={path.name}", raw=path.read_bytes())[0] == 200, "and the next read is not refused as 'already being read'"
+
+
+def test_the_open_drawing_can_be_started_clean_and_the_saved_work_is_kept_aside(tmp_path):
+    from dxf_autoparam import autosave as keep
+
+    path = built_sheet(tmp_path / "sheet.dxf")
+    sheet = SheetSession()
+    sheet.autosave = keep.Autosave(sheet, root=tmp_path / "state", every=60)
+    base, httpd = _start_server(sheet)
+    try:
+        call(base, f"/api/sheet/open?name={path.name}", raw=path.read_bytes())
+        sheet.sm.set_plan({"summary": "work that is saved"})
+        assert sheet.autosave.flush() is True
+        again = j(call(base, "/api/sheet/reopen", body={"fresh": False}))
+        assert again["autosave"]["restored"]["from"] == "the autosave", "reopened as it was: the saved work comes back"
+        clean = j(call(base, "/api/sheet/reopen", body={"fresh": True}))
+        assert clean["autosave"]["restored"] is None and sheet.sm.stated_plan == {}, "started clean: the drawing as drawn"
+        aside = list((tmp_path / "state").glob("*.replaced.json"))
+        assert len(aside) == 1 and json.loads(aside[0].read_text())["plan"]["summary"] == "work that is saved", "and the work is kept under a dated name"
+    finally:
+        httpd.shutdown()
+
+
 def test_open_preview_apply_undo_share_rename_export(server):
     base, path = server
     summary = j(call(base, f"/api/sheet/open?name={path.name}", raw=path.read_bytes()))
@@ -502,10 +573,11 @@ def test_gateway_drops_optional_fields_once_when_a_model_rejects_them(tmp_path, 
     import httpx
     from google.genai import types
 
-    from dxf_autoparam.ai import gateway
+    from dxf_autoparam.ai import gateway, vertex
 
     monkeypatch.setenv("EXPLABS_API_KEY", "xpl_test")
     monkeypatch.setattr(gateway, "CACHE", tmp_path)
+    monkeypatch.setattr(vertex, "CACHE", tmp_path)  # the ledger is written through vertex: without this every run of the suite added two calls to the person's real cost ledger
     monkeypatch.setattr(gateway.time, "sleep", lambda s: None)
     bodies = []
 

@@ -7,7 +7,9 @@ shares, anchors, links and view corrections are transactions with undo / redo.
     GET  /api/sheet                       the views, units, links, shared and local values, what to review
     GET  /api/sheet/geometry              every primitive (once; gzip)
     POST /api/sheet/open?name=…[&fresh=1] a DXF (its bytes) — the sheet is read and its views found; work saved for the same drawing is
-                                          opened with it (fresh=1: not — it is kept aside under a dated name)
+                                          opened with it (fresh=1: not — it is kept aside under a dated name). The read is outside the sheet lock
+    GET  /api/sheet/loading               the drawing being read, if any, and for how long (asked while the open request is out)
+    POST /api/sheet/reopen   {fresh}      the open drawing again from its own file (fresh: as drawn, the saved work kept aside)
     POST /api/sheet/preview  {changes}    regenerated, checked, NOT committed: the entities that would change
     POST /api/sheet/apply    {changes[,live]} committed only if the whole sheet holds (live: one person stepping a value — the steps are one undo)
     GET  /api/sheet/original              the entities that differ from the drawing as read, as that drawing has them (the dotted original)
@@ -15,6 +17,7 @@ shares, anchors, links and view corrections are transactions with undo / redo.
     GET  /api/sheet/unit?id=…             one unit's values, parts, findings (analysed on first use)
     GET  /api/sheet/param?name=…          what a value moves (per view), how it grows, how far it can go
     POST /api/sheet/share | unshare | rename | anchor | link | view | merge | split
+    POST /api/sheet/intent   {unit?}      the design intent derived again (which side of each size stays, decided from the drawing) — one undoable step
     GET  /api/sheet/proposals?units=…     sizes two views both state
     GET  /api/sheet/export                the edited DXF
     GET  /api/sheet/project               the parametric project (JSON); POST it back to restore
@@ -83,6 +86,9 @@ class SheetSession:
         self.gem_factory = None  # a test (or another provider) supplies the model here
         self.gem_per_run = False
         self.autosave = None  # autosave.Autosave: keeps the work on disk while it is made (the server sets it; a test or script does without)
+        self.loading: dict | None = None  # the drawing being read right now: {name, since} (read by the page while the request is out)
+        self._dims: dict[str, tuple[object, dict]] = {}  # per unit: how many dimensions its values drive, for the program it was measured on (not asked again per step)
+        self._opening = threading.Lock()  # one drawing is read at a time
         self.pictures = None
         self.runs: dict = {}
         self.run_n = 0
@@ -96,37 +102,68 @@ class SheetSession:
 
     # ── state ─────────────────────────────────────────────────────────────────
 
-    def open(self, path: str, project: str | None = None, fresh: bool = False) -> dict:
+    def open(self, path: str, project: str | None = None, fresh: bool = False, progress=None) -> dict:
         """Read a DXF. With `project`, the saved parametric project opens with it; otherwise the work kept for this same drawing (autosave) does —
-        unless `fresh`, which keeps that work aside under a dated name and starts from the drawing as drawn."""
+        unless `fresh`, which keeps that work aside under a dated name and starts from the drawing as drawn.
+
+        The drawing is read and analysed WITHOUT the sheet lock (a big one takes many seconds, and the page asks other things — and must be able to
+        say what is going on — meanwhile); the lock is taken only to put the new sheet in the place of the old. One drawing is read at a time."""
         from . import autosave as keep
 
         if self.running():
             raise SheetError("the agent is working on this sheet: stop it first")
-        if self.gem is not None:
-            self.gem.close()
-            self.gem = None
-        self.gem_model = None
-        t = time.perf_counter()
-        sm, restored = None, None
-        if project:
-            sm = SheetModel.load(project, dxf=path)
-            restored = {"from": "a project file", "path": project, "revision": sm.revision, "problems": []}
-        elif self.autosave is not None and fresh:
-            kept = keep.set_aside(path, self.autosave.root)
-            restored = {"from": None, "kept_as": str(kept) if kept else None, "problems": []}
-        elif self.autosave is not None:
-            sm, restored = keep.restore(path, self.autosave.root)
-        self.sm = sm or SheetModel.open(path)
-        if self.autosave is not None:
-            self.autosave.restored = restored if restored and (restored.get("from") or restored.get("problems")) else None
-            self.autosave.rebase()
-        self.pictures = None
-        self.runs, self.current_run, self.run_n = {}, None, 0
-        self.shown = set()
-        self.styles, self._style_ix = [], {}
-        self.opened = time.perf_counter() - t
-        return self.summary()
+        if not self._opening.acquire(blocking=False):
+            raise SheetError("a drawing is already being read: wait for it")
+        try:
+            self.loading = {"name": Path(path).name, "since": time.time()}
+            t = time.perf_counter()
+            sm, restored = None, None
+            if project:
+                sm = SheetModel.load(project, dxf=path)
+                restored = {"from": "a project file", "path": project, "revision": sm.revision, "problems": []}
+            elif self.autosave is not None and not fresh:
+                sm, restored = keep.restore(path, self.autosave.root)
+            sm = sm or SheetModel.open(path)
+            derived = sm.derive_missing_intent(progress)  # saved work from before the design intent existed: which side of each size stays, worked out (no undo step of the person's)
+            with self.lock:
+                if self.running():  # an agent started while the drawing was being read
+                    raise SheetError("the agent is working on this sheet: stop it first")
+                if self.autosave is not None and fresh and not project:
+                    # a clean start keeps the saved work aside — at the swap, not before the read: what the old sheet changed in the last second is written
+                    # first (so it is what is kept), and nothing of the old sheet is written over the clean one afterwards
+                    self.autosave.flush()
+                    kept = keep.set_aside(path, self.autosave.root)
+                    restored = {"from": None, "kept_as": str(kept) if kept else None, "problems": []}
+                if self.gem is not None:
+                    self.gem.close()
+                    self.gem = None
+                self.gem_model = None
+                self.sm = sm
+                if self.autosave is not None:
+                    self.autosave.restored = restored if restored and (restored.get("from") or restored.get("problems")) else None
+                    self.autosave.rebase()
+                    if derived:  # what was worked out is part of the work now: written, so that the next opening does not work it out again
+                        self.autosave.touch()
+                self.pictures = None
+                self.runs, self.current_run, self.run_n = {}, None, 0
+                self.shown = set()
+                self.styles, self._style_ix = [], {}
+                self.opened = time.perf_counter() - t
+                return self.summary()
+        finally:
+            self.loading = None
+            self._opening.release()
+
+    def reopen(self, fresh: bool = False) -> dict:
+        """The open drawing again, from its own file. With `fresh`: from the drawing as drawn, the saved work kept aside under a dated name (nothing is lost)."""
+        with self.lock:
+            path = self._sm().path
+        return self.open(path, fresh=fresh)
+
+    def loading_status(self) -> dict:
+        """What the page shows while a drawing is read: the name and how long it has taken (read without the sheet lock, so it can always be asked)."""
+        cur = self.loading
+        return {"loading": cur is not None, **({"name": cur["name"], "elapsed_s": round(time.time() - cur["since"], 1)} if cur else {})}
 
     def _sm(self) -> SheetModel:
         if self.sm is None:
@@ -279,13 +316,19 @@ class SheetSession:
         self._sm()
         return {"prims": self._prims(self.shown, None), "styles": self.styles}
 
+    def settle_options(self, name: str, unit: str) -> dict:
+        """The ways to settle a value whose direction of growth could not be decided, each tried for real (SheetModel.settle_options): nothing changes."""
+        if self.running():
+            raise SheetError("the agent is working on this sheet: stop it first")
+        return self._sm().settle_options(name, unit)
+
     def history(self, which: str) -> dict:
         sm = self._sm()
         ok = sm.undo() if which == "undo" else sm.redo()
         return {"ok": ok, **self._commit_delta(), "summary": self.summary()}
 
     def edit(self, op: str, body: dict) -> dict:
-        """The model edits (each one undoable): share, unshare, rename, anchor, link, view, merge, split."""
+        """The model edits (each one undoable): share, unshare, rename, anchor, intent, settle, unsettle, link, view, merge, split."""
         sm = self._sm()
         result = None
         if op == "share":
@@ -298,6 +341,17 @@ class SheetSession:
             sm.rename(body["old"], body["new"])
         elif op == "anchor":
             result = sm.anchor(body["name"], body["unit"], body["mode"])
+        elif op == "intent":
+            if self.running():
+                raise SheetError("the agent is working on this sheet: stop it first")
+            result = sm.resolve_intent(body.get("unit"))
+        elif op in ("settle", "unsettle"):
+            if self.running():
+                raise SheetError("the agent is working on this sheet: stop it first")
+            if op == "settle":
+                result = sm.settle(body["name"], body["unit"], body["choice"], bool(body.get("discard_values")))
+            else:
+                result = sm.unsettle(body["unit"], body["choice"])
         elif op == "link":
             sm.link(body["a"], body["b"], bool(body["linked"]))
         elif op == "view":
@@ -606,6 +660,17 @@ class SheetSession:
             sm.prefs["baseline"]["color"] = b["color"]
         return {"ok": True, "prefs": sm.prefs}
 
+    def _dimension_drive(self, uid: str, u) -> dict:
+        """What the page shows of how parametric a unit is. It depends on the unit's program (its parts and values, at the drawn sizes), not on the sizes a
+        person has stepped them to, so it is measured once per program: stepping a value re-reads the unit at every step."""
+        from .status import dimension_drive
+
+        cached = self._dims.get(uid)
+        if cached is None or cached[0] is not u.prog:
+            cached = (u.prog, dimension_drive(u.prog))
+            self._dims[uid] = cached
+        return cached[1]
+
     def unit(self, uid: str) -> dict:
         sm = self._sm()
         u = sm.unit(uid)
@@ -651,7 +716,9 @@ class SheetSession:
                 "params": params,
                 "measured": measured,
                 "frozen": list((u.answer or {}).get("frozen", []))[:600],
+                "settled": list({s["choice"]: {"choice": s["choice"], "title": s["title"], "kind": s["kind"]} for s in (u.answer or {}).get("settled", [])}.values()),
                 "plans": plans,
+                "dimensions": self._dimension_drive(uid, u) if u.answer else None,
                 "relations": [
                     {"name": r.name, "label": r.label, "expr": r.expr}
                     for r in u.prog.relations
@@ -770,6 +837,8 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
                 return handler._send(200, png, "image/png", {"Cache-Control": "max-age=3600"}) or True
             if path == "/api/sheet/autosave":
                 return handler._json(sheet.autosave.status() if sheet.autosave is not None else None) or True
+            if path == "/api/sheet/loading":  # no sheet lock: it is asked while a drawing is being read
+                return handler._json(sheet.loading_status()) or True
             if path == "/api/sheet/ai/usage":
                 from .ai.usage import summary
 
@@ -784,6 +853,18 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
         if method == "POST" and path == "/api/sheet/ai/stop":
             body = json.loads(handler._body() or b"{}")
             return handler._json(sheet.stop_run(body)) or True
+        if method == "POST" and path == "/api/sheet/open":  # the drawing is read before the sheet lock is taken (SheetSession.open)
+            raw = handler._body()
+            name = q.get("name", ["upload.dxf"])[0]
+            fname = Path(name).name
+            if not fname or fname in (".", ".."):
+                fname = "upload.dxf"
+            tmp = Path(tempfile.mkdtemp()) / fname
+            tmp.write_bytes(raw)
+            return handler._json(sheet.open(str(tmp), fresh=q.get("fresh", ["0"])[0] == "1")) or True
+        if method == "POST" and path == "/api/sheet/reopen":
+            body = json.loads(handler._body() or b"{}")
+            return handler._json(sheet.reopen(bool(body.get("fresh")))) or True
         with sheet.lock:
             if method == "GET":
                 if path == "/api/sheet":
@@ -796,6 +877,8 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
                     return handler._json(sheet.unit(q.get("id", [""])[0])) or True
                 if path == "/api/sheet/param":
                     return handler._json(sheet.param(q.get("name", [""])[0])) or True
+                if path == "/api/sheet/settle":
+                    return handler._json(sheet.settle_options(q.get("name", [""])[0], q.get("unit", [""])[0])) or True
                 if path == "/api/sheet/proposals":
                     units = [u for u in q.get("units", [""])[0].split(",") if u] or None
                     return handler._json({"proposals": sheet._sm().shared_proposals(units)}) or True
@@ -844,14 +927,6 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
                                          {"Content-Disposition": f'attachment; filename="{Path(sheet._sm().path).stem}.autoparam.json"'}) or True
             if method == "POST":
                 raw = handler._body()
-                if path == "/api/sheet/open":
-                    name = q.get("name", ["upload.dxf"])[0]
-                    fname = Path(name).name
-                    if not fname or fname in (".", ".."):
-                        fname = "upload.dxf"
-                    tmp = Path(tempfile.mkdtemp()) / fname
-                    tmp.write_bytes(raw)
-                    return handler._json(sheet.open(str(tmp), fresh=q.get("fresh", ["0"])[0] == "1")) or True
                 body = json.loads(raw or b"{}")
                 if path == "/api/sheet/preview":
                     return handler._json(sheet.preview(body.get("changes", {}))) or True

@@ -627,7 +627,7 @@ def serve(path: str | None, domain: str | None = None, host: str = "127.0.0.1", 
     if autosave:  # the work is kept on disk while it is made, and opened again with the same drawing
         sheet.autosave = keep.Autosave(sheet, root=Path(state_dir).expanduser() if state_dir else None)
     if path:  # a saved parametric project (parts, sizes, plans) opens with its drawing; else the work kept for it
-        sheet.open(path, project=project, fresh=fresh)
+        sheet.open(path, project=project, fresh=fresh, progress=_say)
         info = sheet.autosave.restored if sheet.autosave is not None else None
         if info and info.get("from"):
             _say(f"opened the saved work on this drawing ({info['from']}): revision {info.get('revision')}")
@@ -648,6 +648,8 @@ def serve(path: str | None, domain: str | None = None, host: str = "127.0.0.1", 
             _say(f"port {candidate} is in use, trying {candidate + 1}")
     else:
         raise SystemExit(f"no free port between {port} and {port + 19}; pass --port")
+    if sheet.autosave is not None:
+        sheet.autosave.announce(candidate)  # the work of this drawing is this server's: another one can tell it is alive by its port
     _end_like_ctrl_c()  # before the address is announced: whoever reads it may close the terminal that very moment
     _say(f"dxf-autoparam on http://{host}:{candidate}  ({path or 'open a DXF in the page'})")
     try:
