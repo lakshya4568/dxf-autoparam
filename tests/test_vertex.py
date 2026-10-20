@@ -264,3 +264,67 @@ def test_step_headroom_and_thinking_budget(gem, monkeypatch):
     c = vertex.config()
     assert c.thinking_budget == 49152
 
+
+
+def _asks(g, n: int, tag: str) -> list[str]:
+    """The model that answered each of n new questions (answers are kept on disk by question, so each one is its own)."""
+    return [g.ask("system", [BIG, BIG, f"question {tag}-{i}"], [b"png"], Answer, shared=2)[1]["model"] for i in range(n)]
+
+
+def test_a_model_that_cannot_answer_is_not_asked_first_at_every_turn(gem):
+    """A paid run lost about 130 s a turn for seven turns: each turn asked the model that was out of capacity twice, then the fallback."""
+    g, fake = gem(fail=[429, 429])  # the primary refuses both attempts of the first call
+    events: list[dict] = []
+    _, u = g.ask("system", [BIG, BIG, "first"], [b"png"], Answer, shared=2, on_event=events.append)
+    assert u["model"] == "m-fallback" and [c["model"] for c in fake.calls] == ["m-primary", "m-primary", "m-fallback"]
+    assert any(e["kind"] == "note" and "m-primary could not answer" in e["text"] and "m-fallback" in e["text"] and "300 s" in e["text"] for e in events)
+    n = len(fake.calls)
+    assert _asks(g, 3, "a") == ["m-fallback"] * 3 and [c["model"] for c in fake.calls[n:]] == ["m-fallback"] * 3, "the next turns do not ask it again"
+    # its cool-off is over: ONE probe; it fails again, so the wait doubles
+    g._down["m-primary"]["until"] = 0.0
+    fake.fail = [429]
+    n = len(fake.calls)
+    assert _asks(g, 1, "b") == ["m-fallback"] and [c["model"] for c in fake.calls[n:]] == ["m-primary", "m-fallback"]
+    assert g._down["m-primary"]["fails"] == 2
+    # it answers again: the breaker closes and the next turns start on it
+    g._down["m-primary"]["until"] = 0.0
+    events.clear()
+    assert g.ask("system", [BIG, BIG, "recovered"], [b"png"], Answer, shared=2, on_event=events.append)[1]["model"] == "m-primary"
+    assert g._down == {} and any(e["kind"] == "note" and "answers again" in e["text"] for e in events)
+    assert _asks(g, 1, "c") == ["m-primary"]
+
+
+def test_the_agent_step_uses_the_same_breaker(gem):
+    from google.genai import types
+
+    g, fake = gem()
+    sent: list[str] = []
+    reply = types.Content(role="model", parts=[types.Part(function_call=types.FunctionCall(name="finish", args={}))])
+
+    def generate_content(model, contents, config):
+        sent.append(model)
+        if model == "m-primary":
+            raise genai_errors.ClientError(429, {"error": {"code": 429, "message": "Resource exhausted", "status": "RESOURCE_EXHAUSTED"}})
+        return SimpleNamespace(candidates=[SimpleNamespace(content=reply, finish_reason=SimpleNamespace(name="STOP"))],
+                               usage_metadata=SimpleNamespace(prompt_token_count=10, candidates_token_count=5, thoughts_token_count=8, cached_content_token_count=0))
+
+    fake.models.generate_content = generate_content
+    tools = [types.Tool(function_declarations=[types.FunctionDeclaration(name="finish", description="", parameters_json_schema={"type": "object"})])]
+    history = [types.Content(role="user", parts=[types.Part.from_text(text="hi")])]
+    answers = [g.step("system", tools, [], f"k{i}", history, f"turn {i}", "high")[1]["model"] for i in range(3)]
+    assert answers == ["m-fallback"] * 3
+    assert sent == ["m-primary", "m-primary", "m-fallback", "m-fallback", "m-fallback"], "only the first turn paid for the primary's two attempts"
+
+
+def test_without_a_fallback_nothing_changes_and_the_breaker_can_be_switched_off(gem, monkeypatch):
+    g, fake = gem(fail=[504, 504])
+    g.cfg.fallback_model = ""
+    with pytest.raises(GeminiUnavailable):
+        g.ask("system", [BIG, BIG, "alone"], [b"png"], Answer, shared=2)
+    assert g._down == {} and len(fake.calls) == 2, "the one model has its two attempts, and nothing is remembered against it"
+    fake.fail = [504]
+    assert g.ask("system", [BIG, BIG, "alone again"], [b"png"], Answer, shared=2)[1]["model"] == "m-primary"
+    monkeypatch.setenv("VERTEX_BREAKER_S", "0")
+    g2, _fake2 = gem(fail=[429, 429])
+    assert g2.ask("system", [BIG, BIG, "off"], [b"png"], Answer, shared=2)[1]["model"] == "m-fallback" and g2._down == {}
+    assert _asks(g2, 1, "d") == ["m-primary"]

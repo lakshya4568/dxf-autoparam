@@ -327,6 +327,39 @@ class Gemini:
         self.explicit_override: bool | None = None
         # (model, prefix hash) → cached-content name; None when Vertex refused a cache for that prefix
         self._prompt_caches: dict[tuple[str, str], str | None] = {}
+        # model → {fails, until}: a model whose last call failed out of capacity or past its deadline is not asked first again until `until` (monotonic)
+        self._down: dict[str, dict] = {}
+
+    # ── a model that cannot answer is asked less often ───────────────────────────
+
+    def _order(self, plan: list[tuple]) -> list[tuple[tuple, int]]:
+        """The models of one call in the order to try them, each with the attempts it gets. A model whose last call failed out of capacity or past its
+        deadline (all its attempts) is not asked first again until its cool-off is over: then once, as a probe. While it cools it is still tried — last,
+        once — so a call nothing else answers still reaches it. With no fallback there is nothing to put first: the one model gets its two attempts."""
+        if len(plan) < 2:
+            return [(p, 2) for p in plan]
+        now = time.monotonic()
+        cooling = [p for p in plan if p[0] in self._down and now < self._down[p[0]]["until"]]
+        return [(p, 1 if p[0] in self._down else 2) for p in plan if p not in cooling] + [(p, 1) for p in cooling]
+
+    def _mark_down(self, model: str, plan: list[tuple], on_event) -> None:
+        """All attempts of this model ended in a transient failure: its next turns go to the fallback for a while (VERTEX_BREAKER_S, default 300 s, doubled
+        for each probe that fails again, at most 30 minutes; 0 switches this off). Said once, where the person and the run log read it."""
+        base = float(os.environ.get("VERTEX_BREAKER_S", "300"))
+        d = self._down.get(model)
+        if base <= 0 or len(plan) < 2 or (d is not None and time.monotonic() < d["until"]):  # a last resort while it cools: nothing new
+            return
+        fails = (d["fails"] if d else 0) + 1
+        wait = min(1800.0, base * 2 ** (fails - 1))
+        self._down[model] = {"fails": fails, "until": time.monotonic() + wait}
+        other = next(m for m, *_ in plan if m != model)
+        if on_event:
+            on_event({"kind": "note", "text": f"{model} could not answer (out of capacity or past its deadline): the next turns start on {other}; "
+                                              f"{model} is asked again in {wait:.0f} s"})
+
+    def _mark_up(self, model: str, on_event) -> None:
+        if self._down.pop(model, None) is not None and on_event:
+            on_event({"kind": "note", "text": f"{model} answers again: the next turns start on it"})
 
     # ── the explicit prompt cache ────────────────────────────────────────────────
 
@@ -410,8 +443,9 @@ class Gemini:
         t0, last = time.perf_counter(), None
         # Vertex ends the call itself at this deadline (sent as its server timeout); the worker thread backs it up
         step_ms = int((self.step_timeout_s or 0) * 1000) or int(os.environ.get("VERTEX_STEP_TIMEOUT_MS", "240000"))
-        for model, think, tb in plan:
-            for attempt in range(2):
+        for (model, think, tb), tries in self._order(plan):
+            transient = False
+            for attempt in range(tries):
                 if stop and stop():
                     raise GeminiStopped("stopped by the person")
                 cached, cache_state = (None, "implicit") if self.explicit_override is False else self._prefix_cache(model, prefix_key, system, prefix_parts, est, tools, tool_config)
@@ -433,10 +467,13 @@ class Gemini:
                         continue
                     if not _transient(exc):
                         raise
+                    transient = True
                     if on_event:
                         on_event({"kind": "retry", "label": label, "model": model, "why": f"{getattr(exc, 'code', '')} {str(exc)[:120]}"})
-                    _wait(4 * (attempt + 1), stop)
+                    if attempt + 1 < tries:
+                        _wait(4 * (attempt + 1), stop)
                     continue
+                self._mark_up(model, on_event)
                 cands = getattr(resp, "candidates", None) or []
                 content = cands[0].content if cands and getattr(cands[0], "content", None) else types.Content(role="model", parts=[])
                 fr = getattr(cands[0], "finish_reason", None) if cands else None
@@ -449,6 +486,8 @@ class Gemini:
                 hit.write_text(json.dumps({"content": content.model_dump(mode="json", exclude_none=True), "usage": usage}))
                 _log({**usage, "key": key})
                 return content, usage
+            if transient:
+                self._mark_down(model, plan, on_event)
         raise GeminiUnavailable(f"Vertex AI did not answer ({', '.join(m for m, *_ in plan)}): {last}")
 
     # ── a structured question ─────────────────────────────────────────────────────
@@ -520,9 +559,10 @@ class Gemini:
         thoughts_all: list[str] = []
         max_out = self.cfg.max_output_tokens
         wasted = {"input_tokens": 0, "output_tokens": 0, "thinking_tokens": 0}
-        for model, thinking, tb in plan:
+        for (model, thinking, tb), tries in self._order(plan):
             think, think_budget = thinking, tb
-            for attempt in range(2):
+            transient = False
+            for attempt in range(tries):
                 cached, cache_state = (self._prefix_cache(model, prefix_key, system, image_parts + text_parts[:shared], est)
                                        if shared else (None, "off"))
                 contents = text_parts[shared:] if cached else image_parts + text_parts
@@ -547,10 +587,13 @@ class Gemini:
                         continue
                     if not _transient(exc):
                         raise
+                    transient = True
                     if on_event:
                         on_event({"kind": "retry", "label": label, "model": model, "why": f"{getattr(exc, 'code', '')} {str(exc)[:120]}"})
-                    _wait(4 * (attempt + 1), stop)
+                    if attempt + 1 < tries:
+                        _wait(4 * (attempt + 1), stop)
                     continue
+                self._mark_up(model, on_event)
                 thoughts_all += resp.thoughts
                 answer = _read(resp, schema)
                 if answer is not None:
@@ -570,6 +613,8 @@ class Gemini:
                     think_budget = None
             if answer is not None:
                 break
+            if transient:
+                self._mark_down(model, plan, on_event)
         if answer is None:
             raise GeminiUnavailable(f"Vertex AI gave no usable answer ({', '.join(m for m, *_ in plan)}): {last}")
         usage = {"model": used, "thinking": used_thinking, "fallback": used != self.cfg.model, "label": label,
