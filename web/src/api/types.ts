@@ -465,7 +465,7 @@ export interface Criterion {
 export interface CoverageRow {
   unit: string;
   views: string[];
-  state: "parametrized" | "skipped" | "looked_at" | "untouched";
+  state: "parametrized" | "parts_only" | "skipped" | "looked_at" | "untouched";
   covered: boolean;
   parts?: number;
   inputs?: number;

@@ -52,6 +52,7 @@ export function EarlierBubble({ m }: { m: EarlierRun }) {
 
 const STATE_MARK: Record<CoverageRow["state"], { mark: string; words: string; cls: string }> = {
   parametrized: { mark: "✓", words: "parametrized", cls: "text-emerald-700 dark:text-emerald-400" },
+  parts_only: { mark: "◐", words: "parts defined, no named value", cls: "text-amber-700 dark:text-amber-400" },
   skipped: { mark: "○", words: "skipped, reason on the checklist", cls: "text-slate-500" },
   looked_at: { mark: "◐", words: "looked at, nothing kept", cls: "text-amber-700 dark:text-amber-400" },
   untouched: { mark: "✗", words: "untouched", cls: "text-red-700 dark:text-red-400" },
@@ -70,7 +71,7 @@ function Coverage({ rows }: { rows: CoverageRow[] }) {
             <li key={r.unit} className="text-[12px]" data-testid={`coverage-${r.unit}`} data-state={r.state}>
               <span className={`${s.cls} mr-1`}>{s.mark}</span><span className="font-mono">{r.unit}</span>
               <span className="text-slate-400"> · {r.views.join(" + ")} · </span>{s.words}
-              {r.state === "parametrized" && <span className="text-slate-500"> — {r.inputs} named input{r.inputs === 1 ? "" : "s"}{r.measured ? `, ${r.measured} measured` : ""}{r.kept_as_drawn ? `, ${r.kept_as_drawn} kept as drawn` : ""}</span>}
+              {(r.state === "parametrized" || r.state === "parts_only") && <span className="text-slate-500"> — {r.inputs} named input{r.inputs === 1 ? "" : "s"}{r.measured ? `, ${r.measured} measured` : ""}{r.kept_as_drawn ? `, ${r.kept_as_drawn} kept as drawn` : ""}</span>}
               {r.reason && <span className="block pl-4 text-[11px] text-slate-500">{r.reason}</span>}
               {r.refused && r.refused.length > 0 && <span className="block pl-4 text-[11px] text-red-700 dark:text-red-300">refused: {r.refused.join(", ")}</span>}
             </li>
