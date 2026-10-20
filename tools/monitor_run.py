@@ -1,8 +1,9 @@
 """Watch an agent run on a RUNNING workspace server and write down everything, read-only (it never starts, stops or changes anything).
 
-    uv run python tools/monitor_run.py [--url http://127.0.0.1:8790] [--out out/agent-logs] [--every 1.0]
+    uv run python tools/monitor_run.py [--url http://127.0.0.1:8765] [--out out/agent-logs] [--every 1.0]
 
 Run it from the project folder (the model-call ledger path is relative). Leave it running while you use the page; Ctrl+C ends it.
+It can be started before the server: it waits until the server answers and a drawing is open, and says which of those it is waiting for.
 Each session writes a folder `out/agent-logs/<time>/`:
 
   run.log          the readable story, one line per fact: the instruction and scope, every turn, the model's own thinking summary,
@@ -22,7 +23,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 import time
 import urllib.error
 import urllib.request
@@ -31,9 +31,50 @@ from pathlib import Path
 ACTIVE = {"queued", "running", "stopping"}
 
 
+def call_cost(row: dict) -> float | None:
+    """What one model call cost: the provider's own figure when the ledger has it, else its tokens at the model's price (`VERTEX_PRICES`, or the table in
+    `ai/vertex.py`); None when there is no price — nothing is guessed."""
+    if row.get("cost_usd") is not None:
+        return float(row["cost_usd"])
+    from dxf_autoparam.ai.usage import _cost, prices
+
+    inp, cached = int(row.get("input_tokens") or 0), int(row.get("vertex_cached_tokens") or 0)
+    return _cost(prices().get(row.get("model") or ""), max(inp - cached, 0), cached, int(row.get("output_tokens") or 0) + int(row.get("thinking_tokens") or 0))
+
+
+def cost_text(row: dict) -> str:
+    c = call_cost(row)
+    return f"${c:.4f}" if c is not None else f"no price for {row.get('model')} (set VERTEX_PRICES)"
+
+
 def get(url: str, path: str, timeout: float = 15.0):
     with urllib.request.urlopen(url + path, timeout=timeout) as r:
         return json.loads(r.read())
+
+
+def server_state(url: str, exc: BaseException) -> str:
+    """Why /api/sheet did not answer: no server at all, or a server that answers (/api/sheet/autosave takes no lock) while a request holds the sheet."""
+    try:
+        get(url, "/api/sheet/autosave", timeout=3)
+    except (urllib.error.URLError, OSError, ValueError):
+        return f"no server at {url} ({exc}); start it with `uv run dxf-autoparam serve`"
+    return f"{url} answers, but /api/sheet does not: a request is holding the sheet (a drawing being read; if this lasts minutes it is stuck: restart the server)"
+
+
+def wait_for_sheet(url: str, log: Log) -> dict:
+    """Block until the server answers and has a drawing open; say what is awaited each time it changes (not every second)."""
+    last = None
+    while True:
+        try:
+            if not get(url, "/api/sheet", timeout=5).get("empty"):
+                return snapshot_sheet(url)
+            state = f"{url} is up, no drawing is open yet (open it in the page)"
+        except (urllib.error.URLError, OSError, ValueError) as exc:
+            state = server_state(url, exc)
+        if state != last:
+            log.line(f"waiting: {state}", "WAIT")
+            last = state
+        time.sleep(2)
 
 
 def clip(v, n: int = 700) -> str:
@@ -141,14 +182,16 @@ def event_lines(e: dict, log: Log, verbose_results: int) -> None:
 def write_summary(folder: Path, rid: str, p: dict, before: dict, after: dict, usage_rows: list[dict], t_start: float) -> None:
     v = p.get("verdict") or {}
     u = p.get("usage") or {}
-    cost = [r.get("cost_usd") for r in usage_rows if r.get("cost_usd") is not None]
+    costs = [call_cost(r) for r in usage_rows]
+    priced = [c for c in costs if c is not None]
     lines = [
         f"# Run {rid}", "", f"- **Instruction:** {p.get('instruction')}", f"- **Scope:** {json.dumps(p.get('scope'), default=str)}",
         f"- **Outcome:** {p.get('status')} — {v.get('headline') or p.get('reason') or ''}",
         f"- **Effort:** {u.get('turns', 0)} turns · {u.get('tool_calls', 0)} tool calls · {u.get('tokens', 0):,} output+thinking tokens · {p.get('elapsed', 0):.0f} s",
         f"- **Model calls this run:** {len(usage_rows)} · input {sum(r.get('input_tokens', 0) for r in usage_rows):,} (cached {sum(r.get('vertex_cached_tokens', 0) for r in usage_rows):,}) · "
         f"output {sum(r.get('output_tokens', 0) for r in usage_rows):,} · thinking {sum(r.get('thinking_tokens', 0) for r in usage_rows):,}"
-        + (f" · reported cost ${sum(cost):.4f}" if cost else " · cost not reported by the provider (see the price table in the page's Cost tab)"),
+        + (f" · cost ${sum(priced):.4f}" + ("" if len(priced) == len(costs) else f" (only {len(priced)} of {len(costs)} calls have a price)") if priced
+           else " · no cost: the ledger has none and the model has no price — set VERTEX_PRICES='{\"<model>\": {\"input\": …, \"cached\": …, \"output\": …}}' (USD per million tokens)"),
         "", "## What the engine's gate checked", "",
     ]
     for c in v.get("criteria") or []:
@@ -164,7 +207,7 @@ def write_summary(folder: Path, rid: str, p: dict, before: dict, after: dict, us
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--url", default="http://127.0.0.1:8790")
+    ap.add_argument("--url", default="http://127.0.0.1:8765")
     ap.add_argument("--out", default="out/agent-logs")
     ap.add_argument("--every", type=float, default=1.0)
     ap.add_argument("--result-chars", type=int, default=900, help="how much of each tool result to write in run.log (events.jsonl has it whole)")
@@ -174,12 +217,13 @@ def main() -> int:
     folder.mkdir(parents=True, exist_ok=True)
     log = Log(folder)
 
+    log.line(f"monitoring {url} → {folder} (read-only; Ctrl+C ends it)", "START")
     try:
-        sheet0 = snapshot_sheet(url)
-    except (urllib.error.URLError, OSError) as exc:
-        print(f"cannot reach {url}: {exc}", file=sys.stderr)
-        return 1
-    log.line(f"monitoring {url} → {folder}\n{sheet_table(sheet0)}", "START")
+        sheet0 = wait_for_sheet(url, log)
+    except KeyboardInterrupt:
+        log.line("monitor stopped before a drawing was open", "END")
+        return 0
+    log.line(f"the sheet is open\n{sheet_table(sheet0)}", "START")
     log.line(sheet_table(sheet0), "SHEET", file=log.sheet, echo=False)
 
     try:  # the agent's standing instructions, as this checkout sends them (read from the code, not from the server)
@@ -269,7 +313,7 @@ def main() -> int:
                         if current_run:
                             run_usage.setdefault(current_run, []).append(row)
                         log.line(f"MODEL CALL {row.get('label')} · {row.get('model')} · in {row.get('input_tokens')} (cached {row.get('vertex_cached_tokens')}) · out {row.get('output_tokens')} · "
-                                 f"thinking {row.get('thinking_tokens')} · {row.get('seconds')} s · cost {row.get('cost_usd')} · finish {row.get('finish')}", "$")
+                                 f"thinking {row.get('thinking_tokens')} · {row.get('seconds')} s · cost {cost_text(row)} · finish {row.get('finish')}", "$")
                 # a heartbeat every 30 s while something runs
                 if current_run and time.time() - last_beat > 30:
                     last_beat = time.time()
@@ -282,7 +326,7 @@ def main() -> int:
                                  f"in {sum(c.get('input_tokens', 0) for c in calls):,} out {sum(c.get('output_tokens', 0) for c in calls):,} tokens · "
                                  f"{done}/{len(last_sheet['units'])} units parametrized", "STATUS")
             except (urllib.error.URLError, OSError, ValueError) as exc:
-                log.line(f"server not answering ({exc}); retrying", "WARN")
+                log.line(f"{server_state(url, exc)}; retrying", "WARN")
                 time.sleep(3)
             time.sleep(a.every)
     except KeyboardInterrupt:
