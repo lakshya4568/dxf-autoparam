@@ -1355,6 +1355,9 @@ def _units(dr: Drawing, lay: SheetLayout) -> None:
                 if it.extra.get("dimtype") == 1:
                     drawn = math.dist(it.pts[1], it.pts[2])
                 nums = re.findall(r"\d+(?:\.\d+)?", (it.text or "").replace("<>", ""))
+                if not nums:  # an automatic dimension states its number in the block CAD draws it with, not in its own text: that is what the page shows
+                    shown = " ".join(str(q.get("text") or "") for q in it.extra.get("parts") or [] if q.get("k") == "t")
+                    nums = re.findall(r"\d+(?:\.\d+)?", shown)
                 stated = float(nums[0]) if nums else 0.0
                 if drawn > 0 and stated > 0:
                     ratios.append(stated / drawn)

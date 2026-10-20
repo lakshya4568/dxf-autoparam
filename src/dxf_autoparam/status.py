@@ -23,6 +23,7 @@ A state is claimed only when what it names has been measured:
 from __future__ import annotations
 
 from .graph import affects
+from .program import ExprError
 
 STATE_WORDS = {"not_analyzed": "not yet analyzed", "analyzing": "being analyzed", "components_identified": "parts identified",
                "awaiting_user": "waiting for your decision", "parametrizing": "being parametrized", "partial": "partly done",
@@ -126,6 +127,47 @@ def parameters_of(sm, uid: str) -> list[dict]:
         out.append({"name": name, "key": shared.get(name) or f"{uid}.{name}", "state": state, "source": p.source, "entities": n_ent,
                     "changed": name in sm.values.get(uid, {}), "shared": name in shared})
     return out
+
+
+def dimension_drive(prog, examples: int = 8) -> dict:
+    """How far a unit's dimensions are driven. A DIMENSION whose two measured points lie on set-out lines is DRIVEN when stepping some value somebody
+    named (not one the analysis measured and called ThkY1) changes the distance between those lines; otherwise it states a size nothing named changes —
+    a constant, which stays as drawn whatever the design inputs become. Dimensions whose points are on no two lines are `unread` (arcs, angles, text
+    only). Measured, never claimed: this is what a person means by "how much of this drawing is parametric"."""
+    from .generic import is_generated
+
+    an = prog.analysis
+    um = an.drawing.units_mm
+    v0 = prog.datum_values()
+    pairs: list[tuple[object, str, str]] = []
+    unread = 0
+    for it in an.drawing.items:
+        if it.dxftype != "DIMENSION":
+            continue
+        pair = None
+        for ax in ("x", "y"):
+            b1, b2 = an.slot_datum.get((it.index, 1, ax)), an.slot_datum.get((it.index, 2, ax))
+            if b1 and b2 and b1[0] != b2[0] and b1[0] in v0 and b2[0] in v0:
+                pair = (b1[0], b2[0])
+                break
+        if pair is None:
+            unread += 1
+        else:
+            pairs.append((it, *pair))
+    driven: set[int] = set()
+    unsteppable: list[str] = []
+    for name, prm in prog.params.items():
+        if is_generated(name) and prm.source != "ai":
+            continue
+        try:
+            v1 = prog.datum_values({name: prm.value + 1.0})
+        except (ExprError, ArithmeticError, KeyError, ValueError):
+            unsteppable.append(name)  # a value whose step the program cannot evaluate: it is said, and drives nothing that can be measured here
+            continue
+        driven |= {i for i, (_it, a, b) in enumerate(pairs) if abs((v1[b] - v1[a]) - (v0[b] - v0[a])) > 1e-9}
+    constants = [{"mm": round(abs(v0[b] - v0[a]) * um, 1), "text": " ".join((it.text or "").split())[:30]} for i, (it, a, b) in enumerate(pairs) if i not in driven]
+    return {"total": len(pairs) + unread, "driven": len(driven), "constant": len(constants), "unread": unread, "constants": constants[:examples],
+            "unsteppable": unsteppable}
 
 
 def sheet_status(sm, active: dict | None = None) -> dict:

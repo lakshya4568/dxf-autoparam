@@ -147,6 +147,8 @@ def test_a_size_that_follows_at_some_occurrences_is_bound_to_those_and_the_rest_
     assert "your formula" in info["left_as_drawn"][0], "and says what holds it"
     row = next(q for q in bench.answer["parameters"] if q["name"] == "ClearSpan")
     assert row["occurrences"] == [left], "the binding is the occurrence that follows"
+    assert sorted(row["occurrences_asked"]) == sorted([left, right]), "and what was asked for stays on record: the design intent tries to make the rest follow too"
+    assert (info["asked"], info["following"]) == (2, 1)
     # and when NOTHING follows it is still refused, with the lines and what sets them named
     bench2 = Workbench(sm.path, analysis=sm.pristine_analysis(uid), scope=SheetScope(sm, uid), start=ans)
     for d in (an.gaps[left].a, an.gaps[left].b, a, b):
@@ -155,3 +157,32 @@ def test_a_size_that_follows_at_some_occurrences_is_bound_to_those_and_the_rest_
     bench2.validate()
     _info, failure = bench2.binding_check("ClearSpan")
     assert failure is None or failure["code"] == "DRIVE" and "your formula" in failure["cause"]
+
+
+def test_a_size_that_shrinks_as_its_value_grows_is_not_driven(tmp_path):
+    """The drive check once read the SIZE of the change and not its sign: a gap that narrowed 1 mm per mm of the value counted as driven, so a haunch
+    whose far line hung from the other side of the member was bound and then shrank when its value was raised. Here the right cell's left line
+    follows the left cell's right line (it moves WITH the value) while its right line stays: the cell narrows as the value grows."""
+    sm, uid, ans, _g = extension(tmp_path)
+    row0 = next(p for p in ans["parameters"] if p["name"] == "ClearSpan")
+    ans["parameters"] = [p for p in ans["parameters"] if p["name"] != "ClearSpan"]
+    bench = Workbench(sm.path, analysis=sm.pristine_analysis(uid), scope=SheetScope(sm, uid), start=ans)
+    an = bench.an
+    cluster = an.clusters[row0["candidate"]]
+    left, right = sorted(cluster.gaps, key=lambda gid: an.datums[an.gaps[gid].a].value)
+    um = an.drawing.units_mm
+    anchor, l_end, r_start, r_end = an.gaps[left].a, an.gaps[left].b, an.gaps[right].a, an.gaps[right].b
+    drawn = lambda d, ref: round((an.datums[d].value - an.datums[ref].value) * um, 6)
+    bench.write("set_formula", {"line": r_start, "expr": f"{l_end} + {drawn(r_start, l_end)}"})  # hangs on the left cell: moves with the value
+    bench.write("set_formula", {"line": r_end, "expr": f"{anchor} + {drawn(r_end, anchor)}"})  # and its far side stays
+    bench.write("define_parameter", {"name": "ClearSpan", "part": "", "candidate": cluster.id, "occurrences": ["all"]})
+    bench.validate()
+    v0 = {**{d.id: d.value for d in an.datums.values()}, **bench.prog.datum_values()}
+    v1 = bench.prog.datum_values({"ClearSpan": bench.prog.params["ClearSpan"].value + 1.0})
+    assert abs((v1[r_end] - v1[r_start]) * um - (v0[r_end] - v0[r_start]) * um + 1.0) < 1e-6, "the scenario is real: the right cell narrows by 1 mm per mm"
+    assert bench._drives_pair(v0, v1, an.gaps[left].a, an.gaps[left].b) and not bench._drives_pair(v0, v1, r_start, r_end)
+    info, failure = bench.binding_check("ClearSpan")
+    assert failure is None, failure
+    assert info["drives"] == [left], "bound to the cell that GROWS only"
+    assert len(info["left_as_drawn"]) == 1 and info["left_as_drawn"][0].startswith(f"{right} stays its own size")
+

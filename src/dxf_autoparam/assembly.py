@@ -128,6 +128,9 @@ class Stack:
     by_drawn_distance: list[str] = field(default_factory=list)  # lines no size of the drawing could place: set by their drawn distance
     why: str = ""
     conflicts: list[str] = field(default_factory=list)
+    # the same conflicts as data: {line, kind (a key of PROTECTION_WORDS, or "kept" / "follows"), driver, has, wants} — which line stood in the way, what sets
+    # it, and how it moves per mm of the driver against how the policy needs it to
+    blocked: list[dict] = field(default_factory=list)
 
 
 def line_values_mm(prog: Program) -> dict[str, float]:
@@ -160,26 +163,63 @@ def level_lines(prog: Program) -> set[str]:
     return out
 
 
-def protected_lines(prog: Program, fixed: set[str] | None = None) -> dict[str, str]:
-    """Lines the stacking never rewrites, with why: set by a person / the AI, a slope, a held part or existing work, a
-    site level, a formula that is not a plain chain (min / max, the other axis), and lines a person keeps fixed."""
+def _relation_parent(prog: Program, d: str) -> str | None:
+    """The one line of its own axis that `d` is set out from, when its formula is `parent + (what the other axis and the values say)`: a slope
+    (ratio × height), a projection. That is an EQUATION between two lines — it can be solved from either end, so a stacking may keep it while it
+    moves both. None when `d` is set any other way (two lines of its axis, a product, a min / max)."""
+    an = prog.analysis
+    lf = linear(prog.formulas[d])
+    if lf is None or d not in an.datums:
+        return None
+    same = [n for n in lf[0] if n in prog.formulas and n in an.datums and an.datums[n].axis == an.datums[d].axis]
+    if len(same) != 1 or abs(lf[0][same[0]] - 1.0) > 1e-12:
+        return None
+    return same[0] if any(n in an.datums and an.datums[n].axis != an.datums[d].axis for n in lf[0]) else None
+
+
+PROTECTION_WORDS = {"ai": "a person's or the AI's formula", "held": "a held part", "existing": "existing work", "slope": "a stated slope",
+                    "level": "a site level", "formula": "a formula that is not a plain chain",
+                    "axis": "set out from the other axis (a slope or a projection)", "fixed": "kept fixed"}
+
+
+def protection_kinds(prog: Program, fixed: set[str] | None = None) -> dict[str, str]:
+    """Lines the stacking never rewrites, with the KIND of what sets each (a key of PROTECTION_WORDS): a person / the AI, a slope, a held part
+    or existing work, a site level, a formula that is not a plain chain, the other axis, and lines a person keeps fixed."""
     an = prog.analysis
     out: dict[str, str] = {}
     lv = level_lines(prog)
     for d, e in prog.formulas.items():
         o = prog.origin.get(d, "geometry")
-        if o in KEEP_ORIGINS:
-            out[d] = {"ai": "a person's or the AI's formula", "held": "a held part", "existing": "existing work", "slope": "a stated slope"}[o]
+        if o in KEEP_ORIGINS and not (o == "slope" and _relation_parent(prog, d)):
+            out[d] = o
         elif d in lv:
-            out[d] = "a site level"
+            out[d] = "level"
         else:
             lf = linear(e)
             if lf is None:
-                out[d] = "a formula that is not a plain chain"
-            elif any(n in an.datums and an.datums[n].axis != an.datums[d].axis for n in lf[0]):
-                out[d] = "set out from the other axis (a slope or a projection)"
+                out[d] = "formula"
+            elif any(n in an.datums and an.datums[n].axis != an.datums[d].axis for n in lf[0]) and not _relation_parent(prog, d):
+                out[d] = "axis"
     for d in fixed or ():
-        out.setdefault(d, "kept fixed")
+        out.setdefault(d, "fixed")
+    return out
+
+
+def level_of(prog: Program, d: str) -> str | None:
+    """The site level (its name) that sets line `d`, when it is one."""
+    try:
+        names = names_in(prog.formulas[d])
+    except (ExprError, KeyError):
+        return None
+    return next((n for n in sorted(names) if n in prog.params and prog.params[n].kind == "level"), None)
+
+
+def protected_lines(prog: Program, fixed: set[str] | None = None) -> dict[str, str]:
+    """Lines the stacking never rewrites, with why (in words; a site level says which)."""
+    out: dict[str, str] = {}
+    for d, kind in protection_kinds(prog, fixed).items():
+        name = level_of(prog, d) if kind == "level" else None
+        out[d] = PROTECTION_WORDS[kind] + (f" ({name})" if name else "")
     return out
 
 
@@ -272,14 +312,33 @@ def centre_candidates(prog: Program, members: set[str], pairs: list[tuple[str, s
     return out
 
 
-def symmetric_about(prog: Program, members: set[str], centre: str) -> bool:
-    """Whether the assembly's lines mirror each other about `centre` (evidence for a centred design)."""
+def is_axis(prog: Program, d: str) -> bool:
+    """A construction axis (a drawn centre line, the centre of a closed outline, the drawing's axis of symmetry): not a face of anything."""
+    dt = prog.analysis.datums[d]
+    return dt.source in AXIS_SOURCES or bool(dt.virtual)
+
+
+def mirror_stats(prog: Program, members: set[str], centre: str) -> tuple[int, int]:
+    """(faces of the assembly that have a mirror image about `centre`, faces). Faces only: the centre of some outline inside the assembly (a
+    haunch, a void) is a construction line with no mirror image, and says nothing against the symmetry of the members that bound the structure."""
     an = prog.analysis
     v = line_values_mm(prog)
     tol = max(an.drawing.tol * an.drawing.units_mm * 2, 0.5)
     c = v[centre]
-    pos = sorted(v[d] - c for d in members if d != centre)
-    return bool(pos) and all(any(abs(p + q) <= tol for q in pos) for p in pos)
+    pos = [v[d] - c for d in members if d != centre and not is_axis(prog, d)]
+    return sum(1 for p in pos if any(abs(p + q) <= tol for q in pos)), len(pos)
+
+
+def mirrored(prog: Program, members: set[str], centre: str) -> int:
+    """How many faces mirror about `centre` when the assembly IS symmetric about it, else 0: every face does, or — a wing wall that exists on one
+    side only does not make a box asymmetric — at least four do and they are the clear majority (three in five)."""
+    n, total = mirror_stats(prog, members, centre)
+    return n if n and (n == total or (n >= 4 and n >= 0.6 * total)) else 0
+
+
+def symmetric_about(prog: Program, members: set[str], centre: str) -> bool:
+    """Whether the assembly's faces mirror each other about `centre` (evidence for a centred design)."""
+    return mirrored(prog, members, centre) > 0
 
 
 def _segments_on(prog: Program, axis: str) -> list[tuple[float, float]]:
@@ -377,13 +436,14 @@ def _chain_edges(prog: Program, axis: str) -> dict[str, list[tuple[str, dict[str
         if lf is None:
             continue
         coefs, const = lf
-        ds = [n for n in coefs if n in prog.formulas]
-        if len(ds) != 1 or abs(coefs[ds[0]] - 1.0) > 1e-12 or an.datums[ds[0]].axis != axis:
+        ds = [n for n in coefs if n in prog.formulas and n in an.datums and an.datums[n].axis == axis]  # lines of THIS axis: the others are constants here
+        if len(ds) != 1 or abs(coefs[ds[0]] - 1.0) > 1e-12:
             continue
         p = ds[0]
         rest = {k: c for k, c in coefs.items() if k != p}
-        adj.setdefault(p, []).append((s, rest, const, "formula"))
-        adj.setdefault(s, []).append((p, {k: -c for k, c in rest.items()}, -const, "formula"))
+        kind = "relation" if any(k in prog.formulas for k in rest) else "formula"  # a relation reads the other axis (a slope, a projection)
+        adj.setdefault(p, []).append((s, rest, const, kind))
+        adj.setdefault(s, []).append((p, {k: -c for k, c in rest.items()}, -const, kind))
     return adj
 
 
@@ -413,7 +473,16 @@ def stack(prog: Program, axis: str, drivers: list[Driver], members: set[str], st
         miss = [x for pr in drv.pairs for x in pr if x not in members]
         if miss:
             members |= {x for x in miss if x in prog.formulas}
+    adj = _chain_edges(prog, axis)
+    todo = list(members)
+    while todo:  # a slope (or projection) ties two lines by an equation: both move, or neither may — its other end is part of the assembly
+        d = todo.pop()
+        for t, _coefs, _const, kind in adj.get(d, ()):
+            if kind == "relation" and t not in members:
+                members.add(t)
+                todo.append(t)
     protect = protected_lines(prog)
+    kinds = protection_kinds(prog)
     rer = {d for d in members if d not in protect}
     cur = {drv.name: rates(prog, drv.name) for drv in drivers}
     pred = {drv.name: predicted(prog, drv, members, cur[drv.name]) for drv in drivers}
@@ -466,12 +535,14 @@ def stack(prog: Program, axis: str, drivers: list[Driver], members: set[str], st
             if abs(want - got) > 1e-6:
                 st.conflicts.append(f"{d} is set by {protect.get(d, 'something fixed')} and moves {got:+g} mm per mm of {drv.name}; "
                                     f"{POLICY_WORDS[policy]} needs {want:+g}")
+                st.blocked.append({"line": d, "kind": kinds.get(d, "other"), "driver": drv.name, "has": got, "wants": want})
     for d in sorted((still or set()) & members):
         for drv in drivers:
             k = pred[drv.name].get(d, 0.0)
             if abs(k) > 1e-9:
                 st.conflicts.append(f"{d} must stay (a part kept fixed is drawn on it), but {POLICY_WORDS[policy]} moves it "
                                     f"{k:+g} mm per mm of {drv.name}")
+                st.blocked.append({"line": d, "kind": "kept", "driver": drv.name, "has": 0.0, "wants": k})
     if st.conflicts:
         st.why = st.conflicts[0]
         return st
@@ -491,7 +562,6 @@ def stack(prog: Program, axis: str, drivers: list[Driver], members: set[str], st
             parent[root] = (anchor, {}, v[root] - (v[anchor] if anchor else 0.0), "anchor")
         placed[root] = {n: 0.0 for n in cur}
 
-    adj = _chain_edges(prog, axis)
     extra: dict[str, list[tuple[str, dict[str, float], float, str]]] = {}
     for drv in drivers:
         for a, b in drv.pairs:
@@ -510,7 +580,7 @@ def stack(prog: Program, axis: str, drivers: list[Driver], members: set[str], st
                 lo, hi = (a, b) if v[a] <= v[b] else (b, a)
                 extra.setdefault(lo, []).append((hi, {q: 1.0}, v[hi] - v[lo] - prog.params[q].value, "named"))
                 extra.setdefault(hi, []).append((lo, {q: -1.0}, v[lo] - v[hi] + prog.params[q].value, "named"))
-    rank = {"driver": 0, "named": 0, "formula": 1}
+    rank = {"relation": -1, "driver": 0, "named": 0, "formula": 1}  # an equation between two lines is used the moment one end is placed
     heap: list = []
     seq = 0
 
@@ -554,7 +624,7 @@ def stack(prog: Program, axis: str, drivers: list[Driver], members: set[str], st
     # write what changed (a line whose formula already says the same is left alone); every constant is worked out from
     # the drawn positions, so the drawing stays exactly as drawn at the current values
     saved = {d: (prog.formulas[d], prog.origin.get(d)) for d in parent}
-    vals = prog.defaults()
+    vals = {**v, **prog.defaults()}  # the names a formula may read: the values, and the lines (in mm) — a relation reads the other axis
     try:
         for s, (p, coefs, _const, kind) in parent.items():
             if kind == "kept":
@@ -595,6 +665,8 @@ def stack(prog: Program, axis: str, drivers: list[Driver], members: set[str], st
         if off:
             st.conflicts += [f"{d} moves {got.get(d, 0.0):+g} mm per mm of {drv.name}, not {pred[drv.name].get(d, 0.0):+g} "
                              f"({protect.get(d) or 'it follows ' + (prog.formulas[d][:40])})" for d in sorted(off)[:6]]
+            st.blocked += [{"line": d, "kind": kinds.get(d, "follows"), "driver": drv.name, "has": got.get(d, 0.0), "wants": pred[drv.name].get(d, 0.0)}
+                           for d in sorted(off)[:6]]
     st.ok = not st.conflicts
     if not st.ok:  # refused: the set-out is put back exactly as it was
         st.why = st.conflicts[0]
@@ -654,6 +726,30 @@ def interfaces(prog: Program, parts: dict[str, Part]) -> list[dict]:
                 rows.append({"parts": [a, b], "line": None, "axis": None, "kind": "corner", "at": [x, y], "status": "observed",
                              "evidence": f"they share the corner {x}/{y}"})
     return rows
+
+
+def contact_gap(parts: dict[str, Part], row: dict, v: dict[str, float]) -> float:
+    """The gap between the two parts of an observed contact (`interfaces`), on the line positions `v` (a datum → its place, in any one unit): 0
+    while they still touch. A FACE is two outlines that ran along one line over a common stretch — they still touch while the stretches of that
+    line they cover still overlap or meet; a CORNER is a corner they share, which two outlines drawn on the same lines keep for ever."""
+    if row.get("kind") != "face" or not row.get("line"):
+        return 0.0
+    d, axis = row["line"], row["axis"]
+
+    def stretches(name: str) -> list[tuple[float, float]]:
+        out = []
+        for (xa, ya), (xb, yb) in parts[name].edges:
+            if axis == "x" and xa == d and xb == d and ya != yb:
+                out.append(tuple(sorted((v[ya], v[yb]))))
+            elif axis == "y" and ya == d and yb == d and xa != xb:
+                out.append(tuple(sorted((v[xa], v[xb]))))
+        return out  # type: ignore[return-value]
+
+    a, b = row["parts"]
+    sa, sb = stretches(a), stretches(b)
+    if not sa or not sb:
+        return 0.0
+    return min(max(0.0, max(l1, l2) - min(h1, h2)) for l1, h1 in sa for l2, h2 in sb)
 
 
 def part_entities(prog: Program, parts: dict[str, Part], name: str) -> set[int]:

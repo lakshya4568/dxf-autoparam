@@ -14,6 +14,7 @@ import pytest
 from dxf_autoparam.ai.run import ACTIVE
 from dxf_autoparam.ai.scripted import ScriptedModel, call
 from dxf_autoparam.crossview import SheetModel
+from dxf_autoparam.design_intent import derived
 from dxf_autoparam.plan_bench import Box, box_answer, box_gad
 from dxf_autoparam.workspace import SheetSession
 
@@ -496,7 +497,8 @@ def test_a_conflicting_instruction_is_a_conflict_in_the_plan_and_nothing_moves(t
     sheet, uid, _g, _gem = parametrized_sheet(tmp_path, script=script)
     r = sheet.start_run({"instruction": said, "scope": {"views": ["V01"]}})
     p = wait(sheet, r["run"])
-    plan = sheet.sm.unit(uid).answer["plans"][0] if sheet.sm.unit(uid).answer.get("plans") else None
+    asked = [q for q in sheet.sm.unit(uid).answer.get("plans", []) if not derived(q)]  # what the person asked for: the engine's own default (design intent) is there too
+    plan = asked[0] if asked else None
     assert plan is None or plan["status"] != "accepted"
     assert p["status"] in ("awaiting_user", "partial", "failed") and p["verdict"] is None or p["verdict"]["state"] != "completed"
     assert sheet.sm.current()[f"{uid}.ClearSpan"] == 3000  # a conflict is not resolved by a guess

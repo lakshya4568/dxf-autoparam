@@ -3,6 +3,7 @@ true ones must be accepted and false ones rejected with the right reason."""
 
 from __future__ import annotations
 
+import copy
 import math
 from pathlib import Path
 
@@ -15,6 +16,8 @@ from dxf_autoparam.dxf_write import audit, write_dxf
 from dxf_autoparam.ir import GapKind
 from dxf_autoparam.program import ExprError, evaluate, from_model, names_in
 from dxf_autoparam.regen import regenerate_program
+from dxf_autoparam.topology import DatumIndex
+from dxf_autoparam.topology import of as topo_of
 from dxf_autoparam.validator import apply
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -175,6 +178,90 @@ def test_levels_held_as_site_inputs_stay_put_when_the_structure_changes():
     assert after[bed] == pytest.approx(before[bed])
     lifted = prog.datum_values({"FormationLevel": 106.0})
     assert lifted[formation] * dr.units_mm == pytest.approx(106000)
+
+
+def test_a_check_only_level_that_is_the_end_of_a_size_is_left_free():
+    """check_only holds a line fixed and never sets out from it; a size the answer defines to that line could then never move it."""
+    an = two_cell()
+    u = an.drawing.units_mm
+    ans = true_answer(an)
+    soffit = next(d for d in an.datums.values() if d.axis == "y" and not d.virtual and abs(d.value * u - 3400) < 0.5)
+    ans["levels"] = [{"datum": soffit.id, "name": "SoffitLevel", "role": "check_only"}]
+    prog, rep = apply(an, ans)
+    assert not rep.errors(), rep.errors()
+    said = [f for f in rep.findings if f.code == "V6" and f.item == "SoffitLevel"]
+    assert said and "ClearHeight" in said[0].message and "derived" in said[0].message
+    assert "SoffitLevel" not in prog.params  # not held
+    assert (prog.datum_values({"ClearHeight": 3500})[soffit.id] - prog.datum_values()[soffit.id]) * u == pytest.approx(500)
+
+
+def test_a_check_only_level_on_a_face_of_a_proposed_part_is_kept_with_a_word_and_existing_work_and_water_levels_are_not_touched():
+    """A line that is only a face keeps what was said (a level input); the answer is told that a check-only level is held fixed."""
+    an = two_cell()
+    dix = DatumIndex(an)
+    region = next(r for r in topo_of(an).regions if dix.of_ring(r.ring)[1])
+    face = dix.of_ring(region.ring)[1][0]
+    aside = next(d.id for d in an.datums.values() if d.axis == "y" and not d.virtual and d.id not in dix.of_ring(region.ring)[1])  # not on the part
+    base = {"structure_type": "", "family": "other", "views": [], "summary": "", "parameters": [], "datum_formulas": [], "relations": [],
+            "questions": [], "components": [{"name": "Box", "type": "box", "regions": [region.id]}]}
+    prog, rep = apply(an, {**base, "levels": [{"datum": face, "name": "FaceLevel", "role": "check_only"}]})
+    said = [f for f in rep.findings if f.code == "V6" and f.item == "FaceLevel" and "a face of Box" in f.message and "derived" in f.message]
+    assert said and "FaceLevel" in prog.params, "told, and kept: the level stays an input"
+    existing = {**base, "components": [{**base["components"][0], "existing": True}]}  # existing work is held as drawn anyway
+    prog, rep = apply(an, {**existing, "levels": [{"datum": face, "name": "FaceLevel", "role": "check_only"}]})
+    assert "FaceLevel" in prog.params and not any(f.code == "V6" and "check-only" in f.message for f in rep.findings)
+    prog, rep = apply(an, {**base, "levels": [{"datum": aside, "name": "WaterLevel", "role": "check_only"}]})  # a line the part is not drawn on
+    assert "WaterLevel" in prog.params and not any(f.code == "V6" and "check-only" in f.message for f in rep.findings)
+
+
+def test_values_saved_at_another_scale_are_measured_again_only_when_every_one_is_off_by_the_same_drafting_ratio():
+    """A value is the engine's own measurement of what the parameter names. When a unit used to be read at another scale (a detail drawn at 1:25 on a
+    1:100 sheet), every value saved then is the same measurement times one ratio: they are measured again. Anything else is the validator's to refuse."""
+    from dxf_autoparam.validator import rescale_values
+
+    an = two_cell()
+    ans = true_answer(an)
+    base = {p["name"]: p["value"] for p in ans["parameters"]}
+
+    def scaled(factor) -> dict:
+        out = copy.deepcopy(ans)
+        for p in out["parameters"]:
+            p["value"] = p["value"] * factor(p["name"])
+        return out
+
+    fixed, ratio = rescale_values(an, scaled(lambda n: 4.0))
+    assert ratio == pytest.approx(4.0) and {p["name"]: p["value"] for p in fixed["parameters"]} == pytest.approx(base)
+    assert not apply(an, fixed)[1].errors(), "and the answer is accepted again"
+    assert rescale_values(an, ans) == (ans, None), "values that agree with the drawing are left alone"
+    assert rescale_values(an, scaled(lambda n: 4.0 if n == "ClearSpan" else 1.0))[1] is None, "one value off: that is a wrong value, the validator says so"
+    assert rescale_values(an, scaled(lambda n: 2.0 if n == "OuterWall" else 4.0))[1] is None, "two ratios are not one scale"
+    assert rescale_values(an, scaled(lambda n: 40.0))[1] is None, "and 40 is not a drafting scale"
+    assert rescale_values(an, {**ans, "parameters": []}) == ({**ans, "parameters": []}, None)
+
+
+def test_the_work_saved_for_a_detail_before_it_was_read_at_its_own_scale_is_kept_not_dropped(tmp_path):
+    """A detail at 1:25 was read at the sheet's scale, so the agent's names for it carried values four times the drawing's and the engine now refuses them
+    (V2). The names, parts and levels are the work: the values are measured again, a stepped value goes with them, and the unit says so."""
+    from test_sheet import built_sheet
+
+    from dxf_autoparam.crossview import EMPTY_ANSWER, SheetModel
+
+    sm = SheetModel.open(str(built_sheet(tmp_path / "s.dxf", automatic_detail_dims=True)))
+    uid = sm.unit_of_view[next(g.id for g in sm.layout.views() if g.name == "DETAIL OF WALL")]
+    an = sm.pristine_analysis(uid)
+    um = an.drawing.units_mm
+    sized = [c for c in an.clusters.values() if c.kind in (GapKind.SOLID, GapKind.VOID) and any(an.gaps[g].axis in ("x", "y") for g in c.gaps)][:2]
+    assert len(sized) == 2 and um == pytest.approx(0.25)
+    rows = [{"name": name, "label": "", "component": "", "kind": "length", "candidate": c.id, "value": round(c.value * um * 4, 6)} for name, c in zip(("WallTop", "FootingStep"), sized, strict=True)]
+    u = sm.units[uid]
+    u.answer, u.prog = {**copy.deepcopy(EMPTY_ANSWER), "parameters": rows}, None  # as saved by the old reading
+    sm.values[uid] = {"WallTop": rows[0]["value"] * 1.1}  # a person had stepped it
+    prog = sm.unit(uid).prog
+    assert {"WallTop", "FootingStep"} <= set(prog.params) and not u.report.errors()
+    assert prog.params["WallTop"].value == pytest.approx(sized[0].value * um)
+    assert sm.values[uid]["WallTop"] == pytest.approx(sized[0].value * um * 1.1), "the stepped value is on the new scale too"
+    assert any("read at its own scale" in f.message for f in u.report.findings)
+    assert [p["value"] for p in u.answer["parameters"]] == pytest.approx([c.value * um for c in sized]), "and the saved answer says what the drawing measures"
 
 
 @pytest.mark.parametrize("path", EXAMPLES, ids=lambda p: p.stem)

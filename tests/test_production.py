@@ -26,6 +26,7 @@ from dxf_autoparam.ai import production as AP
 from dxf_autoparam.ai.run import ACTIVE, unified_system, unified_tools
 from dxf_autoparam.ai.scripted import ScriptedModel, call
 from dxf_autoparam.crossview import SheetError, SheetModel
+from dxf_autoparam.design_intent import strip
 from dxf_autoparam.plan_bench import Box
 from dxf_autoparam.production import binding as BD
 from dxf_autoparam.production import formulas as F
@@ -366,6 +367,7 @@ def test_corrupted_bindings_are_caught_and_never_accepted(tmp_path):
 def test_an_inverted_dependency_is_reported_and_the_proposed_relation_makes_the_drawing_follow(tmp_path):
     b = Box(cells=1, span=2500.0)
     sm, us, _up, _g = _sheet(b, tmp_path, "s")
+    sm.commit_answer(us, strip(sm.unit(us).answer), intent=False)  # the drawing as it is set out from its left face: the overall width is an input of its own
     u = sm.unit(us)
     overall = next(n for n, p in u.prog.params.items() if abs(p.value - b.width) < 1e-6)
     bind = {"family": "railway_rcc_box", "unit": us, "inputs": {"geometry.clear_w": "ClearSpan", "geometry.t_wall_o": "OuterWall"},

@@ -19,9 +19,11 @@ a valid model — at worst the geometric baseline itself.
 
 from __future__ import annotations
 
+import copy
 import itertools
 import math
 import re
+import statistics
 from dataclasses import dataclass, field
 
 from .build import Decisions, build
@@ -58,6 +60,7 @@ from .program import (
     names_in,
 )
 from .regen import check_change, datum_users, regenerate_program
+from .topology import DatumIndex
 from .topology import of as topo_of
 
 PASCAL = re.compile(r"^[A-Z][A-Za-z0-9]*$")
@@ -106,6 +109,69 @@ def _tol_mm(an: Analysis) -> float:
     return max(0.5, 2 * an.drawing.tol * an.drawing.units_mm)
 
 
+def structure_lines(an: Analysis, answer: dict, parts: dict) -> dict[str, tuple[str, str]]:
+    """The horizontal lines that belong to the structure being parametrized, with how and what says so: ("size", …) an end of a size the answer defines,
+    or ("face", …) a face of a region of a part the answer proposes (existing work is held as drawn anyway). A level the structure is only CHECKED against
+    (a water level) is neither. A size outranks a face."""
+    out: dict[str, tuple[str, str]] = {}
+    regions = topo_of(an).by_id()
+    dix = DatumIndex(an)
+    for part in parts.values():
+        if part.existing:
+            continue
+        for rid in part.regions:
+            r = regions.get(rid)
+            if r is not None:
+                for ring in [r.ring, *r.holes]:
+                    for d in dix.of_ring(ring)[1]:
+                        out.setdefault(d, ("face", f"a face of {part.name}"))
+    for p in answer.get("parameters", []):
+        name, cid = p.get("name", ""), p.get("candidate")
+        if cid in an.clusters:
+            occ = p.get("occurrences")
+            gaps = an.clusters[cid].gaps if occ in (None, "all") else [g for g in occ if g in an.gaps]
+            ends = [e for g in gaps for e in (an.gaps[g].a, an.gaps[g].b)]
+        else:
+            ends = [p.get(k) for k in ("from_datum", "to_datum")]
+        for d in ends:
+            if d in an.datums:
+                out[d] = ("size", f"an end of the size {name}")
+    return out
+
+
+def rescale_values(an: Analysis, answer: dict) -> tuple[dict, float | None]:
+    """Values written when the unit was read at another scale. A parameter's `value` is the engine's own measurement of the candidate or the two lines it
+    names (the model never types one), so when a unit is read differently from the way it was (a detail drawn at 1:25 on a 1:100 sheet used to be read at the
+    sheet's scale), every value of an answer saved before is the same measurement times ONE ratio. When every value that can be measured disagrees with its
+    measurement by one common ratio — a drafting scale — the answer is returned with them measured again, and the ratio is said; any other disagreement
+    (a single value off, different ratios, a candidate that is another size now) is left to the validator, which refuses it (V2).
+    (the answer, the ratio) — or (the answer as it was, None)."""
+    u = an.drawing.units_mm
+    tol = _tol_mm(an)
+    rows: list[tuple[dict, float]] = []  # the parameters that name something measurable, with what it measures now
+    for p in answer.get("parameters", []):
+        cid = p.get("candidate")
+        if cid in an.clusters:
+            rows.append((p, an.clusters[cid].value * u))
+        elif p.get("kind") != "angle" and p.get("from_datum") in an.datums and p.get("to_datum") in an.datums \
+                and an.datums[p["from_datum"]].axis == an.datums[p["to_datum"]].axis:
+            rows.append((p, abs(an.datums[p["to_datum"]].value - an.datums[p["from_datum"]].value) * u))
+    if not rows or any(m <= 0 or not isinstance(p.get("value"), (int, float)) for p, m in rows):
+        return answer, None
+    if all(abs(m - float(p["value"])) <= max(tol, 1e-3 * m) for p, m in rows):
+        return answer, None  # they agree: nothing to do
+    ratios = [float(p["value"]) / m for p, m in rows]
+    ratio = statistics.median(ratios)
+    if not (0.2 <= ratio <= 5 and abs(ratio - 1) > 0.05) or any(abs(r / ratio - 1) > 0.02 for r in ratios):
+        return answer, None  # not one drafting scale: the validator says which values are wrong
+    out = copy.deepcopy(answer)
+    fixed = {p["name"]: m for p, m in rows}
+    for p in out["parameters"]:
+        if p.get("name") in fixed:
+            p["value"] = round(fixed[p["name"]], 6)
+    return out, ratio
+
+
 def apply(an: Analysis, answer: dict, base_decisions: Decisions | None = None, hold_existing: bool = False,
           selection: dict | None = None) -> tuple[Program, Report]:
     """Apply a structured proposal (ai.schema.AIAnswer as a dict) to the drawing; return the validated program.
@@ -118,29 +184,6 @@ def apply(an: Analysis, answer: dict, base_decisions: Decisions | None = None, h
     datums = an.datums
     dec = base_decisions or Decisions()
 
-    # ── levels (V1, V6): site inputs pinned, water levels checked only ─────────────
-    stated = {d for d, *_ in an.stated_levels}
-    used_names: set[str] = set()
-    for lv in answer.get("levels", []):
-        d, name, role = lv.get("datum"), lv.get("name", ""), lv.get("role")
-        if d not in datums or datums[d].axis != "y":
-            rep.bad("level", "V1", d or "?", f"{d} is not a horizontal datum of this drawing")
-            continue
-        if not PASCAL.match(name or ""):
-            rep.bad("level", "V3", name, f"level name {name!r} is not PascalCase")
-            continue
-        if role in ("site_input", "check_only"):
-            if d not in stated:
-                rep.warn("V6", name, f"{name} is held as an input, but the drawing states no level at {d}")
-            if name in used_names:
-                rep.bad("level", "V3", name, f"{name} is used twice")
-                continue
-            dec.pin[d] = name
-            used_names.add(name)
-            if role == "check_only":
-                dec.reference_only.add(d)
-        rep.ok("level")
-
     # The parts, from the regions / entities the answer names; which datums belong only to EXISTING work.
     parts, unknown_ids = resolve_parts(an, answer) if answer.get("components") else ({}, [])
     if unknown_ids:
@@ -152,6 +195,43 @@ def apply(an: Analysis, answer: dict, base_decisions: Decisions | None = None, h
         if part.level != "assembly" or not any(q.parent == part.name for q in parts.values()):
             (existing_d if part.existing else proposed_d).update(part.datums)
     existing_only = existing_d - proposed_d
+
+    # ── levels (V1, V6): site inputs pinned, water levels checked only ─────────────
+    stated = {d for d, *_ in an.stated_levels}
+    used_names: set[str] = set()
+    own = structure_lines(an, answer, parts)
+    for lv in answer.get("levels", []):
+        d, name, role = lv.get("datum"), lv.get("name", ""), lv.get("role")
+        if d not in datums or datums[d].axis != "y":
+            rep.bad("level", "V1", d or "?", f"{d} is not a horizontal datum of this drawing")
+            continue
+        if not PASCAL.match(name or ""):
+            rep.bad("level", "V3", name, f"level name {name!r} is not PascalCase")
+            continue
+        if role == "check_only" and d in own:
+            # Held fixed and never set out from: right for a level the structure is only checked against (a water level), wrong for a line the
+            # structure is drawn on. When a size the answer defines ends on the line, that size could never move it (and would become a result):
+            # the size, which was asked for by name, wins, and the line is left free. A line that is only a face keeps what was said — a level
+            # input — and the answer is told what it chose.
+            kind, what = own[d]
+            if kind == "size":
+                rep.warn("V6", name, f"{name} was given as check_only, but {d} is {what}: a check-only level is held fixed and never "
+                                     f"set out from, so that size could not move it. The size wins: the line is left free (derived)")
+                role = "derived"
+            else:
+                rep.warn("V6", name, f"{name} is held as a level, and {d} is {what}: a check-only level is held fixed and never set out from. "
+                                     f"If it should follow the sizes of the part instead, make it derived")
+        if role in ("site_input", "check_only"):
+            if d not in stated:
+                rep.warn("V6", name, f"{name} is held as an input, but the drawing states no level at {d}")
+            if name in used_names:
+                rep.bad("level", "V3", name, f"{name} is used twice")
+                continue
+            dec.pin[d] = name
+            used_names.add(name)
+            if role == "check_only":
+                dec.reference_only.add(d)
+        rep.ok("level")
 
     # ── parameters naming a candidate (V1, V2, V3) ─────────────────────────────────
     # A candidate is every equal size of one kind; a parameter may name only some of its OCCURRENCES (gap ids): those

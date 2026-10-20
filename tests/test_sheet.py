@@ -3,6 +3,7 @@ title block, a watermark — found without touching the drawing, on a built shee
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import ezdxf
@@ -28,9 +29,10 @@ def text(msp, s, x, y, h=250.0, layer="TEXT"):
     msp.add_text(s, height=h, dxfattribs={"layer": layer, "insert": (x, y)})
 
 
-def built_sheet(path: Path) -> Path:
+def built_sheet(path: Path, automatic_detail_dims: bool = False) -> Path:
     """A1 sheet at 1:100, drawn in mm: an elevation with its plan aligned under it, a detail drawn 4× larger (1:25),
-    a table, notes and a title block in a ruled column on the right, a stamp repeated across the sheet."""
+    a table, notes and a title block in a ruled column on the right, a stamp repeated across the sheet. The detail's dimensions
+    carry their number as text, or (automatic_detail_dims) are measured by CAD with a linear factor and show it only in the block they are drawn with."""
     doc = ezdxf.new("R2010", setup=True)
     doc.header["$INSUNITS"] = 4
     msp = doc.modelspace()
@@ -62,7 +64,10 @@ def built_sheet(path: Path) -> Path:
     for p1, p2, base, angle, s in [((40000, 38000), (41600, 38000), (0, 39500), 0, "400"),
                                    ((41600, 30000), (41600, 38000), (43500, 0), 90, "2000"),
                                    ((39200, 28400), (42400, 28400), (0, 27200), 0, "800")]:
-        msp.add_linear_dim(base=base, p1=p1, p2=p2, angle=angle, text=s, dxfattribs={"layer": "DIM"}).render()
+        if automatic_detail_dims:  # no text of its own: the true size is the measurement times the factor, drawn in the block
+            msp.add_linear_dim(base=base, p1=p1, p2=p2, angle=angle, override={"dimlfac": 0.25}, dxfattribs={"layer": "DIM"}).render()
+        else:
+            msp.add_linear_dim(base=base, p1=p1, p2=p2, angle=angle, text=s, dxfattribs={"layer": "DIM"}).render()
     text(msp, "DETAIL OF WALL (SCALE 1:25)", 37500, 25500, 400)
     # TABLE: 4 rows × 3 columns with words in the cells, its heading above it
     for k in range(5):
@@ -209,6 +214,16 @@ def test_a_detail_drawn_at_another_scale_reads_its_own_units(sheet):
     assert detail.units_mm == pytest.approx(0.25)
     assert any("another scale" in q for q in detail.questions)
     assert next(g for g in lay.views() if g.name == "ELEVATION").units_mm is None  # the sheet's own
+
+
+def test_a_detail_whose_automatic_dimensions_show_the_number_only_in_their_block_reads_its_own_units(tmp_path):
+    dr, _ = read_dxf(built_sheet(tmp_path / "auto.dxf", automatic_detail_dims=True))
+    lay = segment(dr)
+    detail = next(g for g in lay.views() if g.name == "DETAIL OF WALL")
+    dims = [dr.items[i] for i in detail.items if dr.items[i].dxftype == "DIMENSION"]
+    assert dims and not any(re.search(r"\d", (d.text or "").replace("<>", "")) for d in dims)  # the number is not in the dimension's own text
+    assert detail.units_mm == pytest.approx(0.25)
+    assert next(g for g in lay.views() if g.name == "ELEVATION").units_mm is None  # the sheet's own, whose automatic dimensions agree
 
 
 def test_titles_and_their_underlines_go_with_the_view_they_name(sheet):

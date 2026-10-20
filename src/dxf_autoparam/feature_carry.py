@@ -141,6 +141,12 @@ def _assemble(sm, new_dr, img: dict[int, int], cps: dict[int, list[int]], op) ->
         notes += [f"{uid}: {n}" for n in nts]
         new.units[umap[uid]].answer = ans
         new.units[umap[uid]].prog = None
+        if not probs:  # the unit at the new count has its design intent derived as the old one had: what is compared below is like with like
+            try:
+                new.units[umap[uid]].answer, _found = new._with_intent(umap[uid], ans)
+                new.units[umap[uid]].prog = None
+            except (KeyError, ValueError, ArithmeticError, AssertionError):
+                new.units[umap[uid]].answer, new.units[umap[uid]].prog = ans, None
     if problems:
         blocks = [p for p in problems if isinstance(p, PlanBlock)]
         raise FeatureRefused(problems[:MAX_REFUSALS], question={
@@ -350,6 +356,11 @@ class UnitMap:
     # the answer
 
     def translate(self, answer: dict) -> tuple[dict, list[str], list[str]]:
+        from .design_intent import strip
+
+        # the plans the engine derived (design intent) are not promises anybody made: the new count gets its own, derived again when the answer
+        # is committed — only a person's plans stand in the way of a change of count
+        answer = strip(answer)
         out = copy.deepcopy(answer)
         probs: list[str] = []
         notes: list[str] = []

@@ -420,16 +420,17 @@ def test_a_refused_edit_keeps_every_value_the_person_set(tmp_path):
 
 def test_an_accepted_plan_is_undone_redone_saved_and_reopened(tmp_path):
     sm, uid, g = box_sheet(tmp_path)
+    mine = lambda sm_: [p for p in sm_.unit(uid).answer.get("plans", []) if p["anchor"].get("source") != "design intent"]  # what a person asked for
     sm.apply_plan(uid, {"instruction": "Reduce the clear span to 2500, the left side stays fixed. " + FOLLOW_ALL})
-    assert sm.undo() and not sm.unit(uid).answer.get("plans") and not sm.values
-    assert sm.redo() and sm.unit(uid).answer["plans"][0]["status"] == "accepted"
+    assert sm.undo() and not mine(sm) and not sm.values  # the engine's own default (design intent) was there before, and stays: it is not what was undone
+    assert sm.redo() and mine(sm)[0]["status"] == "accepted"
     assert off_intent(sm, g, 2500, "start_fixed") == []
     project = tmp_path / "box.autoparam.json"
     sm.save(str(project))
     again = SheetModel.load(str(project), dxf=g["path"])
     u = again.unit(uid)
-    assert u.answer["plans"][0]["anchor"]["policy"] == "start_fixed"
-    assert u.prog.intent["plans"][0]["ok"]  # compiled and measured again on opening, no model involved
+    assert mine(again)[0]["anchor"]["policy"] == "start_fixed"
+    assert next(r for r in u.prog.intent["plans"] if r["id"] == mine(again)[0]["id"])["ok"]  # compiled and measured again on opening, no model involved
     assert off_intent(again, g, 2500, "start_fixed") == []
     assert again.apply({f"{uid}.ClearSpan": 3200.0}).ok and off_intent(again, g, 3200, "start_fixed") == []
 

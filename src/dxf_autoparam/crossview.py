@@ -24,13 +24,14 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import os
 import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
 
-from . import generic
+from . import design_intent, generic
 from .analyse import analyse
 from .cadjson import entity_id
 from .display import primitives
@@ -43,7 +44,7 @@ from .plan import accept, build_plan, clashes, pairs_of, plan_errors_at, with_pl
 from .program import ExprError, Program
 from .regen import Regenerated, regenerate_program
 from .sheet import Group, SheetLayout, segment, view_drawing
-from .validator import GENERIC, PASCAL, Report, apply, baseline
+from .validator import GENERIC, PASCAL, Finding, Report, apply, baseline, rescale_values
 
 EMPTY_ANSWER = {"structure_type": "", "family": "other", "views": [], "summary": "", "components": [], "line_roles": [], "levels": [],
                 "parameters": [], "datum_formulas": [], "relations": [], "behaviours": [], "constraints": [], "questions": []}
@@ -210,7 +211,9 @@ class SheetModel:
         self.values: dict[str, dict[str, float]] = {}  # unit → parameter → value (only what differs from its defaults)
         self.history: list[dict] = []
         self.future: list[dict] = []
+        self._trial = 0  # > 0 while an answer is only being tried (`_trial_builder`): nothing the person has may change
         self._live: tuple[frozenset[str], int] | None = None  # (values, revision) of the last live step: the next one of them joins it
+        self._settle_cache: dict[tuple[int, str, str], dict] = {}  # (revision, unit, size) → the ways to settle it found on that revision (settle_options)
         self.accepted: set[tuple[str, str]] = set()  # projection links a person (or the AI, checked) took although weak
         self.relations: list[dict] = []  # views that show the same structure / a detail of another (semantic, not set-out)
         # The plan an agent run STATED for the sheet: what it took to be the same component or dimension in more than one view, how they
@@ -340,7 +343,15 @@ class SheetModel:
                 u.an.gaps[gid].cluster = cl
         assert u.an is not None
         if u.answer:  # the answer's own selection applies: parts it keeps as drawn are held, sizes it keeps as drawn are not inputs (unlock_part undoes it)
+            u.answer, ratio = rescale_values(u.an, u.answer)  # values saved when the unit was read at another scale are measured again (said below)
+            if ratio is not None and not self._trial:  # (a candidate being tried changes nothing the person has)
+                for name, v in (self.values.get(u.id) or {}).items():  # a size a person had stepped was on the old scale too
+                    if name in {p.get("name") for p in u.answer.get("parameters", [])}:
+                        self.values[u.id][name] = v / ratio
             u.prog, u.report = apply(u.an, u.answer)
+            if ratio is not None:
+                u.report.findings.append(Finding("V2", "info", u.id, f"the unit is now read at its own scale: the values named for it before were {ratio:g} times what the drawing "
+                                                                     "measures, and are measured again (names, parts and levels are kept)"))
         else:
             u.report = Report()
             u.prog = baseline(u.an, rep=u.report)
@@ -447,10 +458,13 @@ class SheetModel:
             plans = [p for p in (u.answer or {}).get("plans", []) if p.get("status") == "accepted"]
             if plans:  # what a person accepted for this unit holds at the values asked for, not only at the ones tested
                 errors += [f"{uid}: {e}" for e in plan_errors_at(u.prog, plans, vals)]
-                moved_k = {k for k, p in r.pts.items() if any(abs(a[0] - b[0]) > 1e-9 or abs(a[1] - b[1]) > 1e-9
-                                                              for a, b in zip(p, u.sub.items[k].pts, strict=False))}
-                errors += [f"{uid}: {entity_id(u.sub.items[i])} now crosses {entity_id(u.sub.items[j])} — members run into each other"
-                           for i, j in clashes(u.prog, r.pts, moved_k)[:5]]
+                if any(not design_intent.derived(p) for p in plans):
+                    # the crossing check belongs to a plan a person accepted: the engine's own plans (design intent) say which side of a size stays and
+                    # must not make the unit stricter than it was — a size that crosses members was said, when the intent was derived, and is still allowed
+                    moved_k = {k for k, p in r.pts.items() if any(abs(a[0] - b[0]) > 1e-9 or abs(a[1] - b[1]) > 1e-9
+                                                                  for a, b in zip(p, u.sub.items[k].pts, strict=False))}
+                    errors += [f"{uid}: {entity_id(u.sub.items[i])} now crosses {entity_id(u.sub.items[j])} — members run into each other"
+                               for i, j in clashes(u.prog, r.pts, moved_k)[:5]]
             for k, p in r.pts.items():
                 s = u.back[k]
                 pts[s] = p
@@ -846,7 +860,26 @@ class SheetModel:
                     else "centre" if abs(da + 0.5) < 1e-6 and abs(db - 0.5) < 1e-6 else "slides" if abs(da - db) < 1e-6 else "other")
             out.append({"unit": uid, "from": a, "to": b, "moves": {a: round(da, 6), b: round(db, 6)}, "mode": mode,
                         "why": {"start": f"{a} stays, {b} moves", "end": f"{b} stays, {a} moves", "centre": "both lines move about the centre",
-                                "slides": "the size moves whole", "other": "the lines move unevenly"}[mode]})
+                                "slides": "the size moves whole", "other": "the lines move unevenly"}[mode],
+                        "intent": design_intent.explain(u.answer or {}, local), **self._open_direction(u, local)})
+        return out
+
+    @staticmethod
+    def _open_direction(u: Unit, local: str) -> dict:
+        """What the design intent could NOT give this size: its axis ended undecided (`undecided`: why, and the lines in the way), or it was left out of
+        its structure's growth (`left_out`: why) — and the choices a person already made about it (`settled`, each can be taken back)."""
+        ans = u.answer or {}
+        out: dict[str, Any] = {}
+        for ax in ans.get("intent_axes", []):
+            if ax.get("status") == "undecided" and local in (ax.get("drivers") or []):
+                out["undecided"] = {"axis": ax.get("axis"), "assembly": ax.get("assembly"), "evidence": ax.get("evidence") or [],
+                                    "blocked": ax.get("blocked") or [], "drivers": ax.get("drivers") or []}
+            elif local in [x.get("name") for x in ax.get("dropped") or []]:
+                out["left_out"] = {"axis": ax.get("axis"), "status": ax.get("status"),
+                                   "why": next(x.get("why") for x in ax["dropped"] if x.get("name") == local)}
+        mine = {s["choice"]: {"choice": s["choice"], "title": s["title"], "kind": s["kind"]} for s in ans.get("settled", []) if local in (s.get("drivers") or [])}
+        if mine:
+            out["settled"] = list(mine.values())
         return out
 
     def anchor(self, name: str, uid: str, mode: str) -> dict:
@@ -875,19 +908,176 @@ class SheetModel:
             self.commit_answer(uid, ans)
             u = self.unit(uid)
             assert u.prog is not None
-        plan = build_plan(u.prog, u.answer or ans, {"id": f"A_{local}", "driver": {"parameter": local, "pairs": pairs},
-                                                     "anchor": {"policy": policy, "source": "person"}}, sheet=self._plan_sheet(uid))
+        prog0, ans0 = self._plain(uid)
+        plan = build_plan(prog0, ans0, {"id": f"A_{local}", "driver": {"parameter": local, "pairs": pairs},
+                                        "anchor": {"policy": policy, "source": "person"}}, sheet=self._plan_sheet(uid))
         # this is a choice about one value: questions about attached parts are answered by what the set-out does now
         if plan["status"] == "needs_decision" and all(q["about"].startswith("attached:") for q in plan["questions"]):
             decisions = {q["about"]: "follow" for q in plan["questions"]}
-            plan = build_plan(u.prog, u.answer or ans, {"id": f"A_{local}", "driver": {"parameter": local, "pairs": pairs},
-                                                         "anchor": {"policy": policy, "source": "person"}, "decisions": decisions},
-                              sheet=self._plan_sheet(uid))
+            plan = build_plan(prog0, ans0, {"id": f"A_{local}", "driver": {"parameter": local, "pairs": pairs},
+                                            "anchor": {"policy": policy, "source": "person"}, "decisions": decisions}, sheet=self._plan_sheet(uid))
         if plan["status"] != "ready":
             raise SheetError(f"{name} cannot grow from its {mode} in {uid}: " + "; ".join(plan["conflicts"][:2] + [q["text"] for q in plan["questions"]][:1]))
-        self.commit_answer(uid, with_plan(u.answer or ans, accept(plan)))
+        self.commit_answer(uid, with_plan(ans0, accept(plan)))
         g = next(x for x in self.growth(name) if x["unit"] == uid)
         return {**g, "plan": plan["id"], "anchor_line": (plan.get("anchor") or {}).get("line")}
+
+    # ── an axis the design intent could not decide (design_intent.py): the ways to settle it, each tried for real ────────────────────
+
+    SETTLE_BUDGET_S = 60.0  # how long looking for ways to settle one axis may take (each is a whole unit built and checked)
+
+    def _local_name(self, name: str, uid: str) -> str:
+        shared = self._shared_by_name().get(name)
+        local = next((b.param for b in shared.bindings if b.unit == uid), None) if shared else name.split(".", 1)[1] if "." in name else None
+        if local is None:
+            raise SheetError(f"no local parameter for {name} in {uid}")
+        return local
+
+    def _dry_commit(self, uid: str, answer: dict, discard_values: bool = False) -> str:
+        """Whether the whole sheet would accept this answer for the unit, with nothing kept either way: "" when it would, else the reason."""
+        state, rev, depth, future, live = self._state(), self.revision, len(self.history), list(self.future), self._live
+        try:
+            self._commit_answer(uid, answer, None, discard_values)
+            return ""
+        except SheetError as exc:
+            return str(exc)
+        finally:
+            self._restore(state)
+            del self.history[depth:]
+            self.future, self.revision, self._live = future, rev, live
+            self.units[uid].prog = None  # built again from the answer it has, when something asks
+
+    def _try_settle(self, uid: str, local: str, base: dict, ctx: dict, edits: list[design_intent.Edit]) -> tuple[dict | None, str]:
+        """One way of settling the axis, tried for real: the answer written with it, the unit built, the intent derived around it, then the whole sheet
+        asked whether it would hold. (the choice with what it would do, "") when it settles the axis and breaks nothing; (None, why not) otherwise."""
+        dec, build, sheet = ctx["decision"], ctx["build"], ctx["sheet"]
+        title = design_intent.title_of(edits)
+        names = design_intent.names_of(dec)
+        relaxed = design_intent.apply_edits(base, edits, dec.axis, sorted(names))
+        try:
+            prog1, rep1 = build(relaxed)
+        except (KeyError, ExprError, ArithmeticError, ValueError, AssertionError) as exc:
+            return None, f"{title}: the unit does not build with it ({exc})"
+        now = {(e["code"], e["item"]): e["message"] for e in rep1.errors()}
+        new = [m for k, m in now.items() if k not in ctx["errors"]]
+        if new:
+            return None, f"{title}: it breaks something that held ({new[0][:160]})"
+        other = [p for p in ctx["intent"].plans if (p.get("driver") or {}).get("axis") not in (None, dec.axis)]
+        found = design_intent.resolve(prog1, relaxed, build, sheet=sheet, axes=(dec.axis,), seed=other)
+        got = design_intent.decisions_of(found, dec.axis, names)
+        if not got or any(d.status == "undecided" for d in got):
+            return None, f"{title}: it does not settle it ({'still undecided' if got else 'no size would be left to decide it'})"
+        for before in ctx["intent"].axes:  # what was decided stays decided
+            if before is dec or before.status == "undecided" or before.axis != dec.axis:
+                continue
+            if any(d.status == "undecided" for d in design_intent.decisions_of(found, before.axis, design_intent.names_of(before))):
+                return None, f"{title}: it would leave {', '.join(sorted(design_intent.names_of(before))[:3])} undecided"
+        try:
+            with_i, found = self._with_intent(uid, relaxed)  # the whole unit, both axes, as a commit will derive it
+        except (SheetError, KeyError, ExprError, ArithmeticError, ValueError, AssertionError) as exc:
+            return None, f"{title}: the intent cannot be worked out with it ({exc})"
+        got = design_intent.decisions_of(found, dec.axis, names)
+        if not got or any(d.status == "undecided" for d in got):
+            return None, f"{title}: it does not settle it once the whole unit is decided"
+        main = next((d for d in got if local in design_intent.names_of(d)), got[0])
+        prog2, _rep2 = build(with_i)
+        info = design_intent.describe(ctx["program"], prog2, edits, main, local)
+        if info["collateral"]:
+            return None, f"{title}: it would also stop {', '.join(info['collateral'])} being an input"
+        discards = sorted(n for n in self.values.get(uid, {}) if n not in prog2.params)
+        problem = self._dry_commit(uid, with_i, discard_values=bool(discards))
+        if problem:
+            return None, f"{title}: {problem.removeprefix('refused, nothing changed: ')[:240]}"
+        return {"id": design_intent.choice_id(edits), "title": title, "kinds": sorted({e.kind for e in edits}),
+                "edits": [{"kind": e.kind, "target": e.target, "lines": e.lines} for e in edits], **info,
+                "asked_in_growth": local in main.drivers, "discards": discards}, ""
+
+    def settle_options(self, name: str, uid: str) -> dict:
+        """The ways to settle a size whose direction of growth the design intent could not decide (no side could stay without breaking something):
+        changes only a person may make — leave a pinned level free, release a held part, read a size instead of setting it — each TRIED FOR REAL as
+        `design_intent._attempt` tries a side: written into the answer, the unit built, the intent derived around it, the whole sheet asked. Only what
+        settles the axis and breaks nothing is offered, with what it does (which side stays, what moves, what stops being an input); what was tried and
+        did not hold is said. Nothing is changed. Kept for the revision it was worked out on."""
+        import time
+
+        local = self._local_name(name, uid)
+        key = (self.revision, uid, local)
+        self._settle_cache = {k: v for k, v in self._settle_cache.items() if k[0] == self.revision}  # what was found on another revision is not true of this one
+        if key in self._settle_cache:
+            return self._settle_cache[key]
+        u = self.unit(uid)
+        base = design_intent.strip(u.answer or copy.deepcopy(EMPTY_ANSWER))
+        build = self._trial_builder(uid)
+        prog0, rep0 = build(base)
+        sheet = self._plan_sheet(uid)
+        intent = design_intent.resolve(prog0, base, build, sheet=sheet)
+        mine = [a for a in intent.axes if local in design_intent.names_of(a)]  # one value can belong to two structures (its occurrences lie in both)
+        dec = next((a for a in mine if a.status == "undecided"), mine[0] if mine else None)
+        out: dict[str, Any] = {"unit": uid, "name": name, "local": local, "revision": self.revision, "axis": dec.axis if dec else None,
+                               "assembly": dec.assembly if dec else None, "status": dec.status if dec else "none",
+                               "evidence": dec.evidence if dec else [], "blocked": dec.blocked if dec else [], "drivers": sorted(design_intent.names_of(dec)) if dec else [],
+                               "choices": [], "rejected": [], "notes": []}
+        if dec is None or dec.status != "undecided":
+            out["notes"].append(f"{local} is not a size whose direction is undecided" if dec is not None else f"{local} belongs to no structure's growth")
+            self._settle_cache[key] = out
+            return out
+        ctx = {"decision": dec, "build": build, "sheet": sheet, "intent": intent, "program": prog0,
+               "errors": {(e["code"], e["item"]) for e in rep0.errors()}}
+        sets, notes = design_intent.edits_for(base, dec)
+        out["notes"] += notes
+        started = time.monotonic()
+        for k, edits in enumerate(sets):
+            if time.monotonic() - started > self.SETTLE_BUDGET_S:
+                out["notes"].append(f"stopped after {int(time.monotonic() - started)} s: {len(sets) - k} more change(s) were not tried")
+                break
+            choice, why = self._try_settle(uid, local, base, ctx, edits)
+            if choice is not None:
+                out["choices"].append(choice)
+            else:
+                out["rejected"].append({"id": design_intent.choice_id(edits), "why": why})
+        rank = {"level": 0, "part": 1, "reading": 2}
+        out["choices"].sort(key=lambda c: (not c["asked_in_growth"], len(c["left_out"]), c["status"] != "decided", len(c["stops_being_input"]),
+                                           min(rank[k] for k in c["kinds"]), c["id"]))
+        self._settle_cache[key] = out
+        return out
+
+    def settle(self, name: str, uid: str, choice: str, discard_values: bool = False) -> dict:
+        """Settle an undecided direction with one of the ways `settle_options` found: written as the person's own decision (the answer changes — a level's
+        role, a part released, a size read — and is recorded in `settled`), the intent derived around it, committed only if the whole sheet still holds,
+        in ONE step (one undo takes it back). Refused, with nothing changed, if the sheet changed since, or it no longer settles the axis."""
+        opts = self.settle_options(name, uid)
+        pick = next((c for c in opts["choices"] if c["id"] == choice), None)
+        if pick is None:
+            raise SheetError(f"{choice} does not settle {name} on this sheet (it changed since, or it never held): ask for the ways again")
+        if pick["discards"] and not discard_values:
+            raise SheetError(f"it would discard the value you set for {', '.join(pick['discards'])}: confirm that, or reset it first")
+        u = self.unit(uid)
+        edits = [design_intent.Edit(e["kind"], e["target"], list(e.get("lines") or [])) for e in pick["edits"]]
+        relaxed = design_intent.apply_edits(u.answer or {}, edits, opts["axis"], opts["drivers"])
+        depth = len(self.history)
+        res = self.commit_answer(uid, relaxed, discard_values=discard_values)
+        mine = [a for a in (res.get("intent") or {}).get("axes", []) if a["axis"] == opts["axis"]
+                and (set(a["drivers"]) | {x["name"] for x in a["dropped"]}) & set(opts["drivers"])]
+        if res.get("intent_skipped") or not mine or any(a["status"] == "undecided" for a in mine):
+            if len(self.history) > depth:  # committed, but without the direction it was for: put back, not a half-made choice
+                self.undo()
+                self.future.clear()
+            raise SheetError(f"{pick['title']} was not kept: " + (res.get("intent_skipped") or "it no longer settles the direction once the sheet is checked"))
+        self._settle_cache = {}
+        g = next((x for x in self.growth(name) if x["unit"] == uid), {})
+        return {**g, "choice": pick["id"], "title": pick["title"]}
+
+    def unsettle(self, uid: str, choice: str) -> dict:
+        """Take a settled choice back: what it changed is written back (the level pinned again, the part held again, the size an input), the intent
+        derived again, one undoable step."""
+        u = self.unit(uid)
+        try:
+            answer = design_intent.take_back(u.answer or {}, choice)
+        except ValueError as exc:
+            raise SheetError(str(exc)) from exc
+        self.commit_answer(uid, answer)
+        self._settle_cache = {}
+        return {"unit": uid, "choice": choice, "revision": self.revision}
 
     def _plan_sheet(self, uid: str) -> dict:
         """What a plan needs to know of the sheet: its revision, the unit, which views entities are on, shared names."""
@@ -908,13 +1098,13 @@ class SheetModel:
             p = self._shared_by_name().get(shared.get(local, ""))
             return sorted({b.unit for b in p.bindings if b.unit != uid}) if p else []
 
-        return {"revision": self.revision, "unit": uid, "views_of": views_of, "shared": shared, "other_units": other_units}
+        kinds = sorted({g.view_type for g in self.layout.groups if g.id in u.views})
+        return {"revision": self.revision, "unit": uid, "views_of": views_of, "shared": shared, "other_units": other_units, "view_types": kinds}
 
     def plan(self, uid: str, request: dict) -> dict:
         """A plan for an instruction (or a structured request) on one unit — read, resolved, predicted; nothing changes."""
-        u = self.unit(uid)
-        assert u.prog is not None
-        return build_plan(u.prog, u.answer or copy.deepcopy(EMPTY_ANSWER), request, sheet=self._plan_sheet(uid))
+        prog0, ans0 = self._plain(uid)
+        return build_plan(prog0, ans0, request, sheet=self._plan_sheet(uid))
 
     def apply_plan(self, uid: str, request: dict, expected_revision: int | None = None, discard_values: bool = False) -> dict:
         """Make a plan binding and the value asked for real — or nothing. The plan is built again from the request and
@@ -923,13 +1113,12 @@ class SheetModel:
         undo takes both back). Refused: SheetError with the reasons, the sheet as it was."""
         if expected_revision is not None and expected_revision != self.revision:
             raise SheetError(f"stale: the sheet changed since this plan was made (revision {expected_revision} → {self.revision}); plan again")
-        u = self.unit(uid)
-        assert u.prog is not None
-        plan = build_plan(u.prog, u.answer or copy.deepcopy(EMPTY_ANSWER), request, sheet=self._plan_sheet(uid))
+        prog0, ans0 = self._plain(uid)
+        plan = build_plan(prog0, ans0, request, sheet=self._plan_sheet(uid))
         if plan["status"] != "ready":
             raise SheetError(f"plan {plan['id']} is {plan['status']}: " + "; ".join(plan["conflicts"][:3] + [q["text"] for q in plan["questions"]][:3]))
         state, rev, depth = self._state(), self.revision, len(self.history)
-        res = self.commit_answer(uid, with_plan(u.answer or copy.deepcopy(EMPTY_ANSWER), accept(plan)), discard_values=discard_values)
+        res = self.commit_answer(uid, with_plan(ans0, accept(plan)), discard_values=discard_values)
         want = (plan.get("driver") or {}).get("requested_value")
         applied = None
         if want is not None:
@@ -1143,9 +1332,59 @@ class SheetModel:
         an.cache.clear()
         return an
 
+    def _trial_builder(self, uid: str):
+        """`build(answer) → (program, report)`: how a candidate answer is tried for real — the unit built from it — with the unit exactly as it was
+        afterwards (its answer, program, report and the status of every value it shares)."""
+        u = self.units[uid]
+
+        def build(ans: dict):
+            keep = (u.answer, u.prog, u.report)
+            bound = [(b, b.status, b.reason) for p in self.shared.values() for b in p.bindings if b.unit == uid]
+            u.answer, u.prog = ans, None
+            self._trial += 1
+            try:
+                self._build(u)
+                assert u.prog is not None
+                return u.prog, u.report
+            finally:
+                self._trial -= 1
+                u.answer, u.prog, u.report = keep
+                for b, status, reason in bound:
+                    b.status, b.reason = status, reason
+
+        return build
+
+    def _with_intent(self, uid: str, answer: dict) -> tuple[dict, design_intent.Intent]:
+        """The answer with the design intent of its sizes written in (design_intent.py): which side of each size stays, decided by evidence and
+        tried for real. The program the evidence is read from is the answer's own, without any plan the engine derived earlier."""
+        self.unit(uid)
+        build = self._trial_builder(uid)
+        base = design_intent.strip(answer)
+        prog, _rep = build(base)
+        found = design_intent.resolve(prog, base, build, sheet=self._plan_sheet(uid))
+        return design_intent.with_intent(base, found), found
+
+    def _plain(self, uid: str) -> tuple[Program, dict]:
+        """The unit's program and answer WITHOUT the plans the engine derived (design intent): what a person's plan is built on. What a person asks
+        for is worked out on the drawing as it is, never on the engine's own default — the intent is derived again around their choice."""
+        u = self.unit(uid)
+        ans = u.answer or copy.deepcopy(EMPTY_ANSWER)
+        plain = design_intent.strip(ans)
+        if plain == ans:
+            assert u.prog is not None
+            return u.prog, ans
+        prog, _rep = self._trial_builder(uid)(plain)
+        return prog, plain
+
     def commit_answer(self, uid: str, answer: dict, expected_revision: int | None = None, discard_values: bool = False,
-                      keep_unnamed_as_drawn: bool = False) -> dict:
+                      keep_unnamed_as_drawn: bool = False, intent: bool = True) -> dict:
         """Replace a unit's parametrization only if the WHOLE sheet still holds; otherwise nothing changes.
+
+        With `intent` (the default) the design intent of the unit's sizes — which side of each stays when it changes, what moves with it — is derived
+        first and committed with the answer. It is an addition: if the answer does not hold WITH it, the answer is committed without it and the
+        result says why (`intent_skipped`); a plan a person made is never replaced by it.
+
+        The rules below are those of the answer itself:
 
         Refused (SheetError, the state untouched) when: the sheet changed since the work began (`expected_revision`);
         the unit no longer regenerates; a size it shares with other views stops driving here (that view would stop
@@ -1154,6 +1393,76 @@ class SheetModel:
 
         `keep_unnamed_as_drawn`: in the same step, the measured sizes nobody named or used are kept as drawn (generic.py) — the unit is
         left with the values somebody chose. Only when the drawing comes out exactly as it was; otherwise they stay inputs, and it is said."""
+        if not intent or os.environ.get("AUTOPARAM_DESIGN_INTENT", "").strip().lower() in ("0", "off", "no", "false"):
+            return self._commit_answer(uid, answer, expected_revision, discard_values, keep_unnamed_as_drawn)
+        base = design_intent.strip(answer)
+        skipped = ""
+        found = None
+        try:
+            with_i, found = self._with_intent(uid, answer)
+        except (SheetError, KeyError, ExprError, ArithmeticError, ValueError, AssertionError) as exc:  # the intent is an addition, never the reason a commit fails
+            with_i, skipped = None, f"the design intent could not be worked out: {type(exc).__name__}: {exc}"
+        if with_i is not None and found is not None and (found.plans or found.axes):
+            try:
+                res = self._commit_answer(uid, with_i, expected_revision, discard_values, keep_unnamed_as_drawn)
+                return {**res, "intent": found.as_dict()}
+            except SheetError as exc:
+                skipped = f"the design intent was not kept: {exc}"
+        res = self._commit_answer(uid, base, expected_revision, discard_values, keep_unnamed_as_drawn)
+        if skipped:
+            res["intent_skipped"] = skipped
+        elif found is not None:
+            res["intent"] = found.as_dict()
+        return res
+
+    def derive_missing_intent(self, progress=None) -> dict:
+        """Work saved before the design intent existed (or written without it) gets it when it is opened: at the drawn values nothing moves, only what a
+        change of a size does to the drawing. It is not a step of the person's — the undo history is as it was. Units whose intent is derived are not
+        looked at again (their answer says so, `intent_axes`)."""
+        todo = [uid for uid, u in self.units.items() if u.answer and u.answer.get("parameters") and "intent_axes" not in u.answer]
+        if not todo:
+            return {}
+        depth = len(self.history)
+        out: dict[str, Any] = {}
+        for n, uid in enumerate(todo, 1):
+            if progress is not None:
+                progress(f"working out which side of each size stays: {uid} ({n} of {len(todo)})")
+            out.update(self.resolve_intent(uid))
+        del self.history[depth:]
+        return out
+
+    def resolve_intent(self, uid: str | None = None) -> dict:
+        """Derive the design intent of every parametrized unit (or one) and commit what changed — ONE undoable step for the lot. For work that was
+        parametrized before the intent was derived, or after a person changed what the intent rests on. Returns, per unit, what was decided."""
+        uids = [uid] if uid else [k for k, u in self.units.items() if u.answer and u.answer.get("parameters")]
+        for k in uids:
+            if k not in self.units:
+                raise SheetError(f"no unit {k}")
+        depth = len(self.history)
+        out: dict[str, Any] = {}
+        for k in uids:
+            u = self.unit(k)
+            if not u.answer:
+                continue
+            try:
+                with_i, found = self._with_intent(k, u.answer)
+            except (SheetError, KeyError, ExprError, ArithmeticError, ValueError, AssertionError) as exc:
+                out[k] = {"skipped": f"{type(exc).__name__}: {exc}"}
+                continue
+            if with_i == u.answer:
+                out[k] = {**found.as_dict(), "changed": False}
+                continue
+            try:
+                self._commit_answer(k, with_i)
+                out[k] = {**found.as_dict(), "changed": True}
+            except SheetError as exc:
+                out[k] = {"skipped": str(exc)}
+        if len(self.history) > depth + 1:  # one step for the lot: undo goes back to before any of them
+            del self.history[depth + 1:]
+        return out
+
+    def _commit_answer(self, uid: str, answer: dict, expected_revision: int | None = None, discard_values: bool = False,
+                       keep_unnamed_as_drawn: bool = False) -> dict:
         if expected_revision is not None and expected_revision != self.revision:
             raise SheetError(f"stale: the sheet changed while this was being worked out (revision {expected_revision} → {self.revision}); "
                              "nothing was applied — run it again on the current sheet")

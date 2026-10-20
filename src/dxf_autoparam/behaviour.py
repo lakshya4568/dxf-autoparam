@@ -200,22 +200,14 @@ def behaviour_report(sm, changes: dict[str, float], sr=None, plans: bool = True)
         # interfaces between named parts: what touched still touches
         parts = prog.intent.get("parts") or {}
         if parts:
-            from .assembly import interfaces
+            from .assembly import contact_gap, interfaces
 
             for row in interfaces(prog, parts)[:80]:
                 a, b = row["parts"]
-                ea = [i for i in comps.get(a, ()) if items[i].role.value == "structural"]
-                eb = [i for i in comps.get(b, ()) if items[i].role.value == "structural"]
-                if not ea or not eb:
-                    continue
-                segs_a = [s for i in ea for s in _segments(items[i], pts1.get(i, items[i].pts))]
-                pts_b = [p for i in eb for p in pts1.get(i, items[i].pts)]
-                dmin = min((_seg_dist(p, s[0], s[1]) for p in pts_b for s in segs_a), default=math.inf)
-                note(
-                    "interfaces",
-                    dmin <= tol * 2,
-                    {"unit": uid, "parts": [a, b], "kind": row["kind"], "gap_mm": round(dmin * um, 2) if dmin < math.inf else None},
-                )
+                # measured where the contact was observed — on the lines the two outlines run along — not between whatever entities each part owns:
+                # the edge two parts share belongs to neither's entity set, and reading it so called a contact of 4850 mm "8692 mm apart"
+                gap = contact_gap(parts, row, d1)
+                note("interfaces", gap <= tol * 2, {"unit": uid, "parts": [a, b], "kind": row["kind"], "gap_mm": round(gap * um, 2)})
         # held / existing geometry
         held_lines = {d for d, o in prog.origin.items() if o in ("held", "existing")}
         if held_lines:
@@ -276,8 +268,10 @@ def _annotations(model, items, pts0, pts1, tol, um, uid, back, note) -> None:
             anchor0 = a.anchor
             if anchor0 is None or not segs:
                 continue
-            # the attaching point after the change: the leader's tip, or the note's own anchor carried with it
-            k_item = a.items[1] if a.attachment == "geometry" and len(a.items) > 1 else main
+            # the attaching point after the change: the leader's tip (the first vertex of the LEADER, wherever it is among the annotation's items: a
+            # note of two lines has two texts before its leader), or the note's own anchor carried with it
+            leader = next((i for i in a.items if items[i].dxftype in ("LEADER", "MULTILEADER")), None)
+            k_item = leader if a.attachment == "geometry" and leader is not None else main
             it_k = items[k_item]
             p_after = pts1.get(k_item, it_k.pts)[0]
             d0 = min(_seg_dist(anchor0, *s) for s in _segments(tgt, tgt.pts)) if _segments(tgt, tgt.pts) else 0.0

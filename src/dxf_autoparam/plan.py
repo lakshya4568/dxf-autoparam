@@ -470,7 +470,9 @@ def parameter_pairs(
 def drives_pairs(prog: Program, name: str, pairs: list[tuple[str, str]]) -> list[tuple[str, str]]:
     """The pairs the value does NOT drive 1 mm per mm (empty: it drives every one)."""
     r = rates(prog, name)
-    return [(a, b) for a, b in pairs if abs((r.get(b, 0.0) - r.get(a, 0.0)) - 1.0) > 1e-6]
+    v = line_values_mm(prog)
+    return [(a, b) for a, b in pairs
+            if abs(((r.get(b, 0.0) - r.get(a, 0.0)) if v[a] <= v[b] else (r.get(a, 0.0) - r.get(b, 0.0))) - 1.0) > 1e-6]
 
 
 # ── the plan ─────────────────────────────────────────────────────────────────────
@@ -592,7 +594,7 @@ def _trial(prog: Program, parts: dict[str, Part], name: str, pairs, axis: str, p
         prog.invalidate()
     return {"policy": policy, "centre": centre, "available": st.ok, "why": st.why if not st.ok else POLICY_WORDS[policy],
             "anchor_line": st.root, "rewrites": len(st.written), "parts": eff, "lines_moved": len(moved),
-            "conflicts": st.conflicts[:3]}
+            "conflicts": st.conflicts[:3], "blocked": st.blocked[:12]}
 
 
 def _question(qid: str, about: str, text: str, options: list[str], recommended: str | None = None, why: str = "") -> dict:
@@ -669,17 +671,20 @@ def build_plan(prog: Program, answer: dict, request: dict, sheet: dict | None = 
     if name:
         prm = prog.params[name]
         pairs = [cast(tuple[str, str], tuple(p)) for p in drq.get("pairs") or pairs_of(prog, answer, name)]
-        axis = an.datums[pairs[0][0]].axis if pairs else None
-        if pairs and any(an.datums[a].axis != axis for a, _b in pairs):
+        # occurrences the value was asked for and the plain set-out could not follow: the anchor's set-out is what makes them follow
+        extra = [cast(tuple[str, str], tuple(p)) for p in drq.get("extra_pairs") or [] if tuple(p) not in pairs and all(x in an.datums for x in p)]
+        axis = an.datums[(pairs or extra)[0][0]].axis if (pairs or extra) else None
+        if (pairs or extra) and any(an.datums[a].axis != axis for a, _b in pairs + extra):
             plan["conflicts"].append(f"{name}'s occurrences lie on both axes: plan one axis at a time")
         lost = drives_pairs(prog, name, pairs)
         if lost:
             plan["conflicts"].append(f"{name} does not drive {', '.join(f'{a}–{b}' for a, b in lost[:4])} (it is worked out there)")
+        pairs = pairs + extra
         row = next((p for p in answer.get("parameters", []) if p.get("name") == name), {})
         plan["driver"] = {"parameter": name, "label": prm.label, "kind": prm.kind, "unit": prm.unit, "value": round(prm.value, 6),
                           "requested_value": None if req_value is None else round(float(req_value), 6),
                           "candidate": row.get("candidate"), "occurrences": row.get("occurrences"),
-                          "pairs": [list(p) for p in pairs], "axis": axis, "source": how or "request"}
+                          "pairs": [list(p) for p in pairs], "extra_pairs": [list(p) for p in extra], "axis": axis, "source": how or "request"}
     else:
         pairs, axis = [], None
 
@@ -836,6 +841,11 @@ def build_plan(prog: Program, answer: dict, request: dict, sheet: dict | None = 
             ask(f"ask:{k + 1}", q["text"].strip(), [str(o) for o in q.get("options") or []], why=q.get("why") or "")
     fixed_parts = {d["target"] for d in dirs if d["kind"] == "part" and d["mode"] in FIXED_MODES and d["status"] == "accepted"}
     followers = {d["target"] for d in dirs if d["kind"] == "part" and d["mode"] in MOVING_MODES and d["status"] == "accepted"}
+    if name and axis and parts and prog.params[name].kind != "level":
+        # the directives above (a generic "what touches it follows", a person's answers) have just named more parts that move with the assembly:
+        # its lines are worked out again, or the anchor below would be tried on a smaller assembly than the one that moves
+        members = assembly_lines(prog, parts, core | followers, axis, seed={x for p in pairs for x in p}, exclude=fixed_parts)
+        attached = _attached(prog, parts, members, core | followers, axis)
     # ── 6. conflicts between directives, and with the driver ──
     by_target: dict[str, list[dict]] = {}
     for d in dirs:
@@ -970,7 +980,8 @@ def _decide_anchor(prog, plan, request, reading, decisions, dirs, parts, name, p
     src = want.get("source", "request") if want.get("policy") else ""
     if not want.get("policy"):
         prior = next((p for p in (answer or {}).get("plans", []) if p.get("status") == "accepted"
-                      and (p.get("driver") or {}).get("parameter") == name and (p.get("anchor") or {}).get("policy")), None)
+                      and (p.get("driver") or {}).get("parameter") == name and (p.get("anchor") or {}).get("policy")
+                      and (p.get("anchor") or {}).get("source") != "design intent"), None)  # the engine's own default is not a decision: words outrank it
         if prior:
             want, src = {"policy": prior["anchor"]["policy"], "centre": prior["anchor"].get("centre")}, "accepted before"
         elif reading.get("anchor"):
@@ -1119,17 +1130,23 @@ def prepare_plans(prog: Program, answer: dict, parts: dict[str, Part]) -> dict:
     an = prog.analysis
     # exclude → held (its lines constants, shared lines split off: outside the edit, as built); keep_fixed and
     # annotations_only → pinned: it does not move when THIS plan's value changes, and stays parametric otherwise
-    out: dict = {"hold": set(), "pin": set(), "constraints": [], "rows": [], "groups": {}}
+    out: dict = {"hold": set(), "pin": set(), "pin_of": {}, "constraints": [], "rows": [], "groups": {}}
     plans = [p for p in answer.get("plans", []) if p.get("status") == "accepted"]
     for plan in plans:
         row = {"id": plan.get("id"), "ok": True, "problems": [], "stack": None}
         out["rows"].append(row)
         drv = plan.get("driver") or {}
         name = drv.get("parameter")
+        derived = (plan.get("anchor") or {}).get("source") == "design intent"  # the engine's own: written for the parametrization of the day
         dirs = [d for d in plan.get("directives", []) if d.get("status") == "accepted"]
         for d in dirs:
             if d["kind"] == "part" and d["target"] in parts and d["mode"] in FIXED_MODES:
-                out["hold" if d["mode"] == "exclude" else "pin"].add(d["target"])
+                if d["mode"] == "exclude":
+                    out["hold"].add(d["target"])
+                elif derived:  # the engine's own plan keeps a part still for ITS assembly: another assembly's value moving that part is no conflict
+                    out["pin_of"].setdefault(row["id"], set()).add(d["target"])
+                else:
+                    out["pin"].add(d["target"])
             if d["kind"] == "part" and d["mode"] in ("no_parameter", "exclude"):
                 own = [n for n, q in prog.params.items() if q.source == "ai" and q.component == d["target"] and n != name]
                 if own:
@@ -1139,29 +1156,36 @@ def prepare_plans(prog: Program, answer: dict, parts: dict[str, Part]) -> dict:
                     out["constraints"].append({"type": "connected", "components": [d["target"], other], "datums": [],
                                                "description": f"{plan.get('id')}: {d['target']} stays connected to {other}", "confidence": 1.0})
         if not name or name not in prog.params:
-            row["problems"].append(f"the driver {name} is not a value of the program (removed or renamed since the plan was made)")
+            if not derived:  # a derived plan whose value is gone is simply not needed any more
+                row["problems"].append(f"the driver {name} is not a value of the program (removed or renamed since the plan was made)")
             continue
         pairs = [cast(tuple[str, str], tuple(p)) for p in drv.get("pairs") or pairs_of(prog, answer, name)]
+        extra = {tuple(p) for p in drv.get("extra_pairs") or []}  # asked for and not yet followed: the anchor's set-out makes them follow
         bad = [p for p in pairs if p[0] not in an.datums or p[1] not in an.datums]
         if bad or not pairs:
-            row["problems"].append(f"{name}: its occurrences {bad or 'none'} are not lines of this drawing")
+            if not derived:
+                row["problems"].append(f"{name}: its occurrences {bad or 'none'} are not lines of this drawing")
             continue
-        lost = drives_pairs(prog, name, pairs)
+        lost = drives_pairs(prog, name, [p for p in pairs if p not in extra])
         if lost:
-            row["problems"].append(f"{name} does not drive {', '.join(f'{a}–{b}' for a, b in lost[:4])}")
+            if not derived:
+                row["problems"].append(f"{name} does not drive {', '.join(f'{a}–{b}' for a, b in lost[:4])}")
             continue
         anc = plan.get("anchor") or {}
         if prog.params[name].kind == "level" or not anc.get("policy") or anc["policy"] == "as_set_out":
             continue
         axis = an.datums[pairs[0][0]].axis
-        out["groups"].setdefault(axis, {"items": []})["items"].append((row, Driver(name, pairs, anc["policy"], anc.get("centre")), dirs))
-    for axis, g in out["groups"].items():
+        # one anchor per assembly: the plans of separate assemblies on one axis (two views of a unit, a detail beside a section) each have their own
+        out["groups"].setdefault((axis, anc.get("assembly") or ""), {"items": []})["items"].append(
+            (row, Driver(name, pairs, anc["policy"], anc.get("centre")), dirs))
+    for (axis, _assembly), g in out["groups"].items():
         drivers = [drv for _r, drv, _d in g["items"]]
         followers = {d["target"] for _r, _drv, ds in g["items"] for d in ds if d["kind"] == "part" and d["mode"] in MOVING_MODES}
         core = set()
         for drv in drivers:
             core |= core_parts(parts, drv.pairs) if parts else set()
-        fixed = out["hold"] | out["pin"]
+        pins = out["pin"] | set().union(*(out["pin_of"].get(r["id"], set()) for r, _d, _x in g["items"]))
+        fixed = out["hold"] | pins
         g["members"] = assembly_lines(prog, parts if parts else None, (core | followers) if parts else None, axis,
                                       seed={x for drv in drivers for p in drv.pairs for x in p}, exclude=fixed)
         g["still"], g["pinned"] = set(), set()
@@ -1169,7 +1193,7 @@ def prepare_plans(prog: Program, answer: dict, parts: dict[str, Part]) -> dict:
             if n in parts:
                 ls = entity_lines(prog, part_entities(prog, parts, n), axis)
                 g["still"] |= ls & g["members"]
-                if n in out["pin"]:
+                if n in pins:
                     g["pinned"] |= ls - g["members"]
     return out
 
@@ -1179,18 +1203,18 @@ def compile_plans(prog: Program, answer: dict, rep, pre: dict) -> dict:
     (assembly.stack: one policy per assembly and axis). Every problem is a V16 finding; the program is never left half
     rewritten (a refused stacking changes nothing)."""
     named = {n: pairs_of(prog, answer, n) for n, q in prog.params.items() if q.source in ("ai", "dimension", "person") and q.kind != "level"}
-    for axis, g in pre["groups"].items():
+    for (axis, _assembly), g in pre["groups"].items():
         drivers = [drv for _r, drv, _d in g["items"]]
         if len({(d.policy, d.centre) for d in drivers}) > 1:
             for row, _d, _x in g["items"]:
                 row["problems"].append(f"plans on the {axis} axis disagree on the anchor ({', '.join(f'{d.name}: {d.policy}' for d in drivers)})")
             continue
         st = stack(prog, axis, drivers, set(g["members"]), still=g["still"], named=named)
-        pinned = _pin(prog, g.get("pinned", set()), drivers) if st.ok else {}
+        pinned = _pin(prog, g.get("pinned", set()), drivers, answer) if st.ok else {}
         for row, _d, _x in g["items"]:
             row["stack"] = {"axis": axis, "policy": st.policy, "anchor_line": st.root, "rewritten": {k: v[1] for k, v in st.written.items()},
                             "by_drawn_distance": st.by_drawn_distance, "members": sorted(g["members"]), "expected": st.expected,
-                            "pinned": pinned}
+                            "pinned": pinned, "blocked": st.blocked[:12]}
             if not st.ok:
                 row["problems"].append(f"anchor {st.policy}: {st.why}")
     for row in pre["rows"]:
@@ -1200,23 +1224,37 @@ def compile_plans(prog: Program, answer: dict, rep, pre: dict) -> dict:
     return pre
 
 
-def _pin(prog: Program, lines: set[str], drivers: list[Driver]) -> dict[str, str]:
-    """A part kept fixed does not move when the plan's value changes: each of its own lines that would follow the value
-    (set out from the assembly) is set where it is drawn. Its lines on the other axis, and its own values, are left
-    as they are — it is fixed for this edit, not frozen."""
+def _pin(prog: Program, lines: set[str], drivers: list[Driver], answer: dict | None = None) -> dict[str, str]:
+    """A part kept fixed does not move when the plan's value changes: the lines of it that HANG on something that moves (set out from the
+    assembly) are set where they are drawn, and nothing else. The lines that hang on those keep their formulas, so the part's own named
+    sizes (a haunch, a thickness) still drive it: it is fixed for this edit, not frozen — and its lines on the other axis are left as they are."""
     an = prog.analysis
     u = an.drawing.units_mm
-    out = {}
+    out: dict[str, str] = {}
     v = prog.datum_values()
-    moving = set()
+    drv_names = {drv.name for drv in drivers}
+    # the lines of the drivers' OWN occurrences outside this assembly (a haunch of the same size in the part): the value drives them through that
+    # size, so a part kept fixed against the assembly still follows it there — pinning them would take the value's own binding away
+    own = {x for drv in drivers for pr in parameter_pairs(prog, answer, drv.name) if tuple(pr) not in {tuple(q) for q in drv.pairs} for x in pr}
+    still: set[str] = set()  # the lines that move with the plan's values, as the set-out stands now (every line: what a line hangs on may be outside the part)
     for drv in drivers:
-        moving |= {d for d, k in rates(prog, drv.name, lines).items() if abs(k) > 1e-9}
-    for d in sorted(moving):
-        if prog.origin.get(d) in ("ai", "held", "existing", "slope"):
+        still |= set(rates(prog, drv.name))
+    mine = {d for drv in drivers for d, k in rates(prog, drv.name, lines).items() if abs(k) > 1e-9}
+    for d in prog.order():  # parents first: a line hung on one that has just been set where it is drawn no longer moves
+        if d not in still or d not in mine or d in own:
             continue
-        prog.formulas[d] = _num(v[d] * u)
-        prog.origin[d] = "plan"
-        out[d] = prog.formulas[d]
+        try:
+            refs = names_in(prog.formulas[d])
+        except ExprError:
+            refs = set()
+        hangs = any(p in still for p in refs if p in prog.formulas)
+        if not (hangs or refs & drv_names):
+            still.discard(d)  # what it hangs on does not move any more: it stays with its formula, and its own sizes still drive it
+        elif prog.origin.get(d) not in ("ai", "held", "existing", "slope"):
+            prog.formulas[d] = _num(v[d] * u)
+            prog.origin[d] = "plan"
+            out[d] = prog.formulas[d]
+            still.discard(d)
     if out:
         prog.invalidate()
     return out
@@ -1346,11 +1384,14 @@ def verify_plan(prog: Program, plan: dict, parts: dict[str, Part], compiled: dic
     d = delta_of(prog, name)
     tests = list(values or [])
     if not tests:
-        tests = [P0 + d, P0 - d]
+        # up by the step, down by the step but never past half the value: a 20 mm gap is not tested at -30 mm
+        tests = [P0 + d, P0 - (d if prog.params[name].kind == "level" else min(d, 0.5 * abs(P0)))]
         req = drv.get("requested_value")
         if req is not None and all(abs(req - t) > 1e-9 for t in tests) and abs(req - P0) > 1e-9:
             tests.append(float(req))
     fixed_parts = [d_["target"] for d_ in dirs if d_["kind"] == "part" and d_["mode"] in FIXED_MODES and d_["target"] in parts]
+    mine_pairs = {tuple(p) for p in pairs}
+    driven_here = {x for pr in parameter_pairs(prog, answer, name) if tuple(pr) not in mine_pairs for x in pr}  # its occurrences outside this plan's assembly
     own = {n: part_entities(prog, parts, n) for n in parts} if parts else {}
     inside_core = set()
     for n in (plan.get("affected") or {}).get("core", []):
@@ -1382,9 +1423,10 @@ def verify_plan(prog: Program, plan: dict, parts: dict[str, Part], compiled: dic
                   "; ".join(f"{x} moved {dv.get(x, v0[x]) - v0[x]:+.1f} mm, expected {k * dw:+.1f}" for x, k in off[:3]) or "as expected",
                   "a line of the assembly is set out from something the plan does not move", "inspect the line's formula", at=w)
         moved_ents = {i for i, pts in r.pts.items() if _max_move(items[i].pts, pts) * u > tol}
-        # fixed parts: every point of every entity of their own stays
+        # fixed parts: every point of every entity of their own stays — except what the value itself drives there: a part drawn with an
+        # occurrence of the same value (a haunch of the same size in another view) follows it through that size, and stays put against the rest
         for n in fixed_parts:
-            mv = [i for i in own.get(n, ()) if i in moved_ents]
+            mv = [i for i in own.get(n, ()) if i in moved_ents and not (driven_here and (entity_lines(prog, {i}, "x") | entity_lines(prog, {i}, "y")) & driven_here)]
             check("fixed", n, not mv, "every point stays", f"{len(mv)} of its entities move" if mv else "stays",
                   f"{n} is drawn on lines the change moves", "hold it (its own lines become fixed copies)", at=w)
         # values kept, levels kept, thickness / symmetry kept

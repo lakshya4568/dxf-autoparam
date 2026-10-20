@@ -815,17 +815,23 @@ def _allowed(parts: dict[str, Part], claimed: set[str]) -> set[str]:
     return out
 
 
+def grows_with(v0: dict[str, float], v1: dict[str, float], a: str, b: str, units_mm: float) -> bool:
+    """True when the gap between lines a and b WIDENS by exactly 1 mm for the 1 mm the value grew (v0 → v1: the lines' positions before and after).
+    The pair is read from the lower line to the upper one as drawn, never in the order it was written: a size that shrinks as its value grows
+    (a line hung from the other side of the member) does not drive that pair, however exactly it moves it."""
+    lo, hi = (a, b) if v0.get(a, 0.0) <= v0.get(b, 0.0) else (b, a)
+    d_lo = v1.get(lo, v0.get(lo, 0.0)) - v0.get(lo, 0.0)
+    d_hi = v1.get(hi, v0.get(hi, 0.0)) - v0.get(hi, 0.0)
+    return abs((d_hi - d_lo) * units_mm - 1.0) < 1e-6
+
+
 def _drives(prog: Program, name: str, a: str, b: str, v0: dict[str, float]) -> bool:
-    """True when the distance a→b grows exactly with the value (1 mm per mm)."""
-    an = prog.analysis
-    u = an.drawing.units_mm
+    """True when the distance a→b grows exactly with the value (1 mm per mm); a distance that shrinks as the value grows is not driven."""
     try:
         v1 = prog.datum_values({name: prog.params[name].value + 1.0})
     except ExprError:
         return False
-    da = (v1.get(a, v0.get(a, 0.0)) - v0.get(a, 0.0)) * u
-    db = (v1.get(b, v0.get(b, 0.0)) - v0.get(b, 0.0)) * u
-    return abs(abs(db - da) - 1.0) < 1e-6
+    return grows_with(v0, v1, a, b, prog.analysis.drawing.units_mm)
 
 
 def _set_exact(prog: Program, d: str, expr: str, want_mm: float) -> None:
