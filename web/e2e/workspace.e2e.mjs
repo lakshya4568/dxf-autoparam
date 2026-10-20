@@ -4,7 +4,7 @@
 //   a layer can be hidden; a value is previewed and applied, then undone, and the camera never moves; the page's revision
 //   follows the engine's.
 //
-//   bun run build && node e2e/workspace.e2e.mjs [--dxf FILE [--project FILE.autoparam.json]] [--out DIR] [--port 8799]
+//   bun run build && node e2e/workspace.e2e.mjs [--dxf FILE [--project FILE.autoparam.json]] [--out DIR] [--port 8799] [--pinned 1]
 // By default it generates a two-cell box GAD with its known parametrization (e2e/make_fixture.py: no model call), so a unit is
 // parametrized and a value can be previewed, applied and undone.
 import { spawn, spawnSync } from "node:child_process";
@@ -27,7 +27,7 @@ mkdirSync(out, { recursive: true });
 let dxf = args.dxf ? resolve(args.dxf) : null;
 let project = args.project ? resolve(args.project) : null;
 if (!dxf) {
-  const made = spawnSync("uv", ["run", "python", join(here, "make_fixture.py"), join(out, "fixture")], { cwd: root, encoding: "utf8" });
+  const made = spawnSync("uv", ["run", "python", join(here, "make_fixture.py"), join(out, "fixture"), ...(args.pinned ? ["pinned"] : [])], { cwd: root, encoding: "utf8" });
   if (made.status !== 0) throw new Error(`the e2e drawing could not be generated:\n${made.stderr.slice(-2000)}`);
   ({ dxf, project } = JSON.parse(made.stdout.trim().split("\n").pop()));
 }
@@ -224,6 +224,7 @@ try {
     // a value shared across views is listed once, under "Shared across views"; one that only this unit has is under its named values
     const row = `[data-testid="param-${param.name}"], [data-testid="shared-${param.name}"]`;
     check("the Values panel lists the unit's values", await until(`!!document.querySelector(${JSON.stringify(row)})`, 8000), `${param.unit}.${param.name}`);
+    check("and says how many of the unit's dimensions a named value drives", await until("/Dimensions: \\d+ of \\d+ change with a named value/.test(document.querySelector('[data-testid=dimension-drive]')?.textContent || '')", 20000), await js("document.querySelector('[data-testid=dimension-drive]')?.textContent"));
     await js(`document.querySelector(${JSON.stringify(row)}).click()`);
     check("a click on a value opens its editor", await until("!!document.querySelector('[data-testid=param-editor]')", 60000), param.key);
     check("a click on a value says what it moves", await until("!!window.__ws.state().highlight", 5000));
@@ -231,9 +232,27 @@ try {
     check("the editor has a spinner and no Apply, Reset or slider", await js("!!document.querySelector('[data-testid=param-inc]') && !!document.querySelector('[data-testid=param-dec]') && !document.querySelector('[data-testid=apply]') && !document.querySelector('[data-testid=param-reset]') && !document.querySelector('[data-testid=param-editor] [data-testid=show-original]') && !document.querySelector('[data-testid=param-editor] input[type=range]')"));
     const val = () => js(`window.__ws.state().summary.values[${JSON.stringify(param.key)}]`);
     const sig = () => js("JSON.stringify(window.__ws.state().prims.map((p) => [p.i, p.p, p.at]).sort((a, b) => a[0] - b[0] || String(a[1]).localeCompare(String(b[1]))))");
-    const v0 = await val(), sig0 = await sig();
+    const v0 = await val();
+    let sig0 = await sig();
+    // which side stays when it changes: the editor says who decided and on what evidence; a person's choice replaces the engine's default (at the drawn value it moves nothing yet)
+    check("the editor says which side of the value stays when it changes, and who decided", await until("!!document.querySelector('[data-testid=growth-line]') && /engine|your choice|set-out/.test(document.querySelector('[data-testid=growth-by]')?.textContent || '')", 30000), await js("document.querySelector('[data-testid=growth-by]')?.textContent"));
+    const firstPressed = () => js("[...document.querySelector('[data-testid=growth-line]').querySelectorAll('button')].filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.testid).join()");
+    const atDrawn = await js(`(async () => { const i = await (await fetch('/api/sheet/unit?id=' + encodeURIComponent(${JSON.stringify(param.unit)}))).json(); const q = (i.params || []).find((x) => x.key === ${JSON.stringify(param.key)}); return !!q && Math.abs(q.value - q.drawn) < 1e-9; })()`);
+    const sideBefore = await firstPressed();
+    const other = ["growth-start", "growth-end"].find((t) => t !== sideBefore);
+    if (await js("!!document.querySelector('[data-testid=growth-undecided]')")) {
+      // no side can stay for this value (the engine says why): choosing one is refused with the reason; settling it is step 6d
+      check("an undecided value says so, and offers the ways to settle it instead of a side that cannot stay", await js("!!document.querySelector('[data-testid=settle-ways]')"));
+    } else {
+      await js(`document.querySelector('[data-testid=growth-line] [data-testid=${other}]').click()`);
+      check(`choosing a side makes it the person's own plan${atDrawn ? ", and the drawing does not change" : " (the value is stepped already: the drawing follows the side)"}`,
+        await until("/your choice/.test(document.querySelector('[data-testid=growth-by]')?.textContent || '')", 60000) && (await firstPressed()) === other && (!atDrawn || (await sig()) === sig0), `${sideBefore || "none"} → ${other}`);
+    }
+    sig0 = await sig(); // the stepping below begins from here
+    await shot("04a_growth_choice");
+    const revStep = await js("window.__ws.state().revision"); // the choice above is a revision of its own: the step is the next one
     await js("document.querySelector('[data-testid=param-inc]').click()");
-    check("one step up changes the value and the geometry, with nothing applied by hand", await until(`window.__ws.state().revision > ${rev}`, 60000) && (await val()) > v0 && (await sig()) !== sig0, `${param.key}: ${v0} → ${await val()}`);
+    check("one step up changes the value and the geometry, with nothing applied by hand", await until(`window.__ws.state().revision > ${revStep} && window.__ws.state().summary.values[${JSON.stringify(param.key)}] > ${v0}`, 60000) && (await val()) > v0 && (await sig()) !== sig0, `${param.key}: ${v0} → ${await val()}`);
     check("the original is not shown, nor even fetched, while a value is stepped", (await js("window.__ws.state().original === null && window.__ws.state().overlays.original === false")));
     const step1 = (await val()) - v0;
     await js("document.querySelector('[data-testid=param-inc]').click()");
@@ -327,6 +346,52 @@ try {
     }
   }
 
+  // 6d · a direction the engine could not decide: said, with the ways to settle it — each tried on the sheet — and one chosen (one undo takes it back).
+  // Whatever sheet is loaded: the first named value whose growth is undecided; nothing to do (said) where every direction was decided.
+  {
+    const open = await js(`(async () => {
+      const s = window.__ws.state().summary;
+      for (const u of s.units.filter((u) => u.parametrized)) {
+        const info = await (await fetch('/api/sheet/unit?id=' + encodeURIComponent(u.id))).json();
+        for (const p of (info.params || []).filter((p) => p.source === 'ai' && p.kind !== 'level')) {
+          const g = (await (await fetch('/api/sheet/param?name=' + encodeURIComponent(p.key))).json()).growth || [];
+          if (g.some((r) => r.undecided)) return { key: p.key, name: p.name, unit: u.id };
+        }
+      }
+      return null;
+    })()`);
+    if (!open) {
+      check("every direction of growth was decided on this sheet (nothing to settle)", true);
+    } else {
+      await js("document.querySelector('[data-testid=tab-values]').click()");
+      await js(`window.__ws.openUnit(${JSON.stringify(open.unit)})`);
+      await until(`!!document.querySelector('[data-testid=param-${open.name}]')`, 8000);
+      await js(`document.querySelector('[data-testid=param-${open.name}]').click()`);
+      check("an undecided direction is said, with the way to ask for choices", await until("!!document.querySelector('[data-testid=growth-undecided]') && !!document.querySelector('[data-testid=settle-ways]')", 60000)
+        && /Undecided/.test(await js("document.querySelector('[data-testid=growth-undecided]').textContent")), open.key);
+      const revWays = await js("window.__ws.state().revision");
+      const t0 = Date.now();
+      await js("document.querySelector('[data-testid=settle-ways]').click()");
+      const offered = await until("document.querySelectorAll('[data-testid=settle-choice]').length > 0 || /Nothing single settles/.test(document.querySelector('[data-testid=settle]')?.textContent || '')", 180000);
+      const choices = await js("document.querySelectorAll('[data-testid=settle-choice]').length");
+      check("the ways are tried for real and shown, and asking changes nothing", offered && (await js("window.__ws.state().revision")) === revWays, `${choices} way(s) in ${Math.round((Date.now() - t0) / 1000)} s`);
+      await shot("04d_ways_to_settle");
+      if (choices > 0) {
+        const title = await js("document.querySelector('[data-testid=settle-choice] b').textContent");
+        check("each way says what it does: which side stays and what stops being an input", /stays|grows equally/.test(await js("document.querySelector('[data-testid=settle-choice]').textContent")) , title);
+        await js("document.querySelector('[data-testid=settle-choice] [data-testid=settle-choose]').click()");
+        check("choosing one is one step, written as the person's own decision, and the direction is no longer undecided (the size is in the growth, or says it is left out of it)",
+          await until(`window.__ws.state().revision === ${revWays} + 1 && !document.querySelector('[data-testid=settle]') && !document.querySelector('[data-testid=growth-undecided]') && (/your choice/.test(document.querySelector('[data-testid=growth-by]')?.textContent || '') || !!document.querySelector('[data-testid=growth-left-out]')) && !!document.querySelector('[data-testid=growth-settled]')`, 120000),
+          await js("(document.querySelector('[data-testid=growth-by]')?.textContent || '') + ' | ' + (document.querySelector('[data-testid=growth-left-out]')?.textContent || '')"));
+        check("and it is listed among the person's choices, with the way to take it back", await until("!!document.querySelector('[data-testid=settled-group]') || !!document.querySelector('[data-testid=growth-settled]')", 20000));
+        await shot("04e_settled");
+        await js("window.__ws.undo()");
+        check("one undo takes the choice back: undecided again", await until(`!!document.querySelector('[data-testid=growth-undecided]') && window.__ws.state().revision >= ${revWays}`, 60000));
+      }
+      await js(`document.querySelector('[data-testid=param-${open.name}]').click()`);
+    }
+  }
+
   // 7 · panels render with the engine's data
   for (const [tab, testid] of [["fidelity", "faithful"], ["layers", "layers-panel"], ["values", "values-panel"]]) {
     await js(`document.querySelector('[data-testid=tab-${tab}]').click()`);
@@ -338,6 +403,12 @@ try {
   const confirmShown = await js("!!document.querySelector('[data-testid=cost-confirm]')");
   check("the agent never starts without an instruction and a confirmation", sendDisabled && !confirmShown, `send disabled with no instruction: ${sendDisabled}, confirmation shown: ${confirmShown}`);
   await shot("05_panels");
+
+  // 8 · start clean: the drawing as drawn, the saved work kept aside under a dated name (the last thing here: it forgets the parametrization)
+  check("the page offers to start clean when there is saved work", await js("!!document.querySelector('[data-testid=start-clean]')"));
+  await js("window.__ws.startClean()");
+  check("starting clean shows the drawing as drawn and keeps the saved work aside", await until("window.__ws.state().summary && window.__ws.state().summary.units.every((u) => !u.parametrized)", 60000)
+    && readdirSync(stateDir).some((f) => f.includes(".replaced.json")), readdirSync(stateDir).join(", "));
 
   const errors = await js("window.__errors");
   check("no uncaught errors in the page", errors.length === 0, errors.slice(0, 3).join(" | "));

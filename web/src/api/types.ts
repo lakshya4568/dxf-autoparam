@@ -113,6 +113,8 @@ export interface AutosaveInfo {
   revision: number | null;
   restored: { from?: string | null; revision?: number; path?: string; saved_at?: number; kept_as?: string; problems?: string[] } | null;
   error: string | null;
+  /** Another live server that keeps this drawing's saved work (this one writes nothing while it does). */
+  owner?: { pid: number; port?: number | null } | null;
 }
 
 export interface ParamRow {
@@ -168,8 +170,12 @@ export interface UnitInfo {
   params: ParamRow[];
   measured?: MeasuredRow[];
   frozen?: FrozenRow[];
+  /** The choices a person made to settle an undecided direction in this unit (each can be taken back). */
+  settled?: { choice: string; title: string; kind: string }[];
   findings: { code: string; severity: string; item: string; message: string }[];
   components: { name: string; type: string; regions: string[] }[];
+  /** How many of the unit's dimensions a named value drives, measured by stepping each value (null: nobody parametrized the unit). */
+  dimensions?: { total: number; driven: number; constant: number; unread: number; constants: { mm: number; text: string }[]; unsteppable: string[] } | null;
 }
 
 export interface Highlight {
@@ -182,9 +188,74 @@ export interface Highlight {
   open?: Record<string, number[]> | null;
 }
 
+/** How one view takes a value growing, measured by the engine (SheetModel.growth): which of the size's two lines stays, and the design intent behind it
+ * (who decided — the engine's default or a person —, on what evidence). `mode` names the line that STAYS: start (left / bottom), end (right / top). */
+export interface GrowthRow {
+  unit: string;
+  mode: "start" | "end" | "centre" | "slides" | "other" | "none";
+  why: string;
+  from?: string;
+  to?: string;
+  moves?: Record<string, number>;
+  intent?: { policy: string | null; centre: string | null; source: string | null; status: string | null; evidence: string[]; line?: string | null; assembly?: string | null; settled?: string[] } | null;
+  /** The size's axis ended undecided (no side could stay without breaking something): why, and the lines nothing may move that stood in the way. */
+  undecided?: { axis: string; assembly: string; evidence: string[]; blocked: Blocker[]; drivers: string[] };
+  /** The size was left out of its structure's growth (it keeps the direction the set-out gave it), and why. */
+  left_out?: { axis: string; status: string; why: string };
+  /** The choices a person already made about this size's direction (each can be taken back). */
+  settled?: { choice: string; title: string; kind: string }[];
+}
+
+/** A line nothing may move that stood in the way of a side staying, and what sets it. */
+export interface Blocker {
+  line: string;
+  kind: string;
+  level?: string;
+  part?: string;
+}
+
+/** One way to settle an undecided direction, TRIED FOR REAL by the engine (SheetModel.settle_options): a pinned level left free, a held part
+ * released or a size read instead of set — with what it would do. Only what settles the axis and breaks nothing is offered. */
+export interface SettleChoice {
+  id: string;
+  title: string;
+  kinds: string[];
+  edits: { kind: string; target: string; lines: string[] }[];
+  policy: string | null;
+  centre: string | null;
+  status: string;
+  stays: string;
+  evidence: string[];
+  driver: string | null;
+  moves: string[];
+  left_out: { name: string; why: string }[];
+  stops_being_input: string[];
+  become_inputs: string[];
+  collateral: string[];
+  asked_in_growth: boolean;
+  discards: string[];
+}
+
+export interface SettleOptions {
+  unit: string;
+  name: string;
+  local: string;
+  revision: number;
+  axis: string | null;
+  assembly: string | null;
+  status: string;
+  evidence: string[];
+  blocked: Blocker[];
+  drivers: string[];
+  choices: SettleChoice[];
+  rejected: { id: string; why: string }[];
+  notes: string[];
+}
+
 export interface ParamInfo {
   impact: { name: string; value: number; step: number; views: string[]; entities: number; per_view: Record<string, number>; errors: string[] };
   range: { name: string; value: number; min?: number; max?: number; min_reason?: string; max_reason?: string };
+  growth?: GrowthRow[];
   highlight: Highlight;
   card?: unknown;
 }

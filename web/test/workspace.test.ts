@@ -2,7 +2,7 @@
 // move the camera. fetch is faked: these tests exercise the state, not the server (that is web/e2e and tests/test_web_contract.py).
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DeltaResult, Prim, Summary } from "../src/api/types";
-import { applyChange, cancelPreview, focusParam, keepUnnamedAsDrawn, liveChange, mergeDelta, previewChange, releaseKept, rowEntities, setOverlay, store, undo, unlockHeldPart } from "../src/state/workspace";
+import { applyChange, cancelPreview, chooseGrowth, deriveIntent, focusParam, hideWays, settleGrowth, showWays, takeBackChoice, openFile, startClean, keepUnnamedAsDrawn, liveChange, mergeDelta, previewChange, releaseKept, rowEntities, setOverlay, store, undo, unlockHeldPart } from "../src/state/workspace";
 
 const L = (i: number, x: number): Prim => ({ i, k: "p", r: "structural", l: "0", v: "V1", p: [x, 0, x + 1, 1] });
 
@@ -283,6 +283,184 @@ describe("values nobody named, and work kept as drawn", () => {
     await keepUnnamedAsDrawn("U01");
     expect(store.get().message).toEqual({ text: expect.stringContaining("the agent is working"), kind: "bad" });
     expect(store.get().revision).toBe(4);
+    quiet.mockRestore();
+  });
+});
+
+describe("which side of a value stays when it changes (design intent)", () => {
+  const UNIT = { id: "U01", revision: 6, views: ["V01"], params: [], measured: [], frozen: [], findings: [], components: [] };
+  const PARAM = { impact: { name: "U01.ClearSpan", value: 6000, step: 10, views: ["V01"], entities: 3, per_view: {}, errors: [] }, range: { name: "U01.ClearSpan", value: 6000 },
+    highlight: { drives: [], follows: [], texts: [], holds: null },
+    growth: [{ unit: "U01", mode: "end", from: "x1", to: "x2", why: "x2 stays, x1 moves", intent: { policy: "end_fixed", centre: null, source: "person", status: "person", evidence: [] } }] };
+  function routed(routes: Record<string, unknown>) {
+    const asked: { path: string; body: unknown }[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+      const path = String(url).split("?")[0];
+      asked.push({ path, body: init?.body ? JSON.parse(String(init.body)) : undefined });
+      if (!(path in routes)) return new Response(JSON.stringify({ ok: false, error: `no route ${path}` }), { status: 404, headers: { "Content-Type": "application/json" } });
+      return new Response(JSON.stringify(routes[path]), { status: 200, headers: { "Content-Type": "application/json" } });
+    }));
+    return asked;
+  }
+  beforeEach(() => store.set({ summary: SUMMARY, prims: [L(0, 0)], styles: [], revision: 4, unit: null, param: null, highlight: null, message: null, busy: null }));
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("choosing a side asks the engine for the person's plan, says it replaces the default, and reads the value again", async () => {
+    const asked = routed({ "/api/sheet/anchor": { ok: true, result: { plan: "P1" }, delta: [], summary: { ...SUMMARY, revision: 5 } }, "/api/sheet/param": PARAM });
+    await chooseGrowth("U01.ClearSpan", "U01", "end");
+    expect(asked[0]).toEqual({ path: "/api/sheet/anchor", body: { name: "U01.ClearSpan", unit: "U01", mode: "end" } });
+    expect(store.get().revision).toBe(5);
+    expect(store.get().message).toEqual({ text: expect.stringContaining("your choice, in place of the engine's default. The drawing is as it was."), kind: "ok" });
+    await vi.waitFor(() => expect(store.get().param?.info?.growth?.[0].intent?.source).toBe("person")); // the value is read again: the row shows who decided now
+  });
+
+  it("at a value already stepped the drawing follows the chosen side, and the banner says so", async () => {
+    routed({ "/api/sheet/anchor": { ok: true, result: { plan: "P1" }, delta: [L(0, 3)], summary: { ...SUMMARY, revision: 5 } }, "/api/sheet/param": PARAM });
+    await chooseGrowth("U01.ClearSpan", "U01", "start");
+    expect(store.get().message?.text).toContain("The drawing follows it at the value it has now.");
+    expect(store.get().prims.find((p) => p.i === 0)?.p?.[0]).toBe(3);
+  });
+
+  it("a refusal is said in the banner and nothing changes", async () => {
+    routed({ "/api/sheet/anchor": { ok: false, error: "the plan does not hold: the right wall would cross the embankment" } });
+    const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    await chooseGrowth("U01.ClearSpan", "U01", "centre");
+    expect(store.get().message).toEqual({ text: expect.stringContaining("does not hold"), kind: "bad" });
+    expect(store.get().revision).toBe(4);
+    quiet.mockRestore();
+  });
+
+  it("working it out again says what changed and how many directions rest on convention or could not be decided", async () => {
+    const asked = routed({
+      "/api/sheet/intent": { ok: true, result: { U01: { changed: true, axes: [{ status: "decided" }, { status: "provisional" }] }, U02: { changed: false, axes: [{ status: "undecided" }] } }, delta: [], summary: { ...SUMMARY, revision: 7 } },
+      "/api/sheet/unit": UNIT,
+    });
+    await deriveIntent();
+    expect(asked[0]).toEqual({ path: "/api/sheet/intent", body: {} });
+    expect(store.get().revision).toBe(7);
+    expect(store.get().message?.text).toContain("2 unit(s), 1 changed");
+    expect(store.get().message?.text).toContain("2 direction(s) rest on convention or could not be decided");
+    await deriveIntent("U01");
+    expect(asked.filter((a) => a.path === "/api/sheet/intent")[1].body).toEqual({ unit: "U01" });
+  });
+});
+
+describe("settling a direction the engine could not decide", () => {
+  const OPTIONS = { unit: "U01", name: "U01.TopSlab", local: "TopSlab", revision: 4, axis: "y", assembly: "y3", status: "undecided", evidence: ["no side could stay"], blocked: [], drivers: ["TopSlab"],
+    choices: [{ id: "level:BedLevel", title: "Let BedLevel follow the structure", kinds: ["level"], edits: [{ kind: "level", target: "BedLevel", lines: ["y4"] }], policy: "end_fixed", centre: null,
+      status: "decided", stays: "the top side stays", evidence: [], driver: "TopSlab", moves: ["TopSlab grows toward the bottom"], left_out: [], stops_being_input: ["BedLevel"],
+      become_inputs: ["ClearHeight"], collateral: [], asked_in_growth: true, discards: [] }],
+    rejected: [{ id: "reading:TopSlab", why: "it does not settle it" }], notes: [] };
+  function routed(routes: Record<string, unknown>) {
+    const asked: { path: string; method?: string; body?: unknown }[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+      const path = String(url).split("?")[0];
+      asked.push({ path, method: init?.method, body: typeof init?.body === "string" ? JSON.parse(init.body) : undefined });
+      if (!(path in routes)) return new Response(JSON.stringify({ ok: false, error: `no route ${path}` }), { status: 404, headers: { "Content-Type": "application/json" } });
+      return new Response(JSON.stringify(routes[path]), { status: 200, headers: { "Content-Type": "application/json" } });
+    }));
+    return asked;
+  }
+  beforeEach(() => store.set({ summary: SUMMARY, prims: [L(0, 0)], styles: [], revision: 4, unit: null, param: null, ways: null, highlight: null, message: null, busy: null }));
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("asks the engine for the ways, changing nothing, and keeps them for the value that asked", async () => {
+    const asked = routed({ "/api/sheet/settle": OPTIONS });
+    await showWays("U01.TopSlab", "U01");
+    expect(asked[0].method).toBe("GET");
+    expect(store.get().ways).toEqual({ key: "U01.TopSlab", unit: "U01", loading: false, options: OPTIONS });
+    expect(store.get().revision).toBe(4);
+    hideWays();
+    expect(store.get().ways).toBeNull();
+  });
+
+  it("choosing one asks for it by id, takes the new revision, says it is the person's choice and closes the list", async () => {
+    const asked = routed({ "/api/sheet/settle": { ok: true, result: { title: "Let BedLevel follow the structure", intent: { evidence: ["only the top side can stay"] } }, delta: [], summary: { ...SUMMARY, revision: 5 } },
+      "/api/sheet/unit": { id: "U01", views: [], params: [], findings: [], components: [] }, "/api/sheet/param": { impact: {}, range: {}, highlight: {}, growth: [] } });
+    store.set({ ways: { key: "U01.TopSlab", unit: "U01", loading: false, options: OPTIONS } });
+    await settleGrowth("U01.TopSlab", "U01", "level:BedLevel");
+    expect(asked[0]).toEqual({ path: "/api/sheet/settle", method: "POST", body: { name: "U01.TopSlab", unit: "U01", choice: "level:BedLevel" } });
+    expect(store.get().revision).toBe(5);
+    expect(store.get().ways).toBeNull();
+    expect(store.get().message).toEqual({ text: expect.stringContaining("your choice"), kind: "ok" });
+  });
+
+  it("confirms a discarded value only when asked to, and a refusal changes nothing", async () => {
+    const asked = routed({ "/api/sheet/settle": { ok: false, error: "it would discard the value you set for BedLevel" } });
+    const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    await settleGrowth("U01.TopSlab", "U01", "level:BedLevel", true);
+    expect((asked[0].body as Record<string, unknown>).discard_values).toBe(true);
+    expect(store.get().message).toEqual({ text: expect.stringContaining("discard"), kind: "bad" });
+    expect(store.get().revision).toBe(4);
+    quiet.mockRestore();
+  });
+
+  it("taking a choice back asks the engine and reads the unit again", async () => {
+    const asked = routed({ "/api/sheet/unsettle": { ok: true, result: {}, delta: [], summary: { ...SUMMARY, revision: 6 } }, "/api/sheet/unit": { id: "U01", views: [], params: [], findings: [], components: [] } });
+    await takeBackChoice("U01", "level:BedLevel");
+    expect(asked[0]).toEqual({ path: "/api/sheet/unsettle", method: "POST", body: { unit: "U01", choice: "level:BedLevel" } });
+    expect(store.get().revision).toBe(6);
+  });
+});
+
+describe("reading a drawing, and starting it over clean", () => {
+  function routed(routes: Record<string, (() => unknown) | unknown>) {
+    const asked: { path: string; method?: string; body?: unknown }[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+      const path = String(url).split("?")[0];
+      asked.push({ path, method: init?.method, body: typeof init?.body === "string" ? JSON.parse(init.body) : undefined });
+      if (!(path in routes)) return new Response(JSON.stringify({ ok: false, error: `no route ${path}` }), { status: 404, headers: { "Content-Type": "application/json" } });
+      const r = routes[path];
+      return new Response(JSON.stringify(typeof r === "function" ? await (r as () => unknown)() : r), { status: 200, headers: { "Content-Type": "application/json" } });
+    }));
+    return asked;
+  }
+  beforeEach(() => store.set({ summary: SUMMARY, prims: [L(0, 0)], styles: [], revision: 4, unit: null, param: null, message: null, busy: null }));
+  afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
+
+  it("asks the engine what it is reading while the read is out, and says it in the banner", async () => {
+    vi.useFakeTimers();
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((r) => { release = r; });
+    const asked = routed({
+      "/api/sheet/open": async () => { await held; return SUMMARY; },
+      "/api/sheet/loading": { loading: true, name: "20A.dxf", elapsed_s: 12.4 },
+      "/api/sheet": SUMMARY,
+      "/api/sheet/geometry": { prims: [], styles: [], frame: [0, 0, 1, 1] },
+      "/api/sheet/statuses": { entities: {}, counts: {} },
+    });
+    const file = { name: "20A.dxf", arrayBuffer: async () => new ArrayBuffer(4) } as unknown as File;
+    const reading = openFile(file);
+    await vi.advanceTimersByTimeAsync(1100);
+    expect(asked.some((a) => a.path === "/api/sheet/loading")).toBe(true);
+    expect(store.get().busy).toBe("Reading 20A.dxf… 12 s");
+    release();
+    await vi.advanceTimersByTimeAsync(10);
+    await reading.catch(() => undefined);
+  });
+
+  it("starting clean asks the engine for the drawing as drawn, forgets what was selected, and says the saved work is kept aside", async () => {
+    const asked = routed({
+      "/api/sheet/reopen": SUMMARY,
+      "/api/sheet": SUMMARY,
+      "/api/sheet/geometry": { prims: [], styles: [], frame: [0, 0, 1, 1] },
+      "/api/sheet/statuses": { entities: {}, counts: {} },
+    });
+    store.set({ selection: new Set([3]), param: { key: "U1.X", info: undefined as never } });
+    await startClean();
+    expect(asked[0]).toEqual({ path: "/api/sheet/reopen", method: "POST", body: { fresh: true } });
+    expect(store.get().selection.size).toBe(0);
+    expect(store.get().param).toBeNull();
+    expect(store.get().message).toEqual({ text: expect.stringContaining("kept aside under a dated name"), kind: "ok" });
+  });
+
+  it("a refusal (the agent is working) is said and nothing is forgotten", async () => {
+    routed({ "/api/sheet/reopen": { ok: false, error: "the agent is working on this sheet: stop it first" } });
+    const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    store.set({ selection: new Set([3]) });
+    await startClean();
+    expect(store.get().message).toEqual({ text: expect.stringContaining("the agent is working"), kind: "bad" });
+    expect(store.get().selection.size).toBe(1);
     quiet.mockRestore();
   });
 });

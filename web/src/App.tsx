@@ -16,7 +16,7 @@ import { ValuesPanel } from "./panels/ValuesPanel";
 import { ViewsPanel } from "./panels/ViewsPanel";
 import { agent, currentRun } from "./state/agent";
 import { useStore } from "./state/store";
-import { back, fitSheet, loadAll, openFile, redo, setOverlay, store, toggleAgent, undo, type LeftTab, type RightTab } from "./state/workspace";
+import { back, fitSheet, loadAll, openFile, redo, setOverlay, startClean, store, toggleAgent, undo, type LeftTab, type RightTab } from "./state/workspace";
 
 const LEFT: [LeftTab, string][] = [["views", "Views"], ["layers", "Layers"], ["values", "Values"], ["fidelity", "Fidelity"]];
 const RIGHT: [RightTab, string][] = [["inspect", "Inspector"], ["validate", "Validation"]];
@@ -81,9 +81,19 @@ function AutosaveBadge({ initial }: { initial: AutosaveInfo }) {
     return () => window.clearInterval(t);
   }, []);
   const time = (sec: number) => new Date(sec * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  const text = a.error ? "not saved" : a.saved_at ? `saved ${time(a.saved_at)}` : a.restored?.from ? "opened from saved work" : "autosave on";
-  const tip = [a.path ? `kept in ${a.path}` : "kept on disk as it changes", a.restored?.from ? `opened from ${a.restored.from}, revision ${a.restored.revision ?? "?"}` : "", a.error ? `FAILED: ${a.error}` : ""].filter(Boolean).join(" · ");
-  return <span className={`text-[12px] ${a.error ? "text-red-600" : "text-slate-400"}`} data-testid="autosave" title={tip}>· {text}</span>;
+  const text = a.owner ? "not saved: another server keeps it" : a.error ? "not saved" : a.saved_at ? `saved ${time(a.saved_at)}` : a.restored?.from ? "opened from saved work" : "autosave on";
+  const tip = [a.path ? `kept in ${a.path}` : "kept on disk as it changes", a.restored?.from ? `opened from ${a.restored.from}, revision ${a.restored.revision ?? "?"}` : "", a.error ? `${a.owner ? "NOT SAVING" : "FAILED"}: ${a.error}` : ""].filter(Boolean).join(" · ");
+  const hasWork = !!(a.saved_at || a.restored?.from);
+  const startOver = () => {
+    const when = a.restored?.saved_at ? ` (saved ${new Date(a.restored.saved_at * 1000).toLocaleString()}, revision ${a.restored.revision ?? "?"})` : "";
+    if (window.confirm(`Start this drawing over from the drawing as drawn?\n\nThe work saved for it${when} is kept aside under a dated name; nothing is deleted.`)) void startClean();
+  };
+  return (
+    <>
+      <span className={`text-[12px] ${a.error ? "text-red-600" : "text-slate-400"}`} data-testid="autosave" title={tip}>· {text}</span>
+      {hasWork && <button className="text-[12px] underline text-slate-500 hover:text-slate-700 dark:hover:text-slate-300" data-testid="start-clean" title="Open the drawing as drawn; the saved work is kept aside under a dated name" onClick={startOver}>start clean</button>}
+    </>
+  );
 }
 
 function TopBar() {

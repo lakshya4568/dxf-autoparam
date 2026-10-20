@@ -14,6 +14,7 @@ import type {
   Prim,
   RunProgress,
   RunSummary,
+  SettleOptions,
   Statuses,
   Style,
   Summary,
@@ -29,13 +30,29 @@ export class EngineError extends Error {
   }
 }
 
-async function call<T>(method: "GET" | "POST", path: string, body?: unknown, raw?: BodyInit): Promise<T> {
-  const r = await fetch(path, {
-    method,
-    headers: raw ? { "Content-Type": "application/octet-stream" } : body !== undefined ? { "Content-Type": "application/json" } : undefined,
-    body: raw ?? (body !== undefined ? JSON.stringify(body) : undefined),
-  });
-  const text = await r.text();
+/** How long a request may take before the page says the engine did not answer (instead of showing "working…" for ever). Reading a big drawing is the long one. */
+const ANSWER_WITHIN_MS = 5 * 60_000;
+const READ_WITHIN_MS = 15 * 60_000;
+
+async function call<T>(method: "GET" | "POST", path: string, body?: unknown, raw?: BodyInit, within = ANSWER_WITHIN_MS): Promise<T> {
+  const limit = new AbortController();
+  const timer = setTimeout(() => limit.abort(), within);
+  let r: Response;
+  let text: string;
+  try {
+    r = await fetch(path, {
+      method,
+      headers: raw ? { "Content-Type": "application/octet-stream" } : body !== undefined ? { "Content-Type": "application/json" } : undefined,
+      body: raw ?? (body !== undefined ? JSON.stringify(body) : undefined),
+      signal: limit.signal,
+    });
+    text = await r.text();
+  } catch (e) {
+    if (limit.signal.aborted) throw new EngineError(`The engine did not answer ${method} ${path.split("?")[0]} within ${Math.round(within / 60_000)} minutes. It may still be working: the page asks again when you do.`, 0);
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
   let j: unknown = null;
   try {
     j = text ? JSON.parse(text) : null;
@@ -57,7 +74,9 @@ export const api = {
   summary: () => call<Summary>("GET", "/api/sheet"),
   autosave: () => call<AutosaveInfo | null>("GET", "/api/sheet/autosave"),
   geometry: () => call<Geometry>("GET", "/api/sheet/geometry"),
-  open: (name: string, bytes: ArrayBuffer) => call<Summary>("POST", `/api/sheet/open?${q({ name })}`, undefined, bytes),
+  open: (name: string, bytes: ArrayBuffer) => call<Summary>("POST", `/api/sheet/open?${q({ name })}`, undefined, bytes, READ_WITHIN_MS),
+  loading: () => call<{ loading: boolean; name?: string; elapsed_s?: number }>("GET", "/api/sheet/loading"),
+  reopen: (fresh: boolean) => call<Summary>("POST", "/api/sheet/reopen", { fresh }, undefined, READ_WITHIN_MS),
   unit: (id: string) => call<UnitInfo>("GET", `/api/sheet/unit?${q({ id })}`),
   param: (name: string) => call<ParamInfo>("GET", `/api/sheet/param?${q({ name })}`),
   preview: (changes: Record<string, number>) => call<DeltaResult>("POST", "/api/sheet/preview", { changes }),
@@ -78,6 +97,12 @@ export const api = {
   purgeGeneric: (unit?: string, dry_run = false) => call<EditResult>("POST", "/api/sheet/purge_generic", { unit, dry_run }),
   releaseFrozen: (unit: string, names?: string[]) => call<EditResult>("POST", "/api/sheet/release_frozen", { unit, names }),
   unlockPart: (unit: string, part: string) => call<EditResult>("POST", "/api/sheet/unlock_part", { unit, part }),
+  anchor: (name: string, unit: string, mode: "start" | "end" | "centre") => call<EditResult>("POST", "/api/sheet/anchor", { name, unit, mode }),
+  settleOptions: (name: string, unit: string) => call<SettleOptions>("GET", `/api/sheet/settle?${q({ name, unit })}`),
+  settle: (name: string, unit: string, choice: string, discard_values = false) =>
+    call<EditResult>("POST", "/api/sheet/settle", { name, unit, choice, ...(discard_values ? { discard_values } : {}) }),
+  unsettle: (unit: string, choice: string) => call<EditResult>("POST", "/api/sheet/unsettle", { unit, choice }),
+  intent: (unit?: string) => call<EditResult>("POST", "/api/sheet/intent", unit ? { unit } : {}),
   rename: (old: string, name: string) => call<{ ok: boolean; summary: Summary }>("POST", "/api/sheet/rename", { old, new: name }),
   resetValue: (name: string) => call<DeltaResult>("POST", "/api/sheet/reset_value", { name }),
   runs: () => call<{ runs: RunSummary[]; current: string | null }>("GET", "/api/sheet/ai/runs"),

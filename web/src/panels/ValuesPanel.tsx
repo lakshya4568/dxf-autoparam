@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
 import { entityList } from "../api/normalize";
-import type { FrozenRow, MeasuredRow, ParamRow } from "../api/types";
+import type { Blocker, FrozenRow, GrowthRow, MeasuredRow, ParamRow, SettleChoice, UnitInfo } from "../api/types";
 import { useStore } from "../state/store";
-import { checkBehaviour, clearParam, fitEntities, focusParam, keepUnnamedAsDrawn, liveChange, openUnit, releaseKept, store, unlockHeldPart } from "../state/workspace";
+import { checkBehaviour, chooseGrowth, clearParam, deriveIntent, fitEntities, focusParam, hideWays, keepUnnamedAsDrawn, liveChange, openUnit, releaseKept, settleGrowth, showWays, store, takeBackChoice, unlockHeldPart } from "../state/workspace";
 
 function fmt(v: number, unit: string): string {
   return unit === "m" ? v.toFixed(3) : Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(2);
@@ -96,6 +96,7 @@ function ParamEditor({ row }: { row: { key: string; label: string; value: number
         <span>drawn {fmt(row.drawn, row.unit)}</span>
         {lo !== undefined && hi !== undefined && <span title={`${range?.min_reason ?? ""}${range?.max_reason ? ` · ${range.max_reason}` : ""}`}>{fmt(lo, row.unit)} – {fmt(hi, row.unit)}</span>}
       </div>
+      <GrowthChooser rowKey={row.key} />
       {error && <p className="mt-1 text-[12px] text-red-600" role="alert" data-testid="param-error">Refused, the drawing stays as it was: {error}</p>}
       <div className="mt-1 flex gap-2 text-[12px]">
         <button className="underline text-blue-700 dark:text-blue-300" onClick={() => void checkBehaviour({ [row.key]: atDrawn ? row.value * 1.05 : row.value })}>Check the assembly</button>
@@ -105,6 +106,144 @@ function ParamEditor({ row }: { row: { key: string; label: string; value: number
         )}
       </div>
       {impact && <ImpactSummary data={impact} />}
+    </div>
+  );
+}
+
+/** How much of this unit is parametric, measured: the dimensions some named value changes, and those that stay as drawn whatever the values become. */
+function DimensionDrive({ d }: { d: NonNullable<UnitInfo["dimensions"]> }) {
+  const read = d.total - d.unread;
+  const tip = d.constants.length ? `Stay as drawn: ${d.constants.map((c) => `${fmt(c.mm, "mm")}${c.text ? ` (${c.text})` : ""}`).join(", ")}${d.constant > d.constants.length ? ", …" : ""} mm` : "Every dimension follows a named value.";
+  return (
+    <p className="mb-2 px-1 text-[12px] text-slate-500" title={tip} data-testid="dimension-drive">
+      Dimensions: <b className="text-slate-700 dark:text-slate-300">{d.driven}</b> of {read} change with a named value{d.constant ? <> · <span className={d.driven === 0 ? "text-amber-700 dark:text-amber-300" : ""}>{d.constant} stay as drawn</span></> : null}
+    </p>
+  );
+}
+
+const SIDES: Record<string, [string, string]> = { x: ["Left", "Right"], y: ["Bottom", "Top"] };
+const POLICY: Record<string, "start" | "end" | "centre"> = { start_fixed: "start", end_fixed: "end", centered: "centre" };
+
+/** One view's answer to "which side stays when this value changes": measured by the engine, with who decided it and on what evidence. Choosing a
+ * side makes it the person's own plan for the whole assembly (it replaces the engine's default); the drawing does not change until the value does. */
+function GrowthLine({ g, rowKey, many }: { g: GrowthRow; rowKey: string; many: boolean }) {
+  const label = many ? <b className="mr-1">{g.unit}</b> : null;
+  if (g.mode === "none") return <p className="text-[12px] text-slate-500" data-testid="growth-none">{label}{g.why}</p>;
+  const [low, high] = SIDES[(g.from ?? g.to ?? "x")[0] === "y" ? "y" : "x"];
+  const choices = [["start", `${low} stays`], ["centre", "Centred"], ["end", `${high} stays`]] as const;
+  const intent = g.intent;
+  // the decision is about the whole assembly (a centred box has cells whose own line stays): it is what is shown as chosen; with none, the measured side
+  const active = (intent?.policy ? POLICY[intent.policy] : undefined) ?? (g.mode === "start" || g.mode === "end" || g.mode === "centre" ? g.mode : undefined);
+  const engines = intent?.source === "design intent";
+  const provisional = engines && intent?.status === "provisional";
+  const by = !intent ? "as the set-out drew it" : engines ? (provisional ? "engine's default, provisional" : "engine's default") : "your choice";
+  const evidence = (intent?.evidence ?? []).join("; ");
+  return (
+    <div className="mb-1" data-testid="growth-line">
+      <div className="flex items-center gap-1">
+        {label}
+        <div className="inline-flex overflow-hidden rounded border border-slate-300 dark:border-slate-600 text-[12px]" role="group" aria-label={`Which side of ${rowKey} stays${many ? ` in ${g.unit}` : ""}`}>
+          {choices.map(([mode, text]) => (
+            <button key={mode} data-testid={`growth-${mode}`} aria-pressed={active === mode}
+              className={`px-2 py-0.5 border-l first:border-l-0 border-slate-300 dark:border-slate-600 ${active === mode ? "bg-blue-600 text-white" : "bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800"}`}
+              onClick={() => void chooseGrowth(rowKey, g.unit, mode)}>{text}</button>
+          ))}
+        </div>
+      </div>
+      <p className={`mt-0.5 text-[11px] ${provisional ? "text-amber-700 dark:text-amber-300" : "text-slate-500"}`} title={evidence || g.why} data-testid="growth-by">
+        {by}{g.mode === "slides" || g.mode === "other" ? ` · ${g.why}` : ""}{evidence ? ` — ${evidence.length > 110 ? `${evidence.slice(0, 107)}…` : evidence}` : ""}
+      </p>
+      {g.undecided && <Undecided g={g} rowKey={rowKey} />}
+      {!g.undecided && g.left_out && (
+        <p className="mt-0.5 text-[11px] text-slate-500" title={g.left_out.why} data-testid="growth-left-out">
+          Left out of its structure's growth: it keeps the direction the set-out gave it. {g.left_out.why.length > 120 ? `${g.left_out.why.slice(0, 117)}…` : g.left_out.why}
+        </p>
+      )}
+      {(g.settled ?? []).map((c) => (
+        <p key={c.choice} className="mt-0.5 text-[11px] text-slate-500" data-testid="growth-settled">
+          Settled by you: {c.title}. <button className={link} data-testid="take-back" onClick={() => void takeBackChoice(g.unit, c.choice)}>Take back</button>
+        </p>
+      ))}
+      <SettleWays rowKey={rowKey} unit={g.unit} />
+    </div>
+  );
+}
+
+/** What stood in the way, said by name: the site levels and held parts that would have to move, and any other line. */
+function blockedWords(blocked: Blocker[]): string {
+  const levels = [...new Set(blocked.filter((b) => b.kind === "level").map((b) => b.level ?? b.line))];
+  const parts = [...new Set(blocked.filter((b) => b.kind === "held").map((b) => b.part ?? b.line))];
+  const rest = blocked.filter((b) => b.kind !== "level" && b.kind !== "held").map((b) => b.line);
+  const bits = [levels.length ? `site level${levels.length > 1 ? "s" : ""} ${levels.join(", ")}` : "", parts.length ? `held part ${parts.join(", ")}` : "", rest.length ? `line${rest.length > 1 ? "s" : ""} ${[...new Set(rest)].slice(0, 3).join(", ")}` : ""];
+  return bits.filter(Boolean).join("; ");
+}
+
+/** The direction of this size could not be decided: said, with the way to ask the engine for concrete choices (each one tried for real). */
+function Undecided({ g, rowKey }: { g: GrowthRow; rowKey: string }) {
+  const u = g.undecided!;
+  const why = u.blocked.length ? `no side can stay: pinned by ${blockedWords(u.blocked)}` : (u.evidence[0] ?? "no side can stay").replace(/^no side could stay without breaking something/, "no side can stay");
+  return (
+    <div className="mt-0.5" data-testid="growth-undecided">
+      <p className="text-[11px] text-amber-700 dark:text-amber-300" title={u.evidence.join("; ")}>Undecided — {why.length > 150 ? `${why.slice(0, 147)}…` : `${why}.`} The set-out decides, as drawn.</p>
+      <button className={`text-[12px] ${link}`} data-testid="settle-ways" onClick={() => void showWays(rowKey, g.unit)}>Ways to settle it</button>
+    </div>
+  );
+}
+
+function Choice({ c, rowKey, unit }: { c: SettleChoice; rowKey: string; unit: string }) {
+  const discards = c.discards.length > 0;
+  return (
+    <li className="rounded border border-slate-200 dark:border-slate-700 p-1.5" data-testid="settle-choice" data-choice={c.id}>
+      <div className="flex items-start justify-between gap-2">
+        <b className="text-[12px]">{c.title}</b>
+        <button className="shrink-0 rounded bg-blue-600 px-2 py-0.5 text-[12px] text-white hover:bg-blue-700" data-testid="settle-choose"
+          title={discards ? `Also resets the value you set for ${c.discards.join(", ")}` : "Written as your own decision; one undo takes it back"}
+          onClick={() => void settleGrowth(rowKey, unit, c.id, discards)}>{discards ? "Choose, reset my value" : "Choose"}</button>
+      </div>
+      <p className="text-[11px] text-slate-600 dark:text-slate-300">
+        {c.stays.charAt(0).toUpperCase() + c.stays.slice(1)}{c.status === "provisional" ? " (assumed: nothing else decides it)" : ""}.
+        {c.moves.length > 0 && <> {c.moves.join("; ")}.</>}
+      </p>
+      {c.stops_being_input.length > 0 && <p className="text-[11px] text-amber-700 dark:text-amber-300">Stops being an input: {c.stops_being_input.join(", ")}.</p>}
+      {c.become_inputs.length > 0 && <p className="text-[11px] text-slate-500">Becomes an input: {c.become_inputs.join(", ")}.</p>}
+      {c.left_out.length > 0 && <p className="text-[11px] text-slate-500">Left out of the growth (keeps the set-out's direction): {c.left_out.map((x) => x.name).join(", ")}.</p>}
+      {discards && <p className="text-[11px] text-amber-700 dark:text-amber-300">Resets the value you set for {c.discards.join(", ")}.</p>}
+    </li>
+  );
+}
+
+/** The concrete choices that would settle it, as the engine tried them: only what held is offered; what did not is one click away, with why. */
+function SettleWays({ rowKey, unit }: { rowKey: string; unit: string }) {
+  const ways = useStore(store, (s) => s.ways);
+  if (!ways || ways.key !== rowKey || ways.unit !== unit) return null;
+  if (ways.loading || !ways.options) return <p className="mt-1 text-[11px] text-slate-500" data-testid="settle-loading">Trying each way for real…</p>;
+  const o = ways.options;
+  return (
+    <div className="mt-1 rounded border border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/20 p-1.5" data-testid="settle">
+      <div className="mb-1 flex items-center justify-between text-[11px] uppercase tracking-wide text-slate-400">
+        <span>{o.choices.length ? "Ways to settle it, each tried on the sheet" : "Nothing single settles it"}</span>
+        <button className={link} onClick={hideWays}>Close</button>
+      </div>
+      {o.choices.length > 0 && <ul className="space-y-1">{o.choices.map((c) => <Choice key={c.id} c={c} rowKey={rowKey} unit={unit} />)}</ul>}
+      {o.notes.map((n) => <p key={n} className="mt-1 text-[11px] text-slate-500">{n}</p>)}
+      {o.rejected.length > 0 && (
+        <details className="mt-1 text-[11px] text-slate-500" data-testid="settle-rejected">
+          <summary className="cursor-pointer">Tried and did not hold ({o.rejected.length})</summary>
+          <ul className="ml-3 list-disc">{o.rejected.map((r) => <li key={r.id}>{r.why}</li>)}</ul>
+        </details>
+      )}
+    </div>
+  );
+}
+
+function GrowthChooser({ rowKey }: { rowKey: string }) {
+  const param = useStore(store, (s) => s.param);
+  const rows = param?.key === rowKey ? param.info?.growth : undefined;
+  if (!rows || rows.length === 0) return null;
+  return (
+    <div className="mt-2 border-t border-blue-200/70 dark:border-blue-900/70 pt-1.5" data-testid="growth">
+      <div className="mb-1 text-[11px] uppercase tracking-wide text-slate-400">When it changes</div>
+      {rows.map((g) => <GrowthLine key={g.unit} g={g} rowKey={rowKey} many={rows.length > 1} />)}
     </div>
   );
 }
@@ -244,6 +383,7 @@ export function ValuesPanel() {
         </select>
         <input className="flex-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-1.5 py-0.5" placeholder="filter" value={filter} onChange={(e) => setFilter(e.target.value)} />
       </div>
+      {unit?.dimensions && unit.dimensions.total > 0 && <DimensionDrive d={unit.dimensions} />}
       {summary.shared.length > 0 && (
         <Group title="Shared across views" count={summary.shared.length} testid="shared-group">
           {summary.shared.map((p) => (
@@ -283,6 +423,24 @@ export function ValuesPanel() {
           action={<button className={link} data-testid="release-all" onClick={() => void releaseKept(unit.id)}>Release all</button>}>
           <KeptRows rows={groups.kept} uid={unit.id} />
         </Group>
+      )}
+      {unit && (unit.settled ?? []).length > 0 && (
+        <Group title="Your choices" count={unit.settled!.length} fold testid="settled-group">
+          {unit.settled!.map((c) => (
+            <div key={c.choice} className="flex items-center gap-2 px-1.5 py-0.5 text-slate-500">
+              <span className="min-w-0 flex-1 truncate" title={c.title}>{c.title}</span>
+              <button className={`text-[11px] ${link}`} data-testid={`take-back-${c.choice}`} onClick={() => void takeBackChoice(unit.id, c.choice)}>Take back</button>
+            </div>
+          ))}
+        </Group>
+      )}
+      {anyParametrized && !filter && (
+        <p className="mt-2 px-1 text-[12px] text-slate-500">
+          <button className={link} data-testid="derive-intent" title="Which side of each value stays when it changes, decided again from the drawing (symmetry, what is fixed, existing work). What you chose stays; one undo takes it back."
+            onClick={() => void deriveIntent(unit?.id)}>Work out growth directions again</button>
+          {" · "}
+          <button className={link} data-testid="derive-intent-all" onClick={() => void deriveIntent()}>every unit</button>
+        </p>
       )}
       {anyParametrized && !filter && (
         <p className="mt-2 px-1 text-[12px] text-slate-500">

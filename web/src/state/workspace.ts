@@ -3,7 +3,7 @@
 // The camera changes only when the person pans, zooms or asks to fit something: an edit, a preview, an undo never move it.
 import { api, EngineError } from "../api/client";
 import { entitySet } from "../api/normalize";
-import type { BehaviourReport, Box, DeltaResult, EntityRecord, Geometry, ParamInfo, Prim, Style, Summary, UnitInfo } from "../api/types";
+import type { BehaviourReport, Box, DeltaResult, EntityRecord, Geometry, ParamInfo, Prim, SettleOptions, Style, Summary, UnitInfo } from "../api/types";
 import { DEFAULT_OVERLAYS, type HighlightSets, type Overlays } from "../canvas/renderer";
 import { GridIndex, primBox } from "../canvas/spatial";
 import { type Camera, DEFAULT_CAMERA, fitBox, padBox, unionBox, ViewHistory } from "../canvas/viewport";
@@ -41,6 +41,8 @@ export interface WorkspaceState {
   focusView: string | null;
   highlight: HighlightSets | null;
   param: { key: string; info: ParamInfo | null } | null;
+  /** The ways to settle an undecided direction, asked of the engine for one value of one unit (they are tried for real: it takes a moment). */
+  ways: { key: string; unit: string; loading: boolean; options: SettleOptions | null } | null;
   unit: UnitInfo | null;
   preview: Preview | null;
   /** The entities that differ from the drawing as it was read, as it had them — fetched only while the Original overlay is on. */
@@ -65,7 +67,7 @@ export const store = new Store<WorkspaceState>({
   summary: null, prims: [], styles: [], index: null, revision: 0, cam: DEFAULT_CAMERA, fitted: false, W: 800, H: 600,
   theme: typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light",
   hiddenLayers: new Set(), hiddenStatus: new Set(), statusOf: null, overlays: { ...DEFAULT_OVERLAYS }, selection: new Set(), hover: null,
-  focusView: null, highlight: null, param: null, unit: null, preview: null, original: null, behaviour: null, issues: new Set(), entity: null, message: null,
+  focusView: null, highlight: null, param: null, ways: null, unit: null, preview: null, original: null, behaviour: null, issues: new Set(), entity: null, message: null,
   busy: null, leftTab: "views", rightTab: "inspect", leftWidth: 320, rightWidth: 360, leftOpen: true, rightOpen: true, agentOpen: false, agentWidth: 440, frameMs: 0,
 });
 
@@ -180,13 +182,41 @@ export async function refreshSheet(): Promise<void> {
   }
 }
 
+/** While a drawing is read the engine answers other questions: ask it what it is doing and for how long, so a long read says so (and a stuck one shows). */
+async function whileReading<T>(name: string, read: () => Promise<T>): Promise<T | undefined> {
+  const tick = setInterval(() => {
+    api.loading().then((l) => { if (l.loading && store.get().busy) store.set({ busy: `Reading ${l.name ?? name}… ${Math.round(l.elapsed_s ?? 0)} s` }); }).catch(() => undefined);
+  }, 1000);
+  try {
+    return await guard(`Reading ${name}…`, read);
+  } finally {
+    clearInterval(tick);
+  }
+}
+
+const freshSheet = () => ({ selection: new Set<number>(), entity: null, preview: null, param: null, highlight: null, behaviour: null, issues: new Set<number>(), fitted: false, focusView: null });
+
 export async function openFile(file: File): Promise<void> {
-  await guard(`Reading ${file.name}…`, async () => {
+  await whileReading(file.name, async () => {
     const bytes = await file.arrayBuffer();
     await api.open(file.name, bytes);
-    store.set({ selection: new Set(), entity: null, preview: null, param: null, highlight: null, behaviour: null, issues: new Set(), fitted: false, focusView: null });
+    store.set(freshSheet());
   });
   await loadAll(true);
+}
+
+/** Start the open drawing over from the drawing as drawn: the work saved for it is kept aside under a dated name (nothing is lost). */
+export async function startClean(): Promise<void> {
+  const name = store.get().summary?.file ?? "the drawing";
+  const done = await whileReading(name, async () => {
+    await api.reopen(true);
+    store.set(freshSheet());
+    return true;
+  });
+  if (!done) return;
+  announcedRestore = false;
+  await loadAll(true);
+  say("Started from the drawing as drawn. Your earlier work is kept aside under a dated name, next to where it was saved.", "ok");
 }
 
 async function loadStatuses(): Promise<void> {
@@ -325,6 +355,74 @@ export async function releaseKept(uid: string, names?: string[]): Promise<void> 
   void openUnit(uid);
 }
 
+const SIDE_WORDS: Record<"start" | "end" | "centre", string> = { start: "its start side stays", end: "its far side stays", centre: "it grows equally on both sides" };
+
+/** A person says which side of a value stays when it changes. The engine writes it as their plan for the whole assembly the value belongs to and
+ * measures it on the sheet; refused, it says why and nothing changes. A person's choice always replaces the engine's default. */
+export async function chooseGrowth(key: string, unit: string, mode: "start" | "end" | "centre"): Promise<void> {
+  const res = await guard("Choosing which side stays…", () => api.anchor(key, unit, mode));
+  if (!res) return;
+  afterCommit(res);
+  // at the drawn value nothing moves; at another value (one already stepped) the drawing follows the side that was chosen
+  say(`${key}: ${SIDE_WORDS[mode]} — your choice, in place of the engine's default. ${(res.delta ?? []).length ? "The drawing follows it at the value it has now." : "The drawing is as it was."}`, "ok");
+  void focusParam(key);
+}
+
+/** Work the design intent out again (the side of each value that stays), for one unit or all of them: one undoable step; a person's choices stay. */
+export async function deriveIntent(uid?: string): Promise<void> {
+  const res = await guard(uid ? "Working out which side of each value stays…" : "Working out which side of every value stays (a few seconds per unit)…", () => api.intent(uid));
+  if (!res) return;
+  afterCommit(res);
+  const out = res.result as Record<string, { changed?: boolean; skipped?: string; axes?: { status: string }[] }>;
+  const rows = Object.values(out);
+  const changed = rows.filter((r) => r.changed).length;
+  const open = rows.flatMap((r) => r.axes ?? []).filter((a) => a.status === "provisional" || a.status === "undecided").length;
+  say(`Growth worked out for ${rows.length} unit(s)${changed ? `, ${changed} changed` : ", nothing changed"}${open ? `; ${open} direction(s) rest on convention or could not be decided — check them under each value` : ""}.`, "ok");
+  const shown = store.get().unit?.id;
+  if (shown) void openUnit(shown);
+  const picked = store.get().param?.key;
+  if (picked) void focusParam(picked);
+}
+
+/** Ask the engine for the ways to settle a direction it could not decide: each is tried for real (the answer written with it, the unit built, the
+ * whole sheet asked), so only what holds is shown. Nothing changes. */
+export async function showWays(key: string, unit: string): Promise<void> {
+  store.set({ ways: { key, unit, loading: true, options: null } });
+  const options = await guard("Trying each way for real (a few seconds each)…", () => api.settleOptions(key, unit));
+  const now = store.get().ways;
+  if (!now || now.key !== key || now.unit !== unit) return; // another value was opened meanwhile
+  store.set({ ways: options ? { key, unit, loading: false, options } : null });
+}
+
+export function hideWays(): void {
+  store.set({ ways: null });
+}
+
+/** A person picks one of the ways: written as their own decision, the default derived again around it, committed only if the whole sheet holds
+ * (one undoable step). Refused, the engine says why and nothing changes. */
+export async function settleGrowth(key: string, unit: string, choice: string, discard = false): Promise<void> {
+  const res = await guard("Settling the direction…", () => api.settle(key, unit, choice, discard));
+  if (!res) return;
+  afterCommit(res);
+  const r = res.result as { title?: string; intent?: { evidence?: string[] } | null };
+  say(`${key}: ${(r.title ?? "settled")} — your choice. ${r.intent?.evidence?.length ? r.intent.evidence[r.intent.evidence.length - 1] + "." : ""} One undo takes it back.`, "ok");
+  store.set({ ways: null });
+  void openUnit(unit);
+  void focusParam(key);
+}
+
+/** Take a settled choice back (what it changed is written back); the default is derived again. */
+export async function takeBackChoice(unit: string, choice: string): Promise<void> {
+  const res = await guard("Taking the choice back…", () => api.unsettle(unit, choice));
+  if (!res) return;
+  afterCommit(res);
+  say("The choice is taken back; the direction is worked out again from the drawing.", "ok");
+  store.set({ ways: null });
+  void openUnit(unit);
+  const picked = store.get().param?.key;
+  if (picked) void focusParam(picked);
+}
+
 /** A person asks to edit work that was kept as drawn: the part stops being held and the sizes named on it are inputs again. */
 export async function unlockHeldPart(uid: string, part: string): Promise<void> {
   const res = await guard(`Unlocking ${part}…`, () => api.unlockPart(uid, part));
@@ -336,7 +434,7 @@ export async function unlockHeldPart(uid: string, part: string): Promise<void> {
 }
 
 export function clearParam(): void {
-  store.set({ param: null, highlight: null });
+  store.set({ param: null, highlight: null, ways: null });
 }
 
 export async function previewChange(changes: Record<string, number>): Promise<void> {
@@ -418,14 +516,27 @@ export async function applyChange(changes: Record<string, number>): Promise<bool
   return true;
 }
 
+/** After an undo or redo the open value's direction is read again: a choice about it (the side, a way to settle it) may have come or gone. */
+function rereadOpenValue(): void {
+  store.set({ ways: null });
+  const picked = store.get().param?.key;
+  if (picked) void focusParam(picked);
+}
+
 export async function undo(): Promise<void> {
   const res = await guard("Undo…", () => api.undo());
-  if (res) afterCommit(res);
+  if (res) {
+    afterCommit(res);
+    rereadOpenValue();
+  }
 }
 
 export async function redo(): Promise<void> {
   const res = await guard("Redo…", () => api.redo());
-  if (res) afterCommit(res);
+  if (res) {
+    afterCommit(res);
+    rereadOpenValue();
+  }
 }
 
 /** The sheet entities a behaviour row is about: an annotation's entity, or a component's entities. */
@@ -472,6 +583,6 @@ if (typeof window !== "undefined") {
   (window as unknown as Record<string, unknown>).__ws = {
     state: () => store.get(),
     select, fitView, fitSheet, fitSelection, back, previewChange, applyChange, liveChange, undo, redo, focusParam, openUnit, toggleLayer, setOverlay, checkBehaviour, loadAll,
-    keepUnnamedAsDrawn, releaseKept, unlockHeldPart,
+    keepUnnamedAsDrawn, releaseKept, unlockHeldPart, startClean, chooseGrowth, deriveIntent, showWays, hideWays, settleGrowth, takeBackChoice,
   };
 }
