@@ -471,6 +471,30 @@ generator draws for that side (`tests/test_design_intent.py`).
 
 **Still undecidable**, and said as such, never offered a guess: a view whose parts hang on another view's lines once that view's decision has rewritten the
 set-out (a part "set out from the assembly but the plan says nothing about it": a decision about a *part*, per assembly, that none of the changes above
-makes); two pipes that must stay touching while a size moves them apart, and members that would cross (a connection or a clash, not a pin); an axis whose
+makes — for a twin view beside the first, one value with an occurrence in each, §13.2 now decides it); two pipes that must stay touching while a size moves them apart, and members that would cross (a connection or a clash, not a pin); an axis whose
 only blocker is a person's formula, a slope or existing work (said as "not something to release here"). A way that settles the axis may still leave the size
 being looked at *out of the growth* (it keeps the set-out's direction): the card says so, and the value says so after.
+
+### 13.2 One value, two assemblies — a twin view beside the first
+
+A size drawn in two views side by side (two half sections of one bridge, one `ClearSpan`) is one value with an occurrence in each of two assemblies on the
+axis. Each assembly's plan is verified on the whole unit, and the value moves the other assembly too — so every candidate for either one failed the same
+way (*unrelated part moves*, *fixed part moves*, *a binding was lost*) whichever side was tried, and a symmetric structure was left growing from the left
+(a live run: both ends of the span undecided, the span drawn "the right end stays"). Two rules, both about what a plan answers for:
+
+- **The other assembly's parts are not this plan's** (`plan._sibling_parts`): the parts drawn on, or hung from, the lines of the value's occurrences in
+  another assembly are neither taken along by this plan (they are not its followers or attached parts) nor held by it, and their movement through the value
+  is not "unrelated" — the plan of that assembly answers for them.
+- **A candidate must leave every occurrence of every size driving** (`design_intent._holds`): a size in the group is checked on all its occurrences, in every
+  assembly, not only on the ones in the assembly being decided (it used to be: a plan that broke the same size in the other view passed, and failed later).
+
+Held on a generated twin (two boxes side by side, one `ClearSpan` and one `OuterWall` for both; `tests/test_design_intent_twin.py`, which fails on the
+code before this change): both assemblies are *decided, centred about each view's drawn centre line*, and the two faces of each clear span move equal
+distances apart. On the real sheet's twin unit: both assemblies decided centred with `ClearSpan` and `WallThickness`; the two sizes whose plans cannot
+stand beside them (`HaunchSize`, `BoulderBackingThickness`) are left out of the growth and said. When every side fails the same way the reason now says so
+("whichever side stays the same thing breaks, so it is about the structure and not the side"), instead of listing three identical failures.
+
+Not done, measured: building the group up one size at a time when cutting it down ends with nothing (sizes whose plans take each other's lines) would
+decide 6 of the 18 axes the nine examples leave undecided, and two more of the real sheet's — but it adds half again to the derivation of a large unit
+(94 → 141 s for the 974-entity section), leaves the dropped sizes without the ways-to-settle that an undecided axis offers, and gives "decided" to an axis of
+which one size in five is kept. It waits for a person to say it is wanted.

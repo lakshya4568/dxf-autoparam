@@ -82,7 +82,9 @@ node .cache/oracle.mjs fixtures/library && uv run python tools/json_to_dxf.py fi
 
 Uses Application Default Credentials and your gcloud project (see `.env.example`; nothing is hardcoded). Model:
 **Gemini 3.8 Flash, thinking high**; fallback **3.7 Flash, thinking high** when 3.8 is out of capacity or past its
-deadline (429 / 503 / 504). `VERTEX_TIMEOUT_MS` (default 10 min) is also the server's deadline — the SDK sends it as
+deadline (429 / 503 / 504). A model that could not answer a whole call is not asked first again for `VERTEX_BREAKER_S` (300 s, doubled for each
+probe that fails again): a live run lost about two minutes a turn asking an overloaded primary twice before the fallback answered. The verdict says when
+more than one model answered. `VERTEX_TIMEOUT_MS` (default 10 min) is also the server's deadline — the SDK sends it as
 `X-Server-Timeout`, so a shorter value turns long thinking into 504s.
 
 Two caches:

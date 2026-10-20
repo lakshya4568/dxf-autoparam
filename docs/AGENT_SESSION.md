@@ -25,6 +25,13 @@ still holds on the sheet**. Beside the criteria the verdict carries `notes` (thi
 purpose and why, what the plan leaves out, a group the engine doubted that nobody looked at, views never parametrized), `given_up`, the
 plan itself, and `finish_summary` — what the model said it did, whole.
 
+Three things the verdict reads from the sheet, because a live run showed the model's words and the sheet disagreeing: the **links** clause is kept only if
+no named value recurs in several units with the same number and nothing shares it (`SheetModel.unlinked_repeats`; a plan link stating the places, even as
+only noted, counts) — and where the model names such a value, the result of `define_parameters` says so then (`also_named_in`: the same number → share_sizes
+joins the views; a different number → one name for two sizes, a note in the verdict); a unit with parts and **no named value** is `parts_only` in the
+coverage table, not covered (the headline said "9 of 10 units parametrized" with one of the nine holding three parts and nothing to change); and a run whose
+turns were answered by more than one model says which (`notes`).
+
 ## Who does what
 
 | The model (Gemini, via `ai/vertex.py`) | The engine (deterministic) |

@@ -69,6 +69,9 @@ folder is a bug (`vertex.CACHE`, `DXF_AUTOPARAM_STATE`): point it at `tmp_path`.
 - A parameter's `value` is the engine's measurement (the model never types a number). Units drawn at another scale read their own scale.
 - Finish is a gate (the verdict is derived from the engine, never from the model's words). Notes in the verdict are things to read, not failures.
 - The model never sees what the engine derived (`design_intent.strip`); the benchmark fixtures' values never appear in prompts or tool text.
+- A plan answers for its own assembly. A value drawn in two views side by side has an occurrence in each; the parts the value moves through the other one are that
+  assembly's (`plan._sibling_parts`), and a candidate must leave every occurrence of every size driving (`design_intent._holds`). Don't verify one view's plan against
+  the whole unit again: every candidate fails the same way and a symmetric structure is left growing from the left.
 
 ## 5. The paid live run — when, how, what to keep
 
@@ -154,4 +157,5 @@ audit of the last run's saved work). One run per verified change set. If the own
 | A run on old code | Preflight FAILs when the server is older than `src/`: restart it |
 | Cache collapse after a thinking-level change | Adaptive thinking is opt-in (`AUTOPARAM_AGENT_ADAPTIVE_THINKING=1`); leave it off |
 | Cost shows "no price" | Set `VERTEX_PRICES` (`.env.example`); the repo does not guess a price |
+| Turns take minutes, `RETRY — 429` in `run.log` | The primary model is out of capacity. A model that could not answer is not asked first again for `VERTEX_BREAKER_S` (300 s); the log says "…could not answer … the next turns start on <fallback>", and the verdict notes a run answered by two models |
 | A headless browser or test drops out | Something heavy is running; wait, never overlap with a live run |
