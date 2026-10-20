@@ -379,3 +379,98 @@ generator draws the intended result) — but these phrasings are self-authored. 
 the reader: 2/10 and 3/10 before tuning, a third set after tuning 6/12 — and in every set 0 misreadings became an
 applicable plan (each became a question). Remaining: the reader's phrasing coverage; one anchor policy per axis and
 assembly; dimension lines stay where drawn (their points follow).
+
+## 13. Which side of a size stays — growth direction as design intent (`design_intent.py`)
+
+**The problem.** A named size is two lines. When its value grows one end moves and the other stays, or both move half — and until this layer that was an
+accident of the set-out, a tree rooted at the left-most line of each axis: of the 38 named lengths of a ten-unit sheet read by the agent, 26 kept their
+start fixed, 11 their end, one its centre (by coincidence). A symmetric box widened on its right side only; a slab thickened into the cell below it.
+Nobody had decided that, and nothing said so.
+
+**The decision**, per axis and per *assembly* (the lines that move as one structure — a view of a section and the detail beside it are told apart by the
+lines they share), by evidence, in this order — every decision says which evidence it rests on:
+
+| | evidence | result |
+|---|---|---|
+| 1 SYMMETRY | the faces of the structure the size belongs to mirror about a line (a drawn centre line, the drawing's axis, the middle of a closed outline; plain lines only when most of them mirror, and on the vertical axis only in plan views) | `centered` about it: each side moves half |
+| 2 FIXED | only one side can stay: the other would move a stated level, existing work or a held part | that side stays |
+| 3 EXISTING | the size is new work against existing work | the existing side stays, the new work grows away from it |
+| 4 CONVENTION | nothing in the drawing says | the left / bottom side stays, **marked `provisional`** and shown as an assumption |
+
+What touches a side moves with it (a backfill against a wall, a slab resting on it); what is only hung on the lines by the set-out stays where it is
+drawn. Slopes and projections are equations (`x8 = x1 + (y11 − y2)`) and are solved from whichever end the anchor needs.
+
+**Tried for real, never assumed.** Each candidate is written as ordinary plans, the unit is built with them, every promise is measured on the
+regenerated geometry (V16), every named size of the unit — not only the planned ones — must still grow 1 mm per mm of its value (an anchor that
+rewrites the line a size drives would turn that input into a reading, silently), and a size that was independent must not start to move with another. A
+size that breaks a candidate is left out of it (it keeps the set-out's direction, and the decision says so); when no side can stay, the set-out decides, as
+drawn, and the decision says what stood in the way (`undecided`). Measured on the nine example drawings with up to ten sizes each taken from the generic
+set-out's own tree — which includes sizes that overlap — 8 of the 18 axes could not be decided: an overall width named beside the parts it is the sum of
+cannot be an input together with them, and no side can stay for both.
+
+**Stored as plans** with `anchor.source == "design intent"`: measured every time, undone with the step they belong to, saved with the project. A person's
+plan (`propose_plan`, `anchor`, the chooser under each value) **always outranks it**, and the default is derived again around their choice. The agent never
+sees the derived plans (it starts from what was written; `strip`), so it cannot be misled into thinking a plan exists; `commit_answer` derives them for the
+answer it commits (`intent=False` skips; a derived plan that does not hold is dropped and the answer commits without it, `intent_skipped` says why), and
+`SheetModel.resolve_intent(unit?)` / `POST /api/sheet/intent` derive them again for work that is older or whose evidence a person changed.
+
+**Where it is seen.** `GET /api/sheet/param` → `growth[]`: per unit, which line stays (measured) and the intent behind it (who, status, evidence). The
+Values panel shows it under the value — *Left stays · Centred · Right stays* (bottom/top on y), "engine's default, provisional" in amber, "your choice" —
+and a click is the person's own plan. The run's verdict carries a note for every direction that rests on convention or could not be decided, and for the
+sizes left out of a structure's growth.
+
+**What it does not do.** It decides a direction, not a design: a structure whose faces do not mirror, with nothing fixed and nothing existing, gets the
+convention (and says so). Sizes left out of an assembly keep the set-out's direction. A twin view that shares no line with the section (a detail
+drawn beside it) is its own assembly: its sizes follow their own evidence, not the section's.
+
+**Measured.** On the real ten-unit sheet read by the agent (offline copy, nothing paid): the clear span of the half elevation, which grew only to the
+right, now grows equally on both sides about the centre of the closed outline (left lines −0.5, right +0.5 per mm), wall thicknesses outward; across
+every unit no named size gained a failing check at ±10 % and none stopped being an input. On the generated boxes (1–3 cells) the whole box — walls,
+footing, wings, the pitching on them — is where the generator draws it at the new span, centred; on every example drawing the intent either holds or is
+absent, the drawing is reproduced exactly at its drawn values and no named size stops driving what it drove (`tests/test_design_intent.py`).
+
+### 13.1 When no side can stay — ways to settle it, each tried for real
+
+An axis ends `undecided` when every way of growing it breaks something. The reason is now said as data, not only as a sentence: the lines nothing may move
+(`Stack.blocked` → `AxisDecision.blocked`: line, what sets it — a site level *by name*, a held part *by name*, a part another decision keeps still, a
+person's formula, a slope — and how it moves against how the side needs it to) and the sizes the attempts broke on. The Values panel says it under the value
+(*Undecided — no side can stay: pinned by site levels FormationLevel, BedLevel*) and offers **Ways to settle it**.
+
+The engine proposes only changes **only a person may make**, each of which it has TRIED, exactly as `_attempt` tries a side:
+
+| change | when it is a candidate | written as |
+|---|---|---|
+| **leave a pinned level free** | the lines that stood in the way of a side are all site levels: freeing them lets that side stay (the structure then grows away from the level that stays) | the level's role → `derived` (it follows the structure's sizes, and stops being an input) |
+| **release a held part** | the blocking lines belong to a part kept as drawn | the part (and what it is made of) parametrized again, its sizes inputs again (`unlock_part`'s rule) |
+| **read a size instead of setting it** | the attempts broke on sizes that cannot all be inputs (an overall size named beside the parts it adds up, two overlapping sizes) | the size kept as drawn: a named quantity measured between its lines, not an input |
+
+A candidate is offered only if, with it written into the answer, **(1)** the unit builds with no new finding, **(2)** the intent derived around it decides the
+axis (decided or provisional) and leaves nothing that was decided undecided, **(3)** no input stops being one except the ones it names (the card says which
+stop and which become inputs — freeing a level makes the size between it and the next one an input), and **(4)** the whole sheet, asked as a commit would ask
+it (shared sizes still followed, plans measured, values a person set not lost silently) says yes — then put back exactly. What was tried and did not hold is
+listed with why; nothing else is offered. Each card says which side stays, what grows and moves with the size being looked at, which sizes are left out of the
+growth, and what a person's own value it would discard (confirmed before it does).
+
+**Choosing** (`SheetModel.settle`, `POST /api/sheet/settle`) writes the change as the person's own decision (`answer["settled"]` records what it was and what it
+is, so it is shown, kept, and can be taken back), derives the default again around it (the decision's evidence leads with *your choice: …*), and commits in
+**one step** only if the whole sheet holds — one undo takes it back; `unsettle` / *Take back* writes it back and derives again. A choice that no longer
+settles the direction when the sheet is checked is not kept. The ways are asked with `GET /api/sheet/settle?name=&unit=` and kept for the revision they were
+worked out on (each way builds the unit: seconds per way, bounded to 60 s per axis, and the page says when it stopped).
+
+Two defects found on the way and fixed, because they made the ways untrue: a part an engine-derived plan keeps still was kept still against *every other*
+plan too (a foundation held for the width plan blocked the height plan that must move it) — a derived plan's pins now bind its own assembly only (a person's
+`keep_fixed` still binds everywhere); and the status / evidence of a derived plan was stamped before the decision was made, so a *provisional* direction showed
+as decided, without its evidence — the plans now carry the final decision's.
+
+**Measured** (offline copy of the real project, nothing paid; the page's browser test passes on it and on a generated pinned box): of its 10 units' 17 axes, 8
+are undecided. For 5 of them the engine offers verified ways — site levels left free (3 ways on a chain pinned at both ends, each saying which side then stays
+and which sizes it leaves out of the growth; 2 on a footing-and-wall pair), the one held part released, one size read instead of set — and for 3 it offers none
+and says why. On the nine example drawings (sizes taken from the generic set-out's own tree, which overlap) 7 of the 8 undecided axes get a verified way (a size
+read instead of set), the eighth the list of what did not hold. On generated boxes pinned at both ends, freeing either level gives exactly the geometry the
+generator draws for that side (`tests/test_design_intent.py`).
+
+**Still undecidable**, and said as such, never offered a guess: a view whose parts hang on another view's lines once that view's decision has rewritten the
+set-out (a part "set out from the assembly but the plan says nothing about it": a decision about a *part*, per assembly, that none of the changes above
+makes); two pipes that must stay touching while a size moves them apart, and members that would cross (a connection or a clash, not a pin); an axis whose
+only blocker is a person's formula, a slope or existing work (said as "not something to release here"). A way that settles the axis may still leave the size
+being looked at *out of the growth* (it keeps the set-out's direction): the card says so, and the value says so after.

@@ -69,10 +69,12 @@ So:
 - **A saving that turns into a cost is switched off, and said**: no caching although each of three requests was mostly the same as the one before (then
   the explicit cache takes over); a change of thinking level followed, twice and more often than not, by a collapse of the cached tokens (then thinking is
   fixed).
-- **Thinking follows the work**: a turn that follows reading and bookkeeping thinks `low`, the first look at a unit `medium`, a turn that follows the
-  candidates or a measured plan — or a refusal — `high`; never above the model's own level; `VERTEX_AGENT_STEP_THINKING` pins every turn after the first. In the
-  one live run measured, thinking was 1.2% of the tokens billed and the slow calls were provider latency (no correlation with thinking tokens): this is a
-  modest saving, not the lever. The lever is how much of each request is the same as the last.
+- **Thinking is one level by default**: every turn after the first thinks at `VERTEX_THINKING_LEVEL` (`VERTEX_AGENT_STEP_THINKING` pins them to another).
+  Levels that follow the work — `low` after reading and bookkeeping, `medium` for the first look at a unit, `high` after the candidates, a measured plan
+  or a refusal; never above the model's own level — are opt-in (`AUTOPARAM_AGENT_ADAPTIVE_THINKING=1`): in the one live run measured, thinking was
+  1.2% of the tokens billed, and a run with the levels changing had about half of its prompt served from the provider's cache (49%; a call right after a
+  change got 0–40% although 83–97% of it was the same as the call before). What a lower level saves does not pay for what a changed level loses. The lever
+  is how much of each request is the same as the last.
 
 ## What a refused edit is, and what repairs it
 
@@ -84,6 +86,19 @@ and lists what was applied and what was not; what was applied stays applied, wha
 a different, explicit act, and it is said in the verdict (`given_up`, a note): `remove` of the size, `set_relation` with an empty expression,
 or a plan link with `bound_by: noted_only` that names the refused share. `finish` is refused once while any of this is open (with the list), and
 a second `finish` ends the run with what holds — the verdict then says what is open.
+
+A refused link of the plan is repaired by the link itself, or when the plan now says the same thing under other words: every two places the refused link
+named are in one unit (the sheet already holds them as one drawing) or are named together by a link that was kept (`statement.covered`). A replaced plan
+statement is not "never repaired".
+
+## Which side of a size stays, and what the verdict says of it
+
+The engine decides it (`design_intent.py`, `DESIGN_INTENT.md` §13) and the agent does not see it: its prompt says only that growth direction is design
+intent, decided from the drawing and measured, that a person's plan replaces it, and that a side is not to be flipped with `set_formulas`. The verdict's
+`notes` carry what the engine could not settle by evidence (a convention, nothing that held, sizes left out) and, per unit, how many of its dimensions a
+named value drives (`status.dimension_drive`, measured by stepping each named value) and which sizes nothing changes. A level that is the end of a size the
+agent defined is left free (the size was asked for by name; `check_only` holds a line fixed and never sets out from it), and one that is only a face of the
+part is kept with a warning.
 
 ## The plan across views (`ai/statement.py`)
 

@@ -97,6 +97,9 @@ in `.cache/ai/usage.jsonl`.
 
 ## Rules the engine applies itself (whatever the AI proposes)
 
+- **Growth direction is design intent, decided from the drawing:** when a size changes, which side stays — both sides equally about the line a
+  structure mirrors about, away from what is fixed or existing, else the base (marked provisional) — is worked out per structure, tried for real, and
+  shown under each value (*Left stays · Centred · Right stays*); a person's choice always replaces it (**[docs/DESIGN_INTENT.md](docs/DESIGN_INTENT.md)** §13).
 - **Slopes keep their angle:** an inclined edge with a ratio the drawing states ("1(V):1.5(H)", "SLOPE 2:1") or a clean
   drafting ratio sets its toe out by ratio × height.
 - **Annotations follow what they state:** level notes follow their line through the drawing's own level datum (found from

@@ -58,7 +58,11 @@ VALIDATION   per view (collapse, flip, inside-out), across views (every bound si
    nearest view within eight of the sheet's text heights.
 8. **Kinds** — table (straight rules on a grid with words; also a grid of small walled panels), notes, title block (its
    ownership words), view. Each view gets a type, a stated scale, and its own drawing unit when its dimensions agree on
-   another scale (a 1:25 detail on a 1:100 sheet). What is unsure becomes a question, not a decision.
+   another scale (a 1:25 detail on a 1:100 sheet). What is unsure becomes a question, not a decision. The number a dimension
+   states is read from its own text, or — for an automatic dimension, which has none — from the text of the block CAD draws it
+   with. Work saved while such a view was still read at the sheet's scale carries every value times one ratio: they are
+   measured again (`validator.rescale_values`, only when every measurable value of the unit is off by the same drafting ratio),
+   and the names, parts and levels are kept.
 
 Measured on four real sheets (VERIFIED, `tests/test_sheet.py` + overlays):
 
