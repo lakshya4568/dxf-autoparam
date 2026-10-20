@@ -535,6 +535,25 @@ def _attached(prog: Program, parts: dict[str, Part], members: set[str], core: se
     return out
 
 
+def _sibling_parts(prog: Program, parts: dict[str, Part], answer: dict | None, name: str | None, pairs: list[tuple[str, str]], axis: str | None,
+                   own: set[str]) -> set[str]:
+    """The parts the value moves through its occurrences in OTHER assemblies (a sibling view beside this one on this axis), with what is drawn on or
+    hung from their lines: the value itself moves them, and the plan of THAT assembly answers for how. This plan neither holds them nor takes them
+    along — a view that is only positioned from this one by the set-out is not part of this structure. `own`: this plan's own core and subtree."""
+    if not (parts and axis and name and name in prog.params):
+        return set()
+    mine = {tuple(p) for p in pairs}
+    other = [tuple(pr) for pr in parameter_pairs(prog, answer, name) if tuple(pr) not in mine]
+    if not other:
+        return set()
+    core = core_parts(parts, other)
+    out: set[str] = set()
+    for n in core:
+        out |= {n} | descendants(parts, n)
+    out |= set(_attached(prog, parts, assembly_lines(prog, parts, core, axis, seed={x for pr in other for x in pr}), core, axis))
+    return out - own
+
+
 def _touches(why: str) -> bool:
     return not why.startswith("its lines")
 
@@ -792,6 +811,10 @@ def build_plan(prog: Program, answer: dict, request: dict, sheet: dict | None = 
     core = core_parts(parts, pairs) if parts and pairs else set()
     plan["affected"]["core"] = sorted(core)
     followers = {d["target"] for d in dirs if d["kind"] == "part" and d["mode"] in MOVING_MODES and d["status"] == "accepted"}
+    own_core: set[str] = set()
+    for n in core:
+        own_core |= {n} | descendants(parts, n)
+    sibling = _sibling_parts(prog, parts, answer, name, pairs, axis, own_core)  # a sibling view's parts are not this assembly's: neither held nor taken along
     # ── 4. generic directives expand to the parts they mean ──
     members: set[str] = set()
     attached: dict[str, str] = {}
@@ -799,7 +822,7 @@ def build_plan(prog: Program, answer: dict, request: dict, sheet: dict | None = 
         members = assembly_lines(prog, parts if parts else None, (core | followers) if parts else None, axis,
                                  seed={x for p in pairs for x in p}, exclude=fixed_parts)
         if parts:
-            attached = _attached(prog, parts, members, core | followers, axis)
+            attached = {n: why for n, why in _attached(prog, parts, members, core | followers, axis).items() if n not in sibling}
     for d in [x for x in dirs if x["kind"] == "generic"]:
         if d["target"] == "connected":  # what touches the assembly — not what the set-out merely hangs on its lines
             d["expands_to"] = sorted(n for n, why in attached.items() if _touches(why))
@@ -845,7 +868,7 @@ def build_plan(prog: Program, answer: dict, request: dict, sheet: dict | None = 
         # the directives above (a generic "what touches it follows", a person's answers) have just named more parts that move with the assembly:
         # its lines are worked out again, or the anchor below would be tried on a smaller assembly than the one that moves
         members = assembly_lines(prog, parts, core | followers, axis, seed={x for p in pairs for x in p}, exclude=fixed_parts)
-        attached = _attached(prog, parts, members, core | followers, axis)
+        attached = {n: why for n, why in _attached(prog, parts, members, core | followers, axis).items() if n not in sibling}
     # ── 6. conflicts between directives, and with the driver ──
     by_target: dict[str, list[dict]] = {}
     for d in dirs:
@@ -1397,6 +1420,7 @@ def verify_plan(prog: Program, plan: dict, parts: dict[str, Part], compiled: dic
     for n in (plan.get("affected") or {}).get("core", []):
         if n in parts:
             inside_core |= {n} | descendants(parts, n)
+    elsewhere = _sibling_parts(prog, parts, answer, name, pairs, axis, inside_core)  # moved by the value in another assembly: that plan answers for them
     directed = {d_["target"] for d_ in dirs if d_["kind"] == "part"}
     topo = of(an)
     v0 = line_values_mm(prog)
@@ -1485,7 +1509,8 @@ def verify_plan(prog: Program, plan: dict, parts: dict[str, Part], compiled: dic
         # unrelated parts: no movement unless the plan says so
         if parts:
             for n in parts:
-                if n in directed or n in inside_core or any(a in directed or a in inside_core for a in _ancestors(parts, n)) or any(q.parent == n for q in parts.values()):
+                if (n in directed or n in inside_core or n in elsewhere or any(a in directed or a in inside_core or a in elsewhere for a in _ancestors(parts, n))
+                        or any(q.parent == n for q in parts.values())):
                     continue
                 mv = [i for i in own.get(n, ()) if i in moved_ents]
                 if mv:

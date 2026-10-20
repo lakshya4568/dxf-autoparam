@@ -330,13 +330,14 @@ def _holds(prog1: Program, base: dict, plans: list[dict], build: Build, group: l
         blocked = [b for row in prog2.intent.get("plans", []) for b in (((row.get("compiled") or {}).get("stack")) or {}).get("blocked", [])]
         return False, bad[0], m.group(1) if m else None, {"names": [m.group(1)] if m else [], "blocked": _named(prog2, blocked)}
     seen: set[str] = set()
+    every = {w.name: w.pairs for w in watch or []}  # all the occurrences of a size, in every assembly: the group's own carry only this assembly's
     for d in [*group, *(watch or [])]:
         if d.name in seen:
             continue
         seen.add(d.name)
         if d.name not in prog2.params:
             return False, f"{d.name} would stop being an input (it would be worked out from the lines)", d.name, {"names": [d.name]}
-        lost = drives_pairs(prog2, d.name, d.pairs)
+        lost = drives_pairs(prog2, d.name, every.get(d.name) or d.pairs)
         if lost:
             return False, f"{d.name} would no longer drive {', '.join(f'{a}–{b}' for a, b in lost[:3])}", d.name, {"names": [d.name]}
     # independence: a size that did not move with a value before must not start to (it would be an input in name only)
@@ -415,6 +416,7 @@ def _why_undecided(tried: list[dict], sides: tuple[str, str]) -> tuple[str, list
         first.setdefault((t["policy"], t.get("centre")), t)
     order = {"start_fixed": 0, "end_fixed": 1, "centered": 2}
     parts: list[str] = []
+    ways: list[str | None] = []  # per side reported: what failed, or None when it was lines that could not move
     blocked: list[dict] = []
     centred = False
     for (pol, centre), t in sorted(first.items(), key=lambda kv: (order.get(kv[0][0], 3), str(kv[0][1]))):
@@ -429,9 +431,13 @@ def _why_undecided(tried: list[dict], sides: tuple[str, str]) -> tuple[str, list
             lines = list(dict.fromkeys(wording(b) for b in bl))
             parts.append(f"{lead}, {', '.join(lines[:3])}{' …' if len(lines) > 3 else ''} would have to move")
             blocked += [b for b in bl if b not in blocked]
+            ways.append(None)
         else:
             w = t["why"].split(" [")[0]
             parts.append(f"{lead}: {w if len(w) <= 150 else w[:147] + '…'}")
+            ways.append(w)
+    if len(ways) > 1 and None not in ways and len(set(ways)) == 1:  # every side fails the same way: it is about the structure, not about which side stays
+        return f"whichever side stays the same thing breaks, so it is about the structure and not the side: {ways[0] if len(ways[0]) <= 150 else ways[0][:147] + '…'}", blocked
     return "; ".join(parts[:3]), blocked
 
 
