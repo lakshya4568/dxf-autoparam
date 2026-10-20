@@ -3,7 +3,9 @@
 A model's closing words once said "U05–U09 were accounted for and left as drawn" while the sheet showed U05, U06 and U07 parametrized and only U08 and U09
 never opened; and a gate that reported "1 thing remains" hid that two of ten units had not been touched. A unit is, at the end of a run:
 
-  parametrized  the sheet holds an answer for it (parts, named values or levels)
+  parametrized  the sheet holds an answer for it with at least one named value (a size or a level a draftsman can change)
+  parts_only    parts, and not one named value: nothing could be changed in it yet — not covered (a paid run said "9 of 10 units parametrized" with one of
+                the nine holding three parts and no value)
   skipped       the model's checklist says so, in words, for that unit — a reason on the record, which the person can read
   looked_at     the run opened it and nothing was kept: not covered, and not the same as skipped
   untouched     the run never opened it
@@ -40,10 +42,17 @@ def unit_rows(sm, scope_units: list[str], opened: dict[str, dict], checklist: li
         parametrized = bool(answer.get("components") or answer.get("parameters") or answer.get("levels"))
         reason = _skip_reason(uid, checklist)
         state = "parametrized" if parametrized else "skipped" if reason else "looked_at" if uid in opened else "untouched"
+        prog = sm.unit(uid).prog if parametrized else None
+        if not parametrized:
+            named: list = []
+        elif u.answer and prog is not None:  # applied: what the program holds as named values
+            named = [n for n, p in prog.params.items() if p.source == "ai" or not is_generated(n)]
+        else:  # a workbench not applied yet: what it has named so far
+            named = [r for r in [*answer.get("parameters", []), *answer.get("levels", [])] if r.get("name")]
+        if parametrized and not named and (prog is not None or not u.answer):
+            state = "skipped" if reason else "parts_only"  # a reason on the checklist is the model's word that there was nothing to name
         row = {"unit": uid, "views": list(u.views), "state": state, "covered": state in ("parametrized", "skipped")}
         if parametrized:
-            prog = sm.unit(uid).prog
-            named = [n for n, p in prog.params.items() if p.source == "ai" or not is_generated(n)] if prog is not None else []
             row.update(parts=len(answer.get("components", [])), inputs=len(named),
                        measured=len([r for r in (prog.relations if prog is not None else []) if not r.name.startswith("R_")]),
                        kept_as_drawn=len(answer.get("frozen", [])))
@@ -62,7 +71,7 @@ def sentence(rows: list[dict]) -> str:
         return ""
     done = [r for r in rows if r["state"] == "parametrized"]
     out = f"{len(done)} of {len(rows)} units parametrized"
-    said = {"skipped": "skipped on the record", "looked_at": "looked at, nothing kept", "untouched": "untouched"}
+    said = {"parts_only": "parts defined, no named value", "skipped": "skipped on the record", "looked_at": "looked at, nothing kept", "untouched": "untouched"}
     parts = []
     for state, words in said.items():
         ids = [r["unit"] for r in rows if r["state"] == state]

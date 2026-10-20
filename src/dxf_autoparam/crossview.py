@@ -1227,6 +1227,34 @@ class SheetModel:
                     out.append((uid, None))
         return out
 
+    def unlinked_repeats(self) -> list[dict]:
+        """Named inputs that several units carry under ONE name with nothing joining them: a size drawn in more than one view and stated once per
+        view. Rows: {name, units, joined, values (mm, by unit), same}. `same`: the units agree on its number, so it can be shared as it stands
+        (share_sizes); where they differ the one name stands for two sizes — the engine cannot tell that from a size seen again, and says so.
+        Levels are not here (a level's role is each view's own), nor a name every one of whose units a shared value binds."""
+        carriers: dict[str, dict[str, float]] = {}
+        for uid, u in self.units.items():
+            if not (u.answer and u.answer.get("parameters")):
+                continue
+            prog = self.unit(uid).prog
+            if prog is None:
+                continue
+            for r in u.answer["parameters"]:
+                prm = prog.params.get(r.get("name") or "")
+                if prm is not None and prm.kind != "level":
+                    carriers.setdefault(r["name"], {})[uid] = self.values.get(uid, {}).get(r["name"], prm.value) * u.sub.units_mm
+        shared = self._shared_by_name()
+        rows = []
+        for name, by in sorted(carriers.items()):
+            joined = {b.unit for b in shared[name].bindings} if name in shared else set()
+            loose = [uid for uid in by if uid not in joined]
+            if len(by) < 2 or not loose or (len(loose) == 1 and not joined):
+                continue
+            ref = by[min(by)]
+            rows.append({"name": name, "units": sorted(by), "joined": sorted(joined), "values": {uid: round(v, 3) for uid, v in sorted(by.items())},
+                         "same": all(abs(v - ref) <= max(1.0, 2e-3 * ref) for v in by.values())})
+        return rows
+
     def rename(self, old: str, new: str) -> None:
         """A parameter's name, everywhere it is used (formulas, relations, behaviours, every view it is bound in). Its
         value and what it drives do not change. Refused — and nothing changes, not even the revision — when the NEW name is not an engineering

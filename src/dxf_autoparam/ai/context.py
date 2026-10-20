@@ -192,6 +192,12 @@ class SheetScope:
         p = next((q for q in self.sm.shared.values() if q.name == name), None)
         return sorted({b.unit for b in p.bindings if b.unit != self.uid}) if p else []
 
+    def namesakes(self, name: str) -> list[tuple[str, float | None]]:
+        """The other units that already carry a value of this name, with its number (a shared name is not here: its units are joined already)."""
+        if any(p.name == name for p in self.sm.shared.values()):
+            return []
+        return self.sm.namesakes(name, {self.uid})
+
     def views_of_items(self, items) -> list[str]:
         group = self.sm.layout.item_group
         return sorted({group.get(self.back[i]) for i in items if 0 <= i < len(self.back)} - {None})

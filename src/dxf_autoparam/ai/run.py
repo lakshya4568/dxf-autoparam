@@ -1076,9 +1076,16 @@ class SheetBench:
             ok, why = True, ""
             if by == "plan":
                 ok, why = stated or self.any_plan(), "no plan was made: state_plan for how the views relate, propose_plan for a change"
-            elif by == "links":  # views are bound by a shared value, by being drawn in projection (one unit), or by a link the plan states
+            elif by == "links":  # views are bound by a shared value, by being drawn in projection (one unit), or by a link the plan states —
+                # and what the sheet holds is read, not only that one such link exists: a name several units carry with one number is a size seen again
                 projected = any(len(u.views) > 1 for u in sm.units.values())
                 ok, why = bool(sm.shared) or projected or bool(plan.get("links")), "nothing links the views: no shared value, no views drawn in projection, no link in a plan"
+                with self._lock():
+                    loose = [r for r in sm.unlinked_repeats() if r["same"] and not covered([[u, ""] for u in r["units"]], plan.get("links", []))]
+                if loose:
+                    shown = "; ".join(f"{r['name']} in {', '.join(r['units'])} ({r['values'][r['units'][0]]:g} mm)" for r in loose[:4])
+                    ok, why = False, (f"{len(loose)} named value(s) recur in several units with the same number and nothing shares them — {shown}"
+                                      f"{' …' if len(loose) > 4 else ''}: share_sizes each (the unit's own value, by its name), or say in the plan that it is only noted")
             elif by == "views":  # the views were described, or the work was done in them
                 ok, why = self.described > 0 or bool(self.units) or bool(self.touched), "no view was described or worked in (describe_views, open_unit)"
             elif by == "parts":
@@ -1156,12 +1163,39 @@ class SheetBench:
                                f"so they stay as drawn ({shown}{', …' if d['constant'] > 6 else ''} mm)")
         return out[:limit] + ([f"… and {len(out) - limit} more unit(s) with dimensions that stay as drawn"] if len(out) > limit else [])
 
+    def repeat_notes(self, limit: int = 4) -> list[str]:
+        """A name two units carry with different numbers: one word for two sizes, or one size the views state differently — the engine cannot tell
+        which, so it is said (a size seen again with the same number is the commitment `links`, not a note)."""
+        with self._lock():
+            rows = [r for r in self.sm.unlinked_repeats() if not r["same"]]
+        out = [f"one name, two sizes: {r['name']} is {', '.join(f'{u} {v:g} mm' for u, v in r['values'].items())} — if they are different sizes, rename one; "
+               "if they are one size, the views state it differently" for r in rows[:limit]]
+        return out + ([f"… and {len(rows) - limit} more name(s) used for different sizes"] if len(rows) > limit else [])
+
+    def model_notes(self) -> list[str]:
+        """A run some of whose turns the fallback model answered is a mixed run: said, with the numbers (the primary was out of capacity, past its
+        deadline, or gave nothing usable), so the person knows which model wrote what."""
+        loop = self.run.loop
+        if loop is None:
+            return []
+        answered: dict[str, int] = {}
+        for u in loop.state.usages:
+            if u.get("model") and not u.get("cached"):
+                answered[u["model"]] = answered.get(u["model"], 0) + 1
+        if len(answered) < 2:
+            return []
+        refused = sum(1 for e in self.run.events if e.get("kind") == "retry" and e.get("model"))
+        who = ", ".join(f"{m} {n} call(s)" for m, n in sorted(answered.items(), key=lambda kv: -kv[1]))
+        return [f"answered by more than one model: {who} ({refused} attempt(s) were refused, too slow or unusable)"]
+
     def notes(self) -> list[str]:
         """Things the person should read next to the verdict, that are not failures: what was left out on purpose, what the plan leaves out, what
         the engine doubted and the model never looked at, units never opened."""
         out = [f"left out on purpose: {g['item']} — {g.get('how', '')}; the engine had refused it: {g.get('why', '')[:140]}" for g in self.given_up]
         out += self.intent_notes()
         out += self.dimension_notes()
+        out += self.repeat_notes()
+        out += self.model_notes()
         with self._lock():
             plan = self.sm.stated_plan if self.sm.stated_plan.get("run") == self.run.id else {}
             if plan.get("links") or plan.get("summary"):
@@ -1174,6 +1208,9 @@ class SheetBench:
         untouched = [uid for uid, u in self.sm.units.items() if not parametrized(uid, u)]
         if untouched and self.run.scope.get("kind") == "drawing":
             out.append(f"views never parametrized in this run: {', '.join(untouched)}")
+        parts_only = [r["unit"] for r in self.coverage()[0] if r["state"] == "parts_only"]
+        if parts_only:
+            out.append(f"parts defined and no value named: {', '.join(parts_only)} — nothing in them can be changed yet, and the sizes they state stay as drawn")
         return out + self.library_notes() + (self.prod.notes() if self.prod is not None else [])
 
     def library_notes(self) -> list[str]:

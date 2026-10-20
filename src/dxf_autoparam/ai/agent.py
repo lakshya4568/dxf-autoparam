@@ -1343,6 +1343,25 @@ class Workbench:
         if name == "define_parameters" and v["ok"]:
             v["moves"] = self.prog.intent.get("impact", {}).get(item, {})
             v.update(self.checked.get(item, {}))
+            also = self._also_named(item)
+            if also:
+                v["also_named_in"] = also
+
+    def _also_named(self, name: str) -> list[str]:
+        """Other units of the sheet that already carry a value of this name, said where the name is given: the same size seen again (share_sizes
+        joins the views) or one word for two sizes (rename one). The engine cannot tell which; it says what it measured and leaves the choice."""
+        prm = self.prog.params.get(name)
+        if self.scope is None or prm is None:
+            return []
+        um = self.an.drawing.units_mm
+        out = []
+        for uid, val in self.scope.namesakes(name):
+            if val is None:  # a relation of that name there, not a value
+                continue
+            same = abs(val - prm.value) <= max(1.0 / um, 2e-3 * abs(prm.value))
+            out.append(f"{uid}: {val * um:g} mm — " + ("the same number: if it is the same size seen again, share_sizes joins the views" if same
+                                                   else "a different number: rename one of them if they are different sizes"))
+        return out[:4]
 
     def nudge(self) -> str | None:
         return ("you have read enough to start: define the parts now (define_parts, all in one call), then the parameters"

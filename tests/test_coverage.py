@@ -5,13 +5,15 @@ and the gate said "1 thing remains" without saying that two of ten units were un
 
 from __future__ import annotations
 
+import copy
+
 from test_crossview import mini_gad
 from test_run import Scripted, wait
 
 from dxf_autoparam.ai.coverage import sentence, table_md, unit_rows
 from dxf_autoparam.ai.run import Run, SheetBench
 from dxf_autoparam.ai.scripted import call
-from dxf_autoparam.crossview import SheetModel
+from dxf_autoparam.crossview import EMPTY_ANSWER, SheetModel
 from dxf_autoparam.generic import is_generated
 from dxf_autoparam.workspace import SheetSession
 
@@ -35,8 +37,9 @@ def test_a_unit_is_parametrized_skipped_on_the_record_looked_at_or_untouched(tmp
     # opened, nothing kept: not covered, and not the same thing as skipped
     assert unit_rows(sm, [two], {two: {}}, [], [])[0]["state"] == "looked_at"
     assert not unit_rows(sm, [two], {two: {}}, [], [])[0]["covered"]
-    # work in a workbench that is not applied yet counts for the gate that asks before applying
-    assert unit_rows(sm, [two], {two: {"components": [{"name": "Box"}]}}, [], [])[0]["state"] == "parametrized"
+    # work in a workbench that is not applied yet counts for the gate that asks before applying — once it has a named value; parts alone are not it
+    assert unit_rows(sm, [two], {two: {"components": [{"name": "Box"}], "parameters": [{"name": "ClearSpan"}]}}, [], [])[0]["state"] == "parametrized"
+    assert unit_rows(sm, [two], {two: {"components": [{"name": "Box"}]}}, [], [])[0]["state"] == "parts_only"
     # skipped counts only with the reason ON THE CHECKLIST, for that unit, in words
     said = [{"id": "C1", "text": f"{two}: a single-line schematic, nothing to parametrize", "status": "skipped"}]
     row = unit_rows(sm, [two], {}, said, [])[0]
@@ -88,3 +91,19 @@ def test_a_run_over_the_drawing_cannot_end_finished_ok_while_a_unit_was_never_to
     assert v["coverage_sentence"] == f"1 of 2 units parametrized ({two} untouched)"
     assert "left as drawn" in v["finish_summary"], "the model's words are kept, as its words"
     assert f"| {two} |" in v["engine_summary"] and "untouched" in v["engine_summary"], "and the engine's table says what the sheet holds"
+
+
+def test_a_unit_with_parts_and_no_named_value_is_not_parametrized_and_is_said_so(tmp_path):
+    """A paid run ended "9 of 10 units parametrized (U09 untouched)": one of the nine held three parts, no named value, and 48 sizes kept as drawn."""
+    _sheet, sm, one, two = two_unit_sheet(tmp_path)
+    answer = copy.deepcopy(EMPTY_ANSWER)
+    answer["components"] = [{"name": "Box", "existing": False}]
+    sm.units[two].answer, sm.units[two].prog = answer, None
+    rows = unit_rows(sm, [one, two], {}, [], [])
+    assert {r["unit"]: r["state"] for r in rows} == {one: "parametrized", two: "parts_only"}
+    assert not rows[1]["covered"] and rows[1]["parts"] == 1 and rows[1]["inputs"] == 0
+    assert sentence(rows) == f"1 of 2 units parametrized ({two} parts defined, no named value)"
+    assert "parts only" in table_md(rows)
+    # the model's word on the checklist that there was nothing to name is a reason on the record
+    said = [{"id": "C1", "text": f"{two}: a schematic, nothing to name", "status": "skipped"}]
+    assert unit_rows(sm, [two], {}, said, [])[0]["state"] == "skipped"
