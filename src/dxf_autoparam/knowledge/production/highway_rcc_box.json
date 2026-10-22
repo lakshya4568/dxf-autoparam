@@ -6,8 +6,8 @@
  "title": "HIGHWAY RCC BOX",
  "source": {
   "repository": "aagento-bridge",
-  "commit": "ca0b17ec2ccd82b81c246e2c02f8c4dc6fece565",
-  "branch": "cad_agent_dxf",
+  "commit": "e6c8f8fbe63fec95b08527e672aa71bec457a0b9",
+  "branch": "dev-new",
   "dirty_files": [],
   "registry": "src/app/features/bridges/models/bridge-registry.ts",
   "modules": {
@@ -49,13 +49,13 @@
    }
   },
   "sources": {
-   "src/app/features/bridges/models/bridge-registry.ts": "4ad1cd4ab16a2f9e3b72cc5784eba7ce9326cb365c879ebb7ceb82c57c0215bf",
+   "src/app/features/bridges/models/bridge-registry.ts": "a5d9cb11f744e71d087969391e79b0c923435c8b8bfbfcbfce07d817b4fcb2c4",
    "src/app/features/bridges/models/highway-rcc-box.defaults.ts": "e6f7c2fb418fc7d6d0ef89d29684fb4de08a35864a97e43c1f28838602d9bcce",
-   "src/app/features/bridges/utils/highway-rcc-box/highway-rcc-box-mapper.ts": "69cea5ba7cd7972b36be53ddb627f88330fbfcdf1ca971c34484874d2d364ec5",
+   "src/app/features/bridges/utils/highway-rcc-box/highway-rcc-box-mapper.ts": "38eaadb665d01419f14512b10abde73fe51ab1a454a28c8634de7d53eaf2f66e",
    "src/app/features/bridges/utils/highway-rcc-box/highway-rcc-box-rule-engine.ts": "8187f82563ea57159f1dad1d834eb1c08c7ac0b8e35f26bac0ebdb7f7fbca511",
-   "src/app/features/bridges/utils/highway-rcc-box/highway-rcc-box-scene-renderer.ts": "61255fc75ea47025788ee29195c11a0e5e16380799582fa93ef7240a0b890eaa"
+   "src/app/features/bridges/utils/highway-rcc-box/highway-rcc-box-scene-renderer.ts": "c702d99a63e61e6c3adcb32954f104ebc89e09d12029581b7b066f88b8dac544"
   },
-  "sources_digest": "2d326cbdc08b84774c53f3987e8d2003990b5dd0982541bf88ca94755ed36411"
+  "sources_digest": "b4d14ee06548a4b0538c266c70c92ff0e1b7416d1f9d2eb8625ad7d32dc246e7"
  },
  "capabilities": {
   "has_compute": true,
@@ -132,7 +132,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 908,
+    "draws": 946,
     "deterministic": true,
     "reads": [
      "deck.carriageway_width",
@@ -200,7 +200,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 10879,
+    "draws": 11017,
     "deterministic": true,
     "reads": [
      "deck.carriageway_width",
@@ -273,7 +273,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 905,
+    "draws": 867,
     "deterministic": true,
     "reads": [
      "deck.carriageway_width",
@@ -407,7 +407,7 @@
      }
     ],
     "renders": true,
-    "draws": 266,
+    "draws": 263,
     "deterministic": false,
     "reads": [
      "bridge_name",
@@ -523,7 +523,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 343,
+    "draws": 391,
     "deterministic": false,
     "reads": [
      "deck.carriageway_width",
@@ -567,7 +567,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 323,
+    "draws": 393,
     "deterministic": false,
     "reads": [
      "deck.carriageway_width",
@@ -703,7 +703,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 109,
+    "draws": 133,
     "deterministic": true,
     "reads": [
      "deck.carriageway_width",
@@ -752,7 +752,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 67,
+    "draws": 75,
     "deterministic": true,
     "reads": [
      "deck.carriageway_width",
@@ -2516,22 +2516,6 @@
     "expr": "(( cW * cells ) + ( tOW * 2 ) + ( tIW * ( cells - 1 ) ))",
     "line": 28,
     "inputs": {
-     "cW": {
-      "chain": [
-       "geometry.clear_w"
-      ],
-      "op": "||",
-      "default": 5.0,
-      "line": 12
-     },
-     "tOW": {
-      "chain": [
-       "geometry.t_wall_o"
-      ],
-      "op": "||",
-      "default": 0.35,
-      "line": 14
-     },
      "cells": {
       "chain": [
        "project.cellCount",
@@ -2548,6 +2532,22 @@
       "op": "||",
       "default": 0.35,
       "line": 15
+     },
+     "tOW": {
+      "chain": [
+       "geometry.t_wall_o"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 14
+     },
+     "cW": {
+      "chain": [
+       "geometry.clear_w"
+      ],
+      "op": "||",
+      "default": 5.0,
+      "line": 12
      }
     },
     "display": "total_w = ( cW * cells ) + ( tOW * 2 ) + ( tIW * ( cells - 1 ) )",
@@ -2587,13 +2587,13 @@
     "expr": "(cH + tST + tSB)",
     "line": 29,
     "inputs": {
-     "tST": {
+     "cH": {
       "chain": [
-       "geometry.t_slab_t"
+       "geometry.clear_h"
       ],
       "op": "||",
-      "default": 0.35,
-      "line": 16
+      "default": 3.331,
+      "line": 13
      },
      "tSB": {
       "chain": [
@@ -2603,13 +2603,13 @@
       "default": 0.35,
       "line": 17
      },
-     "cH": {
+     "tST": {
       "chain": [
-       "geometry.clear_h"
+       "geometry.t_slab_t"
       ],
       "op": "||",
-      "default": 3.331,
-      "line": 13
+      "default": 0.35,
+      "line": 16
      }
     },
     "display": "total_h = cH + tST + tSB",
@@ -2653,14 +2653,6 @@
     "expr": "(cW * cH * cells)",
     "line": 30,
     "inputs": {
-     "cW": {
-      "chain": [
-       "geometry.clear_w"
-      ],
-      "op": "||",
-      "default": 5.0,
-      "line": 12
-     },
      "cells": {
       "chain": [
        "project.cellCount",
@@ -2677,6 +2669,14 @@
       "op": "||",
       "default": 3.331,
       "line": 13
+     },
+     "cW": {
+      "chain": [
+       "geometry.clear_w"
+      ],
+      "op": "||",
+      "default": 5.0,
+      "line": 12
      }
     },
     "display": "flow_area = cW * cH * cells",
@@ -3094,13 +3094,13 @@
       "default": 96.317,
       "line": 19
      },
-     "tST": {
+     "cH": {
       "chain": [
-       "geometry.t_slab_t"
+       "geometry.clear_h"
       ],
       "op": "||",
-      "default": 0.35,
-      "line": 16
+      "default": 3.331,
+      "line": 13
      },
      "tSB": {
       "chain": [
@@ -3110,13 +3110,13 @@
       "default": 0.35,
       "line": 17
      },
-     "cH": {
+     "tST": {
       "chain": [
-       "geometry.clear_h"
+       "geometry.t_slab_t"
       ],
       "op": "||",
-      "default": 3.331,
-      "line": 13
+      "default": 0.35,
+      "line": 16
      }
     },
     "display": "z_top = z_bot + total_h",
@@ -3158,13 +3158,13 @@
       "default": 96.317,
       "line": 19
      },
-     "tST": {
+     "cH": {
       "chain": [
-       "geometry.t_slab_t"
+       "geometry.clear_h"
       ],
       "op": "||",
-      "default": 0.35,
-      "line": 16
+      "default": 3.331,
+      "line": 13
      },
      "tSB": {
       "chain": [
@@ -3174,13 +3174,13 @@
       "default": 0.35,
       "line": 17
      },
-     "cH": {
+     "tST": {
       "chain": [
-       "geometry.clear_h"
+       "geometry.t_slab_t"
       ],
       "op": "||",
-      "default": 3.331,
-      "line": 13
+      "default": 0.35,
+      "line": 16
      }
     },
     "display": "soffit = z_top - tST",
@@ -3333,14 +3333,6 @@
       "default": 96.317,
       "line": 19
      },
-     "tST": {
-      "chain": [
-       "geometry.t_slab_t"
-      ],
-      "op": "||",
-      "default": 0.35,
-      "line": 16
-     },
      "cH": {
       "chain": [
        "geometry.clear_h"
@@ -3348,6 +3340,14 @@
       "op": "||",
       "default": 3.331,
       "line": 13
+     },
+     "tST": {
+      "chain": [
+       "geometry.t_slab_t"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 16
      }
     },
     "display": "rccBoxTopLvl = bedLvl + cH + tST",
@@ -3460,14 +3460,6 @@
       "default": 96.317,
       "line": 19
      },
-     "tSB": {
-      "chain": [
-       "geometry.t_slab_b"
-      ],
-      "op": "||",
-      "default": 0.35,
-      "line": 17
-     },
      "pccB": {
       "chain": [
        "foundation.pcc_sub_base"
@@ -3475,6 +3467,14 @@
       "op": "??",
       "default": 0.15,
       "line": 22
+     },
+     "tSB": {
+      "chain": [
+       "geometry.t_slab_b"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 17
      }
     },
     "display": "pccBot = z_bot - pccB",
@@ -3517,22 +3517,6 @@
     "expr": "(((bedLvl - tSB) - pccB) - sandFill)",
     "line": 46,
     "inputs": {
-     "sandFill": {
-      "chain": [
-       "foundation.sand_fill_depth"
-      ],
-      "op": "??",
-      "default": 0.7,
-      "line": 23
-     },
-     "tSB": {
-      "chain": [
-       "geometry.t_slab_b"
-      ],
-      "op": "||",
-      "default": 0.35,
-      "line": 17
-     },
      "bedLvl": {
       "chain": [
        "hydraulics.bed_lvl"
@@ -3541,6 +3525,14 @@
       "default": 96.317,
       "line": 19
      },
+     "sandFill": {
+      "chain": [
+       "foundation.sand_fill_depth"
+      ],
+      "op": "??",
+      "default": 0.7,
+      "line": 23
+     },
      "pccB": {
       "chain": [
        "foundation.pcc_sub_base"
@@ -3548,6 +3540,14 @@
       "op": "??",
       "default": 0.15,
       "line": 22
+     },
+     "tSB": {
+      "chain": [
+       "geometry.t_slab_b"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 17
      }
     },
     "display": "granBot = pccBot - sandFill",

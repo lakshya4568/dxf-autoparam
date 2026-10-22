@@ -6,8 +6,8 @@
  "title": "RCC SLAB (LEGACY)",
  "source": {
   "repository": "aagento-bridge",
-  "commit": "ca0b17ec2ccd82b81c246e2c02f8c4dc6fece565",
-  "branch": "cad_agent_dxf",
+  "commit": "e6c8f8fbe63fec95b08527e672aa71bec457a0b9",
+  "branch": "dev-new",
   "dirty_files": [],
   "registry": "src/app/features/bridges/models/bridge-registry.ts",
   "modules": {
@@ -50,17 +50,18 @@
   },
   "sources": {
    "src/app/core/auth/auth.models.ts": "83edf39da84bff6a30ca947cd34776054e6b9f87d6b558806b8b0a4902b94928",
-   "src/app/features/bridges/models/bridge-meta.models.ts": "66b74b60165005af9c34674461cc52247b6c17b08f01b836d4826f7578f26bfa",
-   "src/app/features/bridges/models/bridge-registry.ts": "4ad1cd4ab16a2f9e3b72cc5784eba7ce9326cb365c879ebb7ceb82c57c0215bf",
-   "src/app/features/bridges/models/bridge.models.ts": "3f80944515b45a05d31d989573f505b758d96f6dd1aa502b2a4c063d8047fc79",
+   "src/app/features/bridges/constants/bridge-colors.ts": "a89748adbd2641c4d653e19c6b52418e6e59ebb0aefae652fc21df013a4ab8a6",
+   "src/app/features/bridges/models/bridge-meta.models.ts": "6110846502c0fc5b99ee21861f201d9d86794e97aa4f8f170241ce955928cae7",
+   "src/app/features/bridges/models/bridge-registry.ts": "a5d9cb11f744e71d087969391e79b0c923435c8b8bfbfcbfce07d817b4fcb2c4",
+   "src/app/features/bridges/models/bridge.models.ts": "4449311499a5f9fad847008a798018a2a8c66489063186e8acedb3de76c5ebd2",
    "src/app/features/bridges/models/engineering.models.ts": "9b07e27edbe1320fb4f1841fc032f9b01cfadd8918784bb4072d3b8ecd6b9dc9",
-   "src/app/features/bridges/models/rcc-slab.defaults.ts": "607b02ac19a00f7631ba0f1a0fb6c8286ea9d7538d9b79f09480152cff1a0826",
-   "src/app/features/bridges/utils/rcc-slab/rcc-slab-draw-2d.ts": "de46ecde7fe63ae7e0686171982069f3f4ef021c52506dabdb843e4aca12b855",
-   "src/app/features/bridges/utils/rcc-slab/rcc-slab-mapper.ts": "2e3bdd60511431ed38e4d45f1df0bb74e3297add141b2eb4a322776c7e6758ae",
+   "src/app/features/bridges/models/rcc-slab.defaults.ts": "0fecaf5df1933bdd7a706cb53948ec234c612561fb17798e4522f4280719c446",
+   "src/app/features/bridges/utils/rcc-slab/rcc-slab-draw-2d.ts": "14d3b06657e7020f8be405f4b78739d9afc5347d877ac7e00562cdb8ffff221a",
+   "src/app/features/bridges/utils/rcc-slab/rcc-slab-mapper.ts": "9d117f08035a1e1eedec19dc352955732023c8580014652d4304bf6ff3239e35",
    "src/app/features/bridges/utils/rcc-slab/rcc-slab-rule-engine.ts": "a34d6ab924e914e331c6aa40649de3794a0d5aa534afab19a7901e1261854880",
-   "src/app/features/projects/models/project.models.ts": "a6cb84994827c3ee2b3739308cbf3d9b7c7ecb2fd0a8615e3732f7ea4ac8d9d5"
+   "src/app/features/projects/models/project.models.ts": "e9067b022a27bdc123f2a704adf040eea6595b84936299415af768184e902061"
   },
-  "sources_digest": "1f03a0b48302e736f90fd15055d196da476166f8127f0b4ada3c7f6c70d26b6f"
+  "sources_digest": "55461a58b4d4beb07066d2c2b7bb0d289bee89270934aafe936a08bca57a256c"
  },
  "capabilities": {
   "has_compute": true,
@@ -113,7 +114,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 2642,
+    "draws": 2646,
     "deterministic": true,
     "reads": [
      "abutmentBatter",
@@ -137,6 +138,7 @@
      "pierLength",
      "pierThickness",
      "railLevel",
+     "rccSlabType",
      "returnWallWidth",
      "slabThickness",
      "spanSize",
@@ -206,6 +208,7 @@
      "pierLength",
      "pierThickness",
      "railLevel",
+     "rccSlabType",
      "returnWallLength",
      "slabSpecificationText",
      "slabThickness",
@@ -272,7 +275,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 890,
+    "draws": 1002,
     "deterministic": true,
     "reads": [
      "abutmentLength",
@@ -291,6 +294,7 @@
      "pierLength",
      "pierThickness",
      "railLevel",
+     "rccSlabType",
      "returnWallLength",
      "slabThickness",
      "spanSize",
@@ -351,7 +355,7 @@
      }
     ],
     "renders": true,
-    "draws": 639,
+    "draws": 295,
     "deterministic": true,
     "reads": [
      "abutmentBatter",
@@ -381,6 +385,7 @@
      "pierLength",
      "pierThickness",
      "railLevel",
+     "rccSlabType",
      "returnWallBatterWidth",
      "returnWallBoulderThick",
      "returnWallHeight",
@@ -420,15 +425,40 @@
      "deck",
      "foundation",
      "foundationBottomLevel",
+     "foundation_level",
      "geometry",
      "hydraulics",
+     "levels",
      "options2d",
-     "returnWallType"
+     "returnWallType",
+     "slanting_return_wall_center_width",
+     "slanting_return_wall_fnd_height",
+     "slanting_return_wall_height",
+     "slanting_return_wall_left_batter",
+     "slanting_return_wall_left_neck_height",
+     "slanting_return_wall_left_offset",
+     "slanting_return_wall_left_stem_num_steps",
+     "slanting_return_wall_left_stem_proj",
+     "slanting_return_wall_left_stem_shape",
+     "slanting_return_wall_left_stem_steps",
+     "slanting_return_wall_neck_height",
+     "slanting_return_wall_num_steps",
+     "slanting_return_wall_right_batter",
+     "slanting_return_wall_right_neck_height",
+     "slanting_return_wall_right_offset",
+     "slanting_return_wall_right_stem_num_steps",
+     "slanting_return_wall_right_stem_proj",
+     "slanting_return_wall_right_stem_shape",
+     "slanting_return_wall_right_stem_steps",
+     "slanting_return_wall_step_side",
+     "slanting_return_wall_steps",
+     "slanting_return_wall_zone2_height"
     ],
     "affected_by": [
      "bedLevel",
-     "formationLevel",
+     "bedLevelAbove",
      "foundationDepth",
+     "returnWallBoulderThick",
      "returnWallStemBot",
      "returnWallWidth"
     ],
@@ -456,7 +486,7 @@
      }
     ],
     "renders": true,
-    "draws": 2054,
+    "draws": 2090,
     "deterministic": true,
     "reads": [
      "bedLevel",
@@ -469,6 +499,7 @@
      "pierLength",
      "pierThickness",
      "railLevel",
+     "rccSlabType",
      "slabThickness",
      "spanSize",
      "wingWallBoulderThick",
@@ -479,6 +510,7 @@
      "wingWallStepTread"
     ],
     "code_fallbacks": [
+     "_archFoundationThickness",
      "abutment",
      "foundation",
      "foundationBottomLevel",
@@ -650,7 +682,8 @@
    "outputs": [],
    "views": [
     "sec",
-    "elv"
+    "elv",
+    "rw"
    ],
    "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
   },
@@ -667,6 +700,15 @@
   {
    "op": "set_value",
    "path": "returnWallStemBot",
+   "outputs": [],
+   "views": [
+    "rw"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "returnWallBoulderThick",
    "outputs": [],
    "views": [
     "rw"
@@ -766,7 +808,6 @@
     "sec",
     "elv",
     "plan",
-    "rw",
     "wing_wall"
    ],
    "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
@@ -897,6 +938,16 @@
  ],
  "findings": [],
  "parameters": [
+  {
+   "path": "rccSlabType",
+   "default": "type1",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
   {
    "path": "spanSize",
    "default": 1.219,
@@ -1203,7 +1254,8 @@
    "unit_status": "unknown",
    "affects_views": [
     "sec",
-    "elv"
+    "elv",
+    "rw"
    ]
   },
   {
@@ -1291,7 +1343,10 @@
    "read_by_compute": false,
    "kind": "unknown",
    "unit": "unknown",
-   "unit_status": "unknown"
+   "unit_status": "unknown",
+   "affects_views": [
+    "rw"
+   ]
   },
   {
    "path": "returnWallLeanThick",
@@ -1435,7 +1490,6 @@
     "sec",
     "elv",
     "plan",
-    "rw",
     "wing_wall"
    ]
   },
@@ -2688,6 +2742,7 @@
   ]
  },
  "defaults": {
+  "rccSlabType": "type1",
   "spanSize": 1.219,
   "clearHeight": 1.5,
   "cells": 2,
@@ -2756,7 +2811,7 @@
  },
  "characterization": {
   "samples_per_formula": 16,
-  "defaults_digest": "d2527575f090ad6e918d325632345a203cc46cbfbc81623eaf7fbe5ace32b752",
+  "defaults_digest": "1041cc0f9df3e05814913a5840a007392f5374faae02e2441d23a2751a73d4cd",
   "derived_digest": "89584199bfd553e91a321f308af60426805e7191e73cd2866a44c8646c89cc74"
  }
 }

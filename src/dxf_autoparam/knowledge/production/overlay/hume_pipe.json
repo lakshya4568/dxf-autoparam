@@ -1,1063 +1,1121 @@
 {
-  "family": "hume_pipe",
-  "status": "authored_from_source",
-  "basis": "Read by a person from aagento-bridge hume-pipe-rule-engine.ts (HumePipeRules interface, lines 3-103, documents mm vs m per field in comments) and hume-pipe.defaults.ts. Levels (rl/fl/hfl/bl/scourLevel/floorLevel and their inputs) are in metres; most construction sizes (wall, bedding, curtain/toe/face wall, graded gravel) are in millimetres; formation widths, wing wall length, barrel length, cushion height and founding depth are in metres, matching the interface comments.",
-  "parameters": {
-    "spanSize": {
-      "kind": "length",
-      "unit": "m",
-      "label": "pipe internal diameter (span) as entered",
-      "component": "pipe",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:125"
-      ]
-    },
-    "numPipes": {
-      "kind": "count",
-      "unit": "-",
-      "label": "number of barrels across",
-      "component": "pipe",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:136"
-      ]
-    },
-    "wallThickness": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "pipe wall thickness",
-      "component": "pipe",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:7",
-        "hume-pipe-rule-engine.ts:137"
-      ]
-    },
-    "formationWidth": {
-      "kind": "length",
-      "unit": "m",
-      "label": "formation width (left + right of centre line)",
-      "component": "formation",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:183"
-      ]
-    },
-    "formationWidthLeft": {
-      "kind": "length",
-      "unit": "m",
-      "label": "formation width, left of centre line",
-      "component": "formation",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:189"
-      ]
-    },
-    "formationWidthRight": {
-      "kind": "length",
-      "unit": "m",
-      "label": "formation width, right of centre line",
-      "component": "formation",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:190"
-      ]
-    },
-    "pipeSpacing": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "clear spacing between adjacent pipe barrels",
-      "component": "pipe",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:14",
-        "hume-pipe-rule-engine.ts:211"
-      ]
-    },
-    "wearingCourseThk": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "wearing course thickness in the earth cushion",
-      "component": "wearing_course",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:41",
-        "hume-pipe-rule-engine.ts:212"
-      ]
-    },
-    "beddingThickness": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "concrete bedding thickness under the pipes",
-      "component": "bedding",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:15",
-        "hume-pipe-rule-engine.ts:213"
-      ]
-    },
-    "levelingCourse": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "leveling course thickness under the bedding",
-      "component": "bedding",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:16",
-        "hume-pipe-rule-engine.ts:214"
-      ]
-    },
-    "rubbleSoling": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "rubble soling thickness under the leveling course",
-      "component": "bedding",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:17",
-        "hume-pipe-rule-engine.ts:215"
-      ]
-    },
-    "dropWallDepth": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "drop wall (upstream) depth below bed level",
-      "component": "drop_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:19",
-        "hume-pipe-rule-engine.ts:217"
-      ]
-    },
-    "curtainWallDepth": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "curtain wall (downstream) depth below bed level",
-      "component": "curtain_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:20",
-        "hume-pipe-rule-engine.ts:218"
-      ]
-    },
-    "curtainWallThickness": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "curtain wall thickness",
-      "component": "curtain_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:21",
-        "hume-pipe-rule-engine.ts:219"
-      ]
-    },
-    "curtainWallProjectionLeft": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "curtain wall projection, left side",
-      "component": "curtain_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:23",
-        "hume-pipe-rule-engine.ts:220"
-      ]
-    },
-    "curtainWallProjectionRight": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "curtain wall projection, right side",
-      "component": "curtain_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:24",
-        "hume-pipe-rule-engine.ts:221"
-      ]
-    },
-    "curtainWallFootingThk": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "curtain wall footing thickness",
-      "component": "curtain_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:25",
-        "hume-pipe-rule-engine.ts:222"
-      ]
-    },
-    "curtainWallBeddingProjLeft": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "curtain wall bedding projection, left side",
-      "component": "curtain_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:26",
-        "hume-pipe-rule-engine.ts:223"
-      ]
-    },
-    "curtainWallBeddingProjRight": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "curtain wall bedding projection, right side",
-      "component": "curtain_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:27",
-        "hume-pipe-rule-engine.ts:224"
-      ]
-    },
-    "curtainWallBeddingThk": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "curtain wall bedding thickness",
-      "component": "curtain_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:28",
-        "hume-pipe-rule-engine.ts:225"
-      ]
-    },
-    "stonePitchingThk": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "stone pitching thickness",
-      "component": "pitching",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:29",
-        "hume-pipe-rule-engine.ts:226"
-      ]
-    },
-    "stoneFlooringSide": {
-      "kind": "text",
-      "unit": "-",
-      "label": "side the stone floor pitching is shown on",
-      "component": "pitching",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:30",
-        "hume-pipe-rule-engine.ts:300"
-      ]
-    },
-    "foundingDepthBelowScour": {
-      "kind": "length",
-      "unit": "m",
-      "label": "founding depth below the scour level",
-      "component": "foundation",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:78",
-        "hume-pipe-rule-engine.ts:173"
-      ]
-    },
-    "wingWallLength": {
-      "kind": "length",
-      "unit": "m",
-      "label": "wing wall length",
-      "component": "wing_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:39",
-        "hume-pipe-rule-engine.ts:227"
-      ]
-    },
-    "railLevel": {
-      "kind": "level",
-      "unit": "m",
-      "label": "rail level (an input; the engine falls back to formation level + 0.762 m)",
-      "component": "track",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:157"
-      ]
-    },
-    "formationLevel": {
-      "kind": "level",
-      "unit": "m",
-      "label": "formation level",
-      "component": "track",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:152"
-      ]
-    },
-    "hfl": {
-      "kind": "level",
-      "unit": "m",
-      "label": "high flood level",
-      "component": "site",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:75",
-        "hume-pipe-rule-engine.ts:162"
-      ]
-    },
-    "bedLevel": {
-      "kind": "level",
-      "unit": "m",
-      "label": "bed level: invert level the pipes are laid at",
-      "component": "pipe",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:165"
-      ]
-    },
-    "scourLevel": {
-      "kind": "level",
-      "unit": "m",
-      "label": "scour level as entered (the engine recomputes legacy defaults)",
-      "component": "foundation",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:77",
-        "hume-pipe-rule-engine.ts:111"
-      ]
-    },
-    "floorLevel": {
-      "kind": "level",
-      "unit": "m",
-      "label": "floor level (defaults to bed level)",
-      "component": "pipe",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:80",
-        "hume-pipe-rule-engine.ts:170"
-      ]
-    },
-    "toeWallAboveGL": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "toe wall height above ground level",
-      "component": "toe_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:47",
-        "hume-pipe-rule-engine.ts:145"
-      ]
-    },
-    "faceWallStemAboveGL": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "face wall (headwall) stem height above ground level",
-      "component": "face_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:56",
-        "hume-pipe-rule-engine.ts:252"
-      ]
-    },
-    "faceWallStemBelowGL": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "face wall stem depth below ground level",
-      "component": "face_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:57",
-        "hume-pipe-rule-engine.ts:255"
-      ]
-    },
-    "faceWallStemTopW": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "face wall stem width at top",
-      "component": "face_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:54",
-        "hume-pipe-rule-engine.ts:249"
-      ]
-    },
-    "faceWallStemBotW": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "face wall stem width at bottom",
-      "component": "face_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:55",
-        "hume-pipe-rule-engine.ts:250"
-      ]
-    },
-    "faceWallHeelProj": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "face wall footing heel projection",
-      "component": "face_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:58",
-        "hume-pipe-rule-engine.ts:256"
-      ]
-    },
-    "faceWallToeProj": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "face wall footing toe projection",
-      "component": "face_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:59",
-        "hume-pipe-rule-engine.ts:257"
-      ]
-    },
-    "faceWallFoundThk": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "face wall footing thickness",
-      "component": "face_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:60",
-        "hume-pipe-rule-engine.ts:258"
-      ]
-    },
-    "faceWallBeddingThk": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "face wall bedding thickness",
-      "component": "face_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:61",
-        "hume-pipe-rule-engine.ts:259"
-      ]
-    },
-    "faceWallBeddingProj": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "face wall bedding projection",
-      "component": "face_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:62",
-        "hume-pipe-rule-engine.ts:260"
-      ]
-    },
-    "faceWallRubbleThk": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "face wall rubble soling thickness",
-      "component": "face_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:63",
-        "hume-pipe-rule-engine.ts:261"
-      ]
-    },
-    "showGradedGravel": {
-      "kind": "flag",
-      "unit": "-",
-      "label": "graded gravel filter is part of the arrangement",
-      "component": "graded_gravel",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:35",
-        "hume-pipe-rule-engine.ts:305"
-      ]
-    },
-    "gradedGravelHatch": {
-      "kind": "text",
-      "unit": "-",
-      "label": "graded gravel hatch pattern name",
-      "component": "graded_gravel",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:36",
-        "hume-pipe-rule-engine.ts:306"
-      ]
-    },
-    "gradedGravelLength": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "graded gravel filter length",
-      "component": "graded_gravel",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:31",
-        "hume-pipe-rule-engine.ts:301"
-      ]
-    },
-    "gradedGravelGap": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "vertical gap from the foundation bottom to the top of the graded gravel",
-      "component": "graded_gravel",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:33",
-        "hume-pipe-rule-engine.ts:303"
-      ]
-    },
-    "gradedGravelText": {
-      "kind": "text",
-      "unit": "-",
-      "label": "graded gravel callout text",
-      "component": "graded_gravel",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:34",
-        "hume-pipe-rule-engine.ts:304"
-      ]
-    },
-    "showCradleConcrete": {
-      "kind": "flag",
-      "unit": "-",
-      "label": "cradle concrete under the pipe is part of the arrangement",
-      "component": "cradle_concrete",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:37",
-        "hume-pipe-rule-engine.ts:307"
-      ]
-    },
-    "cradleConcreteThk": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "cradle concrete thickness",
-      "component": "cradle_concrete",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:38",
-        "hume-pipe-rule-engine.ts:308"
-      ]
-    },
-    "faceWallTier1Width": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "face wall first tier width (stem width + heel + toe projection)",
-      "component": "face_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:66",
-        "hume-pipe-rule-engine.ts:264"
-      ]
-    },
-    "faceWallBaseWidth": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "face wall base width (tier-1 width + 2 x bedding projection)",
-      "component": "face_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:67",
-        "hume-pipe-rule-engine.ts:265"
-      ]
-    },
-    "faceWallShelfDrop": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "face wall shelf drop",
-      "component": "face_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:65",
-        "hume-pipe-rule-engine.ts:263"
-      ]
-    },
-    "faceWallShelfProj": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "face wall shelf projection",
-      "component": "face_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:64",
-        "hume-pipe-rule-engine.ts:262"
-      ]
-    },
-    "flowDirection": {
-      "kind": "text",
-      "unit": "-",
-      "label": "flow direction (left-to-right or right-to-left)",
-      "component": "pipe",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:102",
-        "hume-pipe-rule-engine.ts:106"
-      ]
-    },
-    "flow_dir": {
-      "kind": "text",
-      "unit": "-",
-      "label": "flow direction, alternate key",
-      "component": "pipe",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:101",
-        "hume-pipe-rule-engine.ts:106"
-      ]
-    },
-    "gradedGravelDepth": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "graded gravel filter depth (alias of its length)",
-      "component": "graded_gravel",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:32",
-        "hume-pipe-rule-engine.ts:302"
-      ]
-    },
-    "toeWallBeddingProj": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "toe wall bedding projection",
-      "component": "toe_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:51",
-        "hume-pipe-rule-engine.ts:149"
-      ]
-    },
-    "toeWallBeddingThk": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "toe wall bedding thickness",
-      "component": "toe_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:50",
-        "hume-pipe-rule-engine.ts:148"
-      ]
-    },
-    "toeWallProjection": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "toe wall footing projection",
-      "component": "toe_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:48",
-        "hume-pipe-rule-engine.ts:146"
-      ]
-    },
-    "toeWallStemBotW": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "toe wall stem width at bottom",
-      "component": "toe_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:45",
-        "hume-pipe-rule-engine.ts:142"
-      ]
-    },
-    "toeWallStemH": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "toe wall stem height",
-      "component": "toe_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:46",
-        "hume-pipe-rule-engine.ts:144"
-      ]
-    },
-    "toeWallStemTopW": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "toe wall stem width at top",
-      "component": "toe_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:44",
-        "hume-pipe-rule-engine.ts:141"
-      ]
-    },
-    "toeWallUpperFootingThk": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "toe wall upper footing thickness",
-      "component": "toe_wall",
-      "evidence": [
-        "hume-pipe-rule-engine.ts:49",
-        "hume-pipe-rule-engine.ts:147"
-      ]
-    }
+ "family": "hume_pipe",
+ "status": "authored_from_source",
+ "basis": "Read by a person from aagento-bridge hume-pipe-rule-engine.ts (HumePipeRules interface, lines 3-103, documents mm vs m per field in comments) and hume-pipe.defaults.ts. Levels (rl/fl/hfl/bl/scourLevel/floorLevel and their inputs) are in metres; most construction sizes (wall, bedding, curtain/toe/face wall, graded gravel) are in millimetres; formation widths, wing wall length, barrel length, cushion height and founding depth are in metres, matching the interface comments.",
+ "parameters": {
+  "spanSize": {
+   "kind": "length",
+   "unit": "m",
+   "label": "pipe internal diameter (span) as entered",
+   "component": "pipe",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:137"
+   ]
   },
-  "outputs": {
-    "span": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "pipe internal diameter converted to mm"
-    },
-    "pipeDiameterMeter": {
-      "kind": "length",
-      "unit": "m",
-      "label": "pipe internal diameter in metres"
-    },
-    "numPipes": {
-      "kind": "count",
-      "unit": "-",
-      "label": "number of barrels"
-    },
-    "wallThickness": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "pipe wall thickness"
-    },
-    "pipeWallThickness": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "pipe wall thickness (alias)"
-    },
-    "barrelLength": {
-      "kind": "length",
-      "unit": "m",
-      "label": "total barrel length (formation width + 4 x cushion height)"
-    },
-    "cushionHeight": {
-      "kind": "length",
-      "unit": "m",
-      "label": "earth cushion height above the pipe crown"
-    },
-    "pipeSpacing": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "clear spacing between adjacent barrels"
-    },
-    "beddingThickness": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "concrete bedding thickness"
-    },
-    "levelingCourse": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "leveling course thickness"
-    },
-    "rubbleSoling": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "rubble soling thickness"
-    },
-    "rubbleThk": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "rubble soling thickness (alias)"
-    },
-    "dropWallDepth": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "drop wall depth below bed level"
-    },
-    "curtainWallDepth": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "curtain wall depth below bed level"
-    },
-    "curtainWallThickness": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "curtain wall thickness"
-    },
-    "dropWallThickness": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "drop/curtain wall thickness (alias)"
-    },
-    "curtainWallProjectionLeft": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "curtain wall projection, left"
-    },
-    "curtainWallProjectionRight": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "curtain wall projection, right"
-    },
-    "curtainWallFootingThk": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "curtain wall footing thickness"
-    },
-    "curtainWallBeddingProjLeft": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "curtain wall bedding projection, left"
-    },
-    "curtainWallBeddingProjRight": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "curtain wall bedding projection, right"
-    },
-    "curtainWallBeddingThk": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "curtain wall bedding thickness"
-    },
-    "stonePitchingThk": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "stone pitching thickness"
-    },
-    "gradedGravelLength": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "graded gravel filter length"
-    },
-    "gradedGravelDepth": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "graded gravel filter depth"
-    },
-    "gradedGravelGap": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "gap from foundation bottom to graded gravel top"
-    },
-    "cradleConcreteThk": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "cradle concrete thickness"
-    },
-    "wingWallLength": {
-      "kind": "length",
-      "unit": "m",
-      "label": "wing wall length"
-    },
-    "slabThickness": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "approach slab thickness (constant)"
-    },
-    "toeWallStemTopW": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "toe wall stem width at top"
-    },
-    "toeWallStemBotW": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "toe wall stem width at bottom"
-    },
-    "toeWallStemH": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "toe wall stem height"
-    },
-    "toeWallAboveGL": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "toe wall height above ground level"
-    },
-    "toeWallProjection": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "toe wall footing projection"
-    },
-    "toeWallUpperFootingThk": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "toe wall upper footing thickness"
-    },
-    "toeWallBeddingThk": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "toe wall bedding thickness"
-    },
-    "toeWallBeddingProj": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "toe wall bedding projection"
-    },
-    "faceWallStemTopW": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "face wall stem width at top"
-    },
-    "faceWallStemBotW": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "face wall stem width at bottom"
-    },
-    "faceWallStemAboveGL": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "face wall stem height above ground level"
-    },
-    "faceWallStemBelowGL": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "face wall stem depth below ground level"
-    },
-    "faceWallHeelProj": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "face wall footing heel projection"
-    },
-    "faceWallToeProj": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "face wall footing toe projection"
-    },
-    "faceWallFoundThk": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "face wall footing thickness"
-    },
-    "faceWallBeddingThk": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "face wall bedding thickness"
-    },
-    "faceWallBeddingProj": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "face wall bedding projection"
-    },
-    "faceWallRubbleThk": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "face wall rubble soling thickness"
-    },
-    "faceWallShelfProj": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "face wall shelf projection"
-    },
-    "faceWallShelfDrop": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "face wall shelf drop"
-    },
-    "faceWallTier1Width": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "face wall first tier width"
-    },
-    "faceWallBaseWidth": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "face wall base width"
-    },
-    "headwallTopM": {
-      "kind": "level",
-      "unit": "m",
-      "label": "level of the top of the headwall"
-    },
-    "levelingBotM": {
-      "kind": "level",
-      "unit": "m",
-      "label": "level of the underside of the leveling course"
-    },
-    "foundBotM": {
-      "kind": "level",
-      "unit": "m",
-      "label": "level of the underside of the rubble soling / foundation"
-    },
-    "rl": {
-      "kind": "level",
-      "unit": "m",
-      "label": "rail level (alias)"
-    },
-    "fl": {
-      "kind": "level",
-      "unit": "m",
-      "label": "formation level (alias)"
-    },
-    "hfl": {
-      "kind": "level",
-      "unit": "m",
-      "label": "high flood level"
-    },
-    "bl": {
-      "kind": "level",
-      "unit": "m",
-      "label": "bed level (alias)"
-    },
-    "scourLevel": {
-      "kind": "level",
-      "unit": "m",
-      "label": "scour level, recomputed from bed level when the entered value is a stale legacy default"
-    },
-    "foundingDepthBelowScour": {
-      "kind": "length",
-      "unit": "m",
-      "label": "founding depth below scour level"
-    },
-    "foundingLevel": {
-      "kind": "level",
-      "unit": "m",
-      "label": "founding level (scour level - founding depth)"
-    },
-    "floorLevel": {
-      "kind": "level",
-      "unit": "m",
-      "label": "floor level"
-    },
-    "flBase": {
-      "kind": "level",
-      "unit": "m",
-      "label": "level of the base of the pipe foundation (bed level - foundation thickness)"
-    },
-    "total_w": {
-      "kind": "length",
-      "unit": "m",
-      "label": "overall width across all barrels, outer face to outer face"
-    },
-    "total_h": {
-      "kind": "length",
-      "unit": "m",
-      "label": "overall height, rail level to bed level"
-    },
-    "soffit_level": {
-      "kind": "level",
-      "unit": "m",
-      "label": "soffit level (= formation level)"
-    },
-    "flowArea": {
-      "kind": "area",
-      "unit": "m2",
-      "label": "total clear waterway area of all barrels"
-    },
-    "totalHeight": {
-      "kind": "length",
-      "unit": "m",
-      "label": "overall height (alias of total_h)"
-    },
-    "abutmentHeight": {
-      "kind": "length",
-      "unit": "m",
-      "label": "abutment height (overall height - foundation thickness)"
-    },
-    "foundationThickness": {
-      "kind": "length",
-      "unit": "m",
-      "label": "foundation thickness (constant)"
-    },
-    "innerBatter": {
-      "kind": "ratio",
-      "unit": "-",
-      "label": "inner face batter (constant, vertical)"
-    },
-    "wingWallBatter": {
-      "kind": "ratio",
-      "unit": "-",
-      "label": "wing wall batter"
-    },
-    "topAbutmentWidth": {
-      "kind": "length",
-      "unit": "m",
-      "label": "abutment top width (constant)"
-    },
-    "stepHeight": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "abutment step riser height (constant)"
-    },
-    "foundationWidth": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "foundation width (constant)"
-    },
-    "formationWidth": {
-      "kind": "length",
-      "unit": "m",
-      "label": "formation width"
-    },
-    "formationWidthLeft": {
-      "kind": "length",
-      "unit": "m",
-      "label": "formation width, left of centre line"
-    },
-    "formationWidthRight": {
-      "kind": "length",
-      "unit": "m",
-      "label": "formation width, right of centre line"
-    },
-    "wearingCourseThk": {
-      "kind": "length",
-      "unit": "mm",
-      "label": "wearing course thickness"
-    },
-    "stoneFlooringSide": {
-      "kind": "text",
-      "unit": "-",
-      "label": "side the stone floor pitching is shown on"
-    },
-    "gradedGravelText": {
-      "kind": "text",
-      "unit": "-",
-      "label": "graded gravel callout text"
-    },
-    "showGradedGravel": {
-      "kind": "flag",
-      "unit": "-",
-      "label": "graded gravel filter shown"
-    },
-    "gradedGravelHatch": {
-      "kind": "text",
-      "unit": "-",
-      "label": "graded gravel hatch pattern name"
-    },
-    "showCradleConcrete": {
-      "kind": "flag",
-      "unit": "-",
-      "label": "cradle concrete shown"
-    },
-    "flow_dir": {
-      "kind": "text",
-      "unit": "-",
-      "label": "flow direction, alternate key"
-    },
-    "flowDirection": {
-      "kind": "text",
-      "unit": "-",
-      "label": "flow direction"
-    }
+  "numPipes": {
+   "kind": "count",
+   "unit": "-",
+   "label": "number of barrels across",
+   "component": "pipe",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:148"
+   ]
   },
-  "findings": [
-    {
-      "kind": "defaults_inconsistency",
-      "text": "the family defaults store faceWallTier1Width as 1.360 and faceWallBaseWidth as 1.760 (metres-scale numbers) while the rule engine treats both as millimetres and falls back to 1360 / 1760 only when the field is absent: because 1.36 and 1.76 are truthy, the stored defaults are used AS mm, making the defaulted face wall tiers about 1000x too narrow.",
-      "evidence": [
-        "hume-pipe.defaults.ts:67",
-        "hume-pipe.defaults.ts:68",
-        "hume-pipe-rule-engine.ts:264",
-        "hume-pipe-rule-engine.ts:265"
-      ]
-    }
-  ]
+  "wallThickness": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "pipe wall thickness",
+   "component": "pipe",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:7",
+    "hume-pipe-rule-engine.ts:149"
+   ]
+  },
+  "formationWidth": {
+   "kind": "length",
+   "unit": "m",
+   "label": "formation width (left + right of centre line)",
+   "component": "formation",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:199"
+   ]
+  },
+  "formationWidthLeft": {
+   "kind": "length",
+   "unit": "m",
+   "label": "formation width, left of centre line",
+   "component": "formation",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:205"
+   ]
+  },
+  "formationWidthRight": {
+   "kind": "length",
+   "unit": "m",
+   "label": "formation width, right of centre line",
+   "component": "formation",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:206"
+   ]
+  },
+  "pipeSpacing": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "clear spacing between adjacent pipe barrels",
+   "component": "pipe",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:14",
+    "hume-pipe-rule-engine.ts:227"
+   ]
+  },
+  "wearingCourseThk": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "wearing course thickness in the earth cushion",
+   "component": "wearing_course",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:43",
+    "hume-pipe-rule-engine.ts:228"
+   ]
+  },
+  "beddingThickness": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "concrete bedding thickness under the pipes",
+   "component": "bedding",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:15",
+    "hume-pipe-rule-engine.ts:229"
+   ]
+  },
+  "levelingCourse": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "leveling course thickness under the bedding",
+   "component": "bedding",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:16",
+    "hume-pipe-rule-engine.ts:230"
+   ]
+  },
+  "rubbleSoling": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "rubble soling thickness under the leveling course",
+   "component": "bedding",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:17",
+    "hume-pipe-rule-engine.ts:231"
+   ]
+  },
+  "dropWallDepth": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "drop wall (upstream) depth below bed level",
+   "component": "drop_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:19",
+    "hume-pipe-rule-engine.ts:233"
+   ]
+  },
+  "curtainWallDepth": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall (downstream) depth below bed level",
+   "component": "curtain_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:20",
+    "hume-pipe-rule-engine.ts:234"
+   ]
+  },
+  "curtainWallThickness": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall thickness",
+   "component": "curtain_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:21",
+    "hume-pipe-rule-engine.ts:235"
+   ]
+  },
+  "curtainWallProjectionLeft": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall projection, left side",
+   "component": "curtain_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:23",
+    "hume-pipe-rule-engine.ts:236"
+   ]
+  },
+  "curtainWallProjectionRight": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall projection, right side",
+   "component": "curtain_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:24",
+    "hume-pipe-rule-engine.ts:237"
+   ]
+  },
+  "curtainWallFootingThk": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall footing thickness",
+   "component": "curtain_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:25",
+    "hume-pipe-rule-engine.ts:238"
+   ]
+  },
+  "curtainWallBeddingProjLeft": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall bedding projection, left side",
+   "component": "curtain_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:26",
+    "hume-pipe-rule-engine.ts:239"
+   ]
+  },
+  "curtainWallBeddingProjRight": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall bedding projection, right side",
+   "component": "curtain_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:27",
+    "hume-pipe-rule-engine.ts:240"
+   ]
+  },
+  "curtainWallBeddingThk": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall bedding thickness",
+   "component": "curtain_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:28",
+    "hume-pipe-rule-engine.ts:241"
+   ]
+  },
+  "stonePitchingThk": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "stone pitching thickness",
+   "component": "pitching",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:29",
+    "hume-pipe-rule-engine.ts:242"
+   ]
+  },
+  "stoneFlooringSide": {
+   "kind": "text",
+   "unit": "-",
+   "label": "side the stone floor pitching is shown on",
+   "component": "pitching",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:30",
+    "hume-pipe-rule-engine.ts:317"
+   ]
+  },
+  "foundingDepthBelowScour": {
+   "kind": "length",
+   "unit": "m",
+   "label": "founding depth below the scour level",
+   "component": "foundation",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:81",
+    "hume-pipe-rule-engine.ts:189"
+   ]
+  },
+  "wingWallLength": {
+   "kind": "length",
+   "unit": "m",
+   "label": "wing wall length",
+   "component": "wing_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:41",
+    "hume-pipe-rule-engine.ts:243"
+   ]
+  },
+  "railLevel": {
+   "kind": "level",
+   "unit": "m",
+   "label": "rail level (an input; the engine falls back to formation level + 0.762 m)",
+   "component": "track",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:170"
+   ]
+  },
+  "formationLevel": {
+   "kind": "level",
+   "unit": "m",
+   "label": "formation level",
+   "component": "track",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:165"
+   ]
+  },
+  "hfl": {
+   "kind": "level",
+   "unit": "m",
+   "label": "high flood level",
+   "component": "site",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:78",
+    "hume-pipe-rule-engine.ts:180"
+   ]
+  },
+  "bedLevel": {
+   "kind": "level",
+   "unit": "m",
+   "label": "bed level: invert level the pipes are laid at",
+   "component": "pipe",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:175"
+   ]
+  },
+  "scourLevel": {
+   "kind": "level",
+   "unit": "m",
+   "label": "scour level as entered (the engine recomputes legacy defaults)",
+   "component": "foundation",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:80",
+    "hume-pipe-rule-engine.ts:115"
+   ]
+  },
+  "floorLevel": {
+   "kind": "level",
+   "unit": "m",
+   "label": "floor level (defaults to bed level)",
+   "component": "pipe",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:83",
+    "hume-pipe-rule-engine.ts:186"
+   ]
+  },
+  "toeWallAboveGL": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall height above ground level",
+   "component": "toe_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:49",
+    "hume-pipe-rule-engine.ts:157"
+   ]
+  },
+  "faceWallStemAboveGL": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall (headwall) stem height above ground level",
+   "component": "face_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:58",
+    "hume-pipe-rule-engine.ts:268"
+   ]
+  },
+  "faceWallStemBelowGL": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall stem depth below ground level",
+   "component": "face_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:59",
+    "hume-pipe-rule-engine.ts:271"
+   ]
+  },
+  "faceWallStemTopW": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall stem width at top",
+   "component": "face_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:56",
+    "hume-pipe-rule-engine.ts:265"
+   ]
+  },
+  "faceWallStemBotW": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall stem width at bottom",
+   "component": "face_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:57",
+    "hume-pipe-rule-engine.ts:266"
+   ]
+  },
+  "faceWallHeelProj": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall footing heel projection",
+   "component": "face_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:60",
+    "hume-pipe-rule-engine.ts:272"
+   ]
+  },
+  "faceWallToeProj": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall footing toe projection",
+   "component": "face_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:61",
+    "hume-pipe-rule-engine.ts:273"
+   ]
+  },
+  "faceWallFoundThk": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall footing thickness",
+   "component": "face_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:62",
+    "hume-pipe-rule-engine.ts:274"
+   ]
+  },
+  "faceWallBeddingThk": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall bedding thickness",
+   "component": "face_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:63",
+    "hume-pipe-rule-engine.ts:275"
+   ]
+  },
+  "faceWallBeddingProj": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall bedding projection",
+   "component": "face_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:64",
+    "hume-pipe-rule-engine.ts:276"
+   ]
+  },
+  "faceWallRubbleThk": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall rubble soling thickness",
+   "component": "face_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:65",
+    "hume-pipe-rule-engine.ts:277"
+   ]
+  },
+  "showGradedGravel": {
+   "kind": "flag",
+   "unit": "-",
+   "label": "graded gravel filter is part of the arrangement",
+   "component": "graded_gravel",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:35",
+    "hume-pipe-rule-engine.ts:322"
+   ]
+  },
+  "gradedGravelHatch": {
+   "kind": "text",
+   "unit": "-",
+   "label": "graded gravel hatch pattern name",
+   "component": "graded_gravel",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:38",
+    "hume-pipe-rule-engine.ts:325"
+   ]
+  },
+  "gradedGravelLength": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "graded gravel filter length",
+   "component": "graded_gravel",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:31",
+    "hume-pipe-rule-engine.ts:318"
+   ]
+  },
+  "gradedGravelGap": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "vertical gap from the foundation bottom to the top of the graded gravel",
+   "component": "graded_gravel",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:33",
+    "hume-pipe-rule-engine.ts:320"
+   ]
+  },
+  "gradedGravelText": {
+   "kind": "text",
+   "unit": "-",
+   "label": "graded gravel callout text",
+   "component": "graded_gravel",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:34",
+    "hume-pipe-rule-engine.ts:321"
+   ]
+  },
+  "showCradleConcrete": {
+   "kind": "flag",
+   "unit": "-",
+   "label": "cradle concrete under the pipe is part of the arrangement",
+   "component": "cradle_concrete",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:39",
+    "hume-pipe-rule-engine.ts:326"
+   ]
+  },
+  "cradleConcreteThk": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "cradle concrete thickness",
+   "component": "cradle_concrete",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:40",
+    "hume-pipe-rule-engine.ts:327"
+   ]
+  },
+  "faceWallTier1Width": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall first tier width (stem width + heel + toe projection)",
+   "component": "face_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:69",
+    "hume-pipe-rule-engine.ts:281"
+   ]
+  },
+  "faceWallBaseWidth": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall base width (tier-1 width + 2 x bedding projection)",
+   "component": "face_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:70",
+    "hume-pipe-rule-engine.ts:282"
+   ]
+  },
+  "faceWallShelfDrop": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall shelf drop",
+   "component": "face_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:68",
+    "hume-pipe-rule-engine.ts:280"
+   ]
+  },
+  "faceWallShelfProj": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall shelf projection",
+   "component": "face_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:67",
+    "hume-pipe-rule-engine.ts:279"
+   ]
+  },
+  "flowDirection": {
+   "kind": "text",
+   "unit": "-",
+   "label": "flow direction (left-to-right or right-to-left)",
+   "component": "pipe",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:105",
+    "hume-pipe-rule-engine.ts:105"
+   ]
+  },
+  "flow_dir": {
+   "kind": "text",
+   "unit": "-",
+   "label": "flow direction, alternate key",
+   "component": "pipe",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:104",
+    "hume-pipe-rule-engine.ts:104"
+   ]
+  },
+  "gradedGravelDepth": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "graded gravel filter depth (alias of its length)",
+   "component": "graded_gravel",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:32",
+    "hume-pipe-rule-engine.ts:318"
+   ]
+  },
+  "toeWallBeddingProj": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall bedding projection",
+   "component": "toe_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:53",
+    "hume-pipe-rule-engine.ts:161"
+   ]
+  },
+  "toeWallBeddingThk": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall bedding thickness",
+   "component": "toe_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:52",
+    "hume-pipe-rule-engine.ts:160"
+   ]
+  },
+  "toeWallProjection": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall footing projection",
+   "component": "toe_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:50",
+    "hume-pipe-rule-engine.ts:158"
+   ]
+  },
+  "toeWallStemBotW": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall stem width at bottom",
+   "component": "toe_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:47",
+    "hume-pipe-rule-engine.ts:154"
+   ]
+  },
+  "toeWallStemH": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall stem height",
+   "component": "toe_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:48",
+    "hume-pipe-rule-engine.ts:156"
+   ]
+  },
+  "toeWallStemTopW": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall stem width at top",
+   "component": "toe_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:46",
+    "hume-pipe-rule-engine.ts:153"
+   ]
+  },
+  "toeWallUpperFootingThk": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall upper footing thickness",
+   "component": "toe_wall",
+   "evidence": [
+    "hume-pipe-rule-engine.ts:51",
+    "hume-pipe-rule-engine.ts:159"
+   ]
+  }
+ },
+ "outputs": {
+  "span": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "pipe internal diameter converted to mm"
+  },
+  "pipeDiameterMeter": {
+   "kind": "length",
+   "unit": "m",
+   "label": "pipe internal diameter in metres"
+  },
+  "numPipes": {
+   "kind": "count",
+   "unit": "-",
+   "label": "number of barrels",
+   "evidence": []
+  },
+  "wallThickness": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "pipe wall thickness",
+   "evidence": []
+  },
+  "pipeWallThickness": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "pipe wall thickness (alias)"
+  },
+  "barrelLength": {
+   "kind": "length",
+   "unit": "m",
+   "label": "total barrel length (formation width + 4 x cushion height)"
+  },
+  "cushionHeight": {
+   "kind": "length",
+   "unit": "m",
+   "label": "earth cushion height above the pipe crown"
+  },
+  "pipeSpacing": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "clear spacing between adjacent barrels",
+   "evidence": []
+  },
+  "beddingThickness": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "concrete bedding thickness",
+   "evidence": []
+  },
+  "levelingCourse": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "leveling course thickness",
+   "evidence": []
+  },
+  "rubbleSoling": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "rubble soling thickness",
+   "evidence": []
+  },
+  "rubbleThk": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "rubble soling thickness (alias)"
+  },
+  "dropWallDepth": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "drop wall depth below bed level",
+   "evidence": []
+  },
+  "curtainWallDepth": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall depth below bed level",
+   "evidence": []
+  },
+  "curtainWallThickness": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall thickness",
+   "evidence": []
+  },
+  "dropWallThickness": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "drop/curtain wall thickness (alias)"
+  },
+  "curtainWallProjectionLeft": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall projection, left",
+   "evidence": []
+  },
+  "curtainWallProjectionRight": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall projection, right",
+   "evidence": []
+  },
+  "curtainWallFootingThk": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall footing thickness",
+   "evidence": []
+  },
+  "curtainWallBeddingProjLeft": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall bedding projection, left",
+   "evidence": []
+  },
+  "curtainWallBeddingProjRight": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall bedding projection, right",
+   "evidence": []
+  },
+  "curtainWallBeddingThk": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "curtain wall bedding thickness",
+   "evidence": []
+  },
+  "stonePitchingThk": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "stone pitching thickness",
+   "evidence": []
+  },
+  "gradedGravelLength": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "graded gravel filter length",
+   "evidence": []
+  },
+  "gradedGravelDepth": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "graded gravel filter depth",
+   "evidence": []
+  },
+  "gradedGravelGap": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "gap from foundation bottom to graded gravel top",
+   "evidence": []
+  },
+  "cradleConcreteThk": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "cradle concrete thickness",
+   "evidence": []
+  },
+  "wingWallLength": {
+   "kind": "length",
+   "unit": "m",
+   "label": "wing wall length",
+   "evidence": []
+  },
+  "slabThickness": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "approach slab thickness (constant)"
+  },
+  "toeWallStemTopW": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall stem width at top",
+   "evidence": []
+  },
+  "toeWallStemBotW": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall stem width at bottom",
+   "evidence": []
+  },
+  "toeWallStemH": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall stem height",
+   "evidence": []
+  },
+  "toeWallAboveGL": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall height above ground level",
+   "evidence": []
+  },
+  "toeWallProjection": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall footing projection",
+   "evidence": []
+  },
+  "toeWallUpperFootingThk": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall upper footing thickness",
+   "evidence": []
+  },
+  "toeWallBeddingThk": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall bedding thickness",
+   "evidence": []
+  },
+  "toeWallBeddingProj": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "toe wall bedding projection",
+   "evidence": []
+  },
+  "faceWallStemTopW": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall stem width at top",
+   "evidence": []
+  },
+  "faceWallStemBotW": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall stem width at bottom",
+   "evidence": []
+  },
+  "faceWallStemAboveGL": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall stem height above ground level",
+   "evidence": []
+  },
+  "faceWallStemBelowGL": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall stem depth below ground level",
+   "evidence": []
+  },
+  "faceWallHeelProj": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall footing heel projection",
+   "evidence": []
+  },
+  "faceWallToeProj": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall footing toe projection",
+   "evidence": []
+  },
+  "faceWallFoundThk": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall footing thickness",
+   "evidence": []
+  },
+  "faceWallBeddingThk": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall bedding thickness",
+   "evidence": []
+  },
+  "faceWallBeddingProj": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall bedding projection",
+   "evidence": []
+  },
+  "faceWallRubbleThk": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall rubble soling thickness",
+   "evidence": []
+  },
+  "faceWallShelfProj": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall shelf projection",
+   "evidence": []
+  },
+  "faceWallShelfDrop": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall shelf drop",
+   "evidence": []
+  },
+  "faceWallTier1Width": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall first tier width",
+   "evidence": []
+  },
+  "faceWallBaseWidth": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "face wall base width",
+   "evidence": []
+  },
+  "headwallTopM": {
+   "kind": "level",
+   "unit": "m",
+   "label": "level of the top of the headwall"
+  },
+  "levelingBotM": {
+   "kind": "level",
+   "unit": "m",
+   "label": "level of the underside of the leveling course"
+  },
+  "foundBotM": {
+   "kind": "level",
+   "unit": "m",
+   "label": "level of the underside of the rubble soling / foundation"
+  },
+  "rl": {
+   "kind": "level",
+   "unit": "m",
+   "label": "rail level (alias)"
+  },
+  "fl": {
+   "kind": "level",
+   "unit": "m",
+   "label": "formation level (alias)"
+  },
+  "hfl": {
+   "kind": "level",
+   "unit": "m",
+   "label": "high flood level",
+   "evidence": []
+  },
+  "bl": {
+   "kind": "level",
+   "unit": "m",
+   "label": "bed level (alias)"
+  },
+  "scourLevel": {
+   "kind": "level",
+   "unit": "m",
+   "label": "scour level, recomputed from bed level when the entered value is a stale legacy default",
+   "evidence": []
+  },
+  "foundingDepthBelowScour": {
+   "kind": "length",
+   "unit": "m",
+   "label": "founding depth below scour level",
+   "evidence": []
+  },
+  "foundingLevel": {
+   "kind": "level",
+   "unit": "m",
+   "label": "founding level (scour level - founding depth)"
+  },
+  "floorLevel": {
+   "kind": "level",
+   "unit": "m",
+   "label": "floor level",
+   "evidence": []
+  },
+  "flBase": {
+   "kind": "level",
+   "unit": "m",
+   "label": "level of the base of the pipe foundation (bed level - foundation thickness)"
+  },
+  "total_w": {
+   "kind": "length",
+   "unit": "m",
+   "label": "overall width across all barrels, outer face to outer face"
+  },
+  "total_h": {
+   "kind": "length",
+   "unit": "m",
+   "label": "overall height, rail level to bed level"
+  },
+  "soffit_level": {
+   "kind": "level",
+   "unit": "m",
+   "label": "soffit level (= formation level)"
+  },
+  "flowArea": {
+   "kind": "area",
+   "unit": "m2",
+   "label": "total clear waterway area of all barrels"
+  },
+  "totalHeight": {
+   "kind": "length",
+   "unit": "m",
+   "label": "overall height (alias of total_h)"
+  },
+  "abutmentHeight": {
+   "kind": "length",
+   "unit": "m",
+   "label": "abutment height (overall height - foundation thickness)"
+  },
+  "foundationThickness": {
+   "kind": "length",
+   "unit": "m",
+   "label": "foundation thickness (constant)"
+  },
+  "innerBatter": {
+   "kind": "ratio",
+   "unit": "-",
+   "label": "inner face batter (constant, vertical)"
+  },
+  "wingWallBatter": {
+   "kind": "ratio",
+   "unit": "-",
+   "label": "wing wall batter"
+  },
+  "topAbutmentWidth": {
+   "kind": "length",
+   "unit": "m",
+   "label": "abutment top width (constant)"
+  },
+  "stepHeight": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "abutment step riser height (constant)"
+  },
+  "foundationWidth": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "foundation width (constant)"
+  },
+  "formationWidth": {
+   "kind": "length",
+   "unit": "m",
+   "label": "formation width",
+   "evidence": []
+  },
+  "formationWidthLeft": {
+   "kind": "length",
+   "unit": "m",
+   "label": "formation width, left of centre line",
+   "evidence": []
+  },
+  "formationWidthRight": {
+   "kind": "length",
+   "unit": "m",
+   "label": "formation width, right of centre line",
+   "evidence": []
+  },
+  "wearingCourseThk": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "wearing course thickness",
+   "evidence": []
+  },
+  "stoneFlooringSide": {
+   "kind": "text",
+   "unit": "-",
+   "label": "side the stone floor pitching is shown on",
+   "evidence": []
+  },
+  "gradedGravelText": {
+   "kind": "text",
+   "unit": "-",
+   "label": "graded gravel callout text",
+   "evidence": []
+  },
+  "showGradedGravel": {
+   "kind": "flag",
+   "unit": "-",
+   "label": "graded gravel filter shown",
+   "evidence": []
+  },
+  "gradedGravelHatch": {
+   "kind": "text",
+   "unit": "-",
+   "label": "graded gravel hatch pattern name",
+   "evidence": []
+  },
+  "showCradleConcrete": {
+   "kind": "flag",
+   "unit": "-",
+   "label": "cradle concrete shown",
+   "evidence": []
+  },
+  "flow_dir": {
+   "kind": "text",
+   "unit": "-",
+   "label": "flow direction, alternate key",
+   "evidence": []
+  },
+  "flowDirection": {
+   "kind": "text",
+   "unit": "-",
+   "label": "flow direction",
+   "evidence": []
+  }
+ },
+ "findings": [
+  {
+   "kind": "defaults_inconsistency",
+   "text": "the family defaults store faceWallTier1Width as 1.360 and faceWallBaseWidth as 1.760 (metres-scale numbers) while the rule engine treats both as millimetres and falls back to 1360 / 1760 only when the field is absent: because 1.36 and 1.76 are truthy, the stored defaults are used AS mm, making the defaulted face wall tiers about 1000x too narrow.",
+   "evidence": [
+    "hume-pipe.defaults.ts:67",
+    "hume-pipe.defaults.ts:68",
+    "hume-pipe-rule-engine.ts:264",
+    "hume-pipe-rule-engine.ts:265"
+   ]
+  }
+ ]
 }

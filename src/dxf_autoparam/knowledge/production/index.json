@@ -1,46 +1,32 @@
 {
  "format": "dxf-autoparam/production-index-1",
  "extractor_version": 1,
- "generated_at": "2026-10-15T16:15:02+0530",
+ "generated_at": "2026-10-22T12:21:58+0530",
  "source": {
   "repository": "aagento-bridge",
-  "commit": "ca0b17ec2ccd82b81c246e2c02f8c4dc6fece565",
-  "branch": "cad_agent_dxf",
+  "commit": "e6c8f8fbe63fec95b08527e672aa71bec457a0b9",
+  "branch": "dev-new",
   "dirty_files": [],
   "registry": "src/app/features/bridges/models/bridge-registry.ts"
  },
  "bundle": {
-  "sources_digest": "8bb793b66250c5ce4e069fe9aa229c45d5322f909d62c90f2db589ab8bbdb7ac",
-  "built_at": "2026-10-15T11:51:02+0530"
+  "sources_digest": "001caef3415d78287ca25bbbeff1fbff0f53b1d07f529f0fce33b8fa09665931",
+  "built_at": "2026-10-22T12:13:52+0530"
  },
  "families": [
-  {
-   "family": "cad_preview",
-   "title": "CAD PREVIEW",
-   "file": "cad_preview.json",
-   "has_compute": false,
-   "has_validate": false,
-   "parameters": 0,
-   "outputs": 0,
-   "formulas_verified": 0,
-   "views": 0,
-   "sources_digest": "037b39b7cd217cf60069b8e1b8ca9dc17e3ac667babb5d2b3ab90c8cdbb6b32f",
-   "overlay": false,
-   "seconds": 0.1
-  },
   {
    "family": "composite_grider",
    "title": "COMPOSITE GIRDER",
    "file": "composite_grider.json",
    "has_compute": true,
    "has_validate": true,
-   "parameters": 166,
-   "outputs": 1232,
+   "parameters": 233,
+   "outputs": 1233,
    "formulas_verified": 0,
    "views": 9,
-   "sources_digest": "e502daaa669a8a7a0fa8cc86fe03aeb4cbbd35b63d5a3012d38e7636195c12fe",
+   "sources_digest": "8ccd66e38856fe12569daea070d79c6eed8747075ec13513627813b28ee74e1f",
    "overlay": false,
-   "seconds": 19.5
+   "seconds": 22.6
   },
   {
    "family": "highway_arch_bridge",
@@ -52,9 +38,9 @@
    "outputs": 48,
    "formulas_verified": 35,
    "views": 10,
-   "sources_digest": "7e0a44dd25f23c4a2d3d98a2ec019602d4b05c199f59318d40db6b899e0281fa",
+   "sources_digest": "50e8b74381de0972de59caa7a45e4bba971d9832437666fcec581c13f8fa7591",
    "overlay": true,
-   "seconds": 0.5
+   "seconds": 0.6
   },
   {
    "family": "highway_rcc_box",
@@ -66,9 +52,9 @@
    "outputs": 67,
    "formulas_verified": 31,
    "views": 11,
-   "sources_digest": "2d326cbdc08b84774c53f3987e8d2003990b5dd0982541bf88ca94755ed36411",
+   "sources_digest": "b4d14ee06548a4b0538c266c70c92ff0e1b7416d1f9d2eb8625ad7d32dc246e7",
    "overlay": true,
-   "seconds": 0.7
+   "seconds": 0.8
   },
   {
    "family": "highway_rub",
@@ -80,9 +66,9 @@
    "outputs": 67,
    "formulas_verified": 30,
    "views": 11,
-   "sources_digest": "366b71913484a8e30dfb85662fdee43cd520f9ca1c32cba85f1206788a7d18d4",
+   "sources_digest": "4a0ce86d64c4d0f07c477d9dc31a8c4b2a1bd581e747be0229bc773f7da00a89",
    "overlay": true,
-   "seconds": 10.4
+   "seconds": 11.9
   },
   {
    "family": "hume_pipe",
@@ -90,13 +76,13 @@
    "file": "hume_pipe.json",
    "has_compute": true,
    "has_validate": true,
-   "parameters": 87,
-   "outputs": 86,
-   "formulas_verified": 45,
-   "views": 6,
-   "sources_digest": "be7960967732cebdf23edf15cccda5727c244e05e8914c1af367bd1faf6b5009",
+   "parameters": 185,
+   "outputs": 89,
+   "formulas_verified": 47,
+   "views": 7,
+   "sources_digest": "09a582ede1a96ae01230e04134da5334cc3cd411120d7bd15facc91950ea0b08",
    "overlay": true,
-   "seconds": 1.0
+   "seconds": 1.3
   },
   {
    "family": "owg",
@@ -108,9 +94,9 @@
    "outputs": 1028,
    "formulas_verified": 2,
    "views": 8,
-   "sources_digest": "9d7228b929e1caef34d84a33f701e08226b4715e062fdb0d3b74c577e36f06a6",
+   "sources_digest": "2b3dc94cd60d37a0d38c1357a989eeb293a432620c925602c9c3eb8f000ea889",
    "overlay": false,
-   "seconds": 2.0
+   "seconds": 2.4
   },
   {
    "family": "psc_slab",
@@ -118,11 +104,11 @@
    "file": "psc_slab.json",
    "has_compute": true,
    "has_validate": true,
-   "parameters": 154,
+   "parameters": 155,
    "outputs": 27,
    "formulas_verified": 3,
-   "views": 13,
-   "sources_digest": "de76815df2b21f2961c44842d54069919c3eeba0942274d617226dab0716e325",
+   "views": 14,
+   "sources_digest": "6e25235fd40070f4b95a9d66e470cab80536892fc47726f9422649b1fbe9fb4e",
    "overlay": false,
    "seconds": 0.7
   },
@@ -132,27 +118,27 @@
    "file": "railway_arch_bridge.json",
    "has_compute": true,
    "has_validate": true,
-   "parameters": 77,
+   "parameters": 78,
    "outputs": 49,
    "formulas_verified": 21,
    "views": 9,
-   "sources_digest": "602ea4ba62b905e6476990a47555ee744f7951aa45cce709749e118526638fa5",
+   "sources_digest": "4ee1e294866e819805549e23135ed3f8bf9b0a2428bbda4bc19e751a676aa4e1",
    "overlay": true,
-   "seconds": 1.0
+   "seconds": 1.3
   },
   {
    "family": "railway_rcc_box",
    "title": "RCC BOX CULVERT",
    "file": "railway_rcc_box.json",
    "has_compute": true,
-   "has_validate": false,
-   "parameters": 84,
+   "has_validate": true,
+   "parameters": 94,
    "outputs": 67,
    "formulas_verified": 30,
    "views": 14,
-   "sources_digest": "0f1eb265857988e01e4f707a74168147aefd165b6e06ee3045abc0b1b309b083",
+   "sources_digest": "20a6c1e6e4822ebade77e8790d57addd2fce74aff08792eba10082cdcd6f3a70",
    "overlay": true,
-   "seconds": 0.8
+   "seconds": 1.0
   },
   {
    "family": "railway_rub",
@@ -160,13 +146,13 @@
    "file": "railway_rub.json",
    "has_compute": true,
    "has_validate": true,
-   "parameters": 71,
+   "parameters": 83,
    "outputs": 67,
    "formulas_verified": 30,
    "views": 15,
-   "sources_digest": "9ccfd8ac5915bf791d4e1a8546766504119953ff856066d151c3f73596613434",
+   "sources_digest": "39ed7acf44b4416ad14904b5338d5ece5abc5e91d4e3d09c8968730331270ded",
    "overlay": true,
-   "seconds": 0.8
+   "seconds": 1.1
   },
   {
    "family": "rcc_slab",
@@ -174,13 +160,13 @@
    "file": "rcc_slab.json",
    "has_compute": true,
    "has_validate": true,
-   "parameters": 72,
+   "parameters": 73,
    "outputs": 49,
-   "formulas_verified": 21,
+   "formulas_verified": 0,
    "views": 8,
-   "sources_digest": "bb70422a22b5ef297a274d87d45017dd3eada1028aaba53cf582a6e3a39bb8d9",
+   "sources_digest": "0539d5a3ef868f30205f2f864f8ef818c5492e77d3994d1db0241a8c7a76513f",
    "overlay": true,
-   "seconds": 1.4
+   "seconds": 0.4
   },
   {
    "family": "rcc_slab_legacy",
@@ -188,13 +174,13 @@
    "file": "rcc_slab_legacy.json",
    "has_compute": true,
    "has_validate": false,
-   "parameters": 63,
+   "parameters": 64,
    "outputs": 52,
    "formulas_verified": 0,
    "views": 5,
-   "sources_digest": "1f03a0b48302e736f90fd15055d196da476166f8127f0b4ada3c7f6c70d26b6f",
+   "sources_digest": "55461a58b4d4beb07066d2c2b7bb0d289bee89270934aafe936a08bca57a256c",
    "overlay": false,
-   "seconds": 0.5
+   "seconds": 0.6
   },
   {
    "family": "rob",
@@ -206,23 +192,9 @@
    "outputs": 39,
    "formulas_verified": 2,
    "views": 10,
-   "sources_digest": "3d5c6de04c3947f99eb24aecf3c3820e13fa666a1af8ff73dba77581901b7649",
+   "sources_digest": "7ca441253b5113eae48b9cf0a5a712c30aab24b0d480372ad1135c23a4a21a5e",
    "overlay": false,
-   "seconds": 0.6
-  },
-  {
-   "family": "test_bridge_parametric",
-   "title": "TEST BRIDGE PARAMETRIC",
-   "file": "test_bridge_parametric.json",
-   "has_compute": false,
-   "has_validate": false,
-   "parameters": 0,
-   "outputs": 0,
-   "formulas_verified": 0,
-   "views": 0,
-   "sources_digest": "037b39b7cd217cf60069b8e1b8ca9dc17e3ac667babb5d2b3ab90c8cdbb6b32f",
-   "overlay": false,
-   "seconds": 0.0
+   "seconds": 0.7
   }
  ]
 }

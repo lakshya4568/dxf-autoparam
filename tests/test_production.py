@@ -128,8 +128,13 @@ def test_every_shipped_manifest_is_well_formed_and_says_where_it_came_from():
 
 def test_the_railway_box_knowledge_says_what_the_production_code_shows():
     fam = M.ProductionKnowledge().family("railway_rcc_box")
-    assert fam.data["capabilities"]["has_validate"] is False
-    assert any(f["kind"] == "disabled_validation" for f in fam.data["findings"])
+    # validate() was commented out when this was first read; aagento-bridge runs it again (rcc-box-rule-engine.ts:106-160): the knowledge follows the
+    # code — the authored "disabled" note is dropped and the rules it listed are marked as running
+    assert fam.data["capabilities"]["has_validate"] is True
+    assert not any(f["kind"] == "disabled_validation" for f in fam.data["findings"])
+    assert {r["status"] for r in fam.data["validation"]["disabled_rules"]} == {"source_enabled"}
+    assert any("soffit" in m["msg"].lower() and "≠" in m["msg"] for m in fam.data["validation"]["messages_at_defaults"]), \
+        "the family's own defaults are inconsistent about the soffit, and its validation says so"
     total = fam.outputs["total_w"]
     assert total["formula"]["status"] == "verified_by_execution" and total["unit"] == "m"
     assert set(total["depends_on"]) == {"geometry.clear_w", "geometry.t_wall_o", "geometry.t_wall_i", "project.cells"}
@@ -138,8 +143,9 @@ def test_the_railway_box_knowledge_says_what_the_production_code_shows():
     sec = next(v for v in fam.views if v["mode"] == "sec")
     assert "foundation.found_d" in sec["affected_by"] and "foundation.sand_fill_depth" not in sec["affected_by"], \
         "the half section draws the fill from found_d, not from the engine's sand_fill_depth (measured by rendering it)"
-    wing = next(v for v in fam.views if v["mode"] == "rw2")
-    assert any(c.get("when", {}).get("path") == "options2d.show_wing_wall" for c in wing["conditions"] if isinstance(c, dict))
+    curtain = next(v for v in fam.views if v["mode"] == "cw")
+    assert any(c.get("when", {}).get("path") == "options2d.show_curtain_wall" for c in curtain["conditions"] if isinstance(c, dict)), \
+        "a view a toggle switches off says which toggle"
 
 
 def test_a_malformed_manifest_is_refused_whole(tmp_path):
@@ -262,8 +268,8 @@ def test_the_bundle_serves_the_registry_the_knowledge_describes():
     keys = [f["key"] for f in hello["families"]]
     assert sorted(keys) == sorted(pk.family_keys()), "the bundle and the manifests describe the same registry (order is not knowledge)"
     by = {f["key"]: f for f in hello["families"]}
-    assert by["railway_rcc_box"]["has_validate"] is False and by["highway_rcc_box"]["has_validate"] is True
-    assert by["cad_preview"]["has_compute"] is False
+    assert by["rcc_slab_legacy"]["has_validate"] is False and by["railway_rcc_box"]["has_validate"] is True
+    assert all(f["has_compute"] for f in hello["families"]), "the template renderers without a rule engine have left the registry"
 
 
 @needs_bridge
@@ -339,7 +345,10 @@ def test_a_true_binding_holds_and_what_waits_for_an_unbound_field_is_not_judged(
     assert rep["outputs"]["total_h"]["result"] == "holds"
     span = rep["outputs"]["spanLen"]
     assert span["result"] == "not_evaluable" and "deck.formation_lvl" in span["waits_for"], "a production default is never taken for the drawing's value"
-    assert rep["validation"]["status"] == "unsupported" and rep["status"] == "partial"
+    val = rep["validation"]
+    assert val["ran"] and val["status"] in ("passed", "inconclusive") and val["decided_by_drawing"] < val["checks"], \
+        "the engine's own checks ran; those that read a production default are counted apart, never a verdict on the drawing"
+    assert rep["status"] == "partial"
 
 
 @needs_bridge
@@ -609,7 +618,7 @@ def test_a_run_consults_binds_assesses_and_validates_every_view(tmp_path):
     views = seen["validate_views"]["result"]["views"]
     sec = next(v for v in views if v["unit"] == us)
     assert sec["geometry"]["status"] == "passed" and sec["production_rules"]["relations"] == "passed"
-    assert sec["production_rules"]["engine_validation"] == "unsupported", "a family whose engine does not validate is never reported as validated"
+    assert sec["production_rules"]["engine_validation"] == "passed", "the railway box's engine validates again: its checks ran on the drawing's values"
     v = p["verdict"]
     assert v["production"]["bindings_kept"][0]["guards"] == ["total_w", "total_h"]
     crit = {c["id"]: c for c in v["criteria"]}

@@ -1,74 +1,519 @@
 {
-  "family": "railway_rcc_box",
-  "status": "authored_from_source",
-  "basis": "Read by a person from aagento-bridge rcc-box-rule-engine.ts, rcc-box.defaults.ts, rcc-box-mapper.ts and the views that draw the same quantities. Units: the rule engine adds every geometry value to levels in metres (z_bot = bedLvl - wearC - tSB, line 40), so they are metres; a field divided by 1000 where it is drawn is millimetres.",
-  "parameters": {
-    "project.cells": {"kind": "count", "unit": "-", "label": "number of cells (barrels) across the box", "component": "box", "evidence": ["rcc-box-rule-engine.ts:16", "rcc-box-rule-engine.ts:33"]},
-    "geometry.clear_w": {"kind": "length", "unit": "m", "label": "clear span of one cell (inner face to inner face)", "component": "cell", "evidence": ["rcc-box-rule-engine.ts:17", "rcc-box-rule-engine.ts:33"]},
-    "geometry.clear_h": {"kind": "length", "unit": "m", "label": "clear height of a cell (top of bottom slab to soffit of top slab)", "component": "cell", "evidence": ["rcc-box-rule-engine.ts:18", "rcc-box-rule-engine.ts:46"]},
-    "geometry.t_wall_o": {"kind": "length", "unit": "m", "label": "thickness of each outer wall", "component": "outer_wall", "evidence": ["rcc-box-rule-engine.ts:19", "rcc-box-rule-engine.ts:33"]},
-    "geometry.t_wall_i": {"kind": "length", "unit": "m", "label": "thickness of each intermediate (inner) wall between cells", "component": "inner_wall", "evidence": ["rcc-box-rule-engine.ts:20", "rcc-box-rule-engine.ts:33"]},
-    "geometry.t_slab_t": {"kind": "length", "unit": "m", "label": "thickness of the top slab", "component": "top_slab", "evidence": ["rcc-box-rule-engine.ts:21", "rcc-box-rule-engine.ts:42"]},
-    "geometry.t_slab_b": {"kind": "length", "unit": "m", "label": "thickness of the bottom slab", "component": "bottom_slab", "evidence": ["rcc-box-rule-engine.ts:22", "rcc-box-rule-engine.ts:40"]},
-    "geometry.haunch_size": {"kind": "length", "unit": "m", "label": "haunch size (leg) at the wall–slab junctions", "component": "haunch", "evidence": ["rcc-box-rule-engine.ts:61"]},
-    "deck.wearing_course": {"kind": "length", "unit": "m", "label": "wearing course on the bottom slab (bed level is its top)", "component": "wearing_course", "evidence": ["rcc-box-rule-engine.ts:23", "rcc-box-rule-engine.ts:38"]},
-    "hydraulics.bed_lvl": {"kind": "level", "unit": "m", "label": "bed level: the finished floor, top of the wearing course", "component": "cell", "evidence": ["rcc-box-rule-engine.ts:24", "rcc-box-rule-engine.ts:38"]},
-    "hydraulics.hfl": {"kind": "level", "unit": "m", "label": "high flood level", "component": "site", "evidence": ["rcc-box-rule-engine.ts:25"]},
-    "hydraulics.soffit_level": {"kind": "level", "unit": "m", "label": "soffit level as entered (an input; the engine computes its own soffit)", "component": "top_slab", "evidence": ["rcc-box-rule-engine.ts:26"]},
-    "hydraulics.berm": {"kind": "length", "unit": "mm", "label": "berm width of the embankment", "component": "embankment", "evidence": ["rcc-box-scene-renderer.ts:67 ((hyd.berm ?? 2000) / 1000)"]},
-    "deck.formation_lvl": {"kind": "level", "unit": "m", "label": "formation level", "component": "track", "evidence": ["rcc-box-rule-engine.ts:47"]},
-    "deck.rail_level": {"kind": "level", "unit": "m", "label": "rail level", "component": "track", "evidence": ["rcc-box-rule-engine.ts:51"]},
-    "deck.embankment_slope": {"kind": "ratio", "unit": "-", "label": "embankment side slope, horizontal per vertical (SLOPE n:1)", "component": "embankment", "evidence": ["rcc-box-cross-section-view.ts:60", "rcc-box-cross-section-view.ts:322"]},
-    "deck.earth_cushion": {"kind": "length", "unit": "m", "label": "earth cushion as entered (the engine computes its own from the levels)", "component": "embankment", "evidence": ["rcc-box-rule-engine.ts:145"]},
-    "deck.berm_upper_h": {"kind": "length", "unit": "mm", "label": "height of the upper berm", "component": "embankment", "evidence": ["rcc-box-longitudinal-view.ts:230 ((berm_upper_h ?? 6000) / 1000)"]},
-    "foundation.pcc_sub_base": {"kind": "length", "unit": "m", "label": "PCC sub-base thickness under the bottom slab", "component": "foundation", "evidence": ["rcc-box-rule-engine.ts:27", "rcc-box-rule-engine.ts:54"]},
-    "foundation.sand_fill_depth": {"kind": "length", "unit": "m", "label": "sand / granular fill depth under the PCC", "component": "foundation", "evidence": ["rcc-box-rule-engine.ts:28", "rcc-box-rule-engine.ts:55"]},
-    "foundation.found_d": {"kind": "length", "unit": "m", "label": "granular fill thickness as the half section draws it", "component": "foundation", "evidence": ["rcc-box-half-section-view.ts:352"]},
-    "foundation.soil_lvl": {"kind": "level", "unit": "m", "label": "soil / minimum foundation level", "component": "foundation", "evidence": ["rcc-box-mapper.ts:334"]},
-    "side.wing_l": {"kind": "length", "unit": "m", "label": "wing wall length", "component": "wing_wall", "evidence": ["rcc-box-rule-engine.ts:29"]},
-    "side.wing_angle": {"kind": "angle", "unit": "deg", "label": "wing wall splay angle", "component": "wing_wall", "evidence": ["rcc-box-plan-view.ts:209"]},
-    "side.apron_l": {"kind": "length", "unit": "m", "label": "apron length", "component": "apron", "evidence": ["rcc-box-rule-engine.ts:30"]},
-    "side.curtain_d": {"kind": "length", "unit": "m", "label": "curtain wall width", "component": "curtain_wall", "evidence": ["rcc-box-curtain-wall-view.ts:83"]},
-    "side.boulder_pitching_w": {"kind": "length", "unit": "m", "label": "boulder pitching width", "component": "pitching", "evidence": ["rcc-box-plan-view.ts:210"]},
-    "slab.width": {"kind": "length", "unit": "m", "label": "slab width", "component": "slab", "evidence": ["rcc-box-rule-engine.ts:76"]},
-    "slab.thickness": {"kind": "length", "unit": "m", "label": "slab thickness", "component": "slab", "evidence": ["rcc-box-rule-engine.ts:77"]},
-    "options2d.show_wing_wall": {"kind": "flag", "unit": "-", "label": "wing walls are part of the arrangement", "component": "wing_wall", "evidence": ["rcc-box-mapper.ts:411", "rcc-box-rule-engine.ts:81"]},
-    "project.status": {"kind": "text", "unit": "-", "label": "EXISTING or PROPOSED structure (an existing one reads ex_formation_lvl / ex_rail_level)", "component": "box", "evidence": ["rcc-box-rule-engine.ts:45"]}
+ "family": "railway_rcc_box",
+ "status": "authored_from_source",
+ "basis": "Read by a person from aagento-bridge rcc-box-rule-engine.ts, rcc-box.defaults.ts, rcc-box-mapper.ts and the views that draw the same quantities. Units: the rule engine adds every geometry value to levels in metres (z_bot = bedLvl - wearC - tSB, line 40), so they are metres; a field divided by 1000 where it is drawn is millimetres.",
+ "parameters": {
+  "project.cells": {
+   "kind": "count",
+   "unit": "-",
+   "label": "number of cells (barrels) across the box",
+   "component": "box",
+   "evidence": [
+    "rcc-box-rule-engine.ts:16",
+    "rcc-box-rule-engine.ts:33"
+   ]
   },
-  "outputs": {
-    "total_w": {"kind": "length", "unit": "m", "label": "overall width of the box, outer face to outer face"},
-    "total_h": {"kind": "length", "unit": "m", "label": "overall height of the box, underside of bottom slab to top of top slab"},
-    "flow_area": {"kind": "area", "unit": "m2", "label": "clear waterway area of all cells"},
-    "z_bot": {"kind": "level", "unit": "m", "label": "level of the underside of the bottom slab"},
-    "z_top": {"kind": "level", "unit": "m", "label": "level of the top of the top slab"},
-    "soffit": {"kind": "level", "unit": "m", "label": "level of the underside of the top slab (computed)"},
-    "rccBoxTopLvl": {"kind": "level", "unit": "m", "label": "level of the top of the box"},
-    "pccTop": {"kind": "level", "unit": "m", "label": "level of the top of the PCC sub-base"},
-    "pccBot": {"kind": "level", "unit": "m", "label": "level of the underside of the PCC sub-base"},
-    "granBot": {"kind": "level", "unit": "m", "label": "level of the underside of the sand / granular fill"},
-    "formLvl": {"kind": "level", "unit": "m", "label": "formation level used by the drawing"},
-    "railLvl": {"kind": "level", "unit": "m", "label": "rail level used by the drawing"},
-    "earthCushion": {"kind": "length", "unit": "m", "label": "earth cushion above the box (formation − top of box, not below 0)"},
-    "cells": {"kind": "count", "unit": "-"}, "cW": {"kind": "length", "unit": "m"}, "cH": {"kind": "length", "unit": "m"},
-    "tOW": {"kind": "length", "unit": "m"}, "tIW": {"kind": "length", "unit": "m"}, "tST": {"kind": "length", "unit": "m"}, "tSB": {"kind": "length", "unit": "m"},
-    "wearC": {"kind": "length", "unit": "m"}, "haunch": {"kind": "length", "unit": "m"}, "bedLvl": {"kind": "level", "unit": "m"}, "hfl": {"kind": "level", "unit": "m"},
-    "pccB": {"kind": "length", "unit": "m"}, "sandFill": {"kind": "length", "unit": "m"}, "wingL": {"kind": "length", "unit": "m"}, "apronL": {"kind": "length", "unit": "m"}
+  "geometry.clear_w": {
+   "kind": "length",
+   "unit": "m",
+   "label": "clear span of one cell (inner face to inner face)",
+   "component": "cell",
+   "evidence": [
+    "rcc-box-rule-engine.ts:17",
+    "rcc-box-rule-engine.ts:33"
+   ]
   },
-  "disabled_rules": [
-    {"id": "outer_wall_min", "text": "outer wall thickness ≥ 0.3 m", "expr": "geometry.t_wall_o >= 0.3", "severity": "err", "evidence": "rcc-box-rule-engine.ts:112"},
-    {"id": "top_slab_min", "text": "top slab thickness ≥ 0.3 m", "expr": "geometry.t_slab_t >= 0.3", "severity": "err", "evidence": "rcc-box-rule-engine.ts:117"},
-    {"id": "clear_height_min", "text": "clear height ≥ 1.0 m", "expr": "geometry.clear_h >= 1.0", "severity": "err", "evidence": "rcc-box-rule-engine.ts:122"},
-    {"id": "hfl_below_roof", "text": "HFL below the inner roof (hfl − bed_lvl < clear_h)", "severity": "err", "evidence": "rcc-box-rule-engine.ts:128"},
-    {"id": "hfl_below_soffit", "text": "HFL not above the soffit level", "severity": "err", "evidence": "rcc-box-rule-engine.ts:133"},
-    {"id": "soffit_consistent", "text": "computed soffit (z_top − t_slab_t) within 10 mm of the entered soffit level", "severity": "warn", "evidence": "rcc-box-rule-engine.ts:140"},
-    {"id": "cushion_min", "text": "earth cushion ≥ 75 mm (IRS requirement, as the comment says)", "severity": "warn", "evidence": "rcc-box-rule-engine.ts:145"},
-    {"id": "haunch_min", "text": "haunch size ≥ 300 mm", "severity": "warn", "evidence": "rcc-box-rule-engine.ts:150"},
-    {"id": "slab_not_narrower", "text": "slab not narrower than the box", "severity": "warn", "evidence": "rcc-box-rule-engine.ts:155"}
-  ],
-  "findings": [
-    {"kind": "disabled_validation", "text": "validate() of the registered railway RCC box engine is inside a block comment (lines 106–160): the production app runs no domain validation for this family; the rules above are knowledge, not enforced anywhere.", "evidence": ["rcc-box-rule-engine.ts:106", "right-panel.ts:87"]},
-    {"kind": "cross_view_divergence", "text": "the half section draws the granular fill from foundation.found_d (fallback 0.85 m) while the rule engine's granBot uses foundation.sand_fill_depth (fallback 0.7 m): the two views can disagree about the foundation depth.", "evidence": ["rcc-box-half-section-view.ts:352", "rcc-box-rule-engine.ts:55"]},
-    {"kind": "cross_view_divergence", "text": "fallback defaults differ between the rule engine and the half section (t_slab_b 0.35 vs 0.400 m): with a field missing, the engine and the drawing use different values.", "evidence": ["rcc-box-rule-engine.ts:22", "rcc-box-half-section-view.ts:113"]},
-    {"kind": "defaults_inconsistency", "text": "the family defaults enter hydraulics.soffit_level 99.648 while the engine computes soffit 99.498 from them: the (disabled) soffit consistency rule would warn on the defaults themselves.", "evidence": ["rcc-box.defaults.ts:63", "rcc-box-rule-engine.ts:42"]}
-  ]
+  "geometry.clear_h": {
+   "kind": "length",
+   "unit": "m",
+   "label": "clear height of a cell (top of bottom slab to soffit of top slab)",
+   "component": "cell",
+   "evidence": [
+    "rcc-box-rule-engine.ts:18",
+    "rcc-box-rule-engine.ts:46"
+   ]
+  },
+  "geometry.t_wall_o": {
+   "kind": "length",
+   "unit": "m",
+   "label": "thickness of each outer wall",
+   "component": "outer_wall",
+   "evidence": [
+    "rcc-box-rule-engine.ts:19",
+    "rcc-box-rule-engine.ts:33"
+   ]
+  },
+  "geometry.t_wall_i": {
+   "kind": "length",
+   "unit": "m",
+   "label": "thickness of each intermediate (inner) wall between cells",
+   "component": "inner_wall",
+   "evidence": [
+    "rcc-box-rule-engine.ts:20",
+    "rcc-box-rule-engine.ts:33"
+   ]
+  },
+  "geometry.t_slab_t": {
+   "kind": "length",
+   "unit": "m",
+   "label": "thickness of the top slab",
+   "component": "top_slab",
+   "evidence": [
+    "rcc-box-rule-engine.ts:21",
+    "rcc-box-rule-engine.ts:42"
+   ]
+  },
+  "geometry.t_slab_b": {
+   "kind": "length",
+   "unit": "m",
+   "label": "thickness of the bottom slab",
+   "component": "bottom_slab",
+   "evidence": [
+    "rcc-box-rule-engine.ts:22",
+    "rcc-box-rule-engine.ts:40"
+   ]
+  },
+  "geometry.haunch_size": {
+   "kind": "length",
+   "unit": "m",
+   "label": "haunch size (leg) at the wall–slab junctions",
+   "component": "haunch",
+   "evidence": [
+    "rcc-box-rule-engine.ts:61"
+   ]
+  },
+  "deck.wearing_course": {
+   "kind": "length",
+   "unit": "m",
+   "label": "wearing course on the bottom slab (bed level is its top)",
+   "component": "wearing_course",
+   "evidence": [
+    "rcc-box-rule-engine.ts:23",
+    "rcc-box-rule-engine.ts:38"
+   ]
+  },
+  "hydraulics.bed_lvl": {
+   "kind": "level",
+   "unit": "m",
+   "label": "bed level: the finished floor, top of the wearing course",
+   "component": "cell",
+   "evidence": [
+    "rcc-box-rule-engine.ts:24",
+    "rcc-box-rule-engine.ts:38"
+   ]
+  },
+  "hydraulics.hfl": {
+   "kind": "level",
+   "unit": "m",
+   "label": "high flood level",
+   "component": "site",
+   "evidence": [
+    "rcc-box-rule-engine.ts:25"
+   ]
+  },
+  "hydraulics.soffit_level": {
+   "kind": "level",
+   "unit": "m",
+   "label": "soffit level as entered (an input; the engine computes its own soffit)",
+   "component": "top_slab",
+   "evidence": [
+    "rcc-box-rule-engine.ts:26"
+   ]
+  },
+  "hydraulics.berm": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "berm width of the embankment",
+   "component": "embankment",
+   "evidence": [
+    "rcc-box-scene-renderer.ts:67 ((hyd.berm ?? 2000) / 1000)"
+   ]
+  },
+  "deck.formation_lvl": {
+   "kind": "level",
+   "unit": "m",
+   "label": "formation level",
+   "component": "track",
+   "evidence": [
+    "rcc-box-rule-engine.ts:47"
+   ]
+  },
+  "deck.rail_level": {
+   "kind": "level",
+   "unit": "m",
+   "label": "rail level",
+   "component": "track",
+   "evidence": [
+    "rcc-box-rule-engine.ts:51"
+   ]
+  },
+  "deck.embankment_slope": {
+   "kind": "ratio",
+   "unit": "-",
+   "label": "embankment side slope, horizontal per vertical (SLOPE n:1)",
+   "component": "embankment",
+   "evidence": [
+    "rcc-box-cross-section-view.ts:68",
+    "rcc-box-cross-section-view.ts:266"
+   ]
+  },
+  "deck.earth_cushion": {
+   "kind": "length",
+   "unit": "m",
+   "label": "earth cushion as entered (the engine computes its own from the levels)",
+   "component": "embankment",
+   "evidence": [
+    "rcc-box-rule-engine.ts:144"
+   ]
+  },
+  "deck.berm_upper_h": {
+   "kind": "length",
+   "unit": "mm",
+   "label": "height of the upper berm",
+   "component": "embankment",
+   "evidence": [
+    "rcc-box-longitudinal-view-custom.ts:273 ((M.deck?.berm_upper_h ?? 6000) / 1000)"
+   ]
+  },
+  "foundation.pcc_sub_base": {
+   "kind": "length",
+   "unit": "m",
+   "label": "PCC sub-base thickness under the bottom slab",
+   "component": "foundation",
+   "evidence": [
+    "rcc-box-rule-engine.ts:27",
+    "rcc-box-rule-engine.ts:54"
+   ]
+  },
+  "foundation.sand_fill_depth": {
+   "kind": "length",
+   "unit": "m",
+   "label": "sand / granular fill depth under the PCC",
+   "component": "foundation",
+   "evidence": [
+    "rcc-box-rule-engine.ts:28",
+    "rcc-box-rule-engine.ts:55"
+   ]
+  },
+  "foundation.found_d": {
+   "kind": "length",
+   "unit": "m",
+   "label": "granular fill thickness as the half section draws it",
+   "component": "foundation",
+   "evidence": [
+    "rcc-box-half-section-view.ts:316"
+   ]
+  },
+  "foundation.soil_lvl": {
+   "kind": "level",
+   "unit": "m",
+   "label": "soil / minimum foundation level",
+   "component": "foundation",
+   "evidence": [
+    "rcc-box-mapper.ts:334"
+   ]
+  },
+  "side.wing_l": {
+   "kind": "length",
+   "unit": "m",
+   "label": "wing wall length",
+   "component": "wing_wall",
+   "evidence": [
+    "rcc-box-rule-engine.ts:29"
+   ]
+  },
+  "side.wing_angle": {
+   "kind": "angle",
+   "unit": "deg",
+   "label": "wing wall splay angle",
+   "component": "wing_wall",
+   "evidence": [
+    "rcc-box-plan-view.ts:227"
+   ]
+  },
+  "side.apron_l": {
+   "kind": "length",
+   "unit": "m",
+   "label": "apron length",
+   "component": "apron",
+   "evidence": [
+    "rcc-box-rule-engine.ts:30"
+   ]
+  },
+  "side.curtain_d": {
+   "kind": "length",
+   "unit": "m",
+   "label": "curtain wall width",
+   "component": "curtain_wall",
+   "evidence": [
+    "rcc-box-curtain-wall-view.ts:89"
+   ]
+  },
+  "side.boulder_pitching_w": {
+   "kind": "length",
+   "unit": "m",
+   "label": "boulder pitching width",
+   "component": "pitching",
+   "evidence": [
+    "rcc-box-plan-view.ts:228"
+   ]
+  },
+  "slab.width": {
+   "kind": "length",
+   "unit": "m",
+   "label": "slab width",
+   "component": "slab",
+   "evidence": [
+    "rcc-box-rule-engine.ts:76"
+   ]
+  },
+  "slab.thickness": {
+   "kind": "length",
+   "unit": "m",
+   "label": "slab thickness",
+   "component": "slab",
+   "evidence": [
+    "rcc-box-rule-engine.ts:77"
+   ]
+  },
+  "options2d.show_wing_wall": {
+   "kind": "flag",
+   "unit": "-",
+   "label": "wing walls are part of the arrangement",
+   "component": "wing_wall",
+   "evidence": [
+    "rcc-box-mapper.ts:411",
+    "rcc-box-rule-engine.ts:81"
+   ]
+  },
+  "project.status": {
+   "kind": "text",
+   "unit": "-",
+   "label": "EXISTING or PROPOSED structure (an existing one reads ex_formation_lvl / ex_rail_level)",
+   "component": "box",
+   "evidence": [
+    "rcc-box-rule-engine.ts:45"
+   ]
+  }
+ },
+ "outputs": {
+  "total_w": {
+   "kind": "length",
+   "unit": "m",
+   "label": "overall width of the box, outer face to outer face"
+  },
+  "total_h": {
+   "kind": "length",
+   "unit": "m",
+   "label": "overall height of the box, underside of bottom slab to top of top slab"
+  },
+  "flow_area": {
+   "kind": "area",
+   "unit": "m2",
+   "label": "clear waterway area of all cells"
+  },
+  "z_bot": {
+   "kind": "level",
+   "unit": "m",
+   "label": "level of the underside of the bottom slab"
+  },
+  "z_top": {
+   "kind": "level",
+   "unit": "m",
+   "label": "level of the top of the top slab"
+  },
+  "soffit": {
+   "kind": "level",
+   "unit": "m",
+   "label": "level of the underside of the top slab (computed)"
+  },
+  "rccBoxTopLvl": {
+   "kind": "level",
+   "unit": "m",
+   "label": "level of the top of the box"
+  },
+  "pccTop": {
+   "kind": "level",
+   "unit": "m",
+   "label": "level of the top of the PCC sub-base"
+  },
+  "pccBot": {
+   "kind": "level",
+   "unit": "m",
+   "label": "level of the underside of the PCC sub-base"
+  },
+  "granBot": {
+   "kind": "level",
+   "unit": "m",
+   "label": "level of the underside of the sand / granular fill"
+  },
+  "formLvl": {
+   "kind": "level",
+   "unit": "m",
+   "label": "formation level used by the drawing"
+  },
+  "railLvl": {
+   "kind": "level",
+   "unit": "m",
+   "label": "rail level used by the drawing"
+  },
+  "earthCushion": {
+   "kind": "length",
+   "unit": "m",
+   "label": "earth cushion above the box (formation − top of box, not below 0)"
+  },
+  "cells": {
+   "kind": "count",
+   "unit": "-"
+  },
+  "cW": {
+   "kind": "length",
+   "unit": "m"
+  },
+  "cH": {
+   "kind": "length",
+   "unit": "m"
+  },
+  "tOW": {
+   "kind": "length",
+   "unit": "m"
+  },
+  "tIW": {
+   "kind": "length",
+   "unit": "m"
+  },
+  "tST": {
+   "kind": "length",
+   "unit": "m"
+  },
+  "tSB": {
+   "kind": "length",
+   "unit": "m"
+  },
+  "wearC": {
+   "kind": "length",
+   "unit": "m"
+  },
+  "haunch": {
+   "kind": "length",
+   "unit": "m"
+  },
+  "bedLvl": {
+   "kind": "level",
+   "unit": "m"
+  },
+  "hfl": {
+   "kind": "level",
+   "unit": "m"
+  },
+  "pccB": {
+   "kind": "length",
+   "unit": "m"
+  },
+  "sandFill": {
+   "kind": "length",
+   "unit": "m"
+  },
+  "wingL": {
+   "kind": "length",
+   "unit": "m"
+  },
+  "apronL": {
+   "kind": "length",
+   "unit": "m"
+  }
+ },
+ "disabled_rules": [
+  {
+   "id": "outer_wall_min",
+   "text": "outer wall thickness ≥ 0.3 m",
+   "expr": "geometry.t_wall_o >= 0.3",
+   "severity": "err",
+   "evidence": "rcc-box-rule-engine.ts:112"
+  },
+  {
+   "id": "top_slab_min",
+   "text": "top slab thickness ≥ 0.3 m",
+   "expr": "geometry.t_slab_t >= 0.3",
+   "severity": "err",
+   "evidence": "rcc-box-rule-engine.ts:117"
+  },
+  {
+   "id": "clear_height_min",
+   "text": "clear height ≥ 1.0 m",
+   "expr": "geometry.clear_h >= 1.0",
+   "severity": "err",
+   "evidence": "rcc-box-rule-engine.ts:122"
+  },
+  {
+   "id": "hfl_below_roof",
+   "text": "HFL below the inner roof (hfl − bed_lvl < clear_h)",
+   "severity": "err",
+   "evidence": "rcc-box-rule-engine.ts:128"
+  },
+  {
+   "id": "hfl_below_soffit",
+   "text": "HFL not above the soffit level",
+   "severity": "err",
+   "evidence": "rcc-box-rule-engine.ts:133"
+  },
+  {
+   "id": "soffit_consistent",
+   "text": "computed soffit (z_top − t_slab_t) within 10 mm of the entered soffit level",
+   "severity": "warn",
+   "evidence": "rcc-box-rule-engine.ts:140"
+  },
+  {
+   "id": "cushion_min",
+   "text": "earth cushion ≥ 75 mm (IRS requirement, as the comment says)",
+   "severity": "warn",
+   "evidence": "rcc-box-rule-engine.ts:145"
+  },
+  {
+   "id": "haunch_min",
+   "text": "haunch size ≥ 300 mm",
+   "severity": "warn",
+   "evidence": "rcc-box-rule-engine.ts:150"
+  },
+  {
+   "id": "slab_not_narrower",
+   "text": "slab not narrower than the box",
+   "severity": "warn",
+   "evidence": "rcc-box-rule-engine.ts:155"
+  }
+ ],
+ "findings": [
+  {
+   "kind": "disabled_validation",
+   "text": "validate() of the registered railway RCC box engine is inside a block comment (lines 106–160): the production app runs no domain validation for this family; the rules above are knowledge, not enforced anywhere.",
+   "evidence": [
+    "rcc-box-rule-engine.ts:106",
+    "right-panel.ts:87"
+   ]
+  },
+  {
+   "kind": "cross_view_divergence",
+   "text": "the half section draws the granular fill from foundation.found_d (fallback 0.85 m) while the rule engine's granBot uses foundation.sand_fill_depth (fallback 0.7 m): the two views can disagree about the foundation depth.",
+   "evidence": [
+    "rcc-box-half-section-view.ts:352",
+    "rcc-box-rule-engine.ts:55"
+   ]
+  },
+  {
+   "kind": "cross_view_divergence",
+   "text": "fallback defaults differ between the rule engine and the half section (t_slab_b 0.35 vs 0.400 m): with a field missing, the engine and the drawing use different values.",
+   "evidence": [
+    "rcc-box-rule-engine.ts:22",
+    "rcc-box-half-section-view.ts:113"
+   ]
+  },
+  {
+   "kind": "defaults_inconsistency",
+   "text": "the family defaults enter hydraulics.soffit_level 99.648 while the engine computes soffit 99.498 from them: the soffit consistency rule warns on the defaults themselves (it does: 'Computed soffit (99.498m) ≠ input (99.648m)').",
+   "evidence": [
+    "rcc-box.defaults.ts:63",
+    "rcc-box-rule-engine.ts:42"
+   ]
+  }
+ ]
 }

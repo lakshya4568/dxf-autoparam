@@ -6,8 +6,8 @@
  "title": "RAILWAY ROAD UNDER BRIDGE",
  "source": {
   "repository": "aagento-bridge",
-  "commit": "ca0b17ec2ccd82b81c246e2c02f8c4dc6fece565",
-  "branch": "cad_agent_dxf",
+  "commit": "e6c8f8fbe63fec95b08527e672aa71bec457a0b9",
+  "branch": "dev-new",
   "dirty_files": [],
   "registry": "src/app/features/bridges/models/bridge-registry.ts",
   "modules": {
@@ -49,14 +49,16 @@
    }
   },
   "sources": {
-   "src/app/features/bridges/models/bridge-registry.ts": "4ad1cd4ab16a2f9e3b72cc5784eba7ce9326cb365c879ebb7ceb82c57c0215bf",
-   "src/app/features/bridges/models/road-under-bridge-railway.defaults.ts": "ab8b6020cf5743c22745806d09696b9508d8bbaa066f9db4688e26621a8257a1",
-   "src/app/features/bridges/utils/road-under-bridge-railway/road-under-bridge-railway-mapper.ts": "5f855b3655e01ae86c4748e7265960d1430d2de67b60a5836e09b9620a0c699a",
-   "src/app/features/bridges/utils/road-under-bridge-railway/road-under-bridge-railway-rule-engine.ts": "1d8f02b077dfb8b38ebd607c943cba501070418b817c04ad1c2d6c490eefcf2c",
-   "src/app/features/bridges/utils/road-under-bridge-railway/road-under-bridge-railway-scene-renderer.ts": "5a0a77cb6d383d640825cd9e1e23fbeaf22d9beba48cf855d5de40b93ca90376",
+   "src/app/features/bridges/models/bridge-registry.ts": "a5d9cb11f744e71d087969391e79b0c923435c8b8bfbfcbfce07d817b4fcb2c4",
+   "src/app/features/bridges/models/road-under-bridge-railway.defaults.ts": "d9568162aeb34a189d0d9d3651f60845d0628a76b1abd6fb7d60b07b78898fdf",
+   "src/app/features/bridges/utils/psc-slab/psc-slab-rule-engine.ts": "afebe60da9c3ec37d0513c3f59d2786f864ce16d3078d6ccf9a770def4091862",
+   "src/app/features/bridges/utils/road-under-bridge-railway/road-under-bridge-railway-mapper.ts": "54ee707e138715222d16ddd2b88d529d1375a790458424429f5019f25c3c8837",
+   "src/app/features/bridges/utils/road-under-bridge-railway/road-under-bridge-railway-rule-engine.ts": "c343eaeb9d6d868dae54c5d86cf89dd254fb0bde7056f47070317caa18c9e359",
+   "src/app/features/bridges/utils/road-under-bridge-railway/road-under-bridge-railway-scene-renderer.ts": "aae8cf0c446cf54ca86b4eca8aa2dc0dabde2d33cadd65c487eadac72ae48a1b",
+   "src/app/features/bridges/utils/shared/multi-bridge-rules.ts": "7c38fb5cb3103b553544d4350e0207b180ad53c81db425479cd174b06e282444",
    "src/app/features/projects/components/project-detail/project-detail.constants.ts": "296737c40b421a7b234578beaa9fd1138f5b1c8569abb32ef3eda63c16efcf22"
   },
-  "sources_digest": "9ccfd8ac5915bf791d4e1a8546766504119953ff856066d151c3f73596613434"
+  "sources_digest": "39ed7acf44b4416ad14904b5338d5ece5abc5e91d4e3d09c8968730331270ded"
  },
  "capabilities": {
   "has_compute": true,
@@ -121,7 +123,7 @@
  "views": {
   "available": true,
   "decided_by": [
-   "abutment",
+   "abutment.show_return_wall",
    "options2d.show_drainage",
    "options2d.show_l_shaped_wall",
    "options2d.show_return_wall",
@@ -138,11 +140,15 @@
      "always"
     ],
     "renders": true,
-    "draws": 4359,
+    "draws": 4439,
     "deterministic": true,
     "reads": [
+     "abutment.wing_wall_type",
      "deck.embankment_slope",
      "deck.formation_lvl",
+     "deck.formation_width",
+     "deck.formation_width_left",
+     "deck.formation_width_right",
      "deck.rail_level",
      "deck.wearing_course",
      "foundation.found_d",
@@ -159,7 +165,10 @@
      "hydraulics.bed_lvl",
      "hydraulics.hfl",
      "hydraulics.soffit_level",
+     "options2d.show_600_boulder",
      "options2d.show_curtain_wall",
+     "options2d.show_granular_backfill",
+     "options2d.show_parapet_gap",
      "options2d.show_wing_wall",
      "project.bridge_no",
      "project.cells",
@@ -175,22 +184,25 @@
      "slab.width"
     ],
     "code_fallbacks": [
+     "abutment.slanting_wing_wall_fnd_height",
      "deck.ex_formation_lvl",
-     "deck.ex_gl_level",
      "geometry.clear_h_2",
      "geometry.clear_w_2",
      "geometry.haunch_size_2",
+     "geometry.no_of_tracks",
      "geometry.t_slab_b_2",
      "geometry.t_slab_t_2",
      "geometry.t_wall_o_2",
      "hydraulics.bed_lvl_2",
+     "options2d.double_track",
      "options2d.road_layers",
      "options2d.road_layers_callout_pos",
      "options2d.show_road_foundation_layers",
      "options2d.show_road_layers_callouts",
      "options2d.track_centerline_label",
      "project.status",
-     "project.type"
+     "project.type",
+     "slanting_wing_wall_fnd_height"
     ],
     "affected_by": [
      "deck.formation_lvl",
@@ -207,7 +219,7 @@
      "hydraulics.bed_lvl",
      "project.cells"
     ],
-    "inputs_tried": 26
+    "inputs_tried": 29
    },
    {
     "mode": "elv",
@@ -218,12 +230,18 @@
      "always"
     ],
     "renders": true,
-    "draws": 1480,
+    "draws": 1651,
     "deterministic": true,
     "reads": [
+     "abutment.show_coping",
+     "abutment.show_return_wall",
+     "abutment.wing_wall_type",
      "deck.earth_cushion",
      "deck.embankment_slope",
      "deck.formation_lvl",
+     "deck.formation_width",
+     "deck.formation_width_left",
+     "deck.formation_width_right",
      "deck.rail_level",
      "deck.wearing_course",
      "foundation.pcc_sub_base",
@@ -254,7 +272,12 @@
      "slab.width"
     ],
     "code_fallbacks": [
-     "abutment",
+     "abutment.return_wall_h1",
+     "abutment.return_wall_h2",
+     "abutment.return_wall_heel_length",
+     "abutment.return_wall_stem_bottom",
+     "abutment.return_wall_stem_top",
+     "abutment.return_wall_toe_length",
      "deck.approach_slope",
      "deck.connecting_road_lvl",
      "deck.ex_formation_lvl",
@@ -265,6 +288,7 @@
      "foundation.foundation_level_at_abutment_1",
      "foundation.sk_drop",
      "geometry.approach_slope",
+     "geometry.barrel_length",
      "geometry.drain_width",
      "geometry.height_gauge_dist",
      "geometry.no_of_tracks",
@@ -284,20 +308,31 @@
      "hydraulics.scour_lvl",
      "levels",
      "options2d.double_track",
+     "options2d.hide_left_retaining_wall",
+     "options2d.hide_left_return_wall",
+     "options2d.hide_right_retaining_wall",
+     "options2d.hide_right_return_wall",
      "options2d.road_layers",
      "options2d.show_coping",
      "options2d.show_left_break_details",
      "options2d.show_left_drainage",
+     "options2d.show_left_slope",
+     "options2d.show_left_wing_wall_slope",
      "options2d.show_return_wall",
      "options2d.show_right_break_details",
      "options2d.show_right_drainage",
+     "options2d.show_right_slope",
+     "options2d.show_right_wing_wall_slope",
      "options2d.track_centerline_label",
      "project.bridge_type",
      "project.status",
      "project.type"
     ],
     "affected_by": [
+     "deck.earth_cushion",
      "deck.formation_lvl",
+     "deck.formation_width_left",
+     "deck.formation_width_right",
      "deck.rail_level",
      "deck.wearing_course",
      "geometry.clear_h",
@@ -305,7 +340,7 @@
      "geometry.t_slab_t",
      "hydraulics.bed_lvl"
     ],
-    "inputs_tried": 25
+    "inputs_tried": 28
    },
    {
     "mode": "plan",
@@ -316,12 +351,17 @@
      "always"
     ],
     "renders": true,
-    "draws": 389,
+    "draws": 487,
     "deterministic": true,
     "reads": [
      "_hasMultipleBridges",
+     "abutment.wing_wall_type",
+     "deck.earth_cushion",
      "deck.embankment_slope",
      "deck.formation_lvl",
+     "deck.formation_width",
+     "deck.formation_width_left",
+     "deck.formation_width_right",
      "deck.rail_level",
      "deck.wearing_course",
      "foundation.pcc_sub_base",
@@ -356,7 +396,16 @@
     ],
     "code_fallbacks": [
      "_globalStationOffsetX",
-     "abutment",
+     "_mixedBridgeComposition",
+     "abutment.return_wall_heel_length",
+     "abutment.return_wall_stem_bottom",
+     "abutment.return_wall_stem_top",
+     "abutment.return_wall_toe_length",
+     "abutment.toe_wall_heel_length",
+     "abutment.toe_wall_stem_bottom",
+     "abutment.toe_wall_stem_top",
+     "abutment.toe_wall_toe_length",
+     "geometry.barrel_length",
      "geometry.clear_w_2",
      "geometry.no_of_tracks",
      "geometry.rw_heel_width",
@@ -368,9 +417,19 @@
      "options2d.double_track",
      "options2d.road_bend_left",
      "options2d.road_bend_right",
+     "options2d.road_post_len_left",
+     "options2d.road_post_len_right",
+     "options2d.road_radius_left",
+     "options2d.road_radius_right",
+     "options2d.road_splay_len_left",
+     "options2d.road_splay_len_right",
      "options2d.road_straight_len_left",
      "options2d.road_straight_len_right",
      "options2d.show_l_shaped_wall",
+     "options2d.show_left_slope",
+     "options2d.show_left_wing_wall_slope",
+     "options2d.show_right_slope",
+     "options2d.show_right_wing_wall_slope",
      "options2d.show_src_wing_wall",
      "options2d.station_1",
      "options2d.station_2",
@@ -379,15 +438,17 @@
      "project.type"
     ],
     "affected_by": [
-     "deck.formation_lvl",
+     "deck.earth_cushion",
+     "deck.embankment_slope",
+     "deck.formation_width_left",
+     "deck.formation_width_right",
      "geometry.clear_h",
      "geometry.clear_w",
      "geometry.t_slab_t",
      "geometry.t_wall_o",
-     "hydraulics.bed_lvl",
      "project.cells"
     ],
-    "inputs_tried": 27
+    "inputs_tried": 31
    },
    {
     "mode": "rw",
@@ -398,6 +459,13 @@
      "always",
      {
       "when": {
+       "path": "abutment.show_return_wall",
+       "value": false
+      },
+      "removed": true
+     },
+     {
+      "when": {
        "path": "options2d.show_return_wall",
        "value": false
       },
@@ -405,11 +473,16 @@
      }
     ],
     "renders": true,
-    "draws": 953,
+    "draws": 997,
     "deterministic": true,
     "reads": [
+     "abutment.return_wall_type",
+     "abutment.show_coping",
      "deck.embankment_slope",
      "deck.formation_lvl",
+     "deck.formation_width",
+     "deck.formation_width_left",
+     "deck.formation_width_right",
      "deck.rail_level",
      "deck.wearing_course",
      "foundation.pcc_sub_base",
@@ -440,18 +513,27 @@
      "slab.width"
     ],
     "code_fallbacks": [
-     "abutment",
+     "abutment.return_wall_above_bed_level",
+     "abutment.return_wall_fnd_level",
+     "abutment.return_wall_h1",
+     "abutment.return_wall_h2",
+     "abutment.return_wall_heel_length",
+     "abutment.return_wall_stem_bottom",
+     "abutment.return_wall_stem_top",
+     "abutment.return_wall_toe_length",
+     "abutment.wing_wall_fnd_level",
      "foundation.fnd_lvl",
      "foundation.foundation_level_at_abutment",
      "foundation.foundation_level_at_abutment_1",
+     "geometry.no_of_tracks",
      "geometry.rw_depth",
      "geometry.rw_depth_sec",
      "geometry.rw_heel_width",
      "geometry.rw_stem_thick",
      "geometry.rw_stem_top",
      "geometry.rw_toe_width",
-     "geometry.rw_type",
      "hydraulics.scour_lvl",
+     "options2d.double_track",
      "options2d.show_coping",
      "project.status",
      "project.type"
@@ -462,7 +544,7 @@
      "geometry.t_slab_t",
      "hydraulics.bed_lvl"
     ],
-    "inputs_tried": 24
+    "inputs_tried": 27
    },
    {
     "mode": "tw",
@@ -473,11 +555,14 @@
      "always"
     ],
     "renders": true,
-    "draws": 179,
+    "draws": 223,
     "deterministic": true,
     "reads": [
      "deck.embankment_slope",
      "deck.formation_lvl",
+     "deck.formation_width",
+     "deck.formation_width_left",
+     "deck.formation_width_right",
      "deck.rail_level",
      "deck.wearing_course",
      "foundation.pcc_sub_base",
@@ -508,16 +593,21 @@
      "slab.width"
     ],
     "code_fallbacks": [
-     "abutment",
+     "abutment.toe_wall_heel_length",
+     "abutment.toe_wall_stem_bottom",
+     "abutment.toe_wall_stem_top",
+     "abutment.toe_wall_toe_length",
+     "geometry.no_of_tracks",
      "geometry.toe_wall_depth",
      "geometry.toe_wall_h",
+     "options2d.double_track",
      "project.status",
      "project.type"
     ],
     "affected_by": [
      "hydraulics.bed_lvl"
     ],
-    "inputs_tried": 24
+    "inputs_tried": 27
    },
    {
     "mode": "longitudinal_road",
@@ -533,6 +623,9 @@
     "reads": [
      "deck.embankment_slope",
      "deck.formation_lvl",
+     "deck.formation_width",
+     "deck.formation_width_left",
+     "deck.formation_width_right",
      "deck.rail_level",
      "deck.wearing_course",
      "foundation.pcc_sub_base",
@@ -576,12 +669,14 @@
     ],
     "affected_by": [
      "deck.formation_lvl",
+     "deck.formation_width_left",
+     "deck.formation_width_right",
      "deck.wearing_course",
      "geometry.clear_h",
      "geometry.t_slab_t",
      "hydraulics.bed_lvl"
     ],
-    "inputs_tried": 24
+    "inputs_tried": 27
    },
    {
     "mode": "sk",
@@ -592,11 +687,14 @@
      "always"
     ],
     "renders": true,
-    "draws": 131,
+    "draws": 178,
     "deterministic": true,
     "reads": [
      "deck.embankment_slope",
      "deck.formation_lvl",
+     "deck.formation_width",
+     "deck.formation_width_left",
+     "deck.formation_width_right",
      "deck.rail_level",
      "deck.wearing_course",
      "foundation.found_d",
@@ -628,6 +726,8 @@
      "slab.width"
     ],
     "code_fallbacks": [
+     "geometry.no_of_tracks",
+     "options2d.double_track",
      "options2d.road_layers",
      "project.status",
      "project.type"
@@ -638,7 +738,7 @@
      "foundation.pcc_sub_base",
      "geometry.t_slab_b"
     ],
-    "inputs_tried": 25
+    "inputs_tried": 28
    },
    {
     "mode": "er",
@@ -649,11 +749,14 @@
      "always"
     ],
     "renders": true,
-    "draws": 92,
+    "draws": 134,
     "deterministic": true,
     "reads": [
      "deck.embankment_slope",
      "deck.formation_lvl",
+     "deck.formation_width",
+     "deck.formation_width_left",
+     "deck.formation_width_right",
      "deck.rail_level",
      "deck.wearing_course",
      "foundation.pcc_sub_base",
@@ -684,13 +787,15 @@
      "slab.width"
     ],
     "code_fallbacks": [
+     "geometry.no_of_tracks",
+     "options2d.double_track",
      "project.status",
      "project.type"
     ],
     "affected_by": [
      "geometry.t_slab_t"
     ],
-    "inputs_tried": 24
+    "inputs_tried": 27
    },
    {
     "mode": "lfw",
@@ -719,6 +824,9 @@
     "reads": [
      "deck.embankment_slope",
      "deck.formation_lvl",
+     "deck.formation_width",
+     "deck.formation_width_left",
+     "deck.formation_width_right",
      "deck.rail_level",
      "deck.wearing_course",
      "foundation.pcc_sub_base",
@@ -749,11 +857,13 @@
      "slab.width"
     ],
     "code_fallbacks": [
+     "geometry.no_of_tracks",
+     "options2d.double_track",
      "project.status",
      "project.type"
     ],
     "affected_by": [],
-    "inputs_tried": 24
+    "inputs_tried": 27
    },
    {
     "mode": "borelog",
@@ -769,6 +879,9 @@
     "reads": [
      "deck.embankment_slope",
      "deck.formation_lvl",
+     "deck.formation_width",
+     "deck.formation_width_left",
+     "deck.formation_width_right",
      "deck.rail_level",
      "deck.wearing_course",
      "foundation.pcc_sub_base",
@@ -803,16 +916,18 @@
      "foundation.rw_bottom_lvl",
      "foundation.sbc_box",
      "foundation.sbc_rw",
+     "geometry.no_of_tracks",
      "hydraulics.scour_lvl",
      "options2d.bore_layers",
      "options2d.bore_log_interval",
+     "options2d.double_track",
      "project.status",
      "project.type"
     ],
     "affected_by": [
      "hydraulics.bed_lvl"
     ],
-    "inputs_tried": 24
+    "inputs_tried": 27
    },
    {
     "mode": "reinf",
@@ -823,11 +938,14 @@
      "always"
     ],
     "renders": true,
-    "draws": 450,
+    "draws": 441,
     "deterministic": true,
     "reads": [
      "deck.embankment_slope",
      "deck.formation_lvl",
+     "deck.formation_width",
+     "deck.formation_width_left",
+     "deck.formation_width_right",
      "deck.rail_level",
      "deck.wearing_course",
      "foundation.pcc_sub_base",
@@ -862,6 +980,8 @@
      "foundation.key_depth",
      "geometry.gap",
      "geometry.key_depth",
+     "geometry.no_of_tracks",
+     "options2d.double_track",
      "project.status",
      "project.type"
     ],
@@ -875,7 +995,7 @@
      "geometry.t_wall_o",
      "project.cells"
     ],
-    "inputs_tried": 24
+    "inputs_tried": 27
    },
    {
     "mode": "bbs",
@@ -891,6 +1011,9 @@
     "reads": [
      "deck.embankment_slope",
      "deck.formation_lvl",
+     "deck.formation_width",
+     "deck.formation_width_left",
+     "deck.formation_width_right",
      "deck.rail_level",
      "deck.wearing_course",
      "foundation.pcc_sub_base",
@@ -925,6 +1048,8 @@
      "foundation.key_depth",
      "geometry.gap",
      "geometry.key_depth",
+     "geometry.no_of_tracks",
+     "options2d.double_track",
      "project.status",
      "project.type"
     ],
@@ -938,7 +1063,7 @@
      "project.cells",
      "project.span_length"
     ],
-    "inputs_tried": 24
+    "inputs_tried": 27
    },
    {
     "mode": "wing_wall",
@@ -955,11 +1080,15 @@
      }
     ],
     "renders": true,
-    "draws": 1032,
+    "draws": 1082,
     "deterministic": true,
     "reads": [
+     "abutment.wing_wall_type",
      "deck.embankment_slope",
      "deck.formation_lvl",
+     "deck.formation_width",
+     "deck.formation_width_left",
+     "deck.formation_width_right",
      "deck.rail_level",
      "deck.wearing_course",
      "foundation.pcc_sub_base",
@@ -990,9 +1119,16 @@
      "slab.width"
     ],
     "code_fallbacks": [
-     "abutment",
+     "abutment.wing_wall_fnd_level",
+     "abutment.wing_wall_h1",
+     "abutment.wing_wall_h2",
+     "abutment.wing_wall_heel_length",
+     "abutment.wing_wall_stem_bottom",
+     "abutment.wing_wall_stem_top",
+     "abutment.wing_wall_toe_length",
      "foundation.foundation_level_at_abutment",
      "foundation.foundation_level_at_abutment_1",
+     "geometry.no_of_tracks",
      "geometry.rw_depth",
      "geometry.rw_depth_sec",
      "geometry.rw_heel_width",
@@ -1000,6 +1136,7 @@
      "geometry.rw_toe_width",
      "hydraulics.scour_lvl",
      "levels",
+     "options2d.double_track",
      "project.status",
      "project.type"
     ],
@@ -1009,7 +1146,7 @@
      "geometry.t_slab_t",
      "hydraulics.bed_lvl"
     ],
-    "inputs_tried": 24
+    "inputs_tried": 27
    },
    {
     "mode": "drainage",
@@ -1026,11 +1163,14 @@
      }
     ],
     "renders": true,
-    "draws": 6899,
+    "draws": 6912,
     "deterministic": true,
     "reads": [
      "deck.embankment_slope",
      "deck.formation_lvl",
+     "deck.formation_width",
+     "deck.formation_width_left",
+     "deck.formation_width_right",
      "deck.rail_level",
      "deck.wearing_course",
      "foundation.pcc_sub_base",
@@ -1061,11 +1201,13 @@
      "slab.width"
     ],
     "code_fallbacks": [
+     "geometry.no_of_tracks",
+     "options2d.double_track",
      "project.status",
      "project.type"
     ],
     "affected_by": [],
-    "inputs_tried": 24
+    "inputs_tried": 27
    },
    {
     "mode": "u_wall",
@@ -1082,11 +1224,14 @@
      }
     ],
     "renders": true,
-    "draws": 121,
+    "draws": 188,
     "deterministic": true,
     "reads": [
      "deck.embankment_slope",
      "deck.formation_lvl",
+     "deck.formation_width",
+     "deck.formation_width_left",
+     "deck.formation_width_right",
      "deck.rail_level",
      "deck.wearing_course",
      "foundation.pcc_sub_base",
@@ -1117,13 +1262,24 @@
      "slab.width"
     ],
     "code_fallbacks": [
-     "abutment",
+     "abutment.u_wall_D1",
+     "abutment.u_wall_D2",
+     "abutment.u_wall_H",
+     "abutment.u_wall_L2",
+     "abutment.u_wall_T1",
+     "abutment.u_wall_chamfer",
+     "abutment.u_wall_inner_w",
+     "abutment.u_wall_para_h",
+     "abutment.u_wall_para_w",
+     "abutment.u_wall_stem_top_w",
+     "geometry.no_of_tracks",
+     "options2d.double_track",
      "project.status",
      "project.type",
      "substructure.u_wall_road_width"
     ],
     "affected_by": [],
-    "inputs_tried": 24
+    "inputs_tried": 27
    }
   ]
  },
@@ -1312,6 +1468,31 @@
    "views": [
     "sec",
     "elv",
+    "longitudinal_road"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "deck.formation_width_left",
+   "outputs": [
+    "spanLen"
+   ],
+   "views": [
+    "elv",
+    "plan",
+    "longitudinal_road"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "deck.formation_width_right",
+   "outputs": [
+    "spanLen"
+   ],
+   "views": [
+    "elv",
     "plan",
     "longitudinal_road"
    ],
@@ -1323,7 +1504,19 @@
    "outputs": [
     "slope"
    ],
-   "views": [],
+   "views": [
+    "plan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "deck.earth_cushion",
+   "outputs": [],
+   "views": [
+    "elv",
+    "plan"
+   ],
    "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
   },
   {
@@ -1436,7 +1629,6 @@
    "views": [
     "sec",
     "elv",
-    "plan",
     "rw",
     "tw",
     "longitudinal_road",
@@ -1453,6 +1645,14 @@
    ],
    "views": [],
    "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "toggle",
+   "path": "abutment.show_return_wall",
+   "value": false,
+   "view": "rw",
+   "effect": "removes the view",
+   "on_existing_drawing": "topology_change: a component and its views appear or disappear \u2014 needs geometry the drawing may not hold"
   },
   {
    "op": "toggle",
@@ -1495,7 +1695,16 @@
    "on_existing_drawing": "topology_change: a component and its views appear or disappear \u2014 needs geometry the drawing may not hold"
   }
  ],
- "findings": [],
+ "findings": [
+  {
+   "kind": "code_fallbacks",
+   "text": "compute() reads fields the family defaults do not hold; the code then uses its own constants: geometry.no_of_tracks \u2192 None, options2d.double_track \u2192 None",
+   "paths": [
+    "geometry.no_of_tracks",
+    "options2d.double_track"
+   ]
+  }
+ ],
  "parameters": [
   {
    "path": "bridge_name",
@@ -1532,7 +1741,7 @@
     ],
     "op": "||",
     "fallback": 2.0,
-    "line": 14
+    "line": 15
    },
    "kind": "count",
    "unit": "-",
@@ -1540,7 +1749,7 @@
    "component": "box",
    "unit_status": "authored",
    "evidence": [
-    "road-under-bridge-railway-rule-engine.ts:14"
+    "road-under-bridge-railway-rule-engine.ts:15"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -1607,7 +1816,7 @@
     ],
     "op": "||",
     "fallback": 5.0,
-    "line": 15
+    "line": 16
    },
    "kind": "length",
    "unit": "m",
@@ -1615,7 +1824,7 @@
    "component": "cell",
    "unit_status": "authored",
    "evidence": [
-    "road-under-bridge-railway-rule-engine.ts:15"
+    "road-under-bridge-railway-rule-engine.ts:16"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -1642,7 +1851,7 @@
     ],
     "op": "||",
     "fallback": 3.331,
-    "line": 16
+    "line": 17
    },
    "kind": "length",
    "unit": "m",
@@ -1650,7 +1859,7 @@
    "component": "cell",
    "unit_status": "authored",
    "evidence": [
-    "road-under-bridge-railway-rule-engine.ts:16"
+    "road-under-bridge-railway-rule-engine.ts:17"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -1686,7 +1895,7 @@
     ],
     "op": "||",
     "fallback": 0.35,
-    "line": 17
+    "line": 18
    },
    "kind": "length",
    "unit": "m",
@@ -1694,7 +1903,7 @@
    "component": "outer_wall",
    "unit_status": "authored",
    "evidence": [
-    "road-under-bridge-railway-rule-engine.ts:17"
+    "road-under-bridge-railway-rule-engine.ts:18"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -1720,7 +1929,7 @@
     ],
     "op": "||",
     "fallback": 0.35,
-    "line": 18
+    "line": 19
    },
    "kind": "length",
    "unit": "m",
@@ -1728,7 +1937,7 @@
    "component": "inner_wall",
    "unit_status": "authored",
    "evidence": [
-    "road-under-bridge-railway-rule-engine.ts:18"
+    "road-under-bridge-railway-rule-engine.ts:19"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -1747,7 +1956,7 @@
     ],
     "op": "||",
     "fallback": 0.35,
-    "line": 19
+    "line": 20
    },
    "kind": "length",
    "unit": "m",
@@ -1755,7 +1964,7 @@
    "component": "top_slab",
    "unit_status": "authored",
    "evidence": [
-    "road-under-bridge-railway-rule-engine.ts:19"
+    "road-under-bridge-railway-rule-engine.ts:20"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -1790,7 +1999,7 @@
     ],
     "op": "||",
     "fallback": 0.35,
-    "line": 20
+    "line": 21
    },
    "kind": "length",
    "unit": "m",
@@ -1798,7 +2007,7 @@
    "component": "bottom_slab",
    "unit_status": "authored",
    "evidence": [
-    "road-under-bridge-railway-rule-engine.ts:20"
+    "road-under-bridge-railway-rule-engine.ts:21"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -1829,7 +2038,7 @@
     ],
     "op": "??",
     "fallback": 0.5,
-    "line": 57
+    "line": 59
    },
    "kind": "length",
    "unit": "m",
@@ -1837,7 +2046,7 @@
    "component": "haunch",
    "unit_status": "authored",
    "evidence": [
-    "road-under-bridge-railway-rule-engine.ts:57"
+    "road-under-bridge-railway-rule-engine.ts:59"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -1891,7 +2100,7 @@
     ],
     "op": "??",
     "fallback": 0.15,
-    "line": 21
+    "line": 22
    },
    "kind": "length",
    "unit": "m",
@@ -1899,8 +2108,8 @@
    "component": "wearing_course",
    "unit_status": "authored",
    "evidence": [
-    "road-under-bridge-railway-rule-engine.ts:21",
-    "road-under-bridge-railway-rule-engine.ts:37"
+    "road-under-bridge-railway-rule-engine.ts:22",
+    "road-under-bridge-railway-rule-engine.ts:22"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -1937,7 +2146,7 @@
    "component": "track",
    "unit_status": "authored",
    "evidence": [
-    "road-under-bridge-railway-rule-engine.ts:44"
+    "road-under-bridge-railway-rule-engine.ts:45"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -1948,9 +2157,54 @@
    "affects_views": [
     "sec",
     "elv",
+    "longitudinal_road"
+   ]
+  },
+  {
+   "path": "deck.formation_width_left",
+   "default": 3.925,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_outputs": [
+    "spanLen"
+   ],
+   "affects_views": [
+    "elv",
     "plan",
     "longitudinal_road"
    ]
+  },
+  {
+   "path": "deck.formation_width_right",
+   "default": 3.925,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_outputs": [
+    "spanLen"
+   ],
+   "affects_views": [
+    "elv",
+    "plan",
+    "longitudinal_road"
+   ]
+  },
+  {
+   "path": "deck.formation_width",
+   "default": 7.85,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
   },
   {
    "path": "deck.embankment_slope",
@@ -1964,7 +2218,7 @@
     ],
     "op": "??",
     "fallback": 2.0,
-    "line": 79
+    "line": 81
    },
    "kind": "ratio",
    "unit": "-",
@@ -1972,11 +2226,14 @@
    "component": "embankment",
    "unit_status": "authored",
    "evidence": [
-    "road-under-bridge-railway-rule-engine.ts:79"
+    "road-under-bridge-railway-rule-engine.ts:81"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
     "slope"
+   ],
+   "affects_views": [
+    "plan"
    ]
   },
   {
@@ -1987,7 +2244,11 @@
    "read_by_compute": false,
    "kind": "unknown",
    "unit": "unknown",
-   "unit_status": "unknown"
+   "unit_status": "unknown",
+   "affects_views": [
+    "elv",
+    "plan"
+   ]
   },
   {
    "path": "deck.rail_level",
@@ -2001,7 +2262,7 @@
    "component": "track",
    "unit_status": "authored",
    "evidence": [
-    "road-under-bridge-railway-rule-engine.ts:47"
+    "road-under-bridge-railway-rule-engine.ts:49"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2024,7 +2285,7 @@
    "component": "slab",
    "unit_status": "authored",
    "evidence": [
-    "road-under-bridge-railway-rule-engine.ts:74"
+    "road-under-bridge-railway-rule-engine.ts:76"
    ],
    "evidence_check": "checked"
   },
@@ -2040,7 +2301,7 @@
     ],
     "op": "??",
     "fallback": 6.85,
-    "line": 72
+    "line": 74
    },
    "kind": "length",
    "unit": "m",
@@ -2048,7 +2309,7 @@
    "component": "slab",
    "unit_status": "authored",
    "evidence": [
-    "road-under-bridge-railway-rule-engine.ts:72"
+    "road-under-bridge-railway-rule-engine.ts:74"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2067,7 +2328,7 @@
     ],
     "op": "??",
     "fallback": 0.5,
-    "line": 73
+    "line": 75
    },
    "kind": "length",
    "unit": "m",
@@ -2075,7 +2336,7 @@
    "component": "slab",
    "unit_status": "authored",
    "evidence": [
-    "road-under-bridge-railway-rule-engine.ts:73"
+    "road-under-bridge-railway-rule-engine.ts:75"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2114,7 +2375,7 @@
     ],
     "op": "??",
     "fallback": 5.884,
-    "line": 27
+    "line": 28
    },
    "kind": "length",
    "unit": "m",
@@ -2122,7 +2383,7 @@
    "component": "wing_wall",
    "unit_status": "authored",
    "evidence": [
-    "road-under-bridge-railway-rule-engine.ts:27"
+    "road-under-bridge-railway-rule-engine.ts:28"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2162,7 +2423,7 @@
     ],
     "op": "??",
     "fallback": 3.0,
-    "line": 28
+    "line": 29
    },
    "kind": "length",
    "unit": "m",
@@ -2170,7 +2431,7 @@
    "component": "apron",
    "unit_status": "authored",
    "evidence": [
-    "road-under-bridge-railway-rule-engine.ts:28"
+    "road-under-bridge-railway-rule-engine.ts:29"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2228,6 +2489,46 @@
    "unit_status": "unknown"
   },
   {
+   "path": "abutment.show_return_wall",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "abutment.return_wall_type",
+   "default": "rcc",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "abutment.wing_wall_type",
+   "default": "default",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "abutment.show_coping",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
    "path": "foundation.soil_lvl",
    "default": 96.317,
    "type": "number",
@@ -2263,7 +2564,7 @@
     ],
     "op": "??",
     "fallback": 0.15,
-    "line": 25
+    "line": 26
    },
    "kind": "length",
    "unit": "m",
@@ -2271,7 +2572,7 @@
    "component": "foundation",
    "unit_status": "authored",
    "evidence": [
-    "road-under-bridge-railway-rule-engine.ts:25"
+    "road-under-bridge-railway-rule-engine.ts:26"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2296,7 +2597,7 @@
     ],
     "op": "??",
     "fallback": 0.7,
-    "line": 26
+    "line": 27
    },
    "kind": "length",
    "unit": "m",
@@ -2304,7 +2605,7 @@
    "component": "foundation",
    "unit_status": "authored",
    "evidence": [
-    "road-under-bridge-railway-rule-engine.ts:26"
+    "road-under-bridge-railway-rule-engine.ts:27"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2324,7 +2625,7 @@
     ],
     "op": "??",
     "fallback": 97.0,
-    "line": 23
+    "line": 24
    },
    "kind": "level",
    "unit": "m",
@@ -2332,7 +2633,7 @@
    "component": "site",
    "unit_status": "authored",
    "evidence": [
-    "road-under-bridge-railway-rule-engine.ts:23"
+    "road-under-bridge-railway-rule-engine.ts:24"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2351,7 +2652,7 @@
     ],
     "op": "??",
     "fallback": 96.317,
-    "line": 22
+    "line": 23
    },
    "kind": "level",
    "unit": "m",
@@ -2359,7 +2660,7 @@
    "component": "cell",
    "unit_status": "authored",
    "evidence": [
-    "road-under-bridge-railway-rule-engine.ts:22"
+    "road-under-bridge-railway-rule-engine.ts:23"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2377,7 +2678,6 @@
    "affects_views": [
     "sec",
     "elv",
-    "plan",
     "rw",
     "tw",
     "longitudinal_road",
@@ -2397,7 +2697,7 @@
     ],
     "op": "??",
     "fallback": 99.648,
-    "line": 24
+    "line": 25
    },
    "kind": "level",
    "unit": "m",
@@ -2405,7 +2705,7 @@
    "component": "top_slab",
    "unit_status": "authored",
    "evidence": [
-    "road-under-bridge-railway-rule-engine.ts:24"
+    "road-under-bridge-railway-rule-engine.ts:25"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2474,7 +2774,7 @@
    "component": "wing_wall",
    "unit_status": "authored",
    "evidence": [
-    "road-under-bridge-railway-rule-engine.ts:77"
+    "road-under-bridge-railway-rule-engine.ts:79"
    ],
    "evidence_check": "checked"
   },
@@ -2490,9 +2790,39 @@
    "component": "curtain_wall",
    "unit_status": "authored",
    "evidence": [
-    "road-under-bridge-railway-rule-engine.ts:78"
+    "road-under-bridge-railway-rule-engine.ts:80"
    ],
    "evidence_check": "checked"
+  },
+  {
+   "path": "options2d.show_600_boulder",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "options2d.show_granular_backfill",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "options2d.show_parapet_gap",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
   },
   {
    "path": "layers.BOX_STRUCTURE.visible",
@@ -2703,6 +3033,34 @@
    "kind": "text",
    "unit": "-",
    "unit_status": "authored"
+  },
+  {
+   "path": "geometry.no_of_tracks",
+   "default": null,
+   "type": "unknown",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "options2d.double_track",
+   "default": null,
+   "type": "unknown",
+   "in_defaults": false,
+   "code_fallback": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "values_that_change_outputs": [
+    "railway",
+    "err",
+    "ok",
+    "warn"
+   ]
   }
  ],
  "outputs": [
@@ -2734,22 +3092,14 @@
    "unit_status": "authored",
    "formula": {
     "expr": "(( cW * cells ) + ( tOW * 2 ) + ( tIW * ( cells - 1 ) ))",
-    "line": 31,
+    "line": 32,
     "inputs": {
-     "tOW": {
+     "cells": {
       "chain": [
-       "geometry.t_wall_o"
+       "project.cells"
       ],
       "op": "||",
-      "default": 0.35,
-      "line": 17
-     },
-     "cW": {
-      "chain": [
-       "geometry.clear_w"
-      ],
-      "op": "||",
-      "default": 5.0,
+      "default": 2.0,
       "line": 15
      },
      "tIW": {
@@ -2758,15 +3108,23 @@
       ],
       "op": "||",
       "default": 0.35,
-      "line": 18
+      "line": 19
      },
-     "cells": {
+     "tOW": {
       "chain": [
-       "project.cells"
+       "geometry.t_wall_o"
       ],
       "op": "||",
-      "default": 2.0,
-      "line": 14
+      "default": 0.35,
+      "line": 18
+     },
+     "cW": {
+      "chain": [
+       "geometry.clear_w"
+      ],
+      "op": "||",
+      "default": 5.0,
+      "line": 16
      }
     },
     "display": "total_w = ( cW * cells ) + ( tOW * 2 ) + ( tIW * ( cells - 1 ) )",
@@ -2803,15 +3161,23 @@
    "unit_status": "authored",
    "formula": {
     "expr": "(cH + tST + tSB)",
-    "line": 32,
+    "line": 33,
     "inputs": {
+     "cH": {
+      "chain": [
+       "geometry.clear_h"
+      ],
+      "op": "||",
+      "default": 3.331,
+      "line": 17
+     },
      "tSB": {
       "chain": [
        "geometry.t_slab_b"
       ],
       "op": "||",
       "default": 0.35,
-      "line": 20
+      "line": 21
      },
      "tST": {
       "chain": [
@@ -2819,15 +3185,7 @@
       ],
       "op": "||",
       "default": 0.35,
-      "line": 19
-     },
-     "cH": {
-      "chain": [
-       "geometry.clear_h"
-      ],
-      "op": "||",
-      "default": 3.331,
-      "line": 16
+      "line": 20
      }
     },
     "display": "total_h = cH + tST + tSB",
@@ -2864,23 +3222,15 @@
    "unit_status": "authored",
    "formula": {
     "expr": "(cW * cH * cells)",
-    "line": 33,
+    "line": 34,
     "inputs": {
-     "cW": {
-      "chain": [
-       "geometry.clear_w"
-      ],
-      "op": "||",
-      "default": 5.0,
-      "line": 15
-     },
      "cells": {
       "chain": [
        "project.cells"
       ],
       "op": "||",
       "default": 2.0,
-      "line": 14
+      "line": 15
      },
      "cH": {
       "chain": [
@@ -2888,6 +3238,14 @@
       ],
       "op": "||",
       "default": 3.331,
+      "line": 17
+     },
+     "cW": {
+      "chain": [
+       "geometry.clear_w"
+      ],
+      "op": "||",
+      "default": 5.0,
       "line": 16
      }
     },
@@ -2915,7 +3273,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "cells",
-    "line": 14,
+    "line": 15,
     "inputs": {
      "cells": {
       "chain": [
@@ -2923,7 +3281,7 @@
       ],
       "op": "||",
       "default": 2.0,
-      "line": 14
+      "line": 15
      }
     },
     "display": "cells = cells",
@@ -2951,7 +3309,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "cW",
-    "line": 15,
+    "line": 16,
     "inputs": {
      "cW": {
       "chain": [
@@ -2959,7 +3317,7 @@
       ],
       "op": "||",
       "default": 5.0,
-      "line": 15
+      "line": 16
      }
     },
     "display": "cW = cW",
@@ -2987,7 +3345,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "cH",
-    "line": 16,
+    "line": 17,
     "inputs": {
      "cH": {
       "chain": [
@@ -2995,7 +3353,7 @@
       ],
       "op": "||",
       "default": 3.331,
-      "line": 16
+      "line": 17
      }
     },
     "display": "cH = cH",
@@ -3023,7 +3381,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "tOW",
-    "line": 17,
+    "line": 18,
     "inputs": {
      "tOW": {
       "chain": [
@@ -3031,7 +3389,7 @@
       ],
       "op": "||",
       "default": 0.35,
-      "line": 17
+      "line": 18
      }
     },
     "display": "tOW = tOW",
@@ -3059,7 +3417,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "tIW",
-    "line": 18,
+    "line": 19,
     "inputs": {
      "tIW": {
       "chain": [
@@ -3067,7 +3425,7 @@
       ],
       "op": "||",
       "default": 0.35,
-      "line": 18
+      "line": 19
      }
     },
     "display": "tIW = tIW",
@@ -3095,7 +3453,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "tST",
-    "line": 19,
+    "line": 20,
     "inputs": {
      "tST": {
       "chain": [
@@ -3103,7 +3461,7 @@
       ],
       "op": "||",
       "default": 0.35,
-      "line": 19
+      "line": 20
      }
     },
     "display": "tST = tST",
@@ -3131,7 +3489,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "tSB",
-    "line": 20,
+    "line": 21,
     "inputs": {
      "tSB": {
       "chain": [
@@ -3139,7 +3497,7 @@
       ],
       "op": "||",
       "default": 0.35,
-      "line": 20
+      "line": 21
      }
     },
     "display": "tSB = tSB",
@@ -3167,7 +3525,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "wearC",
-    "line": 21,
+    "line": 22,
     "inputs": {
      "wearC": {
       "chain": [
@@ -3175,7 +3533,7 @@
       ],
       "op": "??",
       "default": 0.15,
-      "line": 21
+      "line": 22
      }
     },
     "display": "wearC = wearC",
@@ -3203,7 +3561,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "in3_haunch_size",
-    "line": 57,
+    "line": 59,
     "inputs": {
      "in3_haunch_size": {
       "chain": [
@@ -3211,7 +3569,7 @@
       ],
       "op": "??",
       "default": 0.5,
-      "line": 57
+      "line": 59
      }
     },
     "display": "haunch = in3_haunch_size",
@@ -3249,15 +3607,15 @@
    "unit_status": "authored",
    "formula": {
     "expr": "((bedLvl - wearC) - tSB)",
-    "line": 38,
+    "line": 39,
     "inputs": {
-     "tSB": {
+     "bedLvl": {
       "chain": [
-       "geometry.t_slab_b"
+       "hydraulics.bed_lvl"
       ],
-      "op": "||",
-      "default": 0.35,
-      "line": 20
+      "op": "??",
+      "default": 96.317,
+      "line": 23
      },
      "wearC": {
       "chain": [
@@ -3265,15 +3623,15 @@
       ],
       "op": "??",
       "default": 0.15,
-      "line": 21
-     },
-     "bedLvl": {
-      "chain": [
-       "hydraulics.bed_lvl"
-      ],
-      "op": "??",
-      "default": 96.317,
       "line": 22
+     },
+     "tSB": {
+      "chain": [
+       "geometry.t_slab_b"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 21
      }
     },
     "display": "z_bot = structTopBotSlab - tSB",
@@ -3315,39 +3673,15 @@
    "unit_status": "authored",
    "formula": {
     "expr": "(((bedLvl - wearC) - tSB) + (cH + tST + tSB))",
-    "line": 39,
+    "line": 40,
     "inputs": {
-     "tSB": {
-      "chain": [
-       "geometry.t_slab_b"
-      ],
-      "op": "||",
-      "default": 0.35,
-      "line": 20
-     },
-     "wearC": {
-      "chain": [
-       "deck.wearing_course"
-      ],
-      "op": "??",
-      "default": 0.15,
-      "line": 21
-     },
      "cH": {
       "chain": [
        "geometry.clear_h"
       ],
       "op": "||",
       "default": 3.331,
-      "line": 16
-     },
-     "bedLvl": {
-      "chain": [
-       "hydraulics.bed_lvl"
-      ],
-      "op": "??",
-      "default": 96.317,
-      "line": 22
+      "line": 17
      },
      "tST": {
       "chain": [
@@ -3355,7 +3689,31 @@
       ],
       "op": "||",
       "default": 0.35,
-      "line": 19
+      "line": 20
+     },
+     "bedLvl": {
+      "chain": [
+       "hydraulics.bed_lvl"
+      ],
+      "op": "??",
+      "default": 96.317,
+      "line": 23
+     },
+     "wearC": {
+      "chain": [
+       "deck.wearing_course"
+      ],
+      "op": "??",
+      "default": 0.15,
+      "line": 22
+     },
+     "tSB": {
+      "chain": [
+       "geometry.t_slab_b"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 21
      }
     },
     "display": "z_top = z_bot + total_h",
@@ -3392,39 +3750,15 @@
    "unit_status": "authored",
    "formula": {
     "expr": "((((bedLvl - wearC) - tSB) + (cH + tST + tSB)) - tST)",
-    "line": 40,
+    "line": 41,
     "inputs": {
-     "tSB": {
-      "chain": [
-       "geometry.t_slab_b"
-      ],
-      "op": "||",
-      "default": 0.35,
-      "line": 20
-     },
-     "wearC": {
-      "chain": [
-       "deck.wearing_course"
-      ],
-      "op": "??",
-      "default": 0.15,
-      "line": 21
-     },
      "cH": {
       "chain": [
        "geometry.clear_h"
       ],
       "op": "||",
       "default": 3.331,
-      "line": 16
-     },
-     "bedLvl": {
-      "chain": [
-       "hydraulics.bed_lvl"
-      ],
-      "op": "??",
-      "default": 96.317,
-      "line": 22
+      "line": 17
      },
      "tST": {
       "chain": [
@@ -3432,7 +3766,31 @@
       ],
       "op": "||",
       "default": 0.35,
-      "line": 19
+      "line": 20
+     },
+     "bedLvl": {
+      "chain": [
+       "hydraulics.bed_lvl"
+      ],
+      "op": "??",
+      "default": 96.317,
+      "line": 23
+     },
+     "wearC": {
+      "chain": [
+       "deck.wearing_course"
+      ],
+      "op": "??",
+      "default": 0.15,
+      "line": 22
+     },
+     "tSB": {
+      "chain": [
+       "geometry.t_slab_b"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 21
      }
     },
     "display": "soffit = z_top - tST",
@@ -3459,7 +3817,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "bedLvl",
-    "line": 22,
+    "line": 23,
     "inputs": {
      "bedLvl": {
       "chain": [
@@ -3467,7 +3825,7 @@
       ],
       "op": "??",
       "default": 96.317,
-      "line": 22
+      "line": 23
      }
     },
     "display": "bedLvl = bedLvl",
@@ -3495,7 +3853,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "hfl",
-    "line": 23,
+    "line": 24,
     "inputs": {
      "hfl": {
       "chain": [
@@ -3503,7 +3861,7 @@
       ],
       "op": "??",
       "default": 97.0,
-      "line": 23
+      "line": 24
      }
     },
     "display": "hfl = hfl",
@@ -3531,7 +3889,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "soffit_level",
-    "line": 24,
+    "line": 25,
     "inputs": {
      "soffit_level": {
       "chain": [
@@ -3539,7 +3897,7 @@
       ],
       "op": "??",
       "default": 99.648,
-      "line": 24
+      "line": 25
      }
     },
     "display": "soffit_level = soffit_level",
@@ -3582,7 +3940,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "((bedLvl - wearC) + cH + tST)",
-    "line": 43,
+    "line": 44,
     "inputs": {
      "bedLvl": {
       "chain": [
@@ -3590,7 +3948,7 @@
       ],
       "op": "??",
       "default": 96.317,
-      "line": 22
+      "line": 23
      },
      "wearC": {
       "chain": [
@@ -3598,15 +3956,7 @@
       ],
       "op": "??",
       "default": 0.15,
-      "line": 21
-     },
-     "tST": {
-      "chain": [
-       "geometry.t_slab_t"
-      ],
-      "op": "||",
-      "default": 0.35,
-      "line": 19
+      "line": 22
      },
      "cH": {
       "chain": [
@@ -3614,7 +3964,15 @@
       ],
       "op": "||",
       "default": 3.331,
-      "line": 16
+      "line": 17
+     },
+     "tST": {
+      "chain": [
+       "geometry.t_slab_t"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 20
      }
     },
     "display": "roadUnderBridgeTopLvl = structTopBotSlab + cH + tST",
@@ -3693,15 +4051,15 @@
    "unit_status": "authored",
    "formula": {
     "expr": "(((bedLvl - wearC) - tSB))",
-    "line": 49,
+    "line": 51,
     "inputs": {
-     "tSB": {
+     "bedLvl": {
       "chain": [
-       "geometry.t_slab_b"
+       "hydraulics.bed_lvl"
       ],
-      "op": "||",
-      "default": 0.35,
-      "line": 20
+      "op": "??",
+      "default": 96.317,
+      "line": 23
      },
      "wearC": {
       "chain": [
@@ -3709,15 +4067,15 @@
       ],
       "op": "??",
       "default": 0.15,
-      "line": 21
-     },
-     "bedLvl": {
-      "chain": [
-       "hydraulics.bed_lvl"
-      ],
-      "op": "??",
-      "default": 96.317,
       "line": 22
+     },
+     "tSB": {
+      "chain": [
+       "geometry.t_slab_b"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 21
      }
     },
     "display": "pccTop = z_bot",
@@ -3759,23 +4117,15 @@
    "unit_status": "authored",
    "formula": {
     "expr": "(((bedLvl - wearC) - tSB) - pccB)",
-    "line": 50,
+    "line": 52,
     "inputs": {
-     "tSB": {
+     "bedLvl": {
       "chain": [
-       "geometry.t_slab_b"
-      ],
-      "op": "||",
-      "default": 0.35,
-      "line": 20
-     },
-     "wearC": {
-      "chain": [
-       "deck.wearing_course"
+       "hydraulics.bed_lvl"
       ],
       "op": "??",
-      "default": 0.15,
-      "line": 21
+      "default": 96.317,
+      "line": 23
      },
      "pccB": {
       "chain": [
@@ -3783,15 +4133,23 @@
       ],
       "op": "??",
       "default": 0.15,
-      "line": 25
+      "line": 26
      },
-     "bedLvl": {
+     "wearC": {
       "chain": [
-       "hydraulics.bed_lvl"
+       "deck.wearing_course"
       ],
       "op": "??",
-      "default": 96.317,
+      "default": 0.15,
       "line": 22
+     },
+     "tSB": {
+      "chain": [
+       "geometry.t_slab_b"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 21
      }
     },
     "display": "pccBot = z_bot - pccB",
@@ -3838,31 +4196,15 @@
    "unit_status": "authored",
    "formula": {
     "expr": "((((bedLvl - wearC) - tSB) - pccB) - sandFill)",
-    "line": 51,
+    "line": 53,
     "inputs": {
-     "tSB": {
+     "sandFill": {
       "chain": [
-       "geometry.t_slab_b"
-      ],
-      "op": "||",
-      "default": 0.35,
-      "line": 20
-     },
-     "wearC": {
-      "chain": [
-       "deck.wearing_course"
+       "foundation.sand_fill_depth"
       ],
       "op": "??",
-      "default": 0.15,
-      "line": 21
-     },
-     "pccB": {
-      "chain": [
-       "foundation.pcc_sub_base"
-      ],
-      "op": "??",
-      "default": 0.15,
-      "line": 25
+      "default": 0.7,
+      "line": 27
      },
      "bedLvl": {
       "chain": [
@@ -3870,15 +4212,31 @@
       ],
       "op": "??",
       "default": 96.317,
-      "line": 22
+      "line": 23
      },
-     "sandFill": {
+     "pccB": {
       "chain": [
-       "foundation.sand_fill_depth"
+       "foundation.pcc_sub_base"
       ],
       "op": "??",
-      "default": 0.7,
+      "default": 0.15,
       "line": 26
+     },
+     "wearC": {
+      "chain": [
+       "deck.wearing_course"
+      ],
+      "op": "??",
+      "default": 0.15,
+      "line": 22
+     },
+     "tSB": {
+      "chain": [
+       "geometry.t_slab_b"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 21
      }
     },
     "display": "granBot = pccBot - sandFill",
@@ -3905,7 +4263,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "pccB",
-    "line": 25,
+    "line": 26,
     "inputs": {
      "pccB": {
       "chain": [
@@ -3913,7 +4271,7 @@
       ],
       "op": "??",
       "default": 0.15,
-      "line": 25
+      "line": 26
      }
     },
     "display": "pccB = pccB",
@@ -3941,7 +4299,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "sandFill",
-    "line": 26,
+    "line": 27,
     "inputs": {
      "sandFill": {
       "chain": [
@@ -3949,7 +4307,7 @@
       ],
       "op": "??",
       "default": 0.7,
-      "line": 26
+      "line": 27
      }
     },
     "display": "sandFill = sandFill",
@@ -3964,6 +4322,8 @@
    "value_at_defaults": 9.294000000000016,
    "depends_on": [
     "deck.formation_lvl",
+    "deck.formation_width_left",
+    "deck.formation_width_right",
     "deck.wearing_course",
     "geometry.clear_h",
     "geometry.t_slab_t",
@@ -3986,6 +4346,14 @@
      "slope": 4.0,
      "affine": false
     },
+    "deck.formation_width_left": {
+     "slope": 1.0,
+     "affine": true
+    },
+    "deck.formation_width_right": {
+     "slope": 1.0,
+     "affine": true
+    },
     "hydraulics.bed_lvl": {
      "slope": -0.149708669,
      "affine": false
@@ -3997,7 +4365,7 @@
    "unit_status": "authored",
    "formula": {
     "status": "opaque",
-    "why": "uses earthCushion, which was not read (uses formLvl, which was not read ('?': not arithmetic (conditional, comparison, string or call)))"
+    "why": "uses 'formation.left', which is not a number this reader knows"
    }
   },
   {
@@ -4018,7 +4386,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "wingL",
-    "line": 27,
+    "line": 28,
     "inputs": {
      "wingL": {
       "chain": [
@@ -4026,7 +4394,7 @@
       ],
       "op": "??",
       "default": 5.884,
-      "line": 27
+      "line": 28
      }
     },
     "display": "wingL = wingL",
@@ -4054,7 +4422,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "apronL",
-    "line": 28,
+    "line": 29,
     "inputs": {
      "apronL": {
       "chain": [
@@ -4062,7 +4430,7 @@
       ],
       "op": "??",
       "default": 3.0,
-      "line": 28
+      "line": 29
      }
     },
     "display": "apronL = apronL",
@@ -4131,7 +4499,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "in4_width",
-    "line": 72,
+    "line": 74,
     "inputs": {
      "in4_width": {
       "chain": [
@@ -4139,7 +4507,7 @@
       ],
       "op": "??",
       "default": 6.85,
-      "line": 72
+      "line": 74
      }
     },
     "display": "slabWidth = in4_width",
@@ -4167,7 +4535,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "in5_thickness",
-    "line": 73,
+    "line": 75,
     "inputs": {
      "in5_thickness": {
       "chain": [
@@ -4175,7 +4543,7 @@
       ],
       "op": "??",
       "default": 0.5,
-      "line": 73
+      "line": 75
      }
     },
     "display": "slabThick = in5_thickness",
@@ -4203,7 +4571,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "in9_embankment_slope",
-    "line": 79,
+    "line": 81,
     "inputs": {
      "in9_embankment_slope": {
       "chain": [
@@ -4211,7 +4579,7 @@
       ],
       "op": "??",
       "default": 2.0,
-      "line": 79
+      "line": 81
      }
     },
     "display": "slope = in9_embankment_slope",
@@ -4232,7 +4600,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "0.7",
-    "line": 83,
+    "line": 85,
     "inputs": {},
     "display": "boq.shearKeyW = 0.7",
     "samples": 17,
@@ -4251,7 +4619,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "1.2",
-    "line": 83,
+    "line": 85,
     "inputs": {},
     "display": "boq.shearKeyH = 1.2",
     "samples": 17,
@@ -4270,7 +4638,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "3.2",
-    "line": 84,
+    "line": 86,
     "inputs": {},
     "display": "boq.retWallW = 3.2",
     "samples": 17,
@@ -4289,7 +4657,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "1.3",
-    "line": 84,
+    "line": 86,
     "inputs": {},
     "display": "boq.retWallH = 1.3",
     "samples": 17,
@@ -4315,7 +4683,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "wingL + 0.082",
-    "line": 85,
+    "line": 87,
     "inputs": {
      "wingL": {
       "chain": [
@@ -4323,7 +4691,7 @@
       ],
       "op": "??",
       "default": 5.884,
-      "line": 27
+      "line": 28
      }
     },
     "display": "boq.toeWallL = wingL + 0.082",
@@ -4343,7 +4711,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "0.8",
-    "line": 85,
+    "line": 87,
     "inputs": {},
     "display": "boq.toeWallW = 0.8",
     "samples": 17,
@@ -4362,7 +4730,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "1.0",
-    "line": 85,
+    "line": 87,
     "inputs": {},
     "display": "boq.toeWallH = 1.0",
     "samples": 17,
@@ -4381,7 +4749,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "12.2",
-    "line": 86,
+    "line": 88,
     "inputs": {},
     "display": "boq.curtainDsL = 12.2",
     "samples": 17,
@@ -4400,7 +4768,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "1.85",
-    "line": 86,
+    "line": 88,
     "inputs": {},
     "display": "boq.curtainDsW = 1.85",
     "samples": 17,
@@ -4419,7 +4787,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "12.2",
-    "line": 87,
+    "line": 89,
     "inputs": {},
     "display": "boq.curtainUsL = 12.2",
     "samples": 17,
@@ -4438,7 +4806,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "1.5",
-    "line": 87,
+    "line": 89,
     "inputs": {},
     "display": "boq.curtainUsW = 1.5",
     "samples": 17,
@@ -4457,7 +4825,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "3.8",
-    "line": 88,
+    "line": 90,
     "inputs": {},
     "display": "boq.floorApronW = 3.8",
     "samples": 17,
@@ -4476,7 +4844,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "0.45",
-    "line": 88,
+    "line": 90,
     "inputs": {},
     "display": "boq.floorApronH = 0.45",
     "samples": 17,
@@ -4495,7 +4863,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "12.2",
-    "line": 89,
+    "line": 91,
     "inputs": {},
     "display": "boq.flexibleApronL = 12.2",
     "samples": 17,
@@ -4514,7 +4882,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "6.0",
-    "line": 89,
+    "line": 91,
     "inputs": {},
     "display": "boq.flexibleApronW = 6.0",
     "samples": 17,
@@ -4533,7 +4901,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "0.75",
-    "line": 89,
+    "line": 91,
     "inputs": {},
     "display": "boq.flexibleApronH = 0.75",
     "samples": 17,
@@ -4552,7 +4920,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "3.5",
-    "line": 90,
+    "line": 92,
     "inputs": {},
     "display": "boq.appSlabL = 3.5",
     "samples": 17,
@@ -4571,7 +4939,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "0.3",
-    "line": 90,
+    "line": 92,
     "inputs": {},
     "display": "boq.appSlabH = 0.3",
     "samples": 17,
@@ -4590,7 +4958,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "0.4",
-    "line": 91,
+    "line": 93,
     "inputs": {},
     "display": "boq.crashBW = 0.4",
     "samples": 17,
@@ -4609,7 +4977,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "1.2",
-    "line": 91,
+    "line": 93,
     "inputs": {},
     "display": "boq.crashBH = 1.2",
     "samples": 17,
@@ -4628,7 +4996,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "0.075",
-    "line": 92,
+    "line": 94,
     "inputs": {},
     "display": "boq.wearH = 0.075",
     "samples": 17,
@@ -4647,7 +5015,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "0.5",
-    "line": 93,
+    "line": 95,
     "inputs": {},
     "display": "boq.jointW = 0.5",
     "samples": 17,
@@ -4666,7 +5034,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "1.0",
-    "line": 93,
+    "line": 95,
     "inputs": {},
     "display": "boq.jointH = 1.0",
     "samples": 17,
@@ -4685,7 +5053,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "3.0",
-    "line": 94,
+    "line": 96,
     "inputs": {},
     "display": "boq.subRetWallStW = 3.0",
     "samples": 17,
@@ -4704,7 +5072,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "0.35",
-    "line": 94,
+    "line": 96,
     "inputs": {},
     "display": "boq.subRetWallStH = 0.35",
     "samples": 17,
@@ -4723,7 +5091,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "1.75",
-    "line": 95,
+    "line": 97,
     "inputs": {},
     "display": "boq.subRetWallTapW = 1.75",
     "samples": 17,
@@ -4742,7 +5110,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "0.7",
-    "line": 95,
+    "line": 97,
     "inputs": {},
     "display": "boq.subRetWallTapH = 0.7",
     "samples": 17,
@@ -4761,7 +5129,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "0.4",
-    "line": 96,
+    "line": 98,
     "inputs": {},
     "display": "boq.superRetWallW = 0.4",
     "samples": 17,
@@ -4780,7 +5148,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "2.7",
-    "line": 96,
+    "line": 98,
     "inputs": {},
     "display": "boq.superRetWallH = 2.7",
     "samples": 17,
@@ -4799,7 +5167,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "0.4",
-    "line": 97,
+    "line": 99,
     "inputs": {},
     "display": "boq.ballastRetW = 0.4",
     "samples": 17,
@@ -4818,7 +5186,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "0.6",
-    "line": 97,
+    "line": 99,
     "inputs": {},
     "display": "boq.ballastRetH = 0.6",
     "samples": 17,
@@ -4888,6 +5256,9 @@
   "deck": {
    "wearing_course": 0.15,
    "formation_lvl": 100.259,
+   "formation_width_left": 3.925,
+   "formation_width_right": 3.925,
+   "formation_width": 7.85,
    "embankment_slope": 2,
    "earth_cushion": 0.111,
    "rail_level": 101.021
@@ -4912,6 +5283,12 @@
   "substructure": {
    "design_base_pressure": 0
   },
+  "abutment": {
+   "show_return_wall": true,
+   "return_wall_type": "rcc",
+   "wing_wall_type": "default",
+   "show_coping": true
+  },
   "foundation": {
    "soil_lvl": 96.317,
    "found_d": 0.85,
@@ -4932,7 +5309,10 @@
    "shear_key": false,
    "pin_pockets": false,
    "show_wing_wall": false,
-   "show_curtain_wall": true
+   "show_curtain_wall": true,
+   "show_600_boulder": true,
+   "show_granular_backfill": true,
+   "show_parapet_gap": true
   },
   "layers": {
    "BOX_STRUCTURE": {
@@ -4974,7 +5354,7 @@
  },
  "characterization": {
   "samples_per_formula": 16,
-  "defaults_digest": "72cdb2790a9d254d26d7e297a9f5c11d7ac2bb3bd8593856635af8a1a2f9dfa9",
+  "defaults_digest": "97073a57f0481a8a20a97db19e3428260eac2f69440528499b9745848196c4b6",
   "derived_digest": "1a2ab9a29ef1dda24585f6374a3ed403f04210c7b156aedc683891b3d7e875c8"
  }
 }

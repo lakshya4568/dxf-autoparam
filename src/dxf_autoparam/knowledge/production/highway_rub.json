@@ -6,8 +6,8 @@
  "title": "HIGHWAY ROAD UNDER BRIDGE",
  "source": {
   "repository": "aagento-bridge",
-  "commit": "ca0b17ec2ccd82b81c246e2c02f8c4dc6fece565",
-  "branch": "cad_agent_dxf",
+  "commit": "e6c8f8fbe63fec95b08527e672aa71bec457a0b9",
+  "branch": "dev-new",
   "dirty_files": [],
   "registry": "src/app/features/bridges/models/bridge-registry.ts",
   "modules": {
@@ -49,14 +49,14 @@
    }
   },
   "sources": {
-   "src/app/features/bridges/models/bridge-registry.ts": "4ad1cd4ab16a2f9e3b72cc5784eba7ce9326cb365c879ebb7ceb82c57c0215bf",
+   "src/app/features/bridges/models/bridge-registry.ts": "a5d9cb11f744e71d087969391e79b0c923435c8b8bfbfcbfce07d817b4fcb2c4",
    "src/app/features/bridges/models/highway-road-under-bridge.defaults.ts": "50a76e724a2c78d2804f6c4095f39f34b5a58befda99b95f5d19f45618d627cd",
-   "src/app/features/bridges/utils/highway-road-under-bridge/highway-road-under-bridge-mapper.ts": "344343630b830d9c3373897bae9207f2a0c3f517ac82e598e4b15ad44427fa93",
+   "src/app/features/bridges/utils/highway-road-under-bridge/highway-road-under-bridge-mapper.ts": "fdb7f02f984484a0eb509f30627e76cf53f42e36e7e827976f0543b6dc68af19",
    "src/app/features/bridges/utils/highway-road-under-bridge/highway-road-under-bridge-rule-engine.ts": "f47504faeaeaa4be09310b51c5cb94e4e0a726a48ef735efb4d3f52f21c2f92c",
-   "src/app/features/bridges/utils/highway-road-under-bridge/highway-road-under-bridge-scene-renderer.ts": "5fae0a598e5efc22dae5d75af69f1f9ae32677199fe90c3b31670a1e95b05b82",
+   "src/app/features/bridges/utils/highway-road-under-bridge/highway-road-under-bridge-scene-renderer.ts": "de812bd5b2e6ce9a22293578b64bb465d8fbb5bb9c584e34c0c500f7c3997b50",
    "src/app/features/projects/components/project-detail/project-detail.constants.ts": "296737c40b421a7b234578beaa9fd1138f5b1c8569abb32ef3eda63c16efcf22"
   },
-  "sources_digest": "366b71913484a8e30dfb85662fdee43cd520f9ca1c32cba85f1206788a7d18d4"
+  "sources_digest": "4a0ce86d64c4d0f07c477d9dc31a8c4b2a1bd581e747be0229bc773f7da00a89"
  },
  "capabilities": {
   "has_compute": true,
@@ -316,6 +316,7 @@
     ],
     "code_fallbacks": [
      "_globalStationOffsetX",
+     "_mixedBridgeComposition",
      "deck.formation_lvl",
      "deck.rail_level",
      "geometry.no_of_tracks",
@@ -2469,6 +2470,22 @@
     "expr": "(( cW * cells ) + ( tOW * 2 ) + ( tIW * ( cells - 1 ) ))",
     "line": 30,
     "inputs": {
+     "cells": {
+      "chain": [
+       "project.cells"
+      ],
+      "op": "||",
+      "default": 2.0,
+      "line": 13
+     },
+     "tIW": {
+      "chain": [
+       "geometry.t_wall_i"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 17
+     },
      "tOW": {
       "chain": [
        "geometry.t_wall_o"
@@ -2484,22 +2501,6 @@
       "op": "||",
       "default": 5.0,
       "line": 14
-     },
-     "tIW": {
-      "chain": [
-       "geometry.t_wall_i"
-      ],
-      "op": "||",
-      "default": 0.35,
-      "line": 17
-     },
-     "cells": {
-      "chain": [
-       "project.cells"
-      ],
-      "op": "||",
-      "default": 2.0,
-      "line": 13
      }
     },
     "display": "total_w = ( cW * cells ) + ( tOW * 2 ) + ( tIW * ( cells - 1 ) )",
@@ -2538,6 +2539,14 @@
     "expr": "(cH + tST + tSB)",
     "line": 31,
     "inputs": {
+     "cH": {
+      "chain": [
+       "geometry.clear_h"
+      ],
+      "op": "||",
+      "default": 3.331,
+      "line": 15
+     },
      "tSB": {
       "chain": [
        "geometry.t_slab_b"
@@ -2553,14 +2562,6 @@
       "op": "||",
       "default": 0.35,
       "line": 18
-     },
-     "cH": {
-      "chain": [
-       "geometry.clear_h"
-      ],
-      "op": "||",
-      "default": 3.331,
-      "line": 15
      }
     },
     "display": "total_h = cH + tST + tSB",
@@ -2599,14 +2600,6 @@
     "expr": "(cW * cH * cells)",
     "line": 32,
     "inputs": {
-     "cW": {
-      "chain": [
-       "geometry.clear_w"
-      ],
-      "op": "||",
-      "default": 5.0,
-      "line": 14
-     },
      "cells": {
       "chain": [
        "project.cells"
@@ -2622,6 +2615,14 @@
       "op": "||",
       "default": 3.331,
       "line": 15
+     },
+     "cW": {
+      "chain": [
+       "geometry.clear_w"
+      ],
+      "op": "||",
+      "default": 5.0,
+      "line": 14
      }
     },
     "display": "flow_area = cW * cH * cells",
@@ -2984,13 +2985,13 @@
     "expr": "((bedLvl - wearC) - tSB)",
     "line": 37,
     "inputs": {
-     "tSB": {
+     "bedLvl": {
       "chain": [
-       "geometry.t_slab_b"
+       "hydraulics.bed_lvl"
       ],
-      "op": "||",
-      "default": 0.35,
-      "line": 19
+      "op": "??",
+      "default": 96.317,
+      "line": 21
      },
      "wearC": {
       "chain": [
@@ -3000,13 +3001,13 @@
       "default": 0.15,
       "line": 20
      },
-     "bedLvl": {
+     "tSB": {
       "chain": [
-       "hydraulics.bed_lvl"
+       "geometry.t_slab_b"
       ],
-      "op": "??",
-      "default": 96.317,
-      "line": 21
+      "op": "||",
+      "default": 0.35,
+      "line": 19
      }
     },
     "display": "z_bot = structTopBotSlab - tSB",
@@ -3050,22 +3051,6 @@
     "expr": "(((bedLvl - wearC) - tSB) + (cH + tST + tSB))",
     "line": 38,
     "inputs": {
-     "tSB": {
-      "chain": [
-       "geometry.t_slab_b"
-      ],
-      "op": "||",
-      "default": 0.35,
-      "line": 19
-     },
-     "wearC": {
-      "chain": [
-       "deck.wearing_course"
-      ],
-      "op": "??",
-      "default": 0.15,
-      "line": 20
-     },
      "cH": {
       "chain": [
        "geometry.clear_h"
@@ -3073,6 +3058,14 @@
       "op": "||",
       "default": 3.331,
       "line": 15
+     },
+     "tST": {
+      "chain": [
+       "geometry.t_slab_t"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 18
      },
      "bedLvl": {
       "chain": [
@@ -3082,13 +3075,21 @@
       "default": 96.317,
       "line": 21
      },
-     "tST": {
+     "wearC": {
       "chain": [
-       "geometry.t_slab_t"
+       "deck.wearing_course"
+      ],
+      "op": "??",
+      "default": 0.15,
+      "line": 20
+     },
+     "tSB": {
+      "chain": [
+       "geometry.t_slab_b"
       ],
       "op": "||",
       "default": 0.35,
-      "line": 18
+      "line": 19
      }
     },
     "display": "z_top = z_bot + total_h",
@@ -3127,22 +3128,6 @@
     "expr": "((((bedLvl - wearC) - tSB) + (cH + tST + tSB)) - tST)",
     "line": 39,
     "inputs": {
-     "tSB": {
-      "chain": [
-       "geometry.t_slab_b"
-      ],
-      "op": "||",
-      "default": 0.35,
-      "line": 19
-     },
-     "wearC": {
-      "chain": [
-       "deck.wearing_course"
-      ],
-      "op": "??",
-      "default": 0.15,
-      "line": 20
-     },
      "cH": {
       "chain": [
        "geometry.clear_h"
@@ -3150,6 +3135,14 @@
       "op": "||",
       "default": 3.331,
       "line": 15
+     },
+     "tST": {
+      "chain": [
+       "geometry.t_slab_t"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 18
      },
      "bedLvl": {
       "chain": [
@@ -3159,13 +3152,21 @@
       "default": 96.317,
       "line": 21
      },
-     "tST": {
+     "wearC": {
       "chain": [
-       "geometry.t_slab_t"
+       "deck.wearing_course"
+      ],
+      "op": "??",
+      "default": 0.15,
+      "line": 20
+     },
+     "tSB": {
+      "chain": [
+       "geometry.t_slab_b"
       ],
       "op": "||",
       "default": 0.35,
-      "line": 18
+      "line": 19
      }
     },
     "display": "soffit = z_top - tST",
@@ -3333,14 +3334,6 @@
       "default": 0.15,
       "line": 20
      },
-     "tST": {
-      "chain": [
-       "geometry.t_slab_t"
-      ],
-      "op": "||",
-      "default": 0.35,
-      "line": 18
-     },
      "cH": {
       "chain": [
        "geometry.clear_h"
@@ -3348,6 +3341,14 @@
       "op": "||",
       "default": 3.331,
       "line": 15
+     },
+     "tST": {
+      "chain": [
+       "geometry.t_slab_t"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 18
      }
     },
     "display": "roadUnderBridgeTopLvl = structTopBotSlab + cH + tST",
@@ -3458,13 +3459,13 @@
     "expr": "(((bedLvl - wearC) - tSB))",
     "line": 48,
     "inputs": {
-     "tSB": {
+     "bedLvl": {
       "chain": [
-       "geometry.t_slab_b"
+       "hydraulics.bed_lvl"
       ],
-      "op": "||",
-      "default": 0.35,
-      "line": 19
+      "op": "??",
+      "default": 96.317,
+      "line": 21
      },
      "wearC": {
       "chain": [
@@ -3474,13 +3475,13 @@
       "default": 0.15,
       "line": 20
      },
-     "bedLvl": {
+     "tSB": {
       "chain": [
-       "hydraulics.bed_lvl"
+       "geometry.t_slab_b"
       ],
-      "op": "??",
-      "default": 96.317,
-      "line": 21
+      "op": "||",
+      "default": 0.35,
+      "line": 19
      }
     },
     "display": "pccTop = z_bot",
@@ -3524,21 +3525,13 @@
     "expr": "(((bedLvl - wearC) - tSB) - pccB)",
     "line": 49,
     "inputs": {
-     "tSB": {
+     "bedLvl": {
       "chain": [
-       "geometry.t_slab_b"
-      ],
-      "op": "||",
-      "default": 0.35,
-      "line": 19
-     },
-     "wearC": {
-      "chain": [
-       "deck.wearing_course"
+       "hydraulics.bed_lvl"
       ],
       "op": "??",
-      "default": 0.15,
-      "line": 20
+      "default": 96.317,
+      "line": 21
      },
      "pccB": {
       "chain": [
@@ -3548,13 +3541,21 @@
       "default": 0.15,
       "line": 24
      },
-     "bedLvl": {
+     "wearC": {
       "chain": [
-       "hydraulics.bed_lvl"
+       "deck.wearing_course"
       ],
       "op": "??",
-      "default": 96.317,
-      "line": 21
+      "default": 0.15,
+      "line": 20
+     },
+     "tSB": {
+      "chain": [
+       "geometry.t_slab_b"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 19
      }
     },
     "display": "pccBot = z_bot - pccB",
@@ -3603,29 +3604,13 @@
     "expr": "((((bedLvl - wearC) - tSB) - pccB) - sandFill)",
     "line": 50,
     "inputs": {
-     "tSB": {
+     "sandFill": {
       "chain": [
-       "geometry.t_slab_b"
-      ],
-      "op": "||",
-      "default": 0.35,
-      "line": 19
-     },
-     "wearC": {
-      "chain": [
-       "deck.wearing_course"
+       "foundation.sand_fill_depth"
       ],
       "op": "??",
-      "default": 0.15,
-      "line": 20
-     },
-     "pccB": {
-      "chain": [
-       "foundation.pcc_sub_base"
-      ],
-      "op": "??",
-      "default": 0.15,
-      "line": 24
+      "default": 0.7,
+      "line": 25
      },
      "bedLvl": {
       "chain": [
@@ -3635,13 +3620,29 @@
       "default": 96.317,
       "line": 21
      },
-     "sandFill": {
+     "pccB": {
       "chain": [
-       "foundation.sand_fill_depth"
+       "foundation.pcc_sub_base"
       ],
       "op": "??",
-      "default": 0.7,
-      "line": 25
+      "default": 0.15,
+      "line": 24
+     },
+     "wearC": {
+      "chain": [
+       "deck.wearing_course"
+      ],
+      "op": "??",
+      "default": 0.15,
+      "line": 20
+     },
+     "tSB": {
+      "chain": [
+       "geometry.t_slab_b"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 19
      }
     },
     "display": "granBot = pccBot - sandFill",

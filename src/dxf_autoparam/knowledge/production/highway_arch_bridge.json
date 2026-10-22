@@ -6,8 +6,8 @@
  "title": "HIGHWAY ARCH BRIDGE RCC BOX",
  "source": {
   "repository": "aagento-bridge",
-  "commit": "ca0b17ec2ccd82b81c246e2c02f8c4dc6fece565",
-  "branch": "cad_agent_dxf",
+  "commit": "e6c8f8fbe63fec95b08527e672aa71bec457a0b9",
+  "branch": "dev-new",
   "dirty_files": [],
   "registry": "src/app/features/bridges/models/bridge-registry.ts",
   "modules": {
@@ -49,14 +49,14 @@
    }
   },
   "sources": {
-   "src/app/features/bridges/models/bridge-registry.ts": "4ad1cd4ab16a2f9e3b72cc5784eba7ce9326cb365c879ebb7ceb82c57c0215bf",
+   "src/app/features/bridges/models/bridge-registry.ts": "a5d9cb11f744e71d087969391e79b0c923435c8b8bfbfcbfce07d817b4fcb2c4",
    "src/app/features/bridges/models/highway-arch-bridge.defaults.ts": "e019abfabc2333357d564859a5b62f0131f6f48b9bfaf6a8b1c29525bb304233",
-   "src/app/features/bridges/utils/highway-arch-bridge/highway-arch-bridge-mapper.ts": "dbb163f29673a225c74ed96d7ef73b4fcbe7bd5abe0828eace1944f9ac239833",
-   "src/app/features/bridges/utils/highway-arch-bridge/highway-arch-bridge-rule-engine.ts": "44f73f20b23cb681bc456175954bd97916bbff303496f26375317a5e39128650",
-   "src/app/features/bridges/utils/highway-arch-bridge/highway-arch-bridge-scene-renderer.ts": "9c53b8bd9386436db28a74f79ec716f52828976d8ee6b9c1dd7d1b2f59e5ea01",
+   "src/app/features/bridges/utils/highway-arch-bridge/highway-arch-bridge-mapper.ts": "73f569b83ccf01ab5ca457ae4641efeb0a83b1ec54aeb3d5a6137acabae57d94",
+   "src/app/features/bridges/utils/highway-arch-bridge/highway-arch-bridge-rule-engine.ts": "55e6b20dc9f4a37c28df63d3da215e87b7d4e228ef65e03508e42e05ccc1a3c4",
+   "src/app/features/bridges/utils/highway-arch-bridge/highway-arch-bridge-scene-renderer.ts": "57bf1d743e152e3fefa5a767deaebf17e6e6c71548621113ab75a0b7ebb68ab0",
    "src/app/features/projects/components/project-detail/project-detail.constants.ts": "296737c40b421a7b234578beaa9fd1138f5b1c8569abb32ef3eda63c16efcf22"
   },
-  "sources_digest": "7e0a44dd25f23c4a2d3d98a2ec019602d4b05c199f59318d40db6b899e0281fa"
+  "sources_digest": "50e8b74381de0972de59caa7a45e4bba971d9832437666fcec581c13f8fa7591"
  },
  "capabilities": {
   "has_compute": true,
@@ -95,8 +95,8 @@
     "msg": "HFL below soffit \u2713"
    },
    {
-    "sev": "warn",
-    "msg": "Computed soffit (97.367m) \u2260 input (97.517m)"
+    "sev": "ok",
+    "msg": "Soffit level consistent \u2713"
    },
    {
     "sev": "ok",
@@ -119,7 +119,7 @@
    "slabTop": 97.717,
    "slabBottom": 95.817,
    "foundationBottom": 94.96699999999998,
-   "hflClearanceMm": 367.00000000000443
+   "hflClearanceMm": 516.9999999999959
   }
  },
  "views": {
@@ -140,7 +140,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 985,
+    "draws": 1016,
     "deterministic": true,
     "reads": [
      "deck.embankment_slope",
@@ -196,7 +196,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 230,
+    "draws": 273,
     "deterministic": true,
     "reads": [
      "deck.embankment_slope",
@@ -251,7 +251,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 230,
+    "draws": 273,
     "deterministic": true,
     "reads": [
      "deck.embankment_slope",
@@ -306,7 +306,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 872,
+    "draws": 601,
     "deterministic": true,
     "reads": [
      "deck.embankment_slope",
@@ -336,20 +336,24 @@
      "slab.width"
     ],
     "code_fallbacks": [
+     "abutment",
      "deck.ballast_cushion",
      "deck.ballast_thickness",
-     "foundation.bottom_lvl",
+     "flowDirection",
      "foundation.flooring_thick",
      "foundation.footing_proj_right",
-     "foundation.found_lvl",
      "foundation.found_thickness",
      "foundation.pcc_proj",
      "foundation.step1_h",
+     "foundation.step2_h",
      "geometry.barrel_length_left",
      "geometry.barrel_length_right",
+     "geometry.const_gap",
      "geometry.coping_h",
      "geometry.coping_height",
      "geometry.coping_thick",
+     "geometry.gap",
+     "geometry.gap_btw_boxes",
      "geometry.height_above_masonry",
      "geometry.no_of_tracks",
      "geometry.parapet_box_h",
@@ -357,11 +361,19 @@
      "geometry.parapet_h",
      "geometry.parapet_height",
      "geometry.parapet_t",
+     "geometry.springing_lvl",
      "geometry.track_spacing",
      "geometry.tracks",
+     "geometry.wing_wall_length",
+     "hydraulics.flow_dir",
+     "hydraulics.flow_direction",
+     "hydraulics.scour_level",
      "hydraulics.scour_lvl",
+     "levels",
      "options2d.clear_height_layers",
      "options2d.double_track",
+     "options2d.flow_direction",
+     "options2d.show_us_ds_labels",
      "options2d.track_spacing",
      "project.bridge_type",
      "project.status",
@@ -375,7 +387,8 @@
      "geometry.arch_thick",
      "geometry.clear_h",
      "hydraulics.bed_lvl",
-     "hydraulics.hfl"
+     "hydraulics.hfl",
+     "side.wing_l"
     ],
     "inputs_tried": 22
    },
@@ -388,7 +401,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 273,
+    "draws": 305,
     "deterministic": true,
     "reads": [
      "deck.embankment_slope",
@@ -443,19 +456,25 @@
      "always"
     ],
     "renders": true,
-    "draws": 1244,
+    "draws": 749,
     "deterministic": true,
     "reads": [
+     "bridge_name",
+     "deck.earth_cushion",
      "deck.embankment_slope",
      "deck.formation_lvl",
      "deck.rail_level",
      "deck.wearing_course",
+     "foundation.found_d",
      "foundation.pcc_sub_base",
      "foundation.sand_fill_depth",
+     "foundation.soil_lvl",
      "geometry.arch_thick",
      "geometry.clear_h",
      "geometry.clear_w",
+     "geometry.gap_between_boxes",
      "geometry.haunch_size",
+     "geometry.open_joint",
      "geometry.t_slab_b",
      "geometry.t_slab_t",
      "geometry.t_wall_i",
@@ -463,6 +482,8 @@
      "hydraulics.bed_lvl",
      "hydraulics.hfl",
      "hydraulics.soffit_level",
+     "options2d.pin_pockets",
+     "options2d.shear_key",
      "options2d.show_curtain_wall",
      "options2d.show_wing_wall",
      "project.cells",
@@ -474,25 +495,56 @@
     ],
     "code_fallbacks": [
      "abutment",
+     "bedLevelAbove",
+     "clearHeight",
+     "formationWidth",
+     "foundationBottomLevel",
+     "foundationDepth",
+     "foundation_level",
      "geometry.height_above_masonry",
-     "geometry.rw_depth",
-     "geometry.rw_depth_sec",
-     "geometry.rw_heel_width",
-     "geometry.rw_stem_thick",
-     "geometry.rw_toe_width",
      "geometry.rw_type",
-     "hydraulics.scour_lvl",
+     "levels",
+     "options2d.show_coping",
+     "options2d.show_return_wall",
      "project.bridge_type",
-     "project.type"
+     "project.status",
+     "project.template",
+     "project.type",
+     "returnWallBoulderThick",
+     "returnWallHeight",
+     "returnWallLength",
+     "returnWallStemBot",
+     "returnWallType",
+     "returnWallWidth",
+     "slabThickness",
+     "slanting_return_wall_center_width",
+     "slanting_return_wall_fnd_height",
+     "slanting_return_wall_height",
+     "slanting_return_wall_left_batter",
+     "slanting_return_wall_left_neck_height",
+     "slanting_return_wall_left_offset",
+     "slanting_return_wall_left_stem_num_steps",
+     "slanting_return_wall_left_stem_proj",
+     "slanting_return_wall_left_stem_shape",
+     "slanting_return_wall_left_stem_steps",
+     "slanting_return_wall_neck_height",
+     "slanting_return_wall_num_steps",
+     "slanting_return_wall_right_batter",
+     "slanting_return_wall_right_neck_height",
+     "slanting_return_wall_right_offset",
+     "slanting_return_wall_right_stem_num_steps",
+     "slanting_return_wall_right_stem_proj",
+     "slanting_return_wall_right_stem_shape",
+     "slanting_return_wall_right_stem_steps",
+     "slanting_return_wall_step_side",
+     "slanting_return_wall_steps",
+     "slanting_return_wall_zone2_height"
     ],
     "affected_by": [
-     "deck.wearing_course",
-     "geometry.clear_h",
-     "geometry.t_slab_b",
-     "geometry.t_slab_t",
+     "deck.formation_lvl",
      "hydraulics.bed_lvl"
     ],
-    "inputs_tried": 22
+    "inputs_tried": 27
    },
    {
     "mode": "cw",
@@ -510,8 +562,8 @@
      }
     ],
     "renders": true,
-    "draws": 478,
-    "deterministic": false,
+    "draws": 282,
+    "deterministic": true,
     "reads": [
      "deck.embankment_slope",
      "deck.formation_lvl",
@@ -548,7 +600,11 @@
      "project.bridge_type",
      "project.type",
      "side.curtain_wall_thickness"
-    ]
+    ],
+    "affected_by": [
+     "hydraulics.bed_lvl"
+    ],
+    "inputs_tried": 22
    },
    {
     "mode": "rw2",
@@ -565,7 +621,7 @@
      }
     ],
     "renders": true,
-    "draws": 1244,
+    "draws": 749,
     "deterministic": true,
     "reads": [
      "bridge_name",
@@ -663,10 +719,7 @@
      "toJSON"
     ],
     "affected_by": [
-     "deck.wearing_course",
-     "geometry.clear_h",
-     "geometry.t_slab_b",
-     "geometry.t_slab_t",
+     "deck.formation_lvl",
      "hydraulics.bed_lvl"
     ],
     "inputs_tried": 38
@@ -747,7 +800,7 @@
      }
     ],
     "renders": true,
-    "draws": 515,
+    "draws": 519,
     "deterministic": true,
     "reads": [
      "deck.embankment_slope",
@@ -848,9 +901,7 @@
     "sec2",
     "sec",
     "abut",
-    "elv",
-    "rw",
-    "rw2"
+    "elv"
    ],
    "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
   },
@@ -903,10 +954,7 @@
     "spanLen",
     "earthCushion"
    ],
-   "views": [
-    "rw",
-    "rw2"
-   ],
+   "views": [],
    "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
   },
   {
@@ -920,10 +968,7 @@
     "pccBot",
     "granBot"
    ],
-   "views": [
-    "rw",
-    "rw2"
-   ],
+   "views": [],
    "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
   },
   {
@@ -942,7 +987,6 @@
     "wearC",
     "z_bot",
     "z_top",
-    "soffit",
     "rccBoxTopLvl",
     "pccTop",
     "pccBot",
@@ -950,10 +994,7 @@
     "spanLen",
     "earthCushion"
    ],
-   "views": [
-    "rw",
-    "rw2"
-   ],
+   "views": [],
    "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
   },
   {
@@ -965,7 +1006,9 @@
     "earthCushion"
    ],
    "views": [
-    "elv"
+    "elv",
+    "rw",
+    "rw2"
    ],
    "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
   },
@@ -1018,7 +1061,9 @@
    "outputs": [
     "wingL"
    ],
-   "views": [],
+   "views": [
+    "elv"
+   ],
    "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
   },
   {
@@ -1083,6 +1128,7 @@
     "abut",
     "elv",
     "rw",
+    "cw",
     "rw2",
     "borelog",
     "tw"
@@ -1313,9 +1359,7 @@
     "sec2",
     "sec",
     "abut",
-    "elv",
-    "rw",
-    "rw2"
+    "elv"
    ]
   },
   {
@@ -1441,10 +1485,6 @@
     "rccBoxTopLvl",
     "spanLen",
     "earthCushion"
-   ],
-   "affects_views": [
-    "rw",
-    "rw2"
    ]
   },
   {
@@ -1477,10 +1517,6 @@
     "pccTop",
     "pccBot",
     "granBot"
-   ],
-   "affects_views": [
-    "rw",
-    "rw2"
    ]
   },
   {
@@ -1558,17 +1594,12 @@
     "wearC",
     "z_bot",
     "z_top",
-    "soffit",
     "rccBoxTopLvl",
     "pccTop",
     "pccBot",
     "granBot",
     "spanLen",
     "earthCushion"
-   ],
-   "affects_views": [
-    "rw",
-    "rw2"
    ]
   },
   {
@@ -1592,7 +1623,9 @@
     "earthCushion"
    ],
    "affects_views": [
-    "elv"
+    "elv",
+    "rw",
+    "rw2"
    ]
   },
   {
@@ -1775,6 +1808,9 @@
    "evidence_check": "checked",
    "affects_outputs": [
     "wingL"
+   ],
+   "affects_views": [
+    "elv"
    ]
   },
   {
@@ -2014,6 +2050,7 @@
     "abut",
     "elv",
     "rw",
+    "cw",
     "rw2",
     "borelog",
     "tw"
@@ -2392,6 +2429,22 @@
     "expr": "(( cW * cells ) + ( tOW * 2 ) + ( tIW * ( cells - 1 ) ))",
     "line": 32,
     "inputs": {
+     "cells": {
+      "chain": [
+       "project.cells"
+      ],
+      "op": "||",
+      "default": 2.0,
+      "line": 15
+     },
+     "tIW": {
+      "chain": [
+       "geometry.t_wall_i"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 19
+     },
      "tOW": {
       "chain": [
        "geometry.t_wall_o"
@@ -2407,22 +2460,6 @@
       "op": "||",
       "default": 5.0,
       "line": 16
-     },
-     "tIW": {
-      "chain": [
-       "geometry.t_wall_i"
-      ],
-      "op": "||",
-      "default": 0.35,
-      "line": 19
-     },
-     "cells": {
-      "chain": [
-       "project.cells"
-      ],
-      "op": "||",
-      "default": 2.0,
-      "line": 15
      }
     },
     "display": "total_w = ( cW * cells ) + ( tOW * 2 ) + ( tIW * ( cells - 1 ) )",
@@ -2461,6 +2498,14 @@
     "expr": "(cH + tST + tSB)",
     "line": 33,
     "inputs": {
+     "cH": {
+      "chain": [
+       "geometry.clear_h"
+      ],
+      "op": "||",
+      "default": 3.331,
+      "line": 17
+     },
      "tSB": {
       "chain": [
        "geometry.t_slab_b"
@@ -2476,14 +2521,6 @@
       "op": "||",
       "default": 0.35,
       "line": 20
-     },
-     "cH": {
-      "chain": [
-       "geometry.clear_h"
-      ],
-      "op": "||",
-      "default": 3.331,
-      "line": 17
      }
     },
     "display": "total_h = cH + tST + tSB",
@@ -2522,14 +2559,6 @@
     "expr": "(cW * cH * cells)",
     "line": 34,
     "inputs": {
-     "cW": {
-      "chain": [
-       "geometry.clear_w"
-      ],
-      "op": "||",
-      "default": 5.0,
-      "line": 16
-     },
      "cells": {
       "chain": [
        "project.cells"
@@ -2545,6 +2574,14 @@
       "op": "||",
       "default": 3.331,
       "line": 17
+     },
+     "cW": {
+      "chain": [
+       "geometry.clear_w"
+      ],
+      "op": "||",
+      "default": 5.0,
+      "line": 16
      }
     },
     "display": "flow_area = cW * cH * cells",
@@ -3009,14 +3046,6 @@
     "expr": "(cH + archThick)",
     "line": 58,
     "inputs": {
-     "archThick": {
-      "chain": [
-       "geometry.arch_thick"
-      ],
-      "op": "??",
-      "default": 0.61,
-      "line": 57
-     },
      "cH": {
       "chain": [
        "geometry.clear_h"
@@ -3024,6 +3053,14 @@
       "op": "||",
       "default": 3.331,
       "line": 17
+     },
+     "archThick": {
+      "chain": [
+       "geometry.arch_thick"
+      ],
+      "op": "??",
+      "default": 0.61,
+      "line": 57
      }
     },
     "display": "archTopY = cH + archThick",
@@ -3186,14 +3223,6 @@
     "expr": "((cH) + archThick)",
     "line": 65,
     "inputs": {
-     "archThick": {
-      "chain": [
-       "geometry.arch_thick"
-      ],
-      "op": "??",
-      "default": 0.61,
-      "line": 57
-     },
      "cH": {
       "chain": [
        "geometry.clear_h"
@@ -3201,6 +3230,14 @@
       "op": "||",
       "default": 3.331,
       "line": 17
+     },
+     "archThick": {
+      "chain": [
+       "geometry.arch_thick"
+      ],
+      "op": "??",
+      "default": 0.61,
+      "line": 57
      }
     },
     "display": "dim2Y = dim1Y + archThick",
@@ -3253,13 +3290,13 @@
     "expr": "((bedLvl - wearC) - tSB)",
     "line": 39,
     "inputs": {
-     "tSB": {
+     "bedLvl": {
       "chain": [
-       "geometry.t_slab_b"
+       "hydraulics.bed_lvl"
       ],
-      "op": "||",
-      "default": 0.35,
-      "line": 21
+      "op": "??",
+      "default": 96.317,
+      "line": 23
      },
      "wearC": {
       "chain": [
@@ -3269,13 +3306,13 @@
       "default": 0.15,
       "line": 22
      },
-     "bedLvl": {
+     "tSB": {
       "chain": [
-       "hydraulics.bed_lvl"
+       "geometry.t_slab_b"
       ],
-      "op": "??",
-      "default": 96.317,
-      "line": 23
+      "op": "||",
+      "default": 0.35,
+      "line": 21
      }
     },
     "display": "z_bot = structTopBotSlab - tSB",
@@ -3319,22 +3356,6 @@
     "expr": "(((bedLvl - wearC) - tSB) + (cH + tST + tSB))",
     "line": 40,
     "inputs": {
-     "tSB": {
-      "chain": [
-       "geometry.t_slab_b"
-      ],
-      "op": "||",
-      "default": 0.35,
-      "line": 21
-     },
-     "wearC": {
-      "chain": [
-       "deck.wearing_course"
-      ],
-      "op": "??",
-      "default": 0.15,
-      "line": 22
-     },
      "cH": {
       "chain": [
        "geometry.clear_h"
@@ -3342,6 +3363,14 @@
       "op": "||",
       "default": 3.331,
       "line": 17
+     },
+     "tST": {
+      "chain": [
+       "geometry.t_slab_t"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 20
      },
      "bedLvl": {
       "chain": [
@@ -3351,13 +3380,21 @@
       "default": 96.317,
       "line": 23
      },
-     "tST": {
+     "wearC": {
       "chain": [
-       "geometry.t_slab_t"
+       "deck.wearing_course"
+      ],
+      "op": "??",
+      "default": 0.15,
+      "line": 22
+     },
+     "tSB": {
+      "chain": [
+       "geometry.t_slab_b"
       ],
       "op": "||",
       "default": 0.35,
-      "line": 20
+      "line": 21
      }
     },
     "display": "z_top = z_bot + total_h",
@@ -3368,19 +3405,14 @@
   },
   {
    "name": "soffit",
-   "value_at_defaults": 97.367,
+   "value_at_defaults": 97.517,
    "depends_on": [
-    "deck.wearing_course",
     "geometry.clear_h",
     "hydraulics.bed_lvl"
    ],
    "partials": {
     "geometry.clear_h": {
      "slope": 1.0,
-     "affine": true
-    },
-    "deck.wearing_course": {
-     "slope": -1.0,
      "affine": true
     },
     "hydraulics.bed_lvl": {
@@ -3393,33 +3425,9 @@
    "label": "level of the underside of the top slab",
    "unit_status": "authored",
    "formula": {
-    "expr": "((((bedLvl - wearC) - tSB) + (cH + tST + tSB)) - tST)",
+    "expr": "(bedLvl + cH)",
     "line": 41,
     "inputs": {
-     "tSB": {
-      "chain": [
-       "geometry.t_slab_b"
-      ],
-      "op": "||",
-      "default": 0.35,
-      "line": 21
-     },
-     "wearC": {
-      "chain": [
-       "deck.wearing_course"
-      ],
-      "op": "??",
-      "default": 0.15,
-      "line": 22
-     },
-     "cH": {
-      "chain": [
-       "geometry.clear_h"
-      ],
-      "op": "||",
-      "default": 3.331,
-      "line": 17
-     },
      "bedLvl": {
       "chain": [
        "hydraulics.bed_lvl"
@@ -3428,16 +3436,16 @@
       "default": 96.317,
       "line": 23
      },
-     "tST": {
+     "cH": {
       "chain": [
-       "geometry.t_slab_t"
+       "geometry.clear_h"
       ],
       "op": "||",
-      "default": 0.35,
-      "line": 20
+      "default": 3.331,
+      "line": 17
      }
     },
-    "display": "soffit = z_top - tST",
+    "display": "soffit = bedLvl + cH",
     "samples": 17,
     "max_abs_error": 0.0,
     "status": "verified_by_execution"
@@ -3602,14 +3610,6 @@
       "default": 0.15,
       "line": 22
      },
-     "tST": {
-      "chain": [
-       "geometry.t_slab_t"
-      ],
-      "op": "||",
-      "default": 0.35,
-      "line": 20
-     },
      "cH": {
       "chain": [
        "geometry.clear_h"
@@ -3617,6 +3617,14 @@
       "op": "||",
       "default": 3.331,
       "line": 17
+     },
+     "tST": {
+      "chain": [
+       "geometry.t_slab_t"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 20
      }
     },
     "display": "rccBoxTopLvl = structTopBotSlab + cH + tST",
@@ -3697,13 +3705,13 @@
     "expr": "(((bedLvl - wearC) - tSB))",
     "line": 50,
     "inputs": {
-     "tSB": {
+     "bedLvl": {
       "chain": [
-       "geometry.t_slab_b"
+       "hydraulics.bed_lvl"
       ],
-      "op": "||",
-      "default": 0.35,
-      "line": 21
+      "op": "??",
+      "default": 96.317,
+      "line": 23
      },
      "wearC": {
       "chain": [
@@ -3713,13 +3721,13 @@
       "default": 0.15,
       "line": 22
      },
-     "bedLvl": {
+     "tSB": {
       "chain": [
-       "hydraulics.bed_lvl"
+       "geometry.t_slab_b"
       ],
-      "op": "??",
-      "default": 96.317,
-      "line": 23
+      "op": "||",
+      "default": 0.35,
+      "line": 21
      }
     },
     "display": "pccTop = z_bot",
@@ -3763,21 +3771,13 @@
     "expr": "(((bedLvl - wearC) - tSB) - pccB)",
     "line": 51,
     "inputs": {
-     "tSB": {
+     "bedLvl": {
       "chain": [
-       "geometry.t_slab_b"
-      ],
-      "op": "||",
-      "default": 0.35,
-      "line": 21
-     },
-     "wearC": {
-      "chain": [
-       "deck.wearing_course"
+       "hydraulics.bed_lvl"
       ],
       "op": "??",
-      "default": 0.15,
-      "line": 22
+      "default": 96.317,
+      "line": 23
      },
      "pccB": {
       "chain": [
@@ -3787,13 +3787,21 @@
       "default": 0.15,
       "line": 26
      },
-     "bedLvl": {
+     "wearC": {
       "chain": [
-       "hydraulics.bed_lvl"
+       "deck.wearing_course"
       ],
       "op": "??",
-      "default": 96.317,
-      "line": 23
+      "default": 0.15,
+      "line": 22
+     },
+     "tSB": {
+      "chain": [
+       "geometry.t_slab_b"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 21
      }
     },
     "display": "pccBot = z_bot - pccB",
@@ -3842,29 +3850,13 @@
     "expr": "((((bedLvl - wearC) - tSB) - pccB) - sandFill)",
     "line": 52,
     "inputs": {
-     "tSB": {
+     "sandFill": {
       "chain": [
-       "geometry.t_slab_b"
-      ],
-      "op": "||",
-      "default": 0.35,
-      "line": 21
-     },
-     "wearC": {
-      "chain": [
-       "deck.wearing_course"
+       "foundation.sand_fill_depth"
       ],
       "op": "??",
-      "default": 0.15,
-      "line": 22
-     },
-     "pccB": {
-      "chain": [
-       "foundation.pcc_sub_base"
-      ],
-      "op": "??",
-      "default": 0.15,
-      "line": 26
+      "default": 0.7,
+      "line": 27
      },
      "bedLvl": {
       "chain": [
@@ -3874,13 +3866,29 @@
       "default": 96.317,
       "line": 23
      },
-     "sandFill": {
+     "pccB": {
       "chain": [
-       "foundation.sand_fill_depth"
+       "foundation.pcc_sub_base"
       ],
       "op": "??",
-      "default": 0.7,
-      "line": 27
+      "default": 0.15,
+      "line": 26
+     },
+     "wearC": {
+      "chain": [
+       "deck.wearing_course"
+      ],
+      "op": "??",
+      "default": 0.15,
+      "line": 22
+     },
+     "tSB": {
+      "chain": [
+       "geometry.t_slab_b"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 21
      }
     },
     "display": "granBot = pccBot - sandFill",
@@ -4375,6 +4383,6 @@
  "characterization": {
   "samples_per_formula": 16,
   "defaults_digest": "a904d7c40f6cd18a9df96d51f78dada328b70c0874ad95342abee584370ae145",
-  "derived_digest": "ce8645c700d4cb7b0564fc9aa56bde42d4c268a2e7cbaf770637137e30431178"
+  "derived_digest": "781d76b74a0dead5eed5f0459b6b7d4c59c94f7bedffc77b7a4d7bf758ea1895"
  }
 }

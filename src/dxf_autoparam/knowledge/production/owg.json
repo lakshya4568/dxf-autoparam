@@ -6,8 +6,8 @@
  "title": "OPEN WEB GIRDER",
  "source": {
   "repository": "aagento-bridge",
-  "commit": "ca0b17ec2ccd82b81c246e2c02f8c4dc6fece565",
-  "branch": "cad_agent_dxf",
+  "commit": "e6c8f8fbe63fec95b08527e672aa71bec457a0b9",
+  "branch": "dev-new",
   "dirty_files": [],
   "registry": "src/app/features/bridges/models/bridge-registry.ts",
   "modules": {
@@ -41,7 +41,7 @@
    },
    "viewButtons": {
     "symbol": "owgViewButtons",
-    "path": "src/app/features/bridges/utils/psc-slab/psc-slab-mapper.ts"
+    "path": "src/app/features/bridges/utils/owg/owg-mapper.ts"
    },
    "canvasBasePoint": {
     "symbol": "owgCanvasBasePoint",
@@ -49,16 +49,15 @@
    }
   },
   "sources": {
-   "src/app/features/bridges/models/bridge-registry.ts": "4ad1cd4ab16a2f9e3b72cc5784eba7ce9326cb365c879ebb7ceb82c57c0215bf",
+   "src/app/features/bridges/models/bridge-registry.ts": "a5d9cb11f744e71d087969391e79b0c923435c8b8bfbfcbfce07d817b4fcb2c4",
    "src/app/features/bridges/models/owg.defaults.ts": "7b5bb23526d2501fdc4fe965fe6df42df028bf96ed90966c8fd11ba4c6b5e6c9",
    "src/app/features/bridges/utils/owg/owg-half-top-model.ts": "b130c48d889cb04c2f25124d1125abfc1e6988d8274fbb91e0723764655ba68f",
-   "src/app/features/bridges/utils/owg/owg-mapper.ts": "7091eee574ab6e2380210b2939bb34c2d834abed04705aca9c28f8913eba36a1",
+   "src/app/features/bridges/utils/owg/owg-mapper.ts": "9163b49c119b1e793778a113aefb0dfa9275b9352f97b3298abe90257ea9d8f4",
    "src/app/features/bridges/utils/owg/owg-rdso-civil-rules.ts": "89df534d4c219bc04b50699ed56f29e81e63eed1766f7afce29340725e6d6f05",
    "src/app/features/bridges/utils/owg/owg-rule-engine.ts": "3e6e89aebc949e751ad750ec9378ae09d93b6ff0d96e9e79bf069d177a7aca66",
-   "src/app/features/bridges/utils/owg/owg-scene-renderer.ts": "9b120a5aadad02e9a3968e35c475ae919bd1a3434817ad7a5f7beccd708443ab",
-   "src/app/features/bridges/utils/psc-slab/psc-slab-mapper.ts": "2b339878c8901d501ab2f2ac666c7664b9b827f54a16cb30a9705dbd8e5c7713"
+   "src/app/features/bridges/utils/owg/owg-scene-renderer.ts": "4d189c3199286fbcd45b326334aaf2fcec1d013d7b4aa288c25ab2c210ac560b"
   },
-  "sources_digest": "9d7228b929e1caef34d84a33f701e08226b4715e062fdb0d3b74c577e36f06a6"
+  "sources_digest": "2b3dc94cd60d37a0d38c1357a989eeb293a432620c925602c9c3eb8f000ea889"
  },
  "capabilities": {
   "has_compute": true,
@@ -102,7 +101,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 10697,
+    "draws": 10818,
     "deterministic": false,
     "reads": [
      "deck.formation_lvl",
@@ -207,7 +206,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 26850,
+    "draws": 26932,
     "deterministic": true,
     "reads": [
      "deck.formation_lvl",
@@ -305,7 +304,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 1937,
+    "draws": 1981,
     "deterministic": true,
     "reads": [
      "deck.formation_lvl",
@@ -403,7 +402,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 225,
+    "draws": 245,
     "deterministic": true,
     "reads": [
      "deck.formation_lvl",
@@ -516,7 +515,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 1001,
+    "draws": 1039,
     "deterministic": true,
     "reads": [
      "deck.formation_lvl",
@@ -620,7 +619,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 607,
+    "draws": 623,
     "deterministic": true,
     "reads": [
      "deck.formation_lvl",
@@ -716,7 +715,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 1520,
+    "draws": 1534,
     "deterministic": true,
     "reads": [
      "deck.formation_lvl",
@@ -772,7 +771,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 882,
+    "draws": 898,
     "deterministic": true,
     "reads": [
      "deck.formation_lvl",

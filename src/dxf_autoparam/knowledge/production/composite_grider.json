@@ -6,8 +6,8 @@
  "title": "COMPOSITE GIRDER",
  "source": {
   "repository": "aagento-bridge",
-  "commit": "ca0b17ec2ccd82b81c246e2c02f8c4dc6fece565",
-  "branch": "cad_agent_dxf",
+  "commit": "e6c8f8fbe63fec95b08527e672aa71bec457a0b9",
+  "branch": "dev-new",
   "dirty_files": [],
   "registry": "src/app/features/bridges/models/bridge-registry.ts",
   "modules": {
@@ -49,15 +49,15 @@
    }
   },
   "sources": {
-   "src/app/features/bridges/models/bridge-registry.ts": "4ad1cd4ab16a2f9e3b72cc5784eba7ce9326cb365c879ebb7ceb82c57c0215bf",
-   "src/app/features/bridges/models/composite-girder.defaults.ts": "b61b475e27c727b832c4fffbf253af9288dfc478b55525fd2458d5345ecdb28b",
+   "src/app/features/bridges/models/bridge-registry.ts": "a5d9cb11f744e71d087969391e79b0c923435c8b8bfbfcbfce07d817b4fcb2c4",
+   "src/app/features/bridges/models/composite-girder.defaults.ts": "dc78f41819506d41ef628b6d3f5a8163641c97dec1c912f8810e0e3d5f104d65",
    "src/app/features/bridges/utils/composite-girder/composite-girder-half-top-model.ts": "f0008518252422e8e212f487ff38c45424f4763f7b734ce0bb3c38d94d0f28c1",
-   "src/app/features/bridges/utils/composite-girder/composite-girder-mapper.ts": "6801e72a07f237acc4ad3dbf3ea2c410e8a12f37ae921800b30956611d61555c",
+   "src/app/features/bridges/utils/composite-girder/composite-girder-mapper.ts": "d486380f7348a79ad4c6bf81fd4a29ca701f78aa643d17fdda31905e1467bd77",
    "src/app/features/bridges/utils/composite-girder/composite-girder-rdso-civil-rules.ts": "68159b97240c8416e9371a95fe2297233d85e6bf293f3e07d56ae11c916185a8",
-   "src/app/features/bridges/utils/composite-girder/composite-girder-rule-engine.ts": "26439708dbbb25e6c083c75bb85793b6e395224f7936043f6bd5b460c380bd80",
-   "src/app/features/bridges/utils/composite-girder/composite-girder-scene-renderer.ts": "a0d40de824f0f83d9fe89fd87af8a5081bdb2ab61b1486d8de5a562df93b9751"
+   "src/app/features/bridges/utils/composite-girder/composite-girder-rule-engine.ts": "41061924481d37460b3f9ded9771d57df2c8ef546bfa5bd404651f6c82ef7fb4",
+   "src/app/features/bridges/utils/composite-girder/composite-girder-scene-renderer.ts": "cb566791cd6fee7d7e1b308fa8b0a684464ca346b6c41644a0d6b6b0aacd2d66"
   },
-  "sources_digest": "e502daaa669a8a7a0fa8cc86fe03aeb4cbbd35b63d5a3012d38e7636195c12fe"
+  "sources_digest": "8ccd66e38856fe12569daea070d79c6eed8747075ec13513627813b28ee74e1f"
  },
  "capabilities": {
   "has_compute": true,
@@ -101,7 +101,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 233154,
+    "draws": 233388,
     "deterministic": false,
     "reads": [
      "abutment.heel_length",
@@ -221,7 +221,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 1263487,
+    "draws": 1263533,
     "deterministic": true,
     "reads": [
      "foundation.type",
@@ -316,15 +316,11 @@
      "always"
     ],
     "renders": true,
-    "draws": 408,
+    "draws": 429,
     "deterministic": true,
     "reads": [
      "hydraulics.bed_level",
      "hydraulics.hfl",
-     "layers.ABUTMENT.visible",
-     "layers.BEARING.visible",
-     "layers.GIRDER.visible",
-     "layers.SLAB.visible",
      "levels.formation_level",
      "levels.rail_level",
      "levels.top_level",
@@ -364,7 +360,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 265,
+    "draws": 279,
     "deterministic": true,
     "reads": [
      "foundation.type",
@@ -482,7 +478,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 6507,
+    "draws": 6545,
     "deterministic": true,
     "reads": [
      "foundation.type",
@@ -596,7 +592,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 605,
+    "draws": 621,
     "deterministic": true,
     "reads": [
      "foundation.type",
@@ -704,7 +700,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 1520,
+    "draws": 1534,
     "deterministic": true,
     "reads": [
      "hydraulics.bed_level",
@@ -762,7 +758,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 14226,
+    "draws": 14246,
     "deterministic": true,
     "reads": [
      "foundation.type",
@@ -875,34 +871,111 @@
      "always"
     ],
     "renders": true,
-    "draws": 166,
+    "draws": 264,
     "deterministic": true,
     "reads": [
      "hydraulics.bed_level",
      "hydraulics.hfl",
+     "keyplan.boundaryDistances.displayMode",
+     "keyplan.boundaryDistances.existingTrackIndex",
      "keyplan.boundaryDistances.greenBoundary",
+     "keyplan.boundaryDistances.jogs.0.boundaryType",
+     "keyplan.boundaryDistances.jogs.0.distance",
+     "keyplan.boundaryDistances.jogs.0.id",
+     "keyplan.boundaryDistances.jogs.0.length",
+     "keyplan.boundaryDistances.jogs.0.side",
+     "keyplan.boundaryDistances.jogs.0.startX",
+     "keyplan.boundaryDistances.jogs.0.stepDirection",
+     "keyplan.boundaryDistances.jogs.0.trackIndex",
+     "keyplan.boundaryDistances.jogs.constructor",
+     "keyplan.boundaryDistances.jogs.length",
+     "keyplan.boundaryDistances.jogs.map",
+     "keyplan.boundaryDistances.mirrorToBottom",
+     "keyplan.boundaryDistances.proposedTrackIndex",
      "keyplan.boundaryDistances.redBoundary",
+     "keyplan.boundaryDistances.referenceTrackIndex",
      "keyplan.bridgeNumber",
      "keyplan.coOrdinates.easting",
      "keyplan.coOrdinates.location",
      "keyplan.coOrdinates.northing",
      "keyplan.coOrdinates.title",
+     "keyplan.crossovers.length",
      "keyplan.curve.degree",
      "keyplan.curve.direction",
+     "keyplan.curve.endX",
      "keyplan.curve.isCurved",
+     "keyplan.curve.startX",
+     "keyplan.curveTable.apexChainage",
+     "keyplan.curveTable.cant",
+     "keyplan.curveTable.curveLength",
+     "keyplan.curveTable.curveNo",
+     "keyplan.curveTable.degree",
+     "keyplan.curveTable.delta",
+     "keyplan.curveTable.ltc",
+     "keyplan.curveTable.radius",
+     "keyplan.curveTable.shift",
+     "keyplan.curveTable.show",
+     "keyplan.curveTable.tangentLength",
+     "keyplan.curveTable.tiltAngle",
+     "keyplan.curveTable.title",
+     "keyplan.curveTable.vmax",
+     "keyplan.curveTable.x",
+     "keyplan.curveTable.y",
+     "keyplan.curveTableExisting.apexChainage",
+     "keyplan.curveTableExisting.cant",
+     "keyplan.curveTableExisting.curveLength",
+     "keyplan.curveTableExisting.curveNo",
+     "keyplan.curveTableExisting.degree",
+     "keyplan.curveTableExisting.delta",
+     "keyplan.curveTableExisting.ltc",
+     "keyplan.curveTableExisting.radius",
+     "keyplan.curveTableExisting.shift",
+     "keyplan.curveTableExisting.show",
+     "keyplan.curveTableExisting.tangentLength",
+     "keyplan.curveTableExisting.tiltAngle",
+     "keyplan.curveTableExisting.title",
+     "keyplan.curveTableExisting.vmax",
+     "keyplan.curveTableExisting.x",
+     "keyplan.curveTableExisting.y",
+     "keyplan.curves.constructor",
+     "keyplan.curves.filter",
+     "keyplan.curves.length",
      "keyplan.existingStructure",
+     "keyplan.gradientDisplayMode",
      "keyplan.gradientLeft.chainage",
      "keyplan.gradientLeft.falling",
      "keyplan.gradientLeft.rising",
      "keyplan.gradientLeft.rl",
+     "keyplan.gradientProposedLeft.chainage",
+     "keyplan.gradientProposedLeft.falling",
+     "keyplan.gradientProposedLeft.rising",
+     "keyplan.gradientProposedLeft.rl",
+     "keyplan.gradientProposedRight.chainage",
+     "keyplan.gradientProposedRight.falling",
+     "keyplan.gradientProposedRight.rising",
+     "keyplan.gradientProposedRight.rl",
      "keyplan.gradientRight.chainage",
      "keyplan.gradientRight.falling",
      "keyplan.gradientRight.rising",
      "keyplan.gradientRight.rl",
+     "keyplan.leftGradientOrder",
+     "keyplan.northArrowRotation",
      "keyplan.proposedStructureLine1",
      "keyplan.proposedStructureLine2",
+     "keyplan.rightGradientOrder",
+     "keyplan.showProposedGradient",
      "keyplan.stationLeft",
      "keyplan.stationRight",
+     "keyplan.structureDetails",
+     "keyplan.tracks.0.isProposed",
+     "keyplan.tracks.0.name",
+     "keyplan.tracks.1.distance",
+     "keyplan.tracks.1.isProposed",
+     "keyplan.tracks.1.name",
+     "keyplan.tracks.constructor",
+     "keyplan.tracks.forEach",
+     "keyplan.tracks.length",
+     "keyplan.tracks.map",
      "levels.formation_level",
      "levels.rail_level",
      "levels.top_level",
@@ -921,6 +994,10 @@
      "deck",
      "hydraulics.bed_lvl",
      "hydraulics.gl",
+     "keyplan.curveTable.customFields",
+     "keyplan.curveTableExisting.customFields",
+     "keyplan.flowDirection",
+     "keyplan.lineExtent",
      "spans.arrangement.0.loading_type",
      "substructure.pier_template.capWidth",
      "substructure.pier_template.shaftWidth",
@@ -930,10 +1007,19 @@
      "truss"
     ],
     "affected_by": [
+     "keyplan.boundaryDistances.existingTrackIndex",
      "keyplan.boundaryDistances.greenBoundary",
-     "keyplan.boundaryDistances.redBoundary"
+     "keyplan.boundaryDistances.jogs.0.distance",
+     "keyplan.boundaryDistances.jogs.0.length",
+     "keyplan.boundaryDistances.jogs.0.startX",
+     "keyplan.boundaryDistances.proposedTrackIndex",
+     "keyplan.boundaryDistances.redBoundary",
+     "keyplan.curveTable.x",
+     "keyplan.curveTableExisting.x",
+     "keyplan.northArrowRotation",
+     "keyplan.tracks.1.distance"
     ],
-    "inputs_tried": 16
+    "inputs_tried": 33
    }
   ]
  },
@@ -1317,6 +1403,15 @@
   },
   {
    "op": "set_value",
+   "path": "keyplan.tracks.1.distance",
+   "outputs": [],
+   "views": [
+    "keyplan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
    "path": "keyplan.boundaryDistances.greenBoundary",
    "outputs": [],
    "views": [
@@ -1327,6 +1422,78 @@
   {
    "op": "set_value",
    "path": "keyplan.boundaryDistances.redBoundary",
+   "outputs": [],
+   "views": [
+    "keyplan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "keyplan.boundaryDistances.proposedTrackIndex",
+   "outputs": [],
+   "views": [
+    "keyplan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "keyplan.boundaryDistances.existingTrackIndex",
+   "outputs": [],
+   "views": [
+    "keyplan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "keyplan.boundaryDistances.jogs.0.startX",
+   "outputs": [],
+   "views": [
+    "keyplan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "keyplan.boundaryDistances.jogs.0.length",
+   "outputs": [],
+   "views": [
+    "keyplan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "keyplan.boundaryDistances.jogs.0.distance",
+   "outputs": [],
+   "views": [
+    "keyplan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "keyplan.northArrowRotation",
+   "outputs": [],
+   "views": [
+    "keyplan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "keyplan.curveTable.x",
+   "outputs": [],
+   "views": [
+    "keyplan"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "keyplan.curveTableExisting.x",
    "outputs": [],
    "views": [
     "keyplan"
@@ -1677,6 +1844,7 @@
     "substructure.civilRules.pileCapFrontProjection",
     "substructure.civilRules.pileCapRearProjection",
     "substructure.civilRules.pileCapTransverseWidth",
+    "totalLength",
     "totalLength_pg",
     "positions.1"
    ]
@@ -2998,6 +3166,16 @@
    "unit_status": "authored"
   },
   {
+   "path": "keyplan.structureDetails",
+   "default": "C/L OF BR NO-15, EXIST- 1 X 6.05m STEEL GIRDER\nC/L OF BR NO-15, PROP- 1 X 6.10m PSC SLAB AT CH: 10470.01 m.",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
    "path": "keyplan.existingStructure",
    "default": "C/L OF BR NO-15, EXIST- 1 X 6.05m STEEL GIRDER",
    "type": "str",
@@ -3009,7 +3187,7 @@
   },
   {
    "path": "keyplan.proposedStructureLine1",
-   "default": "C/L OF BR NO-15, PROP-1 X 6.10 m.",
+   "default": "C/L OF BR NO-15, PROP- 1 X 6.10m PSC SLAB AT CH: 10470.01 m.",
    "type": "str",
    "in_defaults": true,
    "read_by_compute": true,
@@ -3019,13 +3197,76 @@
   },
   {
    "path": "keyplan.proposedStructureLine2",
-   "default": "PSC SLAB AT CH: 10470.01 m.",
+   "default": "",
    "type": "str",
    "in_defaults": true,
    "read_by_compute": true,
    "kind": "text",
    "unit": "-",
    "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.tracks.0.name",
+   "default": "CL. OF PROP. BG TRACK (UP LINE)",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.tracks.0.isProposed",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.tracks.0.distance",
+   "default": 0,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "keyplan.tracks.1.name",
+   "default": "CL. OF EXIST. BG TRACK (DN LINE)",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.tracks.1.isProposed",
+   "default": false,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.tracks.1.distance",
+   "default": 5.3,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "keyplan"
+   ]
   },
   {
    "path": "keyplan.stationLeft",
@@ -3168,6 +3409,136 @@
    "unit_status": "authored"
   },
   {
+   "path": "keyplan.gradientProposedLeft.falling",
+   "default": "F 1 IN 200",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.gradientProposedLeft.rising",
+   "default": "R 1 IN 180",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.gradientProposedLeft.chainage",
+   "default": "10040 M",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.gradientProposedLeft.rl",
+   "default": "31.500",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.gradientProposedRight.rising",
+   "default": "R 1 IN 180",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.gradientProposedRight.falling",
+   "default": "F 1 IN 800",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.gradientProposedRight.chainage",
+   "default": "10520M",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.gradientProposedRight.rl",
+   "default": "34.150",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.gradientDisplayMode",
+   "default": "BOTH",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.showProposedGradient",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.leftGradientOrder",
+   "default": "PROPOSED_FIRST",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.rightGradientOrder",
+   "default": "EXISTING_FIRST",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.boundaryDistances.displayMode",
+   "default": "BOTH",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
    "path": "keyplan.boundaryDistances.greenBoundary",
    "default": 9.756,
    "type": "number",
@@ -3194,6 +3565,141 @@
    ]
   },
   {
+   "path": "keyplan.boundaryDistances.proposedTrackIndex",
+   "default": 0,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "keyplan"
+   ]
+  },
+  {
+   "path": "keyplan.boundaryDistances.existingTrackIndex",
+   "default": 0,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "keyplan"
+   ]
+  },
+  {
+   "path": "keyplan.boundaryDistances.referenceTrackIndex",
+   "default": 0,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "keyplan.boundaryDistances.mirrorToBottom",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.boundaryDistances.jogs.0.id",
+   "default": "jog-top-1",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.boundaryDistances.jogs.0.side",
+   "default": "TOP",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.boundaryDistances.jogs.0.boundaryType",
+   "default": "PROPOSED",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.boundaryDistances.jogs.0.stepDirection",
+   "default": "INWARD",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.boundaryDistances.jogs.0.startX",
+   "default": -480,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "keyplan"
+   ]
+  },
+  {
+   "path": "keyplan.boundaryDistances.jogs.0.length",
+   "default": 80,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "keyplan"
+   ]
+  },
+  {
+   "path": "keyplan.boundaryDistances.jogs.0.distance",
+   "default": 15,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "keyplan"
+   ]
+  },
+  {
+   "path": "keyplan.boundaryDistances.jogs.0.trackIndex",
+   "default": 0,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
    "path": "keyplan.curve.isCurved",
    "default": false,
    "type": "bool",
@@ -3204,7 +3710,7 @@
    "unit_status": "authored"
   },
   {
-   "path": "keyplan.curve.degree",
+   "path": "keyplan.curve.startX",
    "default": 0,
    "type": "number",
    "in_defaults": true,
@@ -3214,14 +3720,373 @@
    "unit_status": "unknown"
   },
   {
+   "path": "keyplan.curve.endX",
+   "default": 200,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "keyplan.curve.degree",
+   "default": 2,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
    "path": "keyplan.curve.direction",
-   "default": "LHS",
+   "default": "UPWARD",
    "type": "str",
    "in_defaults": true,
    "read_by_compute": true,
    "kind": "text",
    "unit": "-",
    "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.northArrowRotation",
+   "default": 0,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "keyplan"
+   ]
+  },
+  {
+   "path": "keyplan.curveTable.show",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTable.title",
+   "default": "",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTable.curveNo",
+   "default": "5",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTable.apexChainage",
+   "default": "4447.290 m.",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTable.delta",
+   "default": "5\u00b001'21\"",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTable.degree",
+   "default": "0.50\u00b0",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTable.radius",
+   "default": "3500 m.",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTable.curveLength",
+   "default": "306.810 m.",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTable.tangentLength",
+   "default": "183.505 m.",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTable.ltc",
+   "default": "15",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTable.shift",
+   "default": "0.043 m.",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTable.cant",
+   "default": "",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTable.vmax",
+   "default": "160 kmph",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTable.tiltAngle",
+   "default": 0,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "keyplan.curveTable.x",
+   "default": -135,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "keyplan"
+   ]
+  },
+  {
+   "path": "keyplan.curveTable.y",
+   "default": -470,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "keyplan.curveTableExisting.show",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTableExisting.title",
+   "default": "DN M/L",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTableExisting.curveNo",
+   "default": "C.NO-2(LH)",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTableExisting.radius",
+   "default": "1400m",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTableExisting.degree",
+   "default": "1.25\u00b0",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTableExisting.ltc",
+   "default": "120m",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTableExisting.curveLength",
+   "default": "3190m",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTableExisting.apexChainage",
+   "default": "",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTableExisting.delta",
+   "default": "",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTableExisting.tangentLength",
+   "default": "",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTableExisting.shift",
+   "default": "",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTableExisting.cant",
+   "default": "",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTableExisting.vmax",
+   "default": "",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTableExisting.tiltAngle",
+   "default": 0,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "keyplan.curveTableExisting.x",
+   "default": 95,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "keyplan"
+   ]
+  },
+  {
+   "path": "keyplan.curveTableExisting.y",
+   "default": -470,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
   },
   {
    "path": "deck",
@@ -9296,6 +10161,22 @@
    "unit_status": "unknown"
   },
   {
+   "name": "totalLength",
+   "value_at_defaults": 30.96,
+   "depends_on": [
+    "spans.arrangement.0.length"
+   ],
+   "partials": {
+    "spans.arrangement.0.length": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
    "name": "totalLength_pg",
    "value_at_defaults": 30.96,
    "depends_on": [
@@ -14966,9 +15847,22 @@
   },
   "keyplan": {
    "bridgeNumber": "BR. NO.: 15 (Minor)",
+   "structureDetails": "C/L OF BR NO-15, EXIST- 1 X 6.05m STEEL GIRDER\nC/L OF BR NO-15, PROP- 1 X 6.10m PSC SLAB AT CH: 10470.01 m.",
    "existingStructure": "C/L OF BR NO-15, EXIST- 1 X 6.05m STEEL GIRDER",
-   "proposedStructureLine1": "C/L OF BR NO-15, PROP-1 X 6.10 m.",
-   "proposedStructureLine2": "PSC SLAB AT CH: 10470.01 m.",
+   "proposedStructureLine1": "C/L OF BR NO-15, PROP- 1 X 6.10m PSC SLAB AT CH: 10470.01 m.",
+   "proposedStructureLine2": "",
+   "tracks": [
+    {
+     "name": "CL. OF PROP. BG TRACK (UP LINE)",
+     "isProposed": true,
+     "distance": 0
+    },
+    {
+     "name": "CL. OF EXIST. BG TRACK (DN LINE)",
+     "isProposed": false,
+     "distance": 5.3
+    }
+   ],
    "stationLeft": "TO NADIAD",
    "stationRight": "TO PETLAD",
    "coOrdinates": {
@@ -14989,20 +15883,94 @@
     "chainage": "10520M",
     "rl": "33.026"
    },
+   "gradientProposedLeft": {
+    "falling": "F 1 IN 200",
+    "rising": "R 1 IN 180",
+    "chainage": "10040 M",
+    "rl": "31.500"
+   },
+   "gradientProposedRight": {
+    "rising": "R 1 IN 180",
+    "falling": "F 1 IN 800",
+    "chainage": "10520M",
+    "rl": "34.150"
+   },
+   "gradientDisplayMode": "BOTH",
+   "showProposedGradient": true,
+   "leftGradientOrder": "PROPOSED_FIRST",
+   "rightGradientOrder": "EXISTING_FIRST",
    "boundaryDistances": {
+    "displayMode": "BOTH",
     "greenBoundary": 9.756,
-    "redBoundary": 20
+    "redBoundary": 20,
+    "proposedTrackIndex": 0,
+    "existingTrackIndex": 0,
+    "referenceTrackIndex": 0,
+    "mirrorToBottom": true,
+    "jogs": [
+     {
+      "id": "jog-top-1",
+      "side": "TOP",
+      "boundaryType": "PROPOSED",
+      "stepDirection": "INWARD",
+      "startX": -480,
+      "length": 80,
+      "distance": 15,
+      "trackIndex": 0
+     }
+    ]
    },
    "curve": {
     "isCurved": false,
-    "degree": 0,
-    "direction": "LHS"
+    "startX": 0,
+    "endX": 200,
+    "degree": 2,
+    "direction": "UPWARD"
+   },
+   "curves": [],
+   "crossovers": [],
+   "northArrowRotation": 0,
+   "curveTable": {
+    "show": true,
+    "title": "",
+    "curveNo": "5",
+    "apexChainage": "4447.290 m.",
+    "delta": "5\u00b001'21\"",
+    "degree": "0.50\u00b0",
+    "radius": "3500 m.",
+    "curveLength": "306.810 m.",
+    "tangentLength": "183.505 m.",
+    "ltc": "15",
+    "shift": "0.043 m.",
+    "cant": "",
+    "vmax": "160 kmph",
+    "tiltAngle": 0,
+    "x": -135,
+    "y": -470
+   },
+   "curveTableExisting": {
+    "show": true,
+    "title": "DN M/L",
+    "curveNo": "C.NO-2(LH)",
+    "radius": "1400m",
+    "degree": "1.25\u00b0",
+    "ltc": "120m",
+    "curveLength": "3190m",
+    "apexChainage": "",
+    "delta": "",
+    "tangentLength": "",
+    "shift": "",
+    "cant": "",
+    "vmax": "",
+    "tiltAngle": 0,
+    "x": 95,
+    "y": -470
    }
   }
  },
  "characterization": {
   "samples_per_formula": 16,
-  "defaults_digest": "84c892fc8240ba4283976b8ea22b5e310d9f755283ed3084002aa5bf3aa3e4a7",
-  "derived_digest": "5c41516d541d610e547779a44e72e70b031ec02bbfc374daa0f86e35c203a8ea"
+  "defaults_digest": "1042dc78736c16580588675656519851011c6308fc85d007b3ebee2e3f51d6b1",
+  "derived_digest": "cb7262f0c91ba12c91dedce8b0dc6f2d96a99c6f5ff4d788a85dda739cfff02e"
  }
 }

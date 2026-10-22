@@ -6,8 +6,8 @@
  "title": "ARCH BRIDGE RCC BOX",
  "source": {
   "repository": "aagento-bridge",
-  "commit": "ca0b17ec2ccd82b81c246e2c02f8c4dc6fece565",
-  "branch": "cad_agent_dxf",
+  "commit": "e6c8f8fbe63fec95b08527e672aa71bec457a0b9",
+  "branch": "dev-new",
   "dirty_files": [],
   "registry": "src/app/features/bridges/models/bridge-registry.ts",
   "modules": {
@@ -49,14 +49,14 @@
    }
   },
   "sources": {
-   "src/app/features/bridges/models/arch-bridge.defaults.ts": "00545b2d4063c0e960e749072d1076bbeab2e620e424db08d59b4422dc10aff0",
-   "src/app/features/bridges/models/bridge-registry.ts": "4ad1cd4ab16a2f9e3b72cc5784eba7ce9326cb365c879ebb7ceb82c57c0215bf",
-   "src/app/features/bridges/utils/arch-bridge/arch-bridge-mapper.ts": "9025d6385c98fb6b06490229270e825b7969f5120448fe28ce9c2b36b1c6a2a7",
-   "src/app/features/bridges/utils/arch-bridge/arch-bridge-rule-engine.ts": "35b76f9dfe11920125100fc2dad6e2ac5348a2801d2e6a0d4b8d7296cb4fbbc0",
-   "src/app/features/bridges/utils/arch-bridge/arch-bridge-scene-renderer.ts": "26c07dd2ed39f8d25329d0970489081c483dc5fda95baeb77daf9e069ccde1c0",
+   "src/app/features/bridges/models/arch-bridge.defaults.ts": "a618c99426d610bf3943f4cd3af437ba3fbcccde2528b7e5c6406cfed5cac92c",
+   "src/app/features/bridges/models/bridge-registry.ts": "a5d9cb11f744e71d087969391e79b0c923435c8b8bfbfcbfce07d817b4fcb2c4",
+   "src/app/features/bridges/utils/arch-bridge/arch-bridge-mapper.ts": "f1ba3fee6701e061135e223ba732a09400860777fbc6dcc8fa1a9adab096518b",
+   "src/app/features/bridges/utils/arch-bridge/arch-bridge-rule-engine.ts": "3df51d121ba3c0faf90417618d36c661fbb15b813c8457c95b4778f326dcd330",
+   "src/app/features/bridges/utils/arch-bridge/arch-bridge-scene-renderer.ts": "35b7b0d81615ec133bfb94514a1b373f1eaeb0afe2b24c6e0c8b2f0b5792d3fa",
    "src/app/features/projects/components/project-detail/project-detail.constants.ts": "296737c40b421a7b234578beaa9fd1138f5b1c8569abb32ef3eda63c16efcf22"
   },
-  "sources_digest": "602ea4ba62b905e6476990a47555ee744f7951aa45cce709749e118526638fa5"
+  "sources_digest": "4ee1e294866e819805549e23135ed3f8bf9b0a2428bbda4bc19e751a676aa4e1"
  },
  "capabilities": {
   "has_compute": true,
@@ -96,7 +96,7 @@
    },
    {
     "sev": "warn",
-    "msg": "Computed soffit (97.367m) \u2260 input (99.648m)"
+    "msg": "Computed soffit (97.517m) \u2260 input (99.648m)"
    },
    {
     "sev": "ok",
@@ -119,7 +119,7 @@
    "slabTop": 97.717,
    "slabBottom": 95.817,
    "foundationBottom": 94.96699999999998,
-   "hflClearanceMm": 367.00000000000443
+   "hflClearanceMm": 516.9999999999959
   }
  },
  "views": {
@@ -141,7 +141,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 322,
+    "draws": 398,
     "deterministic": true,
     "reads": [
      "deck.embankment_slope",
@@ -163,6 +163,7 @@
      "geometry.t_wall_o",
      "hydraulics.bed_lvl",
      "hydraulics.hfl",
+     "hydraulics.scour_lvl",
      "hydraulics.soffit_level",
      "options2d.show_curtain_wall",
      "options2d.show_wing_wall",
@@ -177,13 +178,18 @@
      "foundation.bottom_lvl",
      "foundation.found_lvl",
      "foundation.found_thickness",
+     "foundation.step2_h",
      "geometry.height_above_masonry",
+     "geometry.pier_t",
+     "geometry.springing_lvl",
      "geometry.wing_wall_t",
      "geometry.wing_wall_thick",
+     "levels",
      "options2d.show_return_wall",
      "project.bridge_type",
      "project.status",
-     "project.type"
+     "project.type",
+     "substructure"
     ],
     "affected_by": [
      "deck.embankment_slope",
@@ -197,9 +203,10 @@
      "geometry.return_width",
      "hydraulics.bed_lvl",
      "hydraulics.hfl",
+     "hydraulics.scour_lvl",
      "project.cells"
     ],
-    "inputs_tried": 25
+    "inputs_tried": 26
    },
    {
     "mode": "sec",
@@ -210,7 +217,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 521,
+    "draws": 745,
     "deterministic": true,
     "reads": [
      "deck.embankment_slope",
@@ -230,6 +237,7 @@
      "geometry.t_wall_o",
      "hydraulics.bed_lvl",
      "hydraulics.hfl",
+     "hydraulics.scour_lvl",
      "hydraulics.soffit_level",
      "options2d.show_curtain_wall",
      "options2d.show_wing_wall",
@@ -245,9 +253,13 @@
      "foundation.flooring_thick",
      "foundation.found_lvl",
      "foundation.found_thickness",
+     "foundation.step2_h",
      "geometry.height_above_masonry",
+     "geometry.pier_t",
      "geometry.return_wall_thickness",
      "geometry.section_substructure_type",
+     "geometry.springing_lvl",
+     "levels",
      "options2d.clear_height_layers",
      "options2d.show_return_wall",
      "project.bridge_type",
@@ -265,9 +277,10 @@
      "geometry.parapet_h",
      "hydraulics.bed_lvl",
      "hydraulics.hfl",
+     "hydraulics.scour_lvl",
      "project.cells"
     ],
-    "inputs_tried": 23
+    "inputs_tried": 24
    },
    {
     "mode": "abut",
@@ -277,9 +290,8 @@
     "conditions": [
      "always"
     ],
-    "renders": true,
-    "draws": 326,
-    "deterministic": true,
+    "renders": false,
+    "error": "#<Object> could not be cloned.",
     "reads": [
      "deck.embankment_slope",
      "deck.formation_lvl",
@@ -306,24 +318,7 @@
      "slab.thickness",
      "slab.type",
      "slab.width"
-    ],
-    "code_fallbacks": [
-     "foundation.bottom_lvl",
-     "foundation.footing_proj_left",
-     "foundation.footing_proj_right",
-     "foundation.found_lvl",
-     "foundation.found_thickness",
-     "geometry.height_above_masonry",
-     "options2d.show_return_wall",
-     "project.bridge_type",
-     "project.status",
-     "project.type",
-     "substructure"
-    ],
-    "affected_by": [
-     "deck.formation_lvl"
-    ],
-    "inputs_tried": 22
+    ]
    },
    {
     "mode": "elv",
@@ -334,7 +329,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 883,
+    "draws": 601,
     "deterministic": true,
     "reads": [
      "deck.embankment_slope",
@@ -347,7 +342,6 @@
      "geometry.clear_h",
      "geometry.clear_w",
      "geometry.haunch_size",
-     "geometry.parapet_box_h",
      "geometry.parapet_h",
      "geometry.parapet_t",
      "geometry.t_slab_b",
@@ -356,6 +350,7 @@
      "geometry.t_wall_o",
      "hydraulics.bed_lvl",
      "hydraulics.hfl",
+     "hydraulics.scour_lvl",
      "hydraulics.soffit_level",
      "options2d.show_curtain_wall",
      "options2d.show_wing_wall",
@@ -367,28 +362,38 @@
      "slab.width"
     ],
     "code_fallbacks": [
+     "abutment",
      "deck.ballast_cushion",
      "deck.ballast_thickness",
-     "foundation.bottom_lvl",
+     "flowDirection",
      "foundation.flooring_thick",
      "foundation.footing_proj_right",
-     "foundation.found_lvl",
      "foundation.found_thickness",
      "foundation.pcc_proj",
      "foundation.step1_h",
+     "foundation.step2_h",
      "geometry.barrel_length_left",
      "geometry.barrel_length_right",
+     "geometry.const_gap",
      "geometry.coping_h",
      "geometry.coping_height",
      "geometry.coping_thick",
+     "geometry.gap",
+     "geometry.gap_btw_boxes",
      "geometry.height_above_masonry",
      "geometry.no_of_tracks",
+     "geometry.springing_lvl",
      "geometry.track_spacing",
      "geometry.tracks",
-     "hydraulics.scour_lvl",
+     "geometry.wing_wall_length",
+     "hydraulics.flow_dir",
+     "hydraulics.flow_direction",
+     "levels",
      "options2d.clear_height_layers",
      "options2d.double_track",
+     "options2d.flow_direction",
      "options2d.show_return_wall",
+     "options2d.show_us_ds_labels",
      "options2d.track_spacing",
      "project.bridge_type",
      "project.status",
@@ -401,11 +406,12 @@
      "deck.rail_level",
      "geometry.arch_thick",
      "geometry.clear_h",
-     "geometry.parapet_box_h",
      "geometry.parapet_h",
      "geometry.parapet_t",
      "hydraulics.bed_lvl",
-     "hydraulics.hfl"
+     "hydraulics.hfl",
+     "hydraulics.scour_lvl",
+     "side.wing_l"
     ],
     "inputs_tried": 25
    },
@@ -418,7 +424,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 29774,
+    "draws": 29962,
     "deterministic": true,
     "reads": [
      "deck.embankment_slope",
@@ -431,7 +437,9 @@
      "geometry.clear_h",
      "geometry.clear_w",
      "geometry.haunch_size",
-     "geometry.parapet_t",
+     "geometry.parapet_h",
+     "geometry.return_length",
+     "geometry.return_width",
      "geometry.t_slab_b",
      "geometry.t_slab_t",
      "geometry.t_wall_i",
@@ -449,33 +457,52 @@
      "slab.width"
     ],
     "code_fallbacks": [
+     "_hasMultipleBridges",
+     "abutment",
+     "flowDirection",
      "foundation.footing_proj_left",
-     "foundation.footing_proj_right",
      "geometry.barrel_length_left",
      "geometry.barrel_length_right",
+     "geometry.const_gap",
+     "geometry.gap",
+     "geometry.gap_btw_boxes",
      "geometry.height_above_masonry",
      "geometry.pier_t",
+     "geometry.return_wall_length",
+     "geometry.rw_stem_top",
      "geometry.track_spacing",
      "geometry.tracks",
+     "geometry.wing_wall_length",
+     "hydraulics.flow_dir",
+     "hydraulics.flow_direction",
      "options2d.double_track",
+     "options2d.flow_direction",
      "options2d.show_return_wall",
+     "options2d.show_us_ds_labels",
      "options2d.station_1",
      "options2d.station_2",
      "options2d.track_spacing",
      "project.bridge_type",
      "project.status",
      "project.type",
+     "return_wall_layers",
+     "return_wall_masonry",
+     "slanting_return_wall_center_width",
      "substructure"
     ],
     "affected_by": [
      "deck.embankment_slope",
      "deck.formation_lvl",
+     "geometry.arch_thick",
+     "geometry.clear_h",
      "geometry.clear_w",
-     "geometry.parapet_t",
+     "geometry.parapet_h",
+     "geometry.return_length",
+     "geometry.return_width",
      "hydraulics.bed_lvl",
      "project.cells"
     ],
-    "inputs_tried": 23
+    "inputs_tried": 25
    },
    {
     "mode": "cw",
@@ -493,8 +520,8 @@
      }
     ],
     "renders": true,
-    "draws": 478,
-    "deterministic": false,
+    "draws": 282,
+    "deterministic": true,
     "reads": [
      "deck.embankment_slope",
      "deck.formation_lvl",
@@ -512,6 +539,7 @@
      "geometry.t_wall_o",
      "hydraulics.bed_lvl",
      "hydraulics.hfl",
+     "hydraulics.scour_lvl",
      "hydraulics.soffit_level",
      "options2d.show_curtain_wall",
      "options2d.show_wing_wall",
@@ -527,12 +555,16 @@
      "geometry.curtain_wall_thickness",
      "geometry.cw_type",
      "geometry.height_above_masonry",
-     "hydraulics.scour_lvl",
      "options2d.show_return_wall",
      "project.bridge_type",
      "project.type",
      "side.curtain_wall_thickness"
-    ]
+    ],
+    "affected_by": [
+     "hydraulics.bed_lvl",
+     "hydraulics.scour_lvl"
+    ],
+    "inputs_tried": 23
    },
    {
     "mode": "rw",
@@ -557,19 +589,29 @@
      }
     ],
     "renders": true,
-    "draws": 1234,
+    "draws": 749,
     "deterministic": true,
     "reads": [
+     "bridge_name",
+     "deck.earth_cushion",
      "deck.embankment_slope",
      "deck.formation_lvl",
      "deck.rail_level",
      "deck.wearing_course",
+     "foundation.found_d",
      "foundation.pcc_sub_base",
      "foundation.sand_fill_depth",
+     "foundation.soil_lvl",
      "geometry.arch_thick",
      "geometry.clear_h",
      "geometry.clear_w",
+     "geometry.gap_between_boxes",
      "geometry.haunch_size",
+     "geometry.open_joint",
+     "geometry.parapet_box_h",
+     "geometry.parapet_h",
+     "geometry.parapet_t",
+     "geometry.return_length",
      "geometry.return_width",
      "geometry.t_slab_b",
      "geometry.t_slab_t",
@@ -577,7 +619,10 @@
      "geometry.t_wall_o",
      "hydraulics.bed_lvl",
      "hydraulics.hfl",
+     "hydraulics.scour_lvl",
      "hydraulics.soffit_level",
+     "options2d.pin_pockets",
+     "options2d.shear_key",
      "options2d.show_curtain_wall",
      "options2d.show_wing_wall",
      "project.cells",
@@ -589,27 +634,23 @@
     ],
     "code_fallbacks": [
      "abutment",
+     "foundation.found_thickness",
+     "foundation.step2_h",
      "geometry.height_above_masonry",
-     "geometry.rw_depth",
-     "geometry.rw_depth_sec",
-     "geometry.rw_heel_width",
-     "geometry.rw_stem_thick",
-     "geometry.rw_toe_width",
      "geometry.rw_type",
-     "hydraulics.scour_lvl",
+     "options2d.show_coping",
      "options2d.show_return_wall",
      "project.bridge_type",
-     "project.type"
+     "project.status",
+     "project.template",
+     "project.type",
+     "returnWallType"
     ],
     "affected_by": [
-     "deck.wearing_course",
-     "geometry.clear_h",
-     "geometry.return_width",
-     "geometry.t_slab_b",
-     "geometry.t_slab_t",
+     "deck.formation_lvl",
      "hydraulics.bed_lvl"
     ],
-    "inputs_tried": 23
+    "inputs_tried": 33
    },
    {
     "mode": "borelog",
@@ -645,6 +686,7 @@
      "geometry.t_wall_o",
      "hydraulics.bed_lvl",
      "hydraulics.hfl",
+     "hydraulics.scour_lvl",
      "hydraulics.soffit_level",
      "options2d.show_curtain_wall",
      "options2d.show_wing_wall",
@@ -663,7 +705,6 @@
      "foundation.sbc_box",
      "foundation.sbc_rw",
      "geometry.height_above_masonry",
-     "hydraulics.scour_lvl",
      "options2d.bore_layers",
      "options2d.bore_log_interval",
      "options2d.show_return_wall",
@@ -671,9 +712,10 @@
      "project.type"
     ],
     "affected_by": [
-     "hydraulics.bed_lvl"
+     "hydraulics.bed_lvl",
+     "hydraulics.scour_lvl"
     ],
-    "inputs_tried": 22
+    "inputs_tried": 23
    },
    {
     "mode": "tw",
@@ -690,7 +732,7 @@
      }
     ],
     "renders": true,
-    "draws": 515,
+    "draws": 519,
     "deterministic": true,
     "reads": [
      "deck.embankment_slope",
@@ -792,7 +834,7 @@
     "sec2",
     "sec",
     "elv",
-    "rw"
+    "plan"
    ],
    "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
   },
@@ -811,7 +853,8 @@
    "views": [
     "sec2",
     "sec",
-    "elv"
+    "elv",
+    "plan"
    ],
    "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
   },
@@ -844,9 +887,7 @@
     "z_top",
     "rccBoxTopLvl"
    ],
-   "views": [
-    "rw"
-   ],
+   "views": [],
    "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
   },
   {
@@ -860,9 +901,7 @@
     "pccBot",
     "granBot"
    ],
-   "views": [
-    "rw"
-   ],
+   "views": [],
    "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
   },
   {
@@ -881,16 +920,8 @@
    "views": [
     "sec2",
     "sec",
-    "elv"
-   ],
-   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
-  },
-  {
-   "op": "set_value",
-   "path": "geometry.parapet_box_h",
-   "outputs": [],
-   "views": [
-    "elv"
+    "elv",
+    "plan"
    ],
    "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
   },
@@ -899,8 +930,7 @@
    "path": "geometry.parapet_t",
    "outputs": [],
    "views": [
-    "elv",
-    "plan"
+    "elv"
    ],
    "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
   },
@@ -910,7 +940,7 @@
    "outputs": [],
    "views": [
     "sec2",
-    "rw"
+    "plan"
    ],
    "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
   },
@@ -919,7 +949,8 @@
    "path": "geometry.return_length",
    "outputs": [],
    "views": [
-    "sec2"
+    "sec2",
+    "plan"
    ],
    "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
   },
@@ -930,15 +961,12 @@
     "wearC",
     "z_bot",
     "z_top",
-    "soffit",
     "rccBoxTopLvl",
     "pccTop",
     "pccBot",
     "granBot"
    ],
-   "views": [
-    "rw"
-   ],
+   "views": [],
    "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
   },
   {
@@ -959,9 +987,9 @@
    "views": [
     "sec2",
     "sec",
-    "abut",
     "elv",
-    "plan"
+    "plan",
+    "rw"
    ],
    "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
   },
@@ -1015,7 +1043,9 @@
    "outputs": [
     "wingL"
    ],
-   "views": [],
+   "views": [
+    "elv"
+   ],
    "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
   },
   {
@@ -1087,6 +1117,7 @@
     "sec",
     "elv",
     "plan",
+    "cw",
     "rw",
     "borelog",
     "tw"
@@ -1100,6 +1131,19 @@
     "soffit_level"
    ],
    "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "hydraulics.scour_lvl",
+   "outputs": [],
+   "views": [
+    "sec2",
+    "sec",
+    "elv",
+    "cw",
+    "borelog"
+   ],
    "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
   },
   {
@@ -1159,6 +1203,10 @@
     "geometry.height_above_masonry",
     "options2d.show_return_wall"
    ]
+  },
+  {
+   "kind": "headless_render",
+   "text": "views that do not render headless (not characterized): abut"
   }
  ],
  "parameters": [
@@ -1318,7 +1366,7 @@
     "sec2",
     "sec",
     "elv",
-    "rw"
+    "plan"
    ]
   },
   {
@@ -1348,7 +1396,8 @@
    "affects_views": [
     "sec2",
     "sec",
-    "elv"
+    "elv",
+    "plan"
    ]
   },
   {
@@ -1435,9 +1484,6 @@
     "tST",
     "z_top",
     "rccBoxTopLvl"
-   ],
-   "affects_views": [
-    "rw"
    ]
   },
   {
@@ -1470,9 +1516,6 @@
     "pccTop",
     "pccBot",
     "granBot"
-   ],
-   "affects_views": [
-    "rw"
    ]
   },
   {
@@ -1524,7 +1567,7 @@
   },
   {
    "path": "geometry.parapet_h",
-   "default": 1,
+   "default": 0.65,
    "type": "number",
    "in_defaults": true,
    "read_by_compute": false,
@@ -1534,21 +1577,19 @@
    "affects_views": [
     "sec2",
     "sec",
-    "elv"
+    "elv",
+    "plan"
    ]
   },
   {
    "path": "geometry.parapet_box_h",
-   "default": 0.35,
+   "default": 0.65,
    "type": "number",
    "in_defaults": true,
    "read_by_compute": false,
    "kind": "unknown",
    "unit": "unknown",
-   "unit_status": "unknown",
-   "affects_views": [
-    "elv"
-   ]
+   "unit_status": "unknown"
   },
   {
    "path": "geometry.parapet_t",
@@ -1560,8 +1601,7 @@
    "unit": "unknown",
    "unit_status": "unknown",
    "affects_views": [
-    "elv",
-    "plan"
+    "elv"
    ]
   },
   {
@@ -1575,7 +1615,7 @@
    "unit_status": "unknown",
    "affects_views": [
     "sec2",
-    "rw"
+    "plan"
    ]
   },
   {
@@ -1588,7 +1628,8 @@
    "unit": "unknown",
    "unit_status": "unknown",
    "affects_views": [
-    "sec2"
+    "sec2",
+    "plan"
    ]
   },
   {
@@ -1619,14 +1660,10 @@
     "wearC",
     "z_bot",
     "z_top",
-    "soffit",
     "rccBoxTopLvl",
     "pccTop",
     "pccBot",
     "granBot"
-   ],
-   "affects_views": [
-    "rw"
    ]
   },
   {
@@ -1659,9 +1696,9 @@
    "affects_views": [
     "sec2",
     "sec",
-    "abut",
     "elv",
-    "plan"
+    "plan",
+    "rw"
    ]
   },
   {
@@ -1845,6 +1882,9 @@
    "evidence_check": "checked",
    "affects_outputs": [
     "wingL"
+   ],
+   "affects_views": [
+    "elv"
    ]
   },
   {
@@ -2092,6 +2132,7 @@
     "sec",
     "elv",
     "plan",
+    "cw",
     "rw",
     "borelog",
     "tw"
@@ -2122,6 +2163,23 @@
    "evidence_check": "checked",
    "affects_outputs": [
     "soffit_level"
+   ]
+  },
+  {
+   "path": "hydraulics.scour_lvl",
+   "default": 94.5,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_views": [
+    "sec2",
+    "sec",
+    "elv",
+    "cw",
+    "borelog"
    ]
   },
   {
@@ -3186,13 +3244,13 @@
     "expr": "((bedLvl - wearC) - tSB)",
     "line": 39,
     "inputs": {
-     "tSB": {
+     "bedLvl": {
       "chain": [
-       "geometry.t_slab_b"
+       "hydraulics.bed_lvl"
       ],
-      "op": "||",
-      "default": 0.35,
-      "line": 21
+      "op": "??",
+      "default": 96.317,
+      "line": 23
      },
      "wearC": {
       "chain": [
@@ -3202,13 +3260,13 @@
       "default": 0.15,
       "line": 22
      },
-     "bedLvl": {
+     "tSB": {
       "chain": [
-       "hydraulics.bed_lvl"
+       "geometry.t_slab_b"
       ],
-      "op": "??",
-      "default": 96.317,
-      "line": 23
+      "op": "||",
+      "default": 0.35,
+      "line": 21
      }
     },
     "display": "z_bot = structTopBotSlab - tSB",
@@ -3255,19 +3313,14 @@
   },
   {
    "name": "soffit",
-   "value_at_defaults": 97.367,
+   "value_at_defaults": 97.517,
    "depends_on": [
-    "deck.wearing_course",
     "geometry.clear_h",
     "hydraulics.bed_lvl"
    ],
    "partials": {
     "geometry.clear_h": {
      "slope": 1.0,
-     "affine": true
-    },
-    "deck.wearing_course": {
-     "slope": -1.0,
      "affine": true
     },
     "hydraulics.bed_lvl": {
@@ -3281,7 +3334,7 @@
    "unit_status": "authored",
    "formula": {
     "status": "opaque",
-    "why": "uses z_top, which was not read (uses total_h, which was not read (uses cH, which was not read ('!': not arithmetic (conditional, comparison, string or call))))"
+    "why": "uses cH, which was not read ('!': not arithmetic (conditional, comparison, string or call))"
    }
   },
   {
@@ -3505,13 +3558,13 @@
     "expr": "(((bedLvl - wearC) - tSB))",
     "line": 84,
     "inputs": {
-     "tSB": {
+     "bedLvl": {
       "chain": [
-       "geometry.t_slab_b"
+       "hydraulics.bed_lvl"
       ],
-      "op": "||",
-      "default": 0.35,
-      "line": 21
+      "op": "??",
+      "default": 96.317,
+      "line": 23
      },
      "wearC": {
       "chain": [
@@ -3521,13 +3574,13 @@
       "default": 0.15,
       "line": 22
      },
-     "bedLvl": {
+     "tSB": {
       "chain": [
-       "hydraulics.bed_lvl"
+       "geometry.t_slab_b"
       ],
-      "op": "??",
-      "default": 96.317,
-      "line": 23
+      "op": "||",
+      "default": 0.35,
+      "line": 21
      }
     },
     "display": "pccTop = z_bot",
@@ -3571,21 +3624,13 @@
     "expr": "(((bedLvl - wearC) - tSB) - pccB)",
     "line": 85,
     "inputs": {
-     "tSB": {
+     "bedLvl": {
       "chain": [
-       "geometry.t_slab_b"
-      ],
-      "op": "||",
-      "default": 0.35,
-      "line": 21
-     },
-     "wearC": {
-      "chain": [
-       "deck.wearing_course"
+       "hydraulics.bed_lvl"
       ],
       "op": "??",
-      "default": 0.15,
-      "line": 22
+      "default": 96.317,
+      "line": 23
      },
      "pccB": {
       "chain": [
@@ -3595,13 +3640,21 @@
       "default": 0.15,
       "line": 26
      },
-     "bedLvl": {
+     "wearC": {
       "chain": [
-       "hydraulics.bed_lvl"
+       "deck.wearing_course"
       ],
       "op": "??",
-      "default": 96.317,
-      "line": 23
+      "default": 0.15,
+      "line": 22
+     },
+     "tSB": {
+      "chain": [
+       "geometry.t_slab_b"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 21
      }
     },
     "display": "pccBot = z_bot - pccB",
@@ -3650,29 +3703,13 @@
     "expr": "((((bedLvl - wearC) - tSB) - pccB) - sandFill)",
     "line": 86,
     "inputs": {
-     "tSB": {
+     "sandFill": {
       "chain": [
-       "geometry.t_slab_b"
-      ],
-      "op": "||",
-      "default": 0.35,
-      "line": 21
-     },
-     "wearC": {
-      "chain": [
-       "deck.wearing_course"
+       "foundation.sand_fill_depth"
       ],
       "op": "??",
-      "default": 0.15,
-      "line": 22
-     },
-     "pccB": {
-      "chain": [
-       "foundation.pcc_sub_base"
-      ],
-      "op": "??",
-      "default": 0.15,
-      "line": 26
+      "default": 0.7,
+      "line": 27
      },
      "bedLvl": {
       "chain": [
@@ -3682,13 +3719,29 @@
       "default": 96.317,
       "line": 23
      },
-     "sandFill": {
+     "pccB": {
       "chain": [
-       "foundation.sand_fill_depth"
+       "foundation.pcc_sub_base"
       ],
       "op": "??",
-      "default": 0.7,
-      "line": 27
+      "default": 0.15,
+      "line": 26
+     },
+     "wearC": {
+      "chain": [
+       "deck.wearing_course"
+      ],
+      "op": "??",
+      "default": 0.15,
+      "line": 22
+     },
+     "tSB": {
+      "chain": [
+       "geometry.t_slab_b"
+      ],
+      "op": "||",
+      "default": 0.35,
+      "line": 21
      }
     },
     "display": "granBot = pccBot - sandFill",
@@ -4107,8 +4160,8 @@
    "haunch_size": 0.5,
    "open_joint": 0.012,
    "gap_between_boxes": 0.02,
-   "parapet_h": 1,
-   "parapet_box_h": 0.35,
+   "parapet_h": 0.65,
+   "parapet_box_h": 0.65,
    "parapet_t": 0.5,
    "return_width": 1,
    "return_length": 4.7
@@ -4146,7 +4199,8 @@
   "hydraulics": {
    "hfl": 97,
    "bed_lvl": 96.317,
-   "soffit_level": 99.648
+   "soffit_level": 99.648,
+   "scour_lvl": 94.5
   },
   "materials": {
    "rcc_grade": "M25",
@@ -4199,7 +4253,7 @@
  },
  "characterization": {
   "samples_per_formula": 16,
-  "defaults_digest": "7e82b7bdebdd4e674f57e045d9902662b5e13a597572c882e974b5bf55cef96e",
-  "derived_digest": "c8f8bac2ae7efa13bb26dfd7cf3152d7d212ce615c68b1f5807bff8165e6955a"
+  "defaults_digest": "2990a7bba245dc801f679de4bb9b23e6d215ac812fba3095ea8bccbf54af5f7a",
+  "derived_digest": "41ef90a39baf1edbf65649d3a527dc8b9df04b6ff69d6575d71cbb4e0cae19ff"
  }
 }

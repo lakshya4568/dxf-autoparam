@@ -6,8 +6,8 @@
  "title": "ROAD OVER BRIDGE",
  "source": {
   "repository": "aagento-bridge",
-  "commit": "ca0b17ec2ccd82b81c246e2c02f8c4dc6fece565",
-  "branch": "cad_agent_dxf",
+  "commit": "e6c8f8fbe63fec95b08527e672aa71bec457a0b9",
+  "branch": "dev-new",
   "dirty_files": [],
   "registry": "src/app/features/bridges/models/bridge-registry.ts",
   "modules": {
@@ -45,13 +45,13 @@
    }
   },
   "sources": {
-   "src/app/features/bridges/models/bridge-registry.ts": "4ad1cd4ab16a2f9e3b72cc5784eba7ce9326cb365c879ebb7ceb82c57c0215bf",
+   "src/app/features/bridges/models/bridge-registry.ts": "a5d9cb11f744e71d087969391e79b0c923435c8b8bfbfcbfce07d817b4fcb2c4",
    "src/app/features/bridges/models/rob.defaults.ts": "5a84fc568bc2d4039e3cb98990f678cbba3fa0cff74b93a825aa24fe5b5a2b64",
    "src/app/features/bridges/utils/rob/rob-draw-2d.ts": "e779cb2cc83db0ceeef493d1ad4d45410064345a7fd5335348a24ffa24ae695c",
    "src/app/features/bridges/utils/rob/rob-mapper.ts": "fb5e1744bf6193030ea056e4db9f60cc651927f8debf40350d48d78997901a79",
    "src/app/features/bridges/utils/rob/rob-rule-engine.ts": "e83f5531ad929c9eb5032d397fb198669231df2e4c701900abc70c1a34486138"
   },
-  "sources_digest": "3d5c6de04c3947f99eb24aecf3c3820e13fa666a1af8ff73dba77581901b7649"
+  "sources_digest": "7ca441253b5113eae48b9cf0a5a712c30aab24b0d480372ad1135c23a4a21a5e"
  },
  "capabilities": {
   "has_compute": true,
@@ -142,7 +142,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 9150,
+    "draws": 9144,
     "deterministic": true,
     "reads": [
      "abutment.pile_cap_thickness",
@@ -242,7 +242,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 426,
+    "draws": 358,
     "deterministic": true,
     "reads": [
      "abutment.return_wall.heel_width",
@@ -281,12 +281,12 @@
     "code_fallbacks": [
      "abutment.dirt_wall_width",
      "abutment.foundation",
-     "abutment.show_wing_wall",
      "bearingParams",
      "boundary_wall_dist",
      "deckParams",
      "draw_filter_media",
      "keyplan",
+     "options2d",
      "substructure.custom_piers",
      "substructure.pier_template.type",
      "superstructure.girder_type",
@@ -320,7 +320,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 579,
+    "draws": 580,
     "deterministic": true,
     "reads": [
      "bearing.enabled",
@@ -379,7 +379,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 696,
+    "draws": 636,
     "deterministic": true,
     "reads": [
      "abutment.return_wall.heel_width",
@@ -395,6 +395,8 @@
      "hydraulics.hfl",
      "levels.highest_rail_level",
      "levels.rail_level",
+     "psc_section.psc_type",
+     "psc_section.wearing_coat_thick",
      "rob_profile.crown_x_ratio",
      "rob_profile.grade_percent",
      "spans.arrangement.0.length",
@@ -415,6 +417,8 @@
      "superstructure.slab.width"
     ],
     "code_fallbacks": [
+     "abutment.bed_block_thickness",
+     "abutment.bedding_thickness",
      "abutment.cap_height",
      "abutment.cap_width",
      "abutment.dirt_wall_width",
@@ -423,10 +427,15 @@
      "bearingParams",
      "deck",
      "draw_filter_media",
+     "levels.bottom_of_bed_block",
      "levels.ground_level",
+     "pscSlabType",
+     "psc_section.drawing_number",
      "substructure.custom_piers",
      "substructure.pier_template.type",
      "superstructure.girder_type",
+     "superstructure.slab.center_depth",
+     "superstructure.slab.depth",
      "superstructure.slab.leftSpans",
      "superstructure.slab.middleConfig"
     ],
@@ -438,7 +447,7 @@
      "levels.rail_level",
      "superstructure.road.wearing_coat_thickness"
     ],
-    "inputs_tried": 23
+    "inputs_tried": 24
    },
    {
     "mode": "pier",
@@ -449,7 +458,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 233,
+    "draws": 185,
     "deterministic": true,
     "reads": [
      "bearing.enabled",
@@ -488,6 +497,7 @@
      "deck",
      "draw_filter_media",
      "levels.ground_level",
+     "options2d",
      "pier",
      "substructure.pier_template.type",
      "superstructure.girder_type",
@@ -511,7 +521,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 2960,
+    "draws": 2962,
     "deterministic": false,
     "reads": [
      "bearing.enabled",
@@ -558,7 +568,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 310,
+    "draws": 317,
     "deterministic": true,
     "reads": [
      "bearing.enabled",
@@ -604,7 +614,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 285,
+    "draws": 253,
     "deterministic": true,
     "reads": [
      "bearing.enabled",
@@ -670,7 +680,7 @@
      "always"
     ],
     "renders": true,
-    "draws": 855,
+    "draws": 831,
     "deterministic": true,
     "reads": [
      "abutment.return_wall.heel_width",
@@ -751,7 +761,7 @@
      }
     ],
     "renders": true,
-    "draws": 607,
+    "draws": 527,
     "deterministic": true,
     "reads": [
      "bearing.enabled",
@@ -783,8 +793,8 @@
      "superstructure.slab.width"
     ],
     "code_fallbacks": [
-     "abutment.show_wing_wall",
      "bearingParams",
+     "options2d",
      "substructure.custom_piers",
      "substructure.pier_template.type",
      "superstructure.girder_type",

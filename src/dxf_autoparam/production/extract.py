@@ -578,8 +578,9 @@ def extract_family(br: RuleBridge, src: S.Source, key: str, row: dict, hello_row
     val = br.request("validate", family=key, model=defaults)
     man["validation"] = {"available": val["available"], **({"reason": val.get("reason")} if not val["available"] else {}),
                          "messages_at_defaults": (val.get("issues") or [])[:40]}
-    if ov.get("disabled_rules"):
-        man["validation"]["disabled_rules"] = [{**r, "status": "source_disabled"} for r in ov["disabled_rules"]]
+    if ov.get("disabled_rules"):  # authored when the code had them commented out: their status follows what runs now, not the note
+        status = "source_enabled" if val["available"] else "source_disabled"
+        man["validation"]["disabled_rules"] = [{**r, "status": status} for r in ov["disabled_rules"]]
     lv = br.request("levels", family=key, model=defaults)
     man["levels_mapper"] = {"available": lv["available"], "levels_at_defaults": lv.get("levels")}
     # views
@@ -607,7 +608,8 @@ def extract_family(br: RuleBridge, src: S.Source, key: str, row: dict, hello_row
                             "on_existing_drawing": "topology_change: a component and its views appear or disappear — needs geometry the drawing may not hold"})
     man["operations"] = ops
     # findings the code itself shows
-    findings = list(ov.get("findings", []))
+    # an authored finding the code now contradicts is dropped (it said validate() was disabled; it runs): the knowledge follows the code
+    findings = [f for f in ov.get("findings", []) if not (f.get("kind") == "disabled_validation" and val["available"])]
     commented = path and re.search(r"/\*[^*]*?(?:\*(?!/)[^*]*?)*?static\s+validate\s*\(", (src.root / path).read_text(errors="replace"), re.DOTALL)
     if not val["available"] and commented and not any(f.get("kind") == "disabled_validation" for f in findings):
         findings.append({"kind": "disabled_validation", "text": "the registered engine's validate() exists only inside a comment: no domain validation runs",

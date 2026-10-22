@@ -6,8 +6,8 @@
  "title": "HUME PIPE",
  "source": {
   "repository": "aagento-bridge",
-  "commit": "ca0b17ec2ccd82b81c246e2c02f8c4dc6fece565",
-  "branch": "cad_agent_dxf",
+  "commit": "e6c8f8fbe63fec95b08527e672aa71bec457a0b9",
+  "branch": "dev-new",
   "dirty_files": [],
   "registry": "src/app/features/bridges/models/bridge-registry.ts",
   "modules": {
@@ -58,17 +58,19 @@
   },
   "sources": {
    "src/app/core/auth/auth.models.ts": "83edf39da84bff6a30ca947cd34776054e6b9f87d6b558806b8b0a4902b94928",
-   "src/app/features/bridges/models/bridge-meta.models.ts": "66b74b60165005af9c34674461cc52247b6c17b08f01b836d4826f7578f26bfa",
-   "src/app/features/bridges/models/bridge-registry.ts": "4ad1cd4ab16a2f9e3b72cc5784eba7ce9326cb365c879ebb7ceb82c57c0215bf",
-   "src/app/features/bridges/models/bridge.models.ts": "3f80944515b45a05d31d989573f505b758d96f6dd1aa502b2a4c063d8047fc79",
+   "src/app/features/bridges/constants/bridge-colors.ts": "a89748adbd2641c4d653e19c6b52418e6e59ebb0aefae652fc21df013a4ab8a6",
+   "src/app/features/bridges/models/bridge-meta.models.ts": "6110846502c0fc5b99ee21861f201d9d86794e97aa4f8f170241ce955928cae7",
+   "src/app/features/bridges/models/bridge-registry.ts": "a5d9cb11f744e71d087969391e79b0c923435c8b8bfbfcbfce07d817b4fcb2c4",
+   "src/app/features/bridges/models/bridge.models.ts": "4449311499a5f9fad847008a798018a2a8c66489063186e8acedb3de76c5ebd2",
+   "src/app/features/bridges/models/composite-girder.defaults.ts": "dc78f41819506d41ef628b6d3f5a8163641c97dec1c912f8810e0e3d5f104d65",
    "src/app/features/bridges/models/engineering.models.ts": "9b07e27edbe1320fb4f1841fc032f9b01cfadd8918784bb4072d3b8ecd6b9dc9",
-   "src/app/features/bridges/models/hume-pipe.defaults.ts": "dd9a2e7c05f9d78c8364e092ec192f2ca4c5e4b260ebd98b17980aafc607c7e2",
-   "src/app/features/bridges/utils/hume-pipe/hume-pipe-draw-2d.ts": "95e14f75f894ae1c1abee59f987e4abff6948c6293fe5fd69a6c315b1e750824",
-   "src/app/features/bridges/utils/hume-pipe/hume-pipe-mapper.ts": "a4a2eed6c369e91d9d062b07cf7ddd70f214d7f1560722ed7273ebbbef99b875",
-   "src/app/features/bridges/utils/hume-pipe/hume-pipe-rule-engine.ts": "e8d3f1b57912d9d6e17d05661e50ada63abb095f4181ef9785c17f7cf33cacf4",
-   "src/app/features/projects/models/project.models.ts": "a6cb84994827c3ee2b3739308cbf3d9b7c7ecb2fd0a8615e3732f7ea4ac8d9d5"
+   "src/app/features/bridges/models/hume-pipe.defaults.ts": "05ffd82f0a8d59b2441fcf890c54c63b81c1f65a93ddd35eddeeb559e89982ed",
+   "src/app/features/bridges/utils/hume-pipe/hume-pipe-draw-2d.ts": "b2454d442dcf9407c0dcf9e37f22e91bd67f7baa2ef855154ef6d060c7550eea",
+   "src/app/features/bridges/utils/hume-pipe/hume-pipe-mapper.ts": "04ecfaee147a932ce67de9de35ed22cbd7e92d9548f618f6584180755d524733",
+   "src/app/features/bridges/utils/hume-pipe/hume-pipe-rule-engine.ts": "6d8a2d028b6041bb63cc59a5de6b768f75126bd61c325a95619be8f873938724",
+   "src/app/features/projects/models/project.models.ts": "e9067b022a27bdc123f2a704adf040eea6595b84936299415af768184e902061"
   },
-  "sources_digest": "be7960967732cebdf23edf15cccda5727c244e05e8914c1af367bd1faf6b5009"
+  "sources_digest": "09a582ede1a96ae01230e04134da5334cc3cd411120d7bd15facc91950ea0b08"
  },
  "capabilities": {
   "has_compute": true,
@@ -109,7 +111,14 @@
  },
  "views": {
   "available": true,
-  "decided_by": [],
+  "decided_by": [
+   "abutment",
+   "humePipeType",
+   "options2d",
+   "showCurtainWall",
+   "showDropCurtainWall",
+   "showToeWall"
+  ],
   "views": [
    {
     "mode": "sec",
@@ -120,11 +129,12 @@
      "always"
     ],
     "renders": true,
-    "draws": 1868,
+    "draws": 1854,
     "deterministic": false,
     "reads": [
      "bedLevel",
      "beddingThickness",
+     "chamber.enabled",
      "cradleConcreteThk",
      "curtainWallBeddingProjLeft",
      "curtainWallBeddingProjRight",
@@ -135,9 +145,11 @@
      "curtainWallProjectionRight",
      "curtainWallThickness",
      "dropWallDepth",
+     "embankmentSlope",
      "faceWallBaseWidth",
      "faceWallBeddingProj",
      "faceWallBeddingThk",
+     "faceWallFndDepth",
      "faceWallFoundThk",
      "faceWallHeelProj",
      "faceWallRubbleThk",
@@ -158,12 +170,14 @@
      "gradedGravelLength",
      "gradedGravelText",
      "hfl",
+     "humePipeType",
      "levelingCourse",
      "numPipes",
      "pipeSpacing",
      "railLevel",
      "rubbleSoling",
      "scourLevel",
+     "showAdditionalFoundationDetail",
      "showCradleConcrete",
      "showGradedGravel",
      "showLeftSteps",
@@ -211,11 +225,12 @@
      "always"
     ],
     "renders": true,
-    "draws": 1302,
+    "draws": 1265,
     "deterministic": false,
     "reads": [
      "bedLevel",
      "beddingThickness",
+     "chamber.enabled",
      "cradleConcreteThk",
      "curtainWallBeddingProjLeft",
      "curtainWallBeddingProjRight",
@@ -226,9 +241,11 @@
      "curtainWallProjectionRight",
      "curtainWallThickness",
      "dropWallDepth",
+     "embankmentSlope",
      "faceWallBaseWidth",
      "faceWallBeddingProj",
      "faceWallBeddingThk",
+     "faceWallFndDepth",
      "faceWallFoundThk",
      "faceWallHeelProj",
      "faceWallRubbleThk",
@@ -249,13 +266,18 @@
      "gradedGravelLength",
      "gradedGravelText",
      "hfl",
+     "humePipeType",
      "levelingCourse",
      "numPipes",
+     "pipeDiameter",
      "pipeSpacing",
+     "pipeWallThickness",
      "railLevel",
      "rubbleSoling",
      "scourLevel",
+     "showAdditionalFoundationDetail",
      "showCradleConcrete",
+     "showCurtainWall",
      "showFaceWall",
      "showGradedGravel",
      "showLeftWingWall",
@@ -271,9 +293,19 @@
      "wingWallLength"
     ],
     "code_fallbacks": [
+     "abutment",
+     "chamber.formation_edge_to_chamber",
+     "chamber.found_thk",
+     "chamber.found_top_below_bed",
+     "chamber.support_blocks",
+     "chamber.wall_t",
      "cradleConcrete",
+     "faceWallRubbleSolingThk",
      "faceWallShelfDrop",
      "faceWallShelfProj",
+     "face_wall",
+     "face_wall_type",
+     "face_wall_type1",
      "flowDirection",
      "flow_dir",
      "foundation_layers",
@@ -283,8 +315,10 @@
      "longitudinalTitle",
      "options2d",
      "project",
+     "showDropCurtainWall",
      "showLabels",
      "showSectionalLabels",
+     "show_face_wall",
      "toeWallBeddingProj",
      "toeWallBeddingThk",
      "toeWallProjection",
@@ -293,6 +327,7 @@
      "toeWallStemTopW",
      "toeWallUpperFootingThk",
      "trackStatus",
+     "type1_face_wall",
      "viewTitle"
     ]
    },
@@ -305,11 +340,12 @@
      "always"
     ],
     "renders": true,
-    "draws": 625,
+    "draws": 675,
     "deterministic": true,
     "reads": [
      "bedLevel",
      "beddingThickness",
+     "chamber.enabled",
      "cradleConcreteThk",
      "curtainWallBeddingProjLeft",
      "curtainWallBeddingProjRight",
@@ -320,9 +356,11 @@
      "curtainWallProjectionRight",
      "curtainWallThickness",
      "dropWallDepth",
+     "embankmentSlope",
      "faceWallBaseWidth",
      "faceWallBeddingProj",
      "faceWallBeddingThk",
+     "faceWallFndDepth",
      "faceWallFoundThk",
      "faceWallHeelProj",
      "faceWallRubbleThk",
@@ -343,18 +381,22 @@
      "gradedGravelLength",
      "gradedGravelText",
      "hfl",
+     "humePipeType",
      "levelingCourse",
      "numPipes",
      "pipeSpacing",
      "railLevel",
      "rubbleSoling",
      "scourLevel",
+     "showAdditionalFoundationDetail",
      "showCradleConcrete",
+     "showCurtainWall",
      "showGradedGravel",
      "showLeftSteps",
      "showLeftWingWall",
      "showRightSteps",
      "showRightWingWall",
+     "showToeWall",
      "spanSize",
      "stoneFlooringSide",
      "stonePitchingThk",
@@ -365,6 +407,7 @@
      "wingWallLength"
     ],
     "code_fallbacks": [
+     "abutment",
      "faceWallShelfDrop",
      "faceWallShelfProj",
      "faceWallTiers",
@@ -376,6 +419,7 @@
      "planTitle",
      "planTopTitle",
      "project",
+     "showDropCurtainWall",
      "showLabels",
      "showSectionalLabels",
      "stairsOffset",
@@ -408,7 +452,7 @@
      "wingWallHeight",
      "wingWallLength"
     ],
-    "inputs_tried": 46
+    "inputs_tried": 48
    },
    {
     "mode": "tw",
@@ -416,14 +460,22 @@
      "TOE WALL"
     ],
     "conditions": [
-     "always"
+     "always",
+     {
+      "when": {
+       "path": "showToeWall",
+       "value": false
+      },
+      "removed": true
+     }
     ],
     "renders": true,
-    "draws": 305,
+    "draws": 327,
     "deterministic": true,
     "reads": [
      "bedLevel",
      "beddingThickness",
+     "chamber.enabled",
      "cradleConcreteThk",
      "curtainWallBeddingProjLeft",
      "curtainWallBeddingProjRight",
@@ -434,9 +486,11 @@
      "curtainWallProjectionRight",
      "curtainWallThickness",
      "dropWallDepth",
+     "embankmentSlope",
      "faceWallBaseWidth",
      "faceWallBeddingProj",
      "faceWallBeddingThk",
+     "faceWallFndDepth",
      "faceWallFoundThk",
      "faceWallHeelProj",
      "faceWallRubbleThk",
@@ -457,14 +511,17 @@
      "gradedGravelLength",
      "gradedGravelText",
      "hfl",
+     "humePipeType",
      "levelingCourse",
      "numPipes",
      "pipeSpacing",
      "railLevel",
      "rubbleSoling",
      "scourLevel",
+     "showAdditionalFoundationDetail",
      "showCradleConcrete",
      "showGradedGravel",
+     "showToeWall",
      "spanSize",
      "stoneFlooringSide",
      "stonePitchingThk",
@@ -475,12 +532,14 @@
      "wingWallLength"
     ],
     "code_fallbacks": [
+     "abutment",
      "faceWallShelfDrop",
      "faceWallShelfProj",
      "flowDirection",
      "flow_dir",
      "gradedGravelDepth",
      "hydraulics",
+     "options2d",
      "showLabels",
      "showSectionalLabels",
      "toeWallBeddingProj",
@@ -494,12 +553,12 @@
     "affected_by": [
      "bedLevel",
      "beddingThickness",
+     "foundingDepthBelowScour",
      "levelingCourse",
      "rubbleSoling",
-     "scourLevel",
      "toeWallAboveGL"
     ],
-    "inputs_tried": 46
+    "inputs_tried": 48
    },
    {
     "mode": "cw",
@@ -507,14 +566,29 @@
      "DROP/CURTAIN WALL"
     ],
     "conditions": [
-     "always"
+     "always",
+     {
+      "when": {
+       "path": "showCurtainWall",
+       "value": false
+      },
+      "removed": true
+     },
+     {
+      "when": {
+       "path": "showDropCurtainWall",
+       "value": false
+      },
+      "removed": true
+     }
     ],
     "renders": true,
-    "draws": 3488,
+    "draws": 3505,
     "deterministic": false,
     "reads": [
      "bedLevel",
      "beddingThickness",
+     "chamber.enabled",
      "cradleConcreteThk",
      "curtainWallBeddingProjLeft",
      "curtainWallBeddingProjRight",
@@ -525,9 +599,11 @@
      "curtainWallProjectionRight",
      "curtainWallThickness",
      "dropWallDepth",
+     "embankmentSlope",
      "faceWallBaseWidth",
      "faceWallBeddingProj",
      "faceWallBeddingThk",
+     "faceWallFndDepth",
      "faceWallFoundThk",
      "faceWallHeelProj",
      "faceWallRubbleThk",
@@ -548,13 +624,16 @@
      "gradedGravelLength",
      "gradedGravelText",
      "hfl",
+     "humePipeType",
      "levelingCourse",
      "numPipes",
      "pipeSpacing",
      "railLevel",
      "rubbleSoling",
      "scourLevel",
+     "showAdditionalFoundationDetail",
      "showCradleConcrete",
+     "showCurtainWall",
      "showGradedGravel",
      "spanSize",
      "stoneFlooringSide",
@@ -566,6 +645,7 @@
      "wingWallLength"
     ],
     "code_fallbacks": [
+     "abutment",
      "curtainWallViewMode",
      "faceWallShelfDrop",
      "faceWallShelfProj",
@@ -573,6 +653,8 @@
      "flow_dir",
      "gradedGravelDepth",
      "hydraulics",
+     "options2d",
+     "showDropCurtainWall",
      "showLabels",
      "showSectionalLabels",
      "toeWallBeddingProj",
@@ -593,11 +675,12 @@
      "always"
     ],
     "renders": true,
-    "draws": 179,
+    "draws": 201,
     "deterministic": true,
     "reads": [
      "bedLevel",
      "beddingThickness",
+     "chamber.enabled",
      "cradleConcreteThk",
      "curtainWallBeddingProjLeft",
      "curtainWallBeddingProjRight",
@@ -608,9 +691,11 @@
      "curtainWallProjectionRight",
      "curtainWallThickness",
      "dropWallDepth",
+     "embankmentSlope",
      "faceWallBaseWidth",
      "faceWallBeddingProj",
      "faceWallBeddingThk",
+     "faceWallFndDepth",
      "faceWallFoundThk",
      "faceWallHeelProj",
      "faceWallRubbleThk",
@@ -631,12 +716,16 @@
      "gradedGravelLength",
      "gradedGravelText",
      "hfl",
+     "humePipeType",
      "levelingCourse",
      "numPipes",
+     "pipeDiameter",
      "pipeSpacing",
+     "pipeWallThickness",
      "railLevel",
      "rubbleSoling",
      "scourLevel",
+     "showAdditionalFoundationDetail",
      "showCradleConcrete",
      "showGradedGravel",
      "spanSize",
@@ -649,15 +738,184 @@
      "wingWallLength"
     ],
     "code_fallbacks": [
+     "abutment",
+     "drawingColor",
      "faceWallShelfDrop",
      "faceWallShelfProj",
      "faceWallTiers",
+     "face_wall_type",
+     "face_wall_type1",
      "flowDirection",
      "flow_dir",
      "gradedGravelDepth",
      "hydraulics",
+     "proposedBridgeColor",
      "showLabels",
      "showSectionalLabels",
+     "toeWallBeddingProj",
+     "toeWallBeddingThk",
+     "toeWallProjection",
+     "toeWallStemBotW",
+     "toeWallStemH",
+     "toeWallStemTopW",
+     "toeWallUpperFootingThk",
+     "type1_face_wall"
+    ],
+    "affected_by": [
+     "bedLevel",
+     "faceWallBeddingProj",
+     "faceWallBeddingThk",
+     "faceWallFndDepth",
+     "faceWallFoundThk",
+     "faceWallHeelProj",
+     "faceWallRubbleThk",
+     "faceWallStemAboveGL",
+     "faceWallStemBotW",
+     "faceWallStemTopW",
+     "faceWallToeProj",
+     "foundingDepthBelowScour"
+    ],
+    "inputs_tried": 50
+   },
+   {
+    "mode": "rw",
+    "labels": [
+     "RETURN WALL"
+    ],
+    "conditions": [
+     "always"
+    ],
+    "renders": true,
+    "draws": 791,
+    "deterministic": true,
+    "reads": [
+     "barrelLength",
+     "bedLevel",
+     "beddingThickness",
+     "chamber.enabled",
+     "cradleConcreteThk",
+     "curtainWallBeddingProjLeft",
+     "curtainWallBeddingProjRight",
+     "curtainWallBeddingThk",
+     "curtainWallDepth",
+     "curtainWallFootingThk",
+     "curtainWallProjectionLeft",
+     "curtainWallProjectionRight",
+     "curtainWallThickness",
+     "dropWallDepth",
+     "embankmentSlope",
+     "faceWallBaseWidth",
+     "faceWallBeddingProj",
+     "faceWallBeddingThk",
+     "faceWallFndDepth",
+     "faceWallFndLevel",
+     "faceWallFoundThk",
+     "faceWallHeelProj",
+     "faceWallRubbleThk",
+     "faceWallSlopedW",
+     "faceWallStemAboveGL",
+     "faceWallStemBelowGL",
+     "faceWallStemBotW",
+     "faceWallStemTopW",
+     "faceWallTier1Width",
+     "faceWallToeProj",
+     "floorLevel",
+     "formationLevel",
+     "formationWidth",
+     "formationWidthLeft",
+     "formationWidthRight",
+     "foundingDepthBelowScour",
+     "gradedGravelGap",
+     "gradedGravelHatch",
+     "gradedGravelLength",
+     "gradedGravelText",
+     "hfl",
+     "humePipeType",
+     "levelingCourse",
+     "numPipes",
+     "numberOfPipes",
+     "pipeDiameter",
+     "pipeSpacing",
+     "pipeWallThickness",
+     "railLevel",
+     "rubbleSoling",
+     "rubbleThk",
+     "scourLevel",
+     "show460Line",
+     "showAdditionalFoundationDetail",
+     "showCradleConcrete",
+     "showCurtainWall",
+     "showFaceWall",
+     "showGradedGravel",
+     "showLeftAbutment",
+     "showLeftHeadwall",
+     "showLeftSteps",
+     "showLeftWingWall",
+     "showRightAbutment",
+     "showRightHeadwall",
+     "showRightSteps",
+     "showRightWingWall",
+     "showToeWall",
+     "spanSize",
+     "stoneFlooringSide",
+     "stonePitchingThk",
+     "toeWallAboveGL",
+     "wallThickness",
+     "wearingCourseThk",
+     "wingWallHeight",
+     "wingWallLength"
+    ],
+    "code_fallbacks": [
+     "abutment",
+     "bedLevelAbove",
+     "clearHeight",
+     "deck",
+     "drawingColor",
+     "faceWallShelfDrop",
+     "faceWallShelfProj",
+     "flowDirection",
+     "flow_dir",
+     "foundation",
+     "foundationBottomLevel",
+     "foundationDepth",
+     "foundation_level",
+     "geometry",
+     "gradedGravelDepth",
+     "hydraulics",
+     "levels",
+     "options2d",
+     "proposedBridgeColor",
+     "returnWallBoulderThick",
+     "returnWallHeight",
+     "returnWallLength",
+     "returnWallStemBot",
+     "returnWallType",
+     "returnWallWidth",
+     "showLabels",
+     "showSectionalLabels",
+     "slabThickness",
+     "slanting_return_wall_center_width",
+     "slanting_return_wall_fnd_height",
+     "slanting_return_wall_height",
+     "slanting_return_wall_left_batter",
+     "slanting_return_wall_left_neck_height",
+     "slanting_return_wall_left_offset",
+     "slanting_return_wall_left_stem_num_steps",
+     "slanting_return_wall_left_stem_proj",
+     "slanting_return_wall_left_stem_shape",
+     "slanting_return_wall_left_stem_steps",
+     "slanting_return_wall_neck_height",
+     "slanting_return_wall_num_steps",
+     "slanting_return_wall_right_batter",
+     "slanting_return_wall_right_neck_height",
+     "slanting_return_wall_right_offset",
+     "slanting_return_wall_right_stem_num_steps",
+     "slanting_return_wall_right_stem_proj",
+     "slanting_return_wall_right_stem_shape",
+     "slanting_return_wall_right_stem_steps",
+     "slanting_return_wall_step_side",
+     "slanting_return_wall_steps",
+     "slanting_return_wall_zone2_height",
      "toeWallBeddingProj",
      "toeWallBeddingThk",
      "toeWallProjection",
@@ -668,19 +926,9 @@
     ],
     "affected_by": [
      "bedLevel",
-     "faceWallBeddingProj",
-     "faceWallBeddingThk",
-     "faceWallFoundThk",
-     "faceWallHeelProj",
-     "faceWallRubbleThk",
-     "faceWallStemAboveGL",
-     "faceWallStemBelowGL",
-     "faceWallStemBotW",
-     "faceWallStemTopW",
-     "faceWallToeProj",
-     "scourLevel"
+     "formationLevel"
     ],
-    "inputs_tried": 46
+    "inputs_tried": 55
    }
   ]
  },
@@ -911,10 +1159,14 @@
    "op": "set_value",
    "path": "foundingDepthBelowScour",
    "outputs": [
+    "scourLevel",
     "foundingDepthBelowScour",
     "foundingLevel"
    ],
-   "views": [],
+   "views": [
+    "tw",
+    "fw"
+   ],
    "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
   },
   {
@@ -959,7 +1211,8 @@
     "soffit_level"
    ],
    "views": [
-    "plan"
+    "plan",
+    "rw"
    ],
    "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
   },
@@ -992,20 +1245,8 @@
    "views": [
     "plan",
     "tw",
-    "fw"
-   ],
-   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
-  },
-  {
-   "op": "set_value",
-   "path": "scourLevel",
-   "outputs": [
-    "scourLevel",
-    "foundingLevel"
-   ],
-   "views": [
-    "tw",
-    "fw"
+    "fw",
+    "rw"
    ],
    "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
   },
@@ -1047,9 +1288,7 @@
    "outputs": [
     "faceWallStemBelowGL"
    ],
-   "views": [
-    "fw"
-   ],
+   "views": [],
    "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
   },
   {
@@ -1147,6 +1386,17 @@
   },
   {
    "op": "set_value",
+   "path": "faceWallFndDepth",
+   "outputs": [
+    "faceWallFndDepth"
+   ],
+   "views": [
+    "fw"
+   ],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
    "path": "gradedGravelLength",
    "outputs": [
     "gradedGravelLength",
@@ -1187,6 +1437,15 @@
    "path": "faceWallBaseWidth",
    "outputs": [
     "faceWallBaseWidth"
+   ],
+   "views": [],
+   "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "set_value",
+   "path": "embankmentSlope",
+   "outputs": [
+    "embankmentSlope"
    ],
    "views": [],
    "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
@@ -1267,7 +1526,8 @@
    "op": "set_value",
    "path": "toeWallStemTopW",
    "outputs": [
-    "toeWallStemTopW"
+    "toeWallStemTopW",
+    "toeWallStemBotW"
    ],
    "views": [],
    "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
@@ -1280,6 +1540,30 @@
    ],
    "views": [],
    "on_existing_drawing": "parametric: a value change, compiled into the set-out and regenerated"
+  },
+  {
+   "op": "toggle",
+   "path": "showToeWall",
+   "value": false,
+   "view": "tw",
+   "effect": "removes the view",
+   "on_existing_drawing": "topology_change: a component and its views appear or disappear \u2014 needs geometry the drawing may not hold"
+  },
+  {
+   "op": "toggle",
+   "path": "showCurtainWall",
+   "value": false,
+   "view": "cw",
+   "effect": "removes the view",
+   "on_existing_drawing": "topology_change: a component and its views appear or disappear \u2014 needs geometry the drawing may not hold"
+  },
+  {
+   "op": "toggle",
+   "path": "showDropCurtainWall",
+   "value": false,
+   "view": "cw",
+   "effect": "removes the view",
+   "on_existing_drawing": "topology_change: a component and its views appear or disappear \u2014 needs geometry the drawing may not hold"
   }
  ],
  "findings": [
@@ -1295,7 +1579,7 @@
   },
   {
    "kind": "code_fallbacks",
-   "text": "compute() reads fields the family defaults do not hold; the code then uses its own constants: faceWallShelfDrop \u2192 200.0, faceWallShelfProj \u2192 250.0, flowDirection \u2192 None, flow_dir \u2192 None, gradedGravelDepth \u2192 1200.0, hydraulics \u2192 None, toeWallBeddingProj \u2192 150.0, toeWallBeddingThk \u2192 150.0, toeWallProjection \u2192 500.0, toeWallStemBotW \u2192 300.0, toeWallStemH \u2192 1700.0, toeWallStemTopW \u2192 250.0",
+   "text": "compute() reads fields the family defaults do not hold; the code then uses its own constants: faceWallShelfDrop \u2192 200.0, faceWallShelfProj \u2192 250.0, flowDirection \u2192 None, flow_dir \u2192 None, gradedGravelDepth \u2192 1200.0, hydraulics \u2192 None, toeWallBeddingProj \u2192 150.0, toeWallBeddingThk \u2192 150.0, toeWallProjection \u2192 500.0, toeWallStemBotW \u2192 300.0, toeWallStemH \u2192 1700.0, toeWallStemTopW \u2192 300.0",
    "paths": [
     "faceWallShelfDrop",
     "faceWallShelfProj",
@@ -1315,6 +1599,16 @@
  ],
  "parameters": [
   {
+   "path": "humePipeType",
+   "default": "type1",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
    "path": "spanSize",
    "default": 1.2,
    "type": "number",
@@ -1326,7 +1620,7 @@
    "component": "pipe",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:125"
+    "hume-pipe-rule-engine.ts:137"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -1364,7 +1658,7 @@
     ],
     "op": "||",
     "fallback": 1.0,
-    "line": 136
+    "line": 148
    },
    "kind": "count",
    "unit": "-",
@@ -1372,7 +1666,7 @@
    "component": "pipe",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:136"
+    "hume-pipe-rule-engine.ts:148"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -1397,7 +1691,7 @@
     ],
     "op": "||",
     "fallback": 1.0,
-    "line": 136
+    "line": 148
    },
    "kind": "unknown",
    "unit": "unknown",
@@ -1416,7 +1710,7 @@
     ],
     "op": "||",
     "fallback": 180.0,
-    "line": 137
+    "line": 149
    },
    "kind": "length",
    "unit": "mm",
@@ -1425,7 +1719,7 @@
    "unit_status": "authored",
    "evidence": [
     "hume-pipe-rule-engine.ts:7",
-    "hume-pipe-rule-engine.ts:137"
+    "hume-pipe-rule-engine.ts:149"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -1452,7 +1746,7 @@
     ],
     "op": "||",
     "fallback": 180.0,
-    "line": 137
+    "line": 149
    },
    "kind": "unknown",
    "unit": "unknown",
@@ -1470,7 +1764,7 @@
    "component": "formation",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:183"
+    "hume-pipe-rule-engine.ts:199"
    ],
    "evidence_check": "checked"
   },
@@ -1486,7 +1780,7 @@
    "component": "formation",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:189"
+    "hume-pipe-rule-engine.ts:205"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -1510,7 +1804,7 @@
    "component": "formation",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:190"
+    "hume-pipe-rule-engine.ts:206"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -1544,7 +1838,7 @@
     ],
     "op": "||",
     "fallback": 180.0,
-    "line": 211
+    "line": 227
    },
    "kind": "length",
    "unit": "mm",
@@ -1553,7 +1847,7 @@
    "unit_status": "authored",
    "evidence": [
     "hume-pipe-rule-engine.ts:14",
-    "hume-pipe-rule-engine.ts:211"
+    "hume-pipe-rule-engine.ts:227"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -1572,7 +1866,7 @@
     ],
     "op": "??",
     "fallback": 100.0,
-    "line": 212
+    "line": 228
    },
    "kind": "length",
    "unit": "mm",
@@ -1580,8 +1874,8 @@
    "component": "wearing_course",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:41",
-    "hume-pipe-rule-engine.ts:212"
+    "hume-pipe-rule-engine.ts:43",
+    "hume-pipe-rule-engine.ts:228"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -1600,7 +1894,7 @@
     ],
     "op": "||",
     "fallback": 300.0,
-    "line": 213
+    "line": 229
    },
    "kind": "length",
    "unit": "mm",
@@ -1609,7 +1903,7 @@
    "unit_status": "authored",
    "evidence": [
     "hume-pipe-rule-engine.ts:15",
-    "hume-pipe-rule-engine.ts:213"
+    "hume-pipe-rule-engine.ts:229"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -1633,7 +1927,7 @@
     ],
     "op": "||",
     "fallback": 150.0,
-    "line": 214
+    "line": 230
    },
    "kind": "length",
    "unit": "mm",
@@ -1642,7 +1936,7 @@
    "unit_status": "authored",
    "evidence": [
     "hume-pipe-rule-engine.ts:16",
-    "hume-pipe-rule-engine.ts:214"
+    "hume-pipe-rule-engine.ts:230"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -1667,7 +1961,7 @@
     ],
     "op": "||",
     "fallback": 300.0,
-    "line": 215
+    "line": 231
    },
    "kind": "length",
    "unit": "mm",
@@ -1676,7 +1970,7 @@
    "unit_status": "authored",
    "evidence": [
     "hume-pipe-rule-engine.ts:17",
-    "hume-pipe-rule-engine.ts:215"
+    "hume-pipe-rule-engine.ts:231"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -1701,7 +1995,7 @@
     ],
     "op": "||",
     "fallback": 300.0,
-    "line": 215
+    "line": 231
    },
    "kind": "unknown",
    "unit": "unknown",
@@ -1719,7 +2013,7 @@
     ],
     "op": "??",
     "fallback": 1750.0,
-    "line": 217
+    "line": 233
    },
    "kind": "length",
    "unit": "mm",
@@ -1728,7 +2022,7 @@
    "unit_status": "authored",
    "evidence": [
     "hume-pipe-rule-engine.ts:19",
-    "hume-pipe-rule-engine.ts:217"
+    "hume-pipe-rule-engine.ts:233"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -1736,8 +2030,31 @@
    ]
   },
   {
+   "path": "showCurtainWall",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "chamber.enabled",
+   "default": false,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored",
+   "values_that_change_outputs": [
+    true
+   ]
+  },
+  {
    "path": "curtainWallDepth",
-   "default": 1200,
+   "default": 1750,
    "type": "number",
    "in_defaults": true,
    "read_by_compute": true,
@@ -1746,8 +2063,8 @@
      "curtainWallDepth"
     ],
     "op": "??",
-    "fallback": 1200.0,
-    "line": 218
+    "fallback": 1750.0,
+    "line": 234
    },
    "kind": "length",
    "unit": "mm",
@@ -1756,7 +2073,7 @@
    "unit_status": "authored",
    "evidence": [
     "hume-pipe-rule-engine.ts:20",
-    "hume-pipe-rule-engine.ts:218"
+    "hume-pipe-rule-engine.ts:234"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -1777,7 +2094,7 @@
     ],
     "op": "??",
     "fallback": 300.0,
-    "line": 219
+    "line": 235
    },
    "kind": "length",
    "unit": "mm",
@@ -1786,7 +2103,7 @@
    "unit_status": "authored",
    "evidence": [
     "hume-pipe-rule-engine.ts:21",
-    "hume-pipe-rule-engine.ts:219"
+    "hume-pipe-rule-engine.ts:235"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -1812,7 +2129,7 @@
     ],
     "op": "??",
     "fallback": 250.0,
-    "line": 220
+    "line": 236
    },
    "kind": "length",
    "unit": "mm",
@@ -1821,7 +2138,7 @@
    "unit_status": "authored",
    "evidence": [
     "hume-pipe-rule-engine.ts:23",
-    "hume-pipe-rule-engine.ts:220"
+    "hume-pipe-rule-engine.ts:236"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -1846,7 +2163,7 @@
     ],
     "op": "??",
     "fallback": 250.0,
-    "line": 221
+    "line": 237
    },
    "kind": "length",
    "unit": "mm",
@@ -1855,7 +2172,7 @@
    "unit_status": "authored",
    "evidence": [
     "hume-pipe-rule-engine.ts:24",
-    "hume-pipe-rule-engine.ts:221"
+    "hume-pipe-rule-engine.ts:237"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -1875,7 +2192,7 @@
     ],
     "op": "??",
     "fallback": 300.0,
-    "line": 222
+    "line": 238
    },
    "kind": "length",
    "unit": "mm",
@@ -1884,7 +2201,7 @@
    "unit_status": "authored",
    "evidence": [
     "hume-pipe-rule-engine.ts:25",
-    "hume-pipe-rule-engine.ts:222"
+    "hume-pipe-rule-engine.ts:238"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -1906,7 +2223,7 @@
     ],
     "op": "??",
     "fallback": 150.0,
-    "line": 223
+    "line": 239
    },
    "kind": "length",
    "unit": "mm",
@@ -1915,7 +2232,7 @@
    "unit_status": "authored",
    "evidence": [
     "hume-pipe-rule-engine.ts:26",
-    "hume-pipe-rule-engine.ts:223"
+    "hume-pipe-rule-engine.ts:239"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -1937,7 +2254,7 @@
     ],
     "op": "??",
     "fallback": 150.0,
-    "line": 224
+    "line": 240
    },
    "kind": "length",
    "unit": "mm",
@@ -1946,7 +2263,7 @@
    "unit_status": "authored",
    "evidence": [
     "hume-pipe-rule-engine.ts:27",
-    "hume-pipe-rule-engine.ts:224"
+    "hume-pipe-rule-engine.ts:240"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -1966,7 +2283,7 @@
     ],
     "op": "??",
     "fallback": 150.0,
-    "line": 225
+    "line": 241
    },
    "kind": "length",
    "unit": "mm",
@@ -1975,7 +2292,7 @@
    "unit_status": "authored",
    "evidence": [
     "hume-pipe-rule-engine.ts:28",
-    "hume-pipe-rule-engine.ts:225"
+    "hume-pipe-rule-engine.ts:241"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -1995,7 +2312,7 @@
     ],
     "op": "??",
     "fallback": 300.0,
-    "line": 226
+    "line": 242
    },
    "kind": "length",
    "unit": "mm",
@@ -2004,7 +2321,7 @@
    "unit_status": "authored",
    "evidence": [
     "hume-pipe-rule-engine.ts:29",
-    "hume-pipe-rule-engine.ts:226"
+    "hume-pipe-rule-engine.ts:242"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2024,7 +2341,7 @@
    "unit_status": "authored",
    "evidence": [
     "hume-pipe-rule-engine.ts:30",
-    "hume-pipe-rule-engine.ts:300"
+    "hume-pipe-rule-engine.ts:317"
    ],
    "evidence_check": "checked"
   },
@@ -2040,7 +2357,7 @@
     ],
     "op": "??",
     "fallback": 1.75,
-    "line": 173
+    "line": 189
    },
    "kind": "length",
    "unit": "m",
@@ -2048,13 +2365,18 @@
    "component": "foundation",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:78",
-    "hume-pipe-rule-engine.ts:173"
+    "hume-pipe-rule-engine.ts:81",
+    "hume-pipe-rule-engine.ts:189"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
+    "scourLevel",
     "foundingDepthBelowScour",
     "foundingLevel"
+   ],
+   "affects_views": [
+    "tw",
+    "fw"
    ]
   },
   {
@@ -2069,7 +2391,7 @@
     ],
     "op": "||",
     "fallback": 4.5,
-    "line": 227
+    "line": 243
    },
    "kind": "length",
    "unit": "m",
@@ -2077,8 +2399,8 @@
    "component": "wing_wall",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:39",
-    "hume-pipe-rule-engine.ts:227"
+    "hume-pipe-rule-engine.ts:41",
+    "hume-pipe-rule-engine.ts:243"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2100,7 +2422,7 @@
     ],
     "op": "||",
     "fallback": 2.5,
-    "line": 228
+    "line": 244
    },
    "kind": "unknown",
    "unit": "unknown",
@@ -2121,7 +2443,7 @@
    "component": "track",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:157"
+    "hume-pipe-rule-engine.ts:170"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2143,7 +2465,7 @@
    "component": "track",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:152"
+    "hume-pipe-rule-engine.ts:165"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2153,7 +2475,8 @@
     "soffit_level"
    ],
    "affects_views": [
-    "plan"
+    "plan",
+    "rw"
    ]
   },
   {
@@ -2168,8 +2491,8 @@
    "component": "site",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:75",
-    "hume-pipe-rule-engine.ts:162"
+    "hume-pipe-rule-engine.ts:78",
+    "hume-pipe-rule-engine.ts:180"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2188,7 +2511,7 @@
    "component": "pipe",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:165"
+    "hume-pipe-rule-engine.ts:175"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2208,12 +2531,13 @@
    "affects_views": [
     "plan",
     "tw",
-    "fw"
+    "fw",
+    "rw"
    ]
   },
   {
    "path": "scourLevel",
-   "default": 14.102,
+   "default": 94.25,
    "type": "number",
    "in_defaults": true,
    "read_by_compute": true,
@@ -2223,18 +2547,10 @@
    "component": "foundation",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:77",
-    "hume-pipe-rule-engine.ts:111"
+    "hume-pipe-rule-engine.ts:80",
+    "hume-pipe-rule-engine.ts:115"
    ],
-   "evidence_check": "checked",
-   "affects_outputs": [
-    "scourLevel",
-    "foundingLevel"
-   ],
-   "affects_views": [
-    "tw",
-    "fw"
-   ]
+   "evidence_check": "checked"
   },
   {
    "path": "floorLevel",
@@ -2248,8 +2564,8 @@
    "component": "pipe",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:80",
-    "hume-pipe-rule-engine.ts:170"
+    "hume-pipe-rule-engine.ts:83",
+    "hume-pipe-rule-engine.ts:186"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2368,7 +2684,7 @@
     ],
     "op": "||",
     "fallback": 600.0,
-    "line": 145
+    "line": 157
    },
    "kind": "length",
    "unit": "mm",
@@ -2376,8 +2692,8 @@
    "component": "toe_wall",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:47",
-    "hume-pipe-rule-engine.ts:145"
+    "hume-pipe-rule-engine.ts:49",
+    "hume-pipe-rule-engine.ts:157"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2409,8 +2725,8 @@
    "component": "face_wall",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:56",
-    "hume-pipe-rule-engine.ts:252"
+    "hume-pipe-rule-engine.ts:58",
+    "hume-pipe-rule-engine.ts:268"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2433,7 +2749,7 @@
     ],
     "op": "||",
     "fallback": 875.0,
-    "line": 255
+    "line": 271
    },
    "kind": "length",
    "unit": "mm",
@@ -2441,15 +2757,12 @@
    "component": "face_wall",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:57",
-    "hume-pipe-rule-engine.ts:255"
+    "hume-pipe-rule-engine.ts:59",
+    "hume-pipe-rule-engine.ts:271"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
     "faceWallStemBelowGL"
-   ],
-   "affects_views": [
-    "fw"
    ]
   },
   {
@@ -2464,7 +2777,7 @@
     ],
     "op": "||",
     "fallback": 450.0,
-    "line": 249
+    "line": 265
    },
    "kind": "length",
    "unit": "mm",
@@ -2472,8 +2785,8 @@
    "component": "face_wall",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:54",
-    "hume-pipe-rule-engine.ts:249"
+    "hume-pipe-rule-engine.ts:56",
+    "hume-pipe-rule-engine.ts:265"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2486,7 +2799,7 @@
   },
   {
    "path": "faceWallStemBotW",
-   "default": 610,
+   "default": 450,
    "type": "number",
    "in_defaults": true,
    "read_by_compute": true,
@@ -2495,8 +2808,8 @@
      "faceWallStemBotW"
     ],
     "op": "||",
-    "fallback": 610.0,
-    "line": 250
+    "fallback": 450.0,
+    "line": 266
    },
    "kind": "length",
    "unit": "mm",
@@ -2504,8 +2817,8 @@
    "component": "face_wall",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:55",
-    "hume-pipe-rule-engine.ts:250"
+    "hume-pipe-rule-engine.ts:57",
+    "hume-pipe-rule-engine.ts:266"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2515,6 +2828,16 @@
     "plan",
     "fw"
    ]
+  },
+  {
+   "path": "faceWallSlopedW",
+   "default": 900,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
   },
   {
    "path": "faceWallHeelProj",
@@ -2528,7 +2851,7 @@
     ],
     "op": "||",
     "fallback": 500.0,
-    "line": 256
+    "line": 272
    },
    "kind": "length",
    "unit": "mm",
@@ -2536,8 +2859,8 @@
    "component": "face_wall",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:58",
-    "hume-pipe-rule-engine.ts:256"
+    "hume-pipe-rule-engine.ts:60",
+    "hume-pipe-rule-engine.ts:272"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2550,7 +2873,7 @@
   },
   {
    "path": "faceWallToeProj",
-   "default": 250,
+   "default": 500,
    "type": "number",
    "in_defaults": true,
    "read_by_compute": true,
@@ -2559,8 +2882,8 @@
      "faceWallToeProj"
     ],
     "op": "||",
-    "fallback": 250.0,
-    "line": 257
+    "fallback": 500.0,
+    "line": 273
    },
    "kind": "length",
    "unit": "mm",
@@ -2568,8 +2891,8 @@
    "component": "face_wall",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:59",
-    "hume-pipe-rule-engine.ts:257"
+    "hume-pipe-rule-engine.ts:61",
+    "hume-pipe-rule-engine.ts:273"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2592,7 +2915,7 @@
     ],
     "op": "||",
     "fallback": 350.0,
-    "line": 258
+    "line": 274
    },
    "kind": "length",
    "unit": "mm",
@@ -2600,8 +2923,8 @@
    "component": "face_wall",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:60",
-    "hume-pipe-rule-engine.ts:258"
+    "hume-pipe-rule-engine.ts:62",
+    "hume-pipe-rule-engine.ts:274"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2624,7 +2947,7 @@
     ],
     "op": "||",
     "fallback": 150.0,
-    "line": 259
+    "line": 275
    },
    "kind": "length",
    "unit": "mm",
@@ -2632,8 +2955,8 @@
    "component": "face_wall",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:61",
-    "hume-pipe-rule-engine.ts:259"
+    "hume-pipe-rule-engine.ts:63",
+    "hume-pipe-rule-engine.ts:275"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2655,7 +2978,7 @@
     ],
     "op": "||",
     "fallback": 200.0,
-    "line": 260
+    "line": 276
    },
    "kind": "length",
    "unit": "mm",
@@ -2663,8 +2986,8 @@
    "component": "face_wall",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:62",
-    "hume-pipe-rule-engine.ts:260"
+    "hume-pipe-rule-engine.ts:64",
+    "hume-pipe-rule-engine.ts:276"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2689,7 +3012,7 @@
     ],
     "op": "||",
     "fallback": 300.0,
-    "line": 261
+    "line": 277
    },
    "kind": "length",
    "unit": "mm",
@@ -2697,8 +3020,8 @@
    "component": "face_wall",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:63",
-    "hume-pipe-rule-engine.ts:261"
+    "hume-pipe-rule-engine.ts:65",
+    "hume-pipe-rule-engine.ts:277"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2707,6 +3030,50 @@
    "affects_views": [
     "fw"
    ]
+  },
+  {
+   "path": "faceWallFndDepth",
+   "default": 1750,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "faceWallFndDepth",
+     "faceWallFndLevel"
+    ],
+    "op": "??",
+    "fallback": 1750.0,
+    "line": 278
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_outputs": [
+    "faceWallFndDepth"
+   ],
+   "affects_views": [
+    "fw"
+   ]
+  },
+  {
+   "path": "faceWallFndLevel",
+   "default": 1750,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "read_as": {
+    "chain": [
+     "faceWallFndDepth",
+     "faceWallFndLevel"
+    ],
+    "op": "??",
+    "fallback": 1750.0,
+    "line": 278
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
   },
   {
    "path": "showGradedGravel",
@@ -2721,7 +3088,7 @@
    "unit_status": "authored",
    "evidence": [
     "hume-pipe-rule-engine.ts:35",
-    "hume-pipe-rule-engine.ts:305"
+    "hume-pipe-rule-engine.ts:322"
    ],
    "evidence_check": "checked"
   },
@@ -2737,8 +3104,8 @@
    "component": "graded_gravel",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:36",
-    "hume-pipe-rule-engine.ts:306"
+    "hume-pipe-rule-engine.ts:38",
+    "hume-pipe-rule-engine.ts:325"
    ],
    "evidence_check": "checked"
   },
@@ -2755,7 +3122,7 @@
     ],
     "op": "??",
     "fallback": 1200.0,
-    "line": 301
+    "line": 318
    },
    "kind": "length",
    "unit": "mm",
@@ -2764,7 +3131,7 @@
    "unit_status": "authored",
    "evidence": [
     "hume-pipe-rule-engine.ts:31",
-    "hume-pipe-rule-engine.ts:301"
+    "hume-pipe-rule-engine.ts:318"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2784,7 +3151,7 @@
     ],
     "op": "??",
     "fallback": 1632.0,
-    "line": 303
+    "line": 320
    },
    "kind": "length",
    "unit": "mm",
@@ -2793,7 +3160,7 @@
    "unit_status": "authored",
    "evidence": [
     "hume-pipe-rule-engine.ts:33",
-    "hume-pipe-rule-engine.ts:303"
+    "hume-pipe-rule-engine.ts:320"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2813,7 +3180,7 @@
    "unit_status": "authored",
    "evidence": [
     "hume-pipe-rule-engine.ts:34",
-    "hume-pipe-rule-engine.ts:304"
+    "hume-pipe-rule-engine.ts:321"
    ],
    "evidence_check": "checked"
   },
@@ -2829,8 +3196,8 @@
    "component": "cradle_concrete",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:37",
-    "hume-pipe-rule-engine.ts:307"
+    "hume-pipe-rule-engine.ts:39",
+    "hume-pipe-rule-engine.ts:326"
    ],
    "evidence_check": "checked"
   },
@@ -2846,7 +3213,7 @@
     ],
     "op": "??",
     "fallback": 150.0,
-    "line": 308
+    "line": 327
    },
    "kind": "length",
    "unit": "mm",
@@ -2854,8 +3221,8 @@
    "component": "cradle_concrete",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:38",
-    "hume-pipe-rule-engine.ts:308"
+    "hume-pipe-rule-engine.ts:40",
+    "hume-pipe-rule-engine.ts:327"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2874,8 +3241,8 @@
    "component": "face_wall",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:66",
-    "hume-pipe-rule-engine.ts:264"
+    "hume-pipe-rule-engine.ts:69",
+    "hume-pipe-rule-engine.ts:281"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -2894,13 +3261,944 @@
    "component": "face_wall",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:67",
-    "hume-pipe-rule-engine.ts:265"
+    "hume-pipe-rule-engine.ts:70",
+    "hume-pipe-rule-engine.ts:282"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
     "faceWallBaseWidth"
    ]
+  },
+  {
+   "path": "showAdditionalFoundationDetail",
+   "default": false,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "embankmentSlope",
+   "default": 2,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": true,
+   "read_as": {
+    "chain": [
+     "embankmentSlope"
+    ],
+    "op": "??",
+    "fallback": 1.5,
+    "line": 324
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown",
+   "affects_outputs": [
+    "embankmentSlope"
+   ]
+  },
+  {
+   "path": "keyplan.bridgeNumber",
+   "default": "BR. NO.: 15 (Minor)",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.structureDetails",
+   "default": "C/L OF BR NO-15, EXIST- 1 X 6.05m STEEL GIRDER\nC/L OF BR NO-15, PROP- 1 X 6.10m PSC SLAB AT CH: 10470.01 m.",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.existingStructure",
+   "default": "C/L OF BR NO-15, EXIST- 1 X 6.05m STEEL GIRDER",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.proposedStructureLine1",
+   "default": "C/L OF BR NO-15, PROP- 1 X 6.10m PSC SLAB AT CH: 10470.01 m.",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.proposedStructureLine2",
+   "default": "",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.tracks.0.name",
+   "default": "CL. OF PROP. BG TRACK (UP LINE)",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.tracks.0.isProposed",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.tracks.0.distance",
+   "default": 0,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "keyplan.tracks.1.name",
+   "default": "CL. OF EXIST. BG TRACK (DN LINE)",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.tracks.1.isProposed",
+   "default": false,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.tracks.1.distance",
+   "default": 5.3,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "keyplan.stationLeft",
+   "default": "TO NADIAD",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.stationRight",
+   "default": "TO PETLAD",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.coOrdinates.title",
+   "default": "CO-ORDINATE MNB 15",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.coOrdinates.easting",
+   "default": "271961.242",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.coOrdinates.northing",
+   "default": "2508591.049",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.coOrdinates.location",
+   "default": "CENTRE",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.gradientLeft.falling",
+   "default": "F 1 IN 200",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.gradientLeft.rising",
+   "default": "R 1 IN 180",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.gradientLeft.chainage",
+   "default": "10040 M",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.gradientLeft.rl",
+   "default": "30.359",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.gradientRight.rising",
+   "default": "R 1 IN 180",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.gradientRight.falling",
+   "default": "F 1 IN 800",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.gradientRight.chainage",
+   "default": "10520M",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.gradientRight.rl",
+   "default": "33.026",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.gradientProposedLeft.falling",
+   "default": "F 1 IN 200",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.gradientProposedLeft.rising",
+   "default": "R 1 IN 180",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.gradientProposedLeft.chainage",
+   "default": "10040 M",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.gradientProposedLeft.rl",
+   "default": "31.500",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.gradientProposedRight.rising",
+   "default": "R 1 IN 180",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.gradientProposedRight.falling",
+   "default": "F 1 IN 800",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.gradientProposedRight.chainage",
+   "default": "10520M",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.gradientProposedRight.rl",
+   "default": "34.150",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.gradientDisplayMode",
+   "default": "BOTH",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.showProposedGradient",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.leftGradientOrder",
+   "default": "PROPOSED_FIRST",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.rightGradientOrder",
+   "default": "EXISTING_FIRST",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.boundaryDistances.displayMode",
+   "default": "BOTH",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.boundaryDistances.greenBoundary",
+   "default": 9.756,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "keyplan.boundaryDistances.redBoundary",
+   "default": 20,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "keyplan.boundaryDistances.proposedTrackIndex",
+   "default": 0,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "keyplan.boundaryDistances.existingTrackIndex",
+   "default": 0,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "keyplan.boundaryDistances.referenceTrackIndex",
+   "default": 0,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "keyplan.boundaryDistances.mirrorToBottom",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.boundaryDistances.jogs.0.id",
+   "default": "jog-top-1",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.boundaryDistances.jogs.0.side",
+   "default": "TOP",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.boundaryDistances.jogs.0.boundaryType",
+   "default": "PROPOSED",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.boundaryDistances.jogs.0.stepDirection",
+   "default": "INWARD",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.boundaryDistances.jogs.0.startX",
+   "default": -480,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "keyplan.boundaryDistances.jogs.0.length",
+   "default": 80,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "keyplan.boundaryDistances.jogs.0.distance",
+   "default": 15,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "keyplan.boundaryDistances.jogs.0.trackIndex",
+   "default": 0,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "keyplan.curve.isCurved",
+   "default": false,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curve.startX",
+   "default": 0,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "keyplan.curve.endX",
+   "default": 200,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "keyplan.curve.degree",
+   "default": 2,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "keyplan.curve.direction",
+   "default": "UPWARD",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.northArrowRotation",
+   "default": 0,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "keyplan.curveTable.show",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTable.title",
+   "default": "",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTable.curveNo",
+   "default": "5",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTable.apexChainage",
+   "default": "4447.290 m.",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTable.delta",
+   "default": "5\u00b001'21\"",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTable.degree",
+   "default": "0.50\u00b0",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTable.radius",
+   "default": "3500 m.",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTable.curveLength",
+   "default": "306.810 m.",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTable.tangentLength",
+   "default": "183.505 m.",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTable.ltc",
+   "default": "15",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTable.shift",
+   "default": "0.043 m.",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTable.cant",
+   "default": "",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTable.vmax",
+   "default": "160 kmph",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTable.tiltAngle",
+   "default": 0,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "keyplan.curveTable.x",
+   "default": -135,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "keyplan.curveTable.y",
+   "default": -470,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "keyplan.curveTableExisting.show",
+   "default": true,
+   "type": "bool",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "flag",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTableExisting.title",
+   "default": "DN M/L",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTableExisting.curveNo",
+   "default": "C.NO-2(LH)",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTableExisting.radius",
+   "default": "1400m",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTableExisting.degree",
+   "default": "1.25\u00b0",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTableExisting.ltc",
+   "default": "120m",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTableExisting.curveLength",
+   "default": "3190m",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTableExisting.apexChainage",
+   "default": "",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTableExisting.delta",
+   "default": "",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTableExisting.tangentLength",
+   "default": "",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTableExisting.shift",
+   "default": "",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTableExisting.cant",
+   "default": "",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTableExisting.vmax",
+   "default": "",
+   "type": "str",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "text",
+   "unit": "-",
+   "unit_status": "authored"
+  },
+  {
+   "path": "keyplan.curveTableExisting.tiltAngle",
+   "default": 0,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "keyplan.curveTableExisting.x",
+   "default": 95,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
+  },
+  {
+   "path": "keyplan.curveTableExisting.y",
+   "default": -470,
+   "type": "number",
+   "in_defaults": true,
+   "read_by_compute": false,
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
   },
   {
    "path": "curtainWallBeddingProj",
@@ -2918,7 +4216,7 @@
     ],
     "op": "??",
     "fallback": 150.0,
-    "line": 223
+    "line": 239
    },
    "kind": "unknown",
    "unit": "unknown",
@@ -2940,7 +4238,7 @@
     ],
     "op": "??",
     "fallback": 250.0,
-    "line": 220
+    "line": 236
    },
    "kind": "unknown",
    "unit": "unknown",
@@ -2961,7 +4259,7 @@
     ],
     "op": "??",
     "fallback": 300.0,
-    "line": 219
+    "line": 235
    },
    "kind": "unknown",
    "unit": "unknown",
@@ -2980,7 +4278,7 @@
     ],
     "op": "||",
     "fallback": 200.0,
-    "line": 263
+    "line": 280
    },
    "kind": "length",
    "unit": "mm",
@@ -2988,8 +4286,8 @@
    "component": "face_wall",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:65",
-    "hume-pipe-rule-engine.ts:263"
+    "hume-pipe-rule-engine.ts:68",
+    "hume-pipe-rule-engine.ts:280"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -3009,7 +4307,7 @@
     ],
     "op": "||",
     "fallback": 250.0,
-    "line": 262
+    "line": 279
    },
    "kind": "length",
    "unit": "mm",
@@ -3017,8 +4315,8 @@
    "component": "face_wall",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:64",
-    "hume-pipe-rule-engine.ts:262"
+    "hume-pipe-rule-engine.ts:67",
+    "hume-pipe-rule-engine.ts:279"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -3038,8 +4336,8 @@
    "component": "pipe",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:102",
-    "hume-pipe-rule-engine.ts:106"
+    "hume-pipe-rule-engine.ts:105",
+    "hume-pipe-rule-engine.ts:105"
    ],
    "evidence_check": "checked"
   },
@@ -3056,8 +4354,8 @@
    "component": "pipe",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:101",
-    "hume-pipe-rule-engine.ts:106"
+    "hume-pipe-rule-engine.ts:104",
+    "hume-pipe-rule-engine.ts:104"
    ],
    "evidence_check": "checked"
   },
@@ -3075,7 +4373,7 @@
     ],
     "op": "??",
     "fallback": 1200.0,
-    "line": 301
+    "line": 318
    },
    "kind": "length",
    "unit": "mm",
@@ -3084,7 +4382,7 @@
    "unit_status": "authored",
    "evidence": [
     "hume-pipe-rule-engine.ts:32",
-    "hume-pipe-rule-engine.ts:302"
+    "hume-pipe-rule-engine.ts:318"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -3115,7 +4413,7 @@
     ],
     "op": "||",
     "fallback": 150.0,
-    "line": 149
+    "line": 161
    },
    "kind": "length",
    "unit": "mm",
@@ -3123,8 +4421,8 @@
    "component": "toe_wall",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:51",
-    "hume-pipe-rule-engine.ts:149"
+    "hume-pipe-rule-engine.ts:53",
+    "hume-pipe-rule-engine.ts:161"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -3147,7 +4445,7 @@
     ],
     "op": "??",
     "fallback": 150.0,
-    "line": 223
+    "line": 239
    },
    "kind": "unknown",
    "unit": "unknown",
@@ -3169,7 +4467,7 @@
     ],
     "op": "??",
     "fallback": 150.0,
-    "line": 224
+    "line": 240
    },
    "kind": "unknown",
    "unit": "unknown",
@@ -3188,7 +4486,7 @@
     ],
     "op": "||",
     "fallback": 150.0,
-    "line": 148
+    "line": 160
    },
    "kind": "length",
    "unit": "mm",
@@ -3196,8 +4494,8 @@
    "component": "toe_wall",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:50",
-    "hume-pipe-rule-engine.ts:148"
+    "hume-pipe-rule-engine.ts:52",
+    "hume-pipe-rule-engine.ts:160"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -3217,7 +4515,7 @@
     ],
     "op": "||",
     "fallback": 500.0,
-    "line": 146
+    "line": 158
    },
    "kind": "length",
    "unit": "mm",
@@ -3225,8 +4523,8 @@
    "component": "toe_wall",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:48",
-    "hume-pipe-rule-engine.ts:146"
+    "hume-pipe-rule-engine.ts:50",
+    "hume-pipe-rule-engine.ts:158"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -3249,7 +4547,7 @@
     ],
     "op": "??",
     "fallback": 250.0,
-    "line": 220
+    "line": 236
    },
    "kind": "unknown",
    "unit": "unknown",
@@ -3271,7 +4569,7 @@
     ],
     "op": "??",
     "fallback": 250.0,
-    "line": 221
+    "line": 237
    },
    "kind": "unknown",
    "unit": "unknown",
@@ -3290,7 +4588,7 @@
     ],
     "op": "||",
     "fallback": 300.0,
-    "line": 142
+    "line": 154
    },
    "kind": "length",
    "unit": "mm",
@@ -3298,8 +4596,8 @@
    "component": "toe_wall",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:45",
-    "hume-pipe-rule-engine.ts:142"
+    "hume-pipe-rule-engine.ts:47",
+    "hume-pipe-rule-engine.ts:154"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -3319,7 +4617,7 @@
     ],
     "op": "||",
     "fallback": 1700.0,
-    "line": 144
+    "line": 156
    },
    "kind": "length",
    "unit": "mm",
@@ -3327,8 +4625,8 @@
    "component": "toe_wall",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:46",
-    "hume-pipe-rule-engine.ts:144"
+    "hume-pipe-rule-engine.ts:48",
+    "hume-pipe-rule-engine.ts:156"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -3337,7 +4635,7 @@
   },
   {
    "path": "toeWallStemTopW",
-   "default": 250.0,
+   "default": 300.0,
    "type": "number",
    "in_defaults": false,
    "code_fallback": true,
@@ -3347,8 +4645,8 @@
      "toeWallStemTopW"
     ],
     "op": "||",
-    "fallback": 250.0,
-    "line": 141
+    "fallback": 300.0,
+    "line": 153
    },
    "kind": "length",
    "unit": "mm",
@@ -3356,12 +4654,13 @@
    "component": "toe_wall",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:44",
-    "hume-pipe-rule-engine.ts:141"
+    "hume-pipe-rule-engine.ts:46",
+    "hume-pipe-rule-engine.ts:153"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
-    "toeWallStemTopW"
+    "toeWallStemTopW",
+    "toeWallStemBotW"
    ]
   },
   {
@@ -3377,7 +4676,7 @@
     ],
     "op": "||",
     "fallback": 300.0,
-    "line": 147
+    "line": 159
    },
    "kind": "length",
    "unit": "mm",
@@ -3385,8 +4684,8 @@
    "component": "toe_wall",
    "unit_status": "authored",
    "evidence": [
-    "hume-pipe-rule-engine.ts:49",
-    "hume-pipe-rule-engine.ts:147"
+    "hume-pipe-rule-engine.ts:51",
+    "hume-pipe-rule-engine.ts:159"
    ],
    "evidence_check": "checked",
    "affects_outputs": [
@@ -3455,7 +4754,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "(max ( 1 , in1_numPipes ))",
-    "line": 136,
+    "line": 148,
     "inputs": {
      "in1_numPipes": {
       "chain": [
@@ -3464,7 +4763,7 @@
       ],
       "op": "||",
       "default": 1.0,
-      "line": 136
+      "line": 148
      }
     },
     "display": "numPipes = max ( 1 , in1_numPipes )",
@@ -3491,7 +4790,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "wallThickness",
-    "line": 137,
+    "line": 149,
     "inputs": {
      "wallThickness": {
       "chain": [
@@ -3500,7 +4799,7 @@
       ],
       "op": "||",
       "default": 180.0,
-      "line": 137,
+      "line": 149,
       "coerced": true
      }
     },
@@ -3529,7 +4828,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "(wallThickness)",
-    "line": 138,
+    "line": 150,
     "inputs": {
      "wallThickness": {
       "chain": [
@@ -3538,7 +4837,7 @@
       ],
       "op": "||",
       "default": 180.0,
-      "line": 137,
+      "line": 149,
       "coerced": true
      }
     },
@@ -3648,7 +4947,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "pipeSpacing",
-    "line": 211,
+    "line": 227,
     "inputs": {
      "pipeSpacing": {
       "chain": [
@@ -3656,7 +4955,7 @@
       ],
       "op": "||",
       "default": 180.0,
-      "line": 211,
+      "line": 227,
       "coerced": true
      }
     },
@@ -3685,7 +4984,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "beddingThickness",
-    "line": 213,
+    "line": 229,
     "inputs": {
      "beddingThickness": {
       "chain": [
@@ -3693,7 +4992,7 @@
       ],
       "op": "||",
       "default": 300.0,
-      "line": 213,
+      "line": 229,
       "coerced": true
      }
     },
@@ -3722,7 +5021,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "levelingCourse",
-    "line": 214,
+    "line": 230,
     "inputs": {
      "levelingCourse": {
       "chain": [
@@ -3730,7 +5029,7 @@
       ],
       "op": "||",
       "default": 150.0,
-      "line": 214,
+      "line": 230,
       "coerced": true
      }
     },
@@ -3759,7 +5058,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "rubbleSoling",
-    "line": 215,
+    "line": 231,
     "inputs": {
      "rubbleSoling": {
       "chain": [
@@ -3768,7 +5067,7 @@
       ],
       "op": "||",
       "default": 300.0,
-      "line": 215,
+      "line": 231,
       "coerced": true
      }
     },
@@ -3797,7 +5096,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "(rubbleSoling)",
-    "line": 216,
+    "line": 232,
     "inputs": {
      "rubbleSoling": {
       "chain": [
@@ -3806,7 +5105,7 @@
       ],
       "op": "||",
       "default": 300.0,
-      "line": 215,
+      "line": 231,
       "coerced": true
      }
     },
@@ -3834,7 +5133,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "(max ( 0 , in7_dropWallDepth ))",
-    "line": 217,
+    "line": 233,
     "inputs": {
      "in7_dropWallDepth": {
       "chain": [
@@ -3842,7 +5141,7 @@
       ],
       "op": "??",
       "default": 1750.0,
-      "line": 217
+      "line": 233
      }
     },
     "display": "dropWallDepth = max ( 0 , in7_dropWallDepth )",
@@ -3853,7 +5152,7 @@
   },
   {
    "name": "curtainWallDepth",
-   "value_at_defaults": 1200,
+   "value_at_defaults": 1750,
    "depends_on": [
     "curtainWallDepth"
    ],
@@ -3869,15 +5168,15 @@
    "unit_status": "authored",
    "formula": {
     "expr": "(max ( 0 , in8_curtainWallDepth ))",
-    "line": 218,
+    "line": 234,
     "inputs": {
      "in8_curtainWallDepth": {
       "chain": [
        "curtainWallDepth"
       ],
       "op": "??",
-      "default": 1200.0,
-      "line": 218
+      "default": 1750.0,
+      "line": 234
      }
     },
     "display": "curtainWallDepth = max ( 0 , in8_curtainWallDepth )",
@@ -3904,7 +5203,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "curtainWallThickness",
-    "line": 219,
+    "line": 235,
     "inputs": {
      "curtainWallThickness": {
       "chain": [
@@ -3914,7 +5213,7 @@
       ],
       "op": "??",
       "default": 300.0,
-      "line": 219,
+      "line": 235,
       "coerced": true
      }
     },
@@ -3943,7 +5242,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "curtainWallThickness",
-    "line": 219,
+    "line": 235,
     "inputs": {
      "curtainWallThickness": {
       "chain": [
@@ -3953,7 +5252,7 @@
       ],
       "op": "??",
       "default": 300.0,
-      "line": 219,
+      "line": 235,
       "coerced": true
      }
     },
@@ -3982,7 +5281,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "curtainWallProjectionLeft",
-    "line": 220,
+    "line": 236,
     "inputs": {
      "curtainWallProjectionLeft": {
       "chain": [
@@ -3993,7 +5292,7 @@
       ],
       "op": "??",
       "default": 250.0,
-      "line": 220,
+      "line": 236,
       "coerced": true
      }
     },
@@ -4022,7 +5321,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "curtainWallProjectionRight",
-    "line": 221,
+    "line": 237,
     "inputs": {
      "curtainWallProjectionRight": {
       "chain": [
@@ -4033,7 +5332,7 @@
       ],
       "op": "??",
       "default": 250.0,
-      "line": 221,
+      "line": 237,
       "coerced": true
      }
     },
@@ -4062,7 +5361,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "curtainWallFootingThk",
-    "line": 222,
+    "line": 238,
     "inputs": {
      "curtainWallFootingThk": {
       "chain": [
@@ -4071,7 +5370,7 @@
       ],
       "op": "??",
       "default": 300.0,
-      "line": 222,
+      "line": 238,
       "coerced": true
      }
     },
@@ -4100,7 +5399,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "curtainWallBeddingProjLeft",
-    "line": 223,
+    "line": 239,
     "inputs": {
      "curtainWallBeddingProjLeft": {
       "chain": [
@@ -4111,7 +5410,7 @@
       ],
       "op": "??",
       "default": 150.0,
-      "line": 223,
+      "line": 239,
       "coerced": true
      }
     },
@@ -4140,7 +5439,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "curtainWallBeddingProjRight",
-    "line": 224,
+    "line": 240,
     "inputs": {
      "curtainWallBeddingProjRight": {
       "chain": [
@@ -4151,7 +5450,7 @@
       ],
       "op": "??",
       "default": 150.0,
-      "line": 224,
+      "line": 240,
       "coerced": true
      }
     },
@@ -4180,7 +5479,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "curtainWallBeddingThk",
-    "line": 225,
+    "line": 241,
     "inputs": {
      "curtainWallBeddingThk": {
       "chain": [
@@ -4189,7 +5488,7 @@
       ],
       "op": "??",
       "default": 150.0,
-      "line": 225,
+      "line": 241,
       "coerced": true
      }
     },
@@ -4218,7 +5517,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "stonePitchingThk",
-    "line": 226,
+    "line": 242,
     "inputs": {
      "stonePitchingThk": {
       "chain": [
@@ -4227,7 +5526,7 @@
       ],
       "op": "??",
       "default": 300.0,
-      "line": 226,
+      "line": 242,
       "coerced": true
      }
     },
@@ -4256,7 +5555,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "in13_gradedGravelLength",
-    "line": 301,
+    "line": 318,
     "inputs": {
      "in13_gradedGravelLength": {
       "chain": [
@@ -4265,7 +5564,7 @@
       ],
       "op": "??",
       "default": 1200.0,
-      "line": 301,
+      "line": 318,
       "coerced": true
      }
     },
@@ -4299,7 +5598,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "in14_gradedGravelDepth",
-    "line": 302,
+    "line": 319,
     "inputs": {
      "in14_gradedGravelDepth": {
       "chain": [
@@ -4308,7 +5607,7 @@
       ],
       "op": "??",
       "default": 1200.0,
-      "line": 302,
+      "line": 319,
       "coerced": true
      }
     },
@@ -4338,7 +5637,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "in15_gradedGravelGap",
-    "line": 303,
+    "line": 320,
     "inputs": {
      "in15_gradedGravelGap": {
       "chain": [
@@ -4346,7 +5645,7 @@
       ],
       "op": "??",
       "default": 1632.0,
-      "line": 303,
+      "line": 320,
       "coerced": true
      }
     },
@@ -4356,6 +5655,42 @@
     "max_abs_error": 0.0,
     "status": "verified_by_execution"
    }
+  },
+  {
+   "name": "embankmentSlope",
+   "value_at_defaults": 2,
+   "depends_on": [
+    "embankmentSlope"
+   ],
+   "partials": {
+    "embankmentSlope": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "formula": {
+    "expr": "in19_embankmentSlope",
+    "line": 324,
+    "inputs": {
+     "in19_embankmentSlope": {
+      "chain": [
+       "embankmentSlope"
+      ],
+      "op": "??",
+      "default": 1.5,
+      "line": 324,
+      "coerced": true
+     }
+    },
+    "display": "embankmentSlope = in19_embankmentSlope",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
   },
   {
    "name": "cradleConcreteThk",
@@ -4374,20 +5709,20 @@
    "label": "cradle concrete thickness",
    "unit_status": "authored",
    "formula": {
-    "expr": "in20_cradleConcreteThk",
-    "line": 308,
+    "expr": "in22_cradleConcreteThk",
+    "line": 327,
     "inputs": {
-     "in20_cradleConcreteThk": {
+     "in22_cradleConcreteThk": {
       "chain": [
        "cradleConcreteThk"
       ],
       "op": "??",
       "default": 150.0,
-      "line": 308,
+      "line": 327,
       "coerced": true
      }
     },
-    "display": "cradleConcreteThk = in20_cradleConcreteThk",
+    "display": "cradleConcreteThk = in22_cradleConcreteThk",
     "passthrough": true,
     "samples": 17,
     "max_abs_error": 0.0,
@@ -4412,7 +5747,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "wingWallLength",
-    "line": 227,
+    "line": 243,
     "inputs": {
      "wingWallLength": {
       "chain": [
@@ -4420,7 +5755,7 @@
       ],
       "op": "||",
       "default": 4.5,
-      "line": 227,
+      "line": 243,
       "coerced": true
      }
     },
@@ -4442,7 +5777,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "(305)",
-    "line": 135,
+    "line": 147,
     "inputs": {},
     "display": "slabThickness = 305",
     "samples": 17,
@@ -4452,7 +5787,7 @@
   },
   {
    "name": "toeWallStemTopW",
-   "value_at_defaults": 250,
+   "value_at_defaults": 300,
    "depends_on": [
     "toeWallStemTopW"
    ],
@@ -4468,15 +5803,15 @@
    "unit_status": "authored",
    "formula": {
     "expr": "toeWallStemTopW",
-    "line": 141,
+    "line": 153,
     "inputs": {
      "toeWallStemTopW": {
       "chain": [
        "toeWallStemTopW"
       ],
       "op": "||",
-      "default": 250.0,
-      "line": 141,
+      "default": 300.0,
+      "line": 153,
       "coerced": true
      }
     },
@@ -4491,12 +5826,17 @@
    "name": "toeWallStemBotW",
    "value_at_defaults": 300,
    "depends_on": [
-    "toeWallStemBotW"
+    "toeWallStemBotW",
+    "toeWallStemTopW"
    ],
    "partials": {
     "toeWallStemBotW": {
      "slope": 1.0,
-     "affine": true
+     "affine": false
+    },
+    "toeWallStemTopW": {
+     "slope": 1.0,
+     "affine": false
     }
    },
    "kind": "length",
@@ -4505,24 +5845,24 @@
    "unit_status": "authored",
    "formula": {
     "expr": "(max ( toeWallStemTopW , rawToeWallBotW ))",
-    "line": 143,
+    "line": 155,
     "inputs": {
-     "toeWallStemTopW": {
-      "chain": [
-       "toeWallStemTopW"
-      ],
-      "op": "||",
-      "default": 250.0,
-      "line": 141,
-      "coerced": true
-     },
      "rawToeWallBotW": {
       "chain": [
        "toeWallStemBotW"
       ],
       "op": "||",
       "default": 300.0,
-      "line": 142,
+      "line": 154,
+      "coerced": true
+     },
+     "toeWallStemTopW": {
+      "chain": [
+       "toeWallStemTopW"
+      ],
+      "op": "||",
+      "default": 300.0,
+      "line": 153,
       "coerced": true
      }
     },
@@ -4550,7 +5890,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "toeWallStemH",
-    "line": 144,
+    "line": 156,
     "inputs": {
      "toeWallStemH": {
       "chain": [
@@ -4558,7 +5898,7 @@
       ],
       "op": "||",
       "default": 1700.0,
-      "line": 144,
+      "line": 156,
       "coerced": true
      }
     },
@@ -4587,7 +5927,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "toeWallAboveGL",
-    "line": 145,
+    "line": 157,
     "inputs": {
      "toeWallAboveGL": {
       "chain": [
@@ -4595,7 +5935,7 @@
       ],
       "op": "||",
       "default": 600.0,
-      "line": 145,
+      "line": 157,
       "coerced": true
      }
     },
@@ -4624,7 +5964,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "toeWallProjection",
-    "line": 146,
+    "line": 158,
     "inputs": {
      "toeWallProjection": {
       "chain": [
@@ -4632,7 +5972,7 @@
       ],
       "op": "||",
       "default": 500.0,
-      "line": 146,
+      "line": 158,
       "coerced": true
      }
     },
@@ -4661,7 +6001,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "toeWallUpperFootingThk",
-    "line": 147,
+    "line": 159,
     "inputs": {
      "toeWallUpperFootingThk": {
       "chain": [
@@ -4669,7 +6009,7 @@
       ],
       "op": "||",
       "default": 300.0,
-      "line": 147,
+      "line": 159,
       "coerced": true
      }
     },
@@ -4698,7 +6038,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "toeWallBeddingThk",
-    "line": 148,
+    "line": 160,
     "inputs": {
      "toeWallBeddingThk": {
       "chain": [
@@ -4706,7 +6046,7 @@
       ],
       "op": "||",
       "default": 150.0,
-      "line": 148,
+      "line": 160,
       "coerced": true
      }
     },
@@ -4735,7 +6075,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "toeWallBeddingProj",
-    "line": 149,
+    "line": 161,
     "inputs": {
      "toeWallBeddingProj": {
       "chain": [
@@ -4743,7 +6083,7 @@
       ],
       "op": "||",
       "default": 150.0,
-      "line": 149,
+      "line": 161,
       "coerced": true
      }
     },
@@ -4772,7 +6112,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "faceWallStemTopW",
-    "line": 249,
+    "line": 265,
     "inputs": {
      "faceWallStemTopW": {
       "chain": [
@@ -4780,7 +6120,7 @@
       ],
       "op": "||",
       "default": 450.0,
-      "line": 249,
+      "line": 265,
       "coerced": true
      }
     },
@@ -4793,7 +6133,7 @@
   },
   {
    "name": "faceWallStemBotW",
-   "value_at_defaults": 610,
+   "value_at_defaults": 450,
    "depends_on": [
     "faceWallStemBotW"
    ],
@@ -4809,15 +6149,15 @@
    "unit_status": "authored",
    "formula": {
     "expr": "faceWallStemBotW",
-    "line": 250,
+    "line": 266,
     "inputs": {
      "faceWallStemBotW": {
       "chain": [
        "faceWallStemBotW"
       ],
       "op": "||",
-      "default": 610.0,
-      "line": 250,
+      "default": 450.0,
+      "line": 266,
       "coerced": true
      }
     },
@@ -4867,7 +6207,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "faceWallStemBelowGL",
-    "line": 255,
+    "line": 271,
     "inputs": {
      "faceWallStemBelowGL": {
       "chain": [
@@ -4875,7 +6215,7 @@
       ],
       "op": "||",
       "default": 875.0,
-      "line": 255,
+      "line": 271,
       "coerced": true
      }
     },
@@ -4904,7 +6244,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "faceWallHeelProj",
-    "line": 256,
+    "line": 272,
     "inputs": {
      "faceWallHeelProj": {
       "chain": [
@@ -4912,7 +6252,7 @@
       ],
       "op": "||",
       "default": 500.0,
-      "line": 256,
+      "line": 272,
       "coerced": true
      }
     },
@@ -4925,7 +6265,7 @@
   },
   {
    "name": "faceWallToeProj",
-   "value_at_defaults": 250,
+   "value_at_defaults": 500,
    "depends_on": [
     "faceWallToeProj"
    ],
@@ -4941,15 +6281,15 @@
    "unit_status": "authored",
    "formula": {
     "expr": "faceWallToeProj",
-    "line": 257,
+    "line": 273,
     "inputs": {
      "faceWallToeProj": {
       "chain": [
        "faceWallToeProj"
       ],
       "op": "||",
-      "default": 250.0,
-      "line": 257,
+      "default": 500.0,
+      "line": 273,
       "coerced": true
      }
     },
@@ -4978,7 +6318,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "faceWallFoundThk",
-    "line": 258,
+    "line": 274,
     "inputs": {
      "faceWallFoundThk": {
       "chain": [
@@ -4986,7 +6326,7 @@
       ],
       "op": "||",
       "default": 350.0,
-      "line": 258,
+      "line": 274,
       "coerced": true
      }
     },
@@ -5015,7 +6355,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "faceWallBeddingThk",
-    "line": 259,
+    "line": 275,
     "inputs": {
      "faceWallBeddingThk": {
       "chain": [
@@ -5024,7 +6364,7 @@
       ],
       "op": "||",
       "default": 150.0,
-      "line": 259,
+      "line": 275,
       "coerced": true
      }
     },
@@ -5053,7 +6393,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "faceWallBeddingProj",
-    "line": 260,
+    "line": 276,
     "inputs": {
      "faceWallBeddingProj": {
       "chain": [
@@ -5061,7 +6401,7 @@
       ],
       "op": "||",
       "default": 200.0,
-      "line": 260,
+      "line": 276,
       "coerced": true
      }
     },
@@ -5090,7 +6430,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "faceWallRubbleThk",
-    "line": 261,
+    "line": 277,
     "inputs": {
      "faceWallRubbleThk": {
       "chain": [
@@ -5100,7 +6440,7 @@
       ],
       "op": "||",
       "default": 300.0,
-      "line": 261,
+      "line": 277,
       "coerced": true
      }
     },
@@ -5110,6 +6450,43 @@
     "max_abs_error": 0.0,
     "status": "verified_by_execution"
    }
+  },
+  {
+   "name": "faceWallFndDepth",
+   "value_at_defaults": 1750,
+   "depends_on": [
+    "faceWallFndDepth"
+   ],
+   "partials": {
+    "faceWallFndDepth": {
+     "slope": 1.0,
+     "affine": true
+    }
+   },
+   "formula": {
+    "expr": "faceWallFndDepth",
+    "line": 278,
+    "inputs": {
+     "faceWallFndDepth": {
+      "chain": [
+       "faceWallFndDepth",
+       "faceWallFndLevel"
+      ],
+      "op": "??",
+      "default": 1750.0,
+      "line": 278,
+      "coerced": true
+     }
+    },
+    "display": "faceWallFndDepth = faceWallFndDepth",
+    "passthrough": true,
+    "samples": 17,
+    "max_abs_error": 0.0,
+    "status": "verified_by_execution"
+   },
+   "kind": "unknown",
+   "unit": "unknown",
+   "unit_status": "unknown"
   },
   {
    "name": "faceWallShelfProj",
@@ -5129,7 +6506,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "faceWallShelfProj",
-    "line": 262,
+    "line": 279,
     "inputs": {
      "faceWallShelfProj": {
       "chain": [
@@ -5137,7 +6514,7 @@
       ],
       "op": "||",
       "default": 250.0,
-      "line": 262,
+      "line": 279,
       "coerced": true
      }
     },
@@ -5166,7 +6543,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "faceWallShelfDrop",
-    "line": 263,
+    "line": 280,
     "inputs": {
      "faceWallShelfDrop": {
       "chain": [
@@ -5174,7 +6551,7 @@
       ],
       "op": "||",
       "default": 200.0,
-      "line": 263,
+      "line": 280,
       "coerced": true
      }
     },
@@ -5380,7 +6757,7 @@
    "unit_status": "authored",
    "formula": {
     "status": "opaque",
-    "why": "'!': not arithmetic (conditional, comparison, string or call)"
+    "why": "declared with let (it may be reassigned)"
    }
   },
   {
@@ -5409,16 +6786,16 @@
    "value_at_defaults": 14.102,
    "depends_on": [
     "bedLevel",
-    "scourLevel"
+    "foundingDepthBelowScour"
    ],
    "partials": {
+    "foundingDepthBelowScour": {
+     "slope": -1.001589825,
+     "affine": false
+    },
     "bedLevel": {
      "slope": 1.000062543,
      "affine": false
-    },
-    "scourLevel": {
-     "slope": 1.0,
-     "affine": true
     }
    },
    "kind": "level",
@@ -5448,7 +6825,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "foundingDepthBelowScour",
-    "line": 173,
+    "line": 189,
     "inputs": {
      "foundingDepthBelowScour": {
       "chain": [
@@ -5456,7 +6833,7 @@
       ],
       "op": "??",
       "default": 1.75,
-      "line": 173,
+      "line": 189,
       "coerced": true
      }
     },
@@ -5472,21 +6849,16 @@
    "value_at_defaults": 12.352,
    "depends_on": [
     "bedLevel",
-    "foundingDepthBelowScour",
-    "scourLevel"
+    "foundingDepthBelowScour"
    ],
    "partials": {
     "foundingDepthBelowScour": {
-     "slope": -1.0,
-     "affine": true
+     "slope": -2.001589825,
+     "affine": false
     },
     "bedLevel": {
      "slope": 1.000062543,
      "affine": false
-    },
-    "scourLevel": {
-     "slope": 1.0,
-     "affine": true
     }
    },
    "kind": "level",
@@ -5707,7 +7079,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "(1.219)",
-    "line": 230,
+    "line": 246,
     "inputs": {},
     "display": "foundationThickness = 1.219",
     "samples": 17,
@@ -5726,7 +7098,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "(0.0)",
-    "line": 243,
+    "line": 259,
     "inputs": {},
     "display": "innerBatter = 0.0",
     "samples": 17,
@@ -5745,7 +7117,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "(0.5)",
-    "line": 244,
+    "line": 260,
     "inputs": {},
     "display": "wingWallBatter = 0.5",
     "samples": 17,
@@ -5764,7 +7136,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "(0.5)",
-    "line": 246,
+    "line": 262,
     "inputs": {},
     "display": "topAbutmentWidth = 0.5",
     "samples": 17,
@@ -5783,7 +7155,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "(381)",
-    "line": 272,
+    "line": 289,
     "inputs": {},
     "display": "stepHeight = 381",
     "samples": 17,
@@ -5802,7 +7174,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "(4012)",
-    "line": 274,
+    "line": 291,
     "inputs": {},
     "display": "foundationWidth = 4012",
     "samples": 17,
@@ -5896,7 +7268,7 @@
    "unit_status": "authored",
    "formula": {
     "expr": "wearingCourseThk",
-    "line": 212,
+    "line": 228,
     "inputs": {
      "wearingCourseThk": {
       "chain": [
@@ -5904,7 +7276,7 @@
       ],
       "op": "??",
       "default": 100.0,
-      "line": 212,
+      "line": 228,
       "coerced": true
      }
     },
@@ -5932,6 +7304,13 @@
   {
    "name": "showGradedGravel",
    "value_at_defaults": true,
+   "kind": "flag",
+   "unit": "-",
+   "depends_on": []
+  },
+  {
+   "name": "showAdditionalFoundationDetail",
+   "value_at_defaults": false,
    "kind": "flag",
    "unit": "-",
    "depends_on": []
@@ -5966,8 +7345,8 @@
   }
  ],
  "formulas_summary": {
-  "extracted": 52,
-  "verified": 45,
+  "extracted": 54,
+  "verified": 47,
   "constants": 7,
   "differs": [],
   "opaque": [
@@ -5997,6 +7376,7 @@
    "pipeDiameterMeter",
    "rl",
    "scourLevel",
+   "showAdditionalFoundationDetail",
    "showCradleConcrete",
    "showGradedGravel",
    "soffit_level",
@@ -6008,6 +7388,7 @@
   ]
  },
  "defaults": {
+  "humePipeType": "type1",
   "spanSize": 1.2,
   "pipeDiameter": 1.2,
   "numPipes": 1,
@@ -6025,7 +7406,11 @@
   "rubbleSoling": 300,
   "rubbleThk": 300,
   "dropWallDepth": 1750,
-  "curtainWallDepth": 1200,
+  "showCurtainWall": true,
+  "chamber": {
+   "enabled": false
+  },
+  "curtainWallDepth": 1750,
   "curtainWallThickness": 300,
   "curtainWallProjectionLeft": 250,
   "curtainWallProjectionRight": 250,
@@ -6042,7 +7427,7 @@
   "formationLevel": 18.315,
   "hfl": 16.5,
   "bedLevel": 15.852,
-  "scourLevel": 14.102,
+  "scourLevel": 94.25,
   "floorLevel": 15.852,
   "show460Line": true,
   "showLeftSteps": false,
@@ -6059,13 +7444,16 @@
   "faceWallStemAboveGL": 1530,
   "faceWallStemBelowGL": 875,
   "faceWallStemTopW": 450,
-  "faceWallStemBotW": 610,
+  "faceWallStemBotW": 450,
+  "faceWallSlopedW": 900,
   "faceWallHeelProj": 500,
-  "faceWallToeProj": 250,
+  "faceWallToeProj": 500,
   "faceWallFoundThk": 350,
   "faceWallBeddingThk": 150,
   "faceWallBeddingProj": 200,
   "faceWallRubbleThk": 300,
+  "faceWallFndDepth": 1750,
+  "faceWallFndLevel": 1750,
   "showGradedGravel": true,
   "gradedGravelHatch": "GRAVEL",
   "gradedGravelLength": 1200,
@@ -6074,11 +7462,135 @@
   "showCradleConcrete": false,
   "cradleConcreteThk": 150,
   "faceWallTier1Width": 1.36,
-  "faceWallBaseWidth": 1.76
+  "faceWallBaseWidth": 1.76,
+  "showAdditionalFoundationDetail": false,
+  "embankmentSlope": 2,
+  "keyplan": {
+   "bridgeNumber": "BR. NO.: 15 (Minor)",
+   "structureDetails": "C/L OF BR NO-15, EXIST- 1 X 6.05m STEEL GIRDER\nC/L OF BR NO-15, PROP- 1 X 6.10m PSC SLAB AT CH: 10470.01 m.",
+   "existingStructure": "C/L OF BR NO-15, EXIST- 1 X 6.05m STEEL GIRDER",
+   "proposedStructureLine1": "C/L OF BR NO-15, PROP- 1 X 6.10m PSC SLAB AT CH: 10470.01 m.",
+   "proposedStructureLine2": "",
+   "tracks": [
+    {
+     "name": "CL. OF PROP. BG TRACK (UP LINE)",
+     "isProposed": true,
+     "distance": 0
+    },
+    {
+     "name": "CL. OF EXIST. BG TRACK (DN LINE)",
+     "isProposed": false,
+     "distance": 5.3
+    }
+   ],
+   "stationLeft": "TO NADIAD",
+   "stationRight": "TO PETLAD",
+   "coOrdinates": {
+    "title": "CO-ORDINATE MNB 15",
+    "easting": "271961.242",
+    "northing": "2508591.049",
+    "location": "CENTRE"
+   },
+   "gradientLeft": {
+    "falling": "F 1 IN 200",
+    "rising": "R 1 IN 180",
+    "chainage": "10040 M",
+    "rl": "30.359"
+   },
+   "gradientRight": {
+    "rising": "R 1 IN 180",
+    "falling": "F 1 IN 800",
+    "chainage": "10520M",
+    "rl": "33.026"
+   },
+   "gradientProposedLeft": {
+    "falling": "F 1 IN 200",
+    "rising": "R 1 IN 180",
+    "chainage": "10040 M",
+    "rl": "31.500"
+   },
+   "gradientProposedRight": {
+    "rising": "R 1 IN 180",
+    "falling": "F 1 IN 800",
+    "chainage": "10520M",
+    "rl": "34.150"
+   },
+   "gradientDisplayMode": "BOTH",
+   "showProposedGradient": true,
+   "leftGradientOrder": "PROPOSED_FIRST",
+   "rightGradientOrder": "EXISTING_FIRST",
+   "boundaryDistances": {
+    "displayMode": "BOTH",
+    "greenBoundary": 9.756,
+    "redBoundary": 20,
+    "proposedTrackIndex": 0,
+    "existingTrackIndex": 0,
+    "referenceTrackIndex": 0,
+    "mirrorToBottom": true,
+    "jogs": [
+     {
+      "id": "jog-top-1",
+      "side": "TOP",
+      "boundaryType": "PROPOSED",
+      "stepDirection": "INWARD",
+      "startX": -480,
+      "length": 80,
+      "distance": 15,
+      "trackIndex": 0
+     }
+    ]
+   },
+   "curve": {
+    "isCurved": false,
+    "startX": 0,
+    "endX": 200,
+    "degree": 2,
+    "direction": "UPWARD"
+   },
+   "curves": [],
+   "crossovers": [],
+   "northArrowRotation": 0,
+   "curveTable": {
+    "show": true,
+    "title": "",
+    "curveNo": "5",
+    "apexChainage": "4447.290 m.",
+    "delta": "5\u00b001'21\"",
+    "degree": "0.50\u00b0",
+    "radius": "3500 m.",
+    "curveLength": "306.810 m.",
+    "tangentLength": "183.505 m.",
+    "ltc": "15",
+    "shift": "0.043 m.",
+    "cant": "",
+    "vmax": "160 kmph",
+    "tiltAngle": 0,
+    "x": -135,
+    "y": -470
+   },
+   "curveTableExisting": {
+    "show": true,
+    "title": "DN M/L",
+    "curveNo": "C.NO-2(LH)",
+    "radius": "1400m",
+    "degree": "1.25\u00b0",
+    "ltc": "120m",
+    "curveLength": "3190m",
+    "apexChainage": "",
+    "delta": "",
+    "tangentLength": "",
+    "shift": "",
+    "cant": "",
+    "vmax": "",
+    "tiltAngle": 0,
+    "x": 95,
+    "y": -470
+   }
+  }
  },
  "characterization": {
   "samples_per_formula": 16,
-  "defaults_digest": "b56b425b801078f211fa0267ac789ff7634f58b56044c369d11e339a3fa9dd5d",
-  "derived_digest": "3e5ac077446249e5a3e2a7376bbd6d7d080f119c14b85c4792c4053f0e6af3fb"
+  "defaults_digest": "e29f3ffd09da7f77f79fc369dc99d390caf107ee08f41b68122e297d3d864e62",
+  "derived_digest": "372203f301545e466f42a15feb1ea6e5df386d6781eda2f191179381fedbd7a9"
  }
 }
