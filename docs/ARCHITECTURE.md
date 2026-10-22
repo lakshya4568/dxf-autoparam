@@ -142,6 +142,12 @@ Live: its thinking summaries, tool calls and verdicts stream into the UI.
 | Gemini | `ai/vertex.py` (client, cache, streaming), `ai/agent.py` (tools, workbench), `ai/prompt.py`, `ai/schema.py` |
 | UI / CLI | `server.py`, `static/index.html`, `cli.py` |
 | Checks | `robustness.py`, `tests/` |
+| What is parametric, part by part | `coverage.py` (each DIMENSION: driven / unnamed / fixed / kept / unread, on the parts it measures) |
+| Why a change was refused | `refusal.py` (the failed check, its entities, and its kind), `crossview.SheetModel.explain` |
+| A relation, checked before it is bound | `relations.py` (`check_relation`) |
+| Views in their own coordinates; redrawing a view at another scale | `frames.py`, `rescale.py` |
+| Component knowledge (production) | `knowledge/library/bridge/components.json` (cards: parameters, defaults, relations, sources) |
+| Measuring it | `tools/param_bench.py` + `tools/bench_cases.json` (docs/PARAM_BENCH.md), `tools/component_inventory.py` |
 
 Deeper detail: `docs/DESIGN_INTENT.md`.
 
@@ -272,3 +278,71 @@ ONE unit (a face they share is one set-out line) and binds sizes separate views 
 every change on the regenerated sheet and commits it only when everything holds. `workspace.py` + `static/workspace.html`
 are the canvas workspace; `ai/sheet_ai.py` runs Gemini in checked stages. The full design, the measurements and what
 remains: `docs/MULTIVIEW.md`.
+
+---
+
+## Part 7 — Understanding a real GAD together (what was added on 2026-10-22, and why)
+
+A real sheet (173A) showed the gap: the return walls in the longitudinal section were drawn, dimensioned and named, yet none of their own sizes
+could be changed. 29 of the unit's 33 undriven dimensions measured gaps the set-out held as constant offsets after the agent's answer, invisible to
+every tool the agent read; nothing told it which dimensions were left, and it spent 13 calls on the unit that needed most
+(`docs/INVENTORY_173A.md`). The fixes are generic: each answers "what does the agent not see, or not know how to check?".
+
+**1. Dimensions are the yardstick (`coverage.py`).** Every DIMENSION the drafter placed is tied to the two set-out lines its own definition points
+lie on (`gap.dims`, the same tie a binding by its id uses), stepped on the program, and sorted onto the parts drawn on those lines. A dimension is
+*driven* only when a value somebody named moves both lines. The agent's `coverage` tool lists, per part, what is open and why (a constant offset:
+bind the dimension itself; an engine value: rename it; kept as drawn: `keep_dimensions` with why); a dimension whose written number disagrees with
+what it measures is said. The status line counts it, the finish gate refuses once while dimensions stay open, and the bench reports it. Nothing in
+it knows what a structure is called. The agent's workbench works on its answer without what the engine derived (design intent); there a SUM —
+a box's overall width — can look free. Coverage asks the sheet as it stands (`SheetScope.drivers`): a dimension that values of the answer already
+move there is driven, never listed open, and binding it as an input is refused (`SUM`, with set_relation as the way to name it) — held as an
+input it would leave the values it is made of nowhere to go (a wider span runs into the wall between the cells).
+
+**2. Production knowledge as data (`components.json`).** What `aagento-bridge` builds by hand for each family — the return wall's stem, batter, toe,
+heel and depths, the toe wall, shear key, earth retainer, the box's links (clear height from the box height and the wearing course; barrel length
+from the formation widths and four times the cushion) — is a card per component with its parameters, production defaults, relations and the source
+file and line (`docs/PRODUCTION_AUDIT.md`). `coverage` attaches the card of a part whose name matches, so the agent sees what a draftsman would
+change. A card is knowledge, not a rule: nothing is enforced from it.
+
+**3. Relations are hypotheses, checked on the drawing (`relations.py`).** `check_relation` takes LEFT = RIGHT over named values, levels and set-out
+lines and answers, nothing changed: does it hold at the drawn values (residual, mm); does the drawing already carry it (step each value on the right:
+does it stay true when each value that takes part changes?), WHICH of its terms move for each value (`gives`), do the units make sense (a level plus
+a length), and what binding it would take (`set_formulas` for a line that must follow, `set_relation` for a quantity worked out). `set_relation`
+keeps where the relation came from (`source`). A relation can be carried with another side giving way than a designer's: on a longitudinal section
+the engine reads the 2H:1V slopes from the geometry, so production's barrel = formation + 4 × cushion holds under every change — but as read the
+barrel is kept and the formation widens; production keeps the formation and shortens the barrel. Choosing production's side is setting lines out
+(the formation's edges from where they stand, the barrel's ends down the slopes): then a taller box shortens the barrel by exactly four times what
+the cushion loses (`tests/test_relations.py`; on 173A's own section the same, −2000 mm for +500 mm).
+
+**4. A refusal says what kind it is (`refusal.py`).** Every error the sheet finds on a change or a commit is tagged with its check (GEOMETRY,
+CLASH, POSITIVE, PLAN, FOLLOW, WORKED_OUT, UNBOUND, VALUES, RULE, SOLVER) and classified from what the change measurably does to the lines it moves:
+*the edit cannot be drawn* (a size through zero — one a value or a dimension owns —, two different parts colliding, past the drawing's extent),
+*the model does not carry this change* (an entity with one end on a line that follows and one on a line that stays, the gap between owned by
+nothing; a line set out through an intersection that moves it many times the change; a part's own entities colliding; a view that does not follow),
+*an accepted plan says otherwise*, *a rule bound to the sheet fails*, *the program cannot be evaluated*. Each also says whether the sheet as it
+stands fails the same check (`existing`): the change did not cause it. The kind never changes what is refused; the page shows it with the entities
+to zoom to, and the agent reads it (`check_behaviour`, commit results).
+
+**5. Each view in its own coordinates (`frames.py`).** A view's frame is a scale and a translation: x from its drawn centre line or axis of
+symmetry (else its first structural line), y from a level it states (a site input first; else its lowest structural line), in real millimetres at
+the view's own scale, with the reduced level where it states one. The page opens each view in its own tab in that frame (cursor readout in local
+mm and RL); the agent's `inspect_view` gives the same frame. The mapping to the sheet is exact both ways (tested); edits are still made on the
+sheet's entities, so every view drawing the same geometry follows.
+
+**6. Scale is presentation (`rescale.py`).** A view redrawn at another drafting ratio changes size on the sheet and nothing it measures: geometry
+moves toward the view's origin, DIMLFAC is divided by the same factor so every number stays the real size, texts, arrows, hatch patterns and
+symbols keep their paper size, the title's ratio is rewritten. `cli rescale`. A geometry edit at any scale moves each view by its real size.
+
+**Found by measuring, fixed in the engine.** A dimension from a drawn centre line to a face — one of the commonest on a GAD — took the nearest
+member vertex for its point on the centre line (the face itself, a span away): it slid along with the face and showed its old number after every
+change (`analyse.py`, `line_through`; the bench's annotation check caught it on a real L-section). And committing a unit with many named values
+was slow: deriving the design intent tries each size's anchors for real, rebuilding every remaining size's plan each time one is left out, and
+asked the same formulas for their names half a million times. Each size's plan is now built once per anchor (`design_intent._plans_for` memo) and a
+formula's names once (`program._names`): 656 → 336 s of CPU for 25 new values on 173A's longitudinal section, the same result. The whole-unit check
+per left-out size (`_holds`) is what remains of the cost.
+
+**7. Measured, not claimed (`tools/param_bench.py`).** PARAMETRIZED = a dimension a named value drives AND whose value can be edited ±10 %
+with the whole sheet valid; plus edits accepted and refused by kind, shared values editable in every view, dimension numbers after an edit, the
+components the drawing labels found by name, and a recorded run's calls and tokens per parametrized dimension. Results and the method:
+`docs/PARAM_BENCH.md`.
+

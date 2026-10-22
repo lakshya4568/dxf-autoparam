@@ -39,10 +39,14 @@ engine that checks every claim. Read this first; the details are in `README.md` 
 | The agent: tools, loop, run state machine, verdict, model transport, cost log | `ai/agent.py` `ai/loop.py` `ai/run.py` `ai/vertex.py` `ai/gateway.py` (OpenAI-compatible providers) `ai/tokenharbor.py` (its catalogue, the free models) `ai/requestlog.py` `ai/statement.py` `ai/coverage.py` `ai/labels.py` (what the drawing's own labels call a part) |
 | What the views state side by side (search the sheet, compare views, arithmetic) | `ai/crosscheck.py` (tools `search_drawing` `compare_views` `calculate`) |
 | Checks on a change: interfaces, notes, held parts, validity | `behaviour.py`; how parametric a unit is: `status.dimension_drive` |
+| The drawing's own DIMENSIONS as the yardstick: each driven / unnamed / fixed / kept / unread, on the parts it measures (the agent's `coverage`, the finish gate, the bench) | `coverage.py` |
+| Why a change or commit was refused: the failed check, its entities, its KIND (edit cannot be drawn / model does not carry it / a plan / a rule / the solver) and whether the sheet already failed it | `refusal.py`, `SheetModel.explain`, `SheetError.failures` |
+| A relation checked on the drawing before it is bound (`check_relation`); views in their own coordinates (the page's view tabs, `inspect_view`); a view redrawn at another scale | `relations.py`, `frames.py`, `rescale.py` |
+| Production knowledge per component (parameters, defaults, relations, source file:line) | `knowledge/library/bridge/components.json`; the audit `docs/PRODUCTION_AUDIT.md` |
 | Server, page API, autosave (one owner per drawing), status | `server.py` `workspace.py` `autosave.py` `status.py` |
 | The page (React + Tailwind + TypeScript; the built bundle is tracked in `src/dxf_autoparam/static/app/`) | `web/src` `web/test` `web/e2e` |
-| Tools | `tools/monitor_run.py` (watch a run), `tools/preflight_run.py` (before a paid run), `tools/audit_run.py` (after), `tools/replay_trace.py` (replay a recorded run free), `tools/serve_scripted.py` / `serve_replay.py` (the app with a scripted / replayed model), `tools/tokenharbor_check.py` (list Token Harbor's models; `--test`: one tiny call to a free one), `tools/sweep_sides.py` (every value stepped and every side choice tried on a copy: what a person meets in the Values panel), `tools/ui_check.mjs` |
-| Docs | `docs/ARCHITECTURE.md` (start), `AGENT_SESSION.md` (runs, budgets, cost, verdict), `DESIGN_INTENT.md`, `MULTIVIEW.md`, `AUTO_PARAMETRIZATION.md` |
+| Tools | `tools/monitor_run.py` (watch a run), `tools/preflight_run.py` (before a paid run), `tools/audit_run.py` (after), `tools/replay_trace.py` (replay a recorded run free), `tools/serve_scripted.py` / `serve_replay.py` (the app with a scripted / replayed model), `tools/tokenharbor_check.py` (list Token Harbor's models; `--test`: one tiny call to a free one), `tools/sweep_sides.py` (every value stepped and every side choice tried on a copy: what a person meets in the Values panel), `tools/param_bench.py` + `tools/bench_cases.json` (the benchmark: PARAMETRIZED dimensions, edits by refusal kind, views, annotation, components found, cost — `docs/PARAM_BENCH.md`), `tools/component_inventory.py` (per part: parametrized / partial / unparametrized), `tools/ui_check.mjs` |
+| Docs | `docs/ARCHITECTURE.md` (start; Part 7 = the harness for a real GAD), `AGENT_SESSION.md` (runs, budgets, cost, verdict), `DESIGN_INTENT.md`, `MULTIVIEW.md`, `AUTO_PARAMETRIZATION.md`, `PARAM_BENCH.md` (the metric and its numbers), `BRIDGE_GEOMETRY_HARNESS.md` (what was built for real bridge geometry, before / after, limits, how to reproduce), `PRODUCTION_AUDIT.md`, `INVENTORY_173A.md` |
 
 State and logs: autosave `~/.local/state/dxf-autoparam/<drawing>-<hash>.autoparam.json` (+ `.prev.json`, `.owner.json`, dated `.replaced.json` after a clean start); model-call
 ledger `.cache/ai/usage.jsonl`; run logs, backups and findings in `out/agent-logs/` (git-ignored); `.env` (git-ignored; Vertex and gateway settings, see `.env.example`).
@@ -59,6 +63,8 @@ cd web && node e2e/workspace.e2e.mjs [--dxf F --project P --out DIR]    # headle
 uv run python tools/audit_run.py "<drawing>.dxf" <copy of the autosave> [--sweep] [--out FILE]
 uv run python tools/sweep_sides.py "<drawing>.dxf" <copy of the autosave> [--from-drawn] [--out FILE.jsonl]   # side choices accepted / refused by cause
 uv run dxf-autoparam agent-eval [--free <Token Harbor free model id>]   # the agent scored per category on a generated box: scripted (free), or a model priced at zero
+uv run python -I tools/param_bench.py --cases tools/bench_cases.json [--only 173A] [--ceiling --domain bridge] [--md FILE]   # the benchmark, no model (docs/PARAM_BENCH.md)
+uv run dxf-autoparam rescale "<drawing>.dxf" --view V03 --to 50 --out OUT.dxf      # one view redrawn at 1:50: its size on the sheet changes, nothing it measures
 ```
 
 Don't run tests, builds or e2e while a paid run is in flight (they compete for the machine and the run is what matters). A test that writes into the real ledger or the real state
@@ -79,6 +85,10 @@ folder is a bug (`vertex.CACHE`, `DXF_AUTOPARAM_STATE`): point it at `tmp_path`.
 - A plan answers for its own assembly. A value drawn in two views side by side has an occurrence in each; the parts the value moves through the other one are that
   assembly's (`plan._sibling_parts`), and a candidate must leave every occurrence of every size driving (`design_intent._holds`). Don't verify one view's plan against
   the whole unit again: every candidate fails the same way and a symmetric structure is left growing from the left.
+- The drawing's own DIMENSIONS are the yardstick: one counts as PARAMETRIZED only when a named value drives both its lines and that value can be edited ±10 % with
+  the whole sheet valid (`coverage.py`, the bench). Naming a part, or a value the engine generated, counts for nothing.
+- A refusal's kind (refusal.py) is a diagnosis with its measured basis, never a relaxation: every failed check still refuses. A relation from production knowledge
+  or a standard is a hypothesis until `check_relation` measures it on this drawing; a component card is knowledge, never an enforced rule.
 
 ## 5. The paid live run — when, how, what to keep
 
@@ -155,6 +165,10 @@ audit of the last run's saved work). One run per verified change set. If the own
   their start fixed, 11 their end, 1 its centre (the set-out's accident — now design intent). Bugs and gaps found and their status: `out/agent-logs/FINDINGS-live-run.md`; the retrace:
   `out/agent-logs/20261018-post-run/RETRACE-R1.md`.
 
+- The benchmark (2026-10-22/23, `docs/PARAM_BENCH.md`; PARAMETRIZED = a named value drives the dimension and its ±10 % edit keeps the sheet valid): 173A as
+  saved after R1 61 % (its L-section 15 / 50), reachable through the harness 87 % (39 / 50); 20A 49 % → 71 %; Bridge No.7A (never parametrized) 87 %; mib173 ≥ 72 %
+  (one pass); generated 1–4-cell boxes 100 %. Compare a run's result with these, and say what a MODEL reached separately from the ceiling.
+
 ## 7. Quick fixes for known trouble
 
 | Symptom | Cause / action |
@@ -167,3 +181,27 @@ audit of the last run's saved work). One run per verified change set. If the own
 | Turns take minutes, `RETRY — 429` in `run.log` | The primary model is out of capacity. A model that could not answer is not asked first again for `VERTEX_BREAKER_S` (300 s); the log says "…could not answer … the next turns start on <fallback>", and the verdict notes a run answered by two models |
 | Vertex credits or capacity are out | Put `TOKENHARBOR_API_KEY` in `.env` and restart the server (after copying the autosave if work is open): the picker lists Token Harbor's free models (`TOKENHARBOR_MODELS=all` for every one, with its price). `uv run python tools/tokenharbor_check.py [--test]` checks the key and one free model. A model is a free one only when the catalogue prices both input and output at zero |
 | A headless browser or test drops out | Something heavy is running; wait, never overlap with a live run |
+
+## 8. The production reference — what aagento-bridge knows (read 2026-10-22; trust the code over this)
+
+`../aagento-bridge/src/app/features/bridges` is the hand-coded production system dxf-autoparam is meant to make unnecessary: ~306k lines of TypeScript,
+one folder per family. It is GROUND TRUTH for what a family's components are, which numbers drive them and what follows when one changes — never code to
+port, and never a value of the drawing in hand. 173A is a railway RCC box whose components carry exactly this generator's defaults (return wall toe 1000 /
+heel 950 / footing 450 at the stem, 250 at the edge; earth retainer 225 × 450; toe wall 500 / 200 / 200 / 300, levelling course 75).
+
+| Where | What |
+|---|---|
+| `models/<family>.defaults.ts`, `models/bridge-registry.ts` | the model `M` (metres unless named `_mm`): `project{cells, span_length}`, `geometry{clear_w, clear_h, t_wall_o/i, t_slab_t/b, haunch_size, rw_*, toe_wall_*}`, `deck{wearing_course, formation_lvl, rail_level, earth_cushion, embankment_slope, formation_width_left/right}`, `hydraulics{bed_lvl, hfl, soffit_level, scour_lvl}`, `foundation{found_d, pcc_sub_base, sand_fill_depth}`, `abutment{return_wall_type, slanting_*}`, `side{curtain_*, drop_*, wing_l, apron_*}`, `options2d{show_*}`; the registry dispatches 15 keys |
+| `utils/rcc-box-railway/rcc-box-rule-engine.ts` (`compute`) | `total_w = cW·cells + 2·tOW + tIW·(cells−1)`, `total_h = cH + tST + tSB`, `z_bot = bed − wearC − tSB`, `z_top = z_bot + total_h`, `soffit = z_top − tST`, `pccBot = z_bot − pccB`, `granBot = pccBot − sandFill`; `validate()` (`:106–160`) is LIVE again (the UI's validation panel): outer wall ≥ 0.3 m, top slab ≥ 0.3 m, clear height ≥ 1.0 m, HFL clearance, HFL below soffit, soffit consistent, earth cushion ≥ 75 mm (IRS), haunch ≥ 300 mm, slab narrower than box width (warn). At its own defaults the soffit is inconsistent (99.498 computed vs 99.648 input) |
+| `components/bridge-workspace/panels/rcc-box-params.ts:355–460` (the UI panel) | the hand-coded LINKS a person sees move together: Clear Height = Box Height (`geometry.clear_h`) − wearing course; soffit = bed + clear height; top of slab = soffit + tST; earth cushion = max(formation − top of slab, 0) (written back to `deck.earth_cushion`); barrel length `project.span_length` = formation left + right + 4 × cushion (a 2H:1V slope each side) unless multi-bridge rules clip it; haunch from an RDSO band table on max(clear_w, clear_h) (<3.0 → 0.2 … ≥6.0 → 0.6); slab and wall thicknesses from an RDSO API (`getCulvertByState(cushion, w, h, code)`); toe wall stem bottom = top + both slants. Other families have the same pattern in `panels/*-params.ts` and `utils/*/…-mapper.ts` |
+| views `utils/<family>/*-view.ts` | each view is built in WORLD units — x in metres from its own origin (the centre line in a half section), y = reduced level (RL) — then mapped to the canvas: `wx = origin + x·scale`, `wy = bedY − (z − bedLvl)·scale` (`rcc-box-half-section-view.ts:157`, `rcc-box-longitudinal-view.ts:143`). Dimensions print the model's numbers; levels print `RL …` from the same values. The UI shows one tab per view: HALF SECTION · LONGITUDINAL ELEVATION · PLAN TOP · RETAINING WALL · CURTAIN WALL · DROP WALL · TOE WALL · SHEAR KEY · EARTH RETAINER · BORE LOG · REINFORCEMENT · BBS · KEY PLAN |
+| return wall: `rcc-box.constants.ts` (`RCC_BOX_RW_PARAMS`, `getEffectiveRwParams(M)`) | rcc type: stem top `cw_base_w` 0.300 (`geometry.rw_stem_top_thick`), batter `rw_inner_slant_dx` 0.150 (stem bottom − top), toe `rw_horiz_ext_w` 1.000 (`rw_toe_width`), heel `rw_horiz_inner_ext_w` 0.950 (`rw_heel_width`), footing depth at the stem `rw_horiz_base_h` 0.450 (`rw_depth`), at the edges `rw_depth_sec` (top slopes by the difference), depth below scour `rw_depth_scour` 1.750, lean concrete 0.120 projecting 0.150, coping `cw_*`; earth retainer trapezium on the box top `rw_h` 0.225 / `rw_top_w` 0.450 / `rw_base_w` 0.675. Slanting and PCC types have their own sets (neck, 1:12 / 1:6 batters, steps) |
+| return wall in the L-section (`rcc-box-longitudinal-view.ts:1497–1700`) and its C/S (`rcc-box-retaining-wall-view.ts:96–260`) | the SAME parameters in both views: outer stem face solid and vertical from the footing top to the top of the box; inner face battered and dashed (hidden); footing dashed with toe / heel / sloped top; footing bottom = scour level − `rw_depth_scour`; an `RL` label and a dimension from the scour level |
+| toe wall `rcc-box-toe-wall-view.ts`; curtain / drop wall `rcc-box-curtain-wall-view.ts`, `-drop-wall-view.ts` | `geometry.toe_wall_{h 0.5, stem_thick 0.2, depth 0.2, base_thick 0.3, form_w_left/right 0.3, leveling_course_thick 0.075, lc_offset_left/right 0.075}`; `side.{curtain_d 0.4, base_height 0.3, left/right_offset 0.3, length_below_scour 1.8}`, `side.drop_*` alike |
+| `utils/shared/` | substructure views shared by families (return / wing / face / toe / curtain wall, abutment), drafting styles (text and dimension sizes per scale), the DXF export, a GAD engine and validator |
+
+**What dxf-autoparam already takes from it** (`production/`, `docs/PRODUCTION_RULES.md`; refresh with `production build && production extract` when `production status` says stale — it did on 2026-10-22, and an older manifest called this `validate()` disabled): the rule engines run through a node bundle; per-family manifests
+(`knowledge/production/<family>.json`) hold the `compute` parameters, outputs, formulas verified by execution, view reads and findings. **What it did not
+take** (found 2026-10-22): component parameters read through helpers and constants (`geometry.rw_*`, `toe_wall_*`, `side.curtain_*`,
+`RCC_BOX_RW_PARAMS`) — no view record lists one — and the panel's links above. The engineering library (`knowledge/agent_context`) names the components
+(return wall, toe wall, shear key, haunch, coping…) but gives no parameters, relations or behaviour for them. They are now in `knowledge/library/bridge/components.json` (cited to file:line), which the agent's `coverage` tool attaches to a part whose name, type or labels match (with the bridge library on).
