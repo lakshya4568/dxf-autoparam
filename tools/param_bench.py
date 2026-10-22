@@ -24,7 +24,8 @@ The metrics (docs/PARAM_BENCH.md), all measured by the engine on the drawing's o
   baseline   the saved work as it is (a drawing without saved work: the engine's own reading, which names nothing — 0 by definition)
   ceiling    every dimension the agent's `coverage` tool lists as not driven, bound through the same tool path a model's call takes
              (define_parameters with the dimension's id, validated, taken back if it breaks the drawing), then committed with the whole-sheet
-             checks. The names are PLACEHOLDERS (Auto<part><n>): the ceiling measures what binding can reach, not naming quality
+             checks and the design intent derived, as a run commits; repeated while a pass binds something (coverage lists a part's first open
+             dimensions). The names are PLACEHOLDERS (Auto<part><n>): the ceiling measures what binding can reach, not naming quality
 """
 
 from __future__ import annotations
@@ -321,12 +322,16 @@ def _bind_all(sm, uid: str, pack) -> dict:
                      scope=SheetScope(sm, uid), pack=pack)
     cov = wb.coverage()
     todo = [(p, r) for p, e in cov["parts"].items() for r in e.get("open", [])] + [(None, r) for r in cov["unassigned"]]
-    seen, items = set(), []
+    seen, items, taken = set(), [], set(wb.prog.params)
     for p, r in todo:
         if r["dimension"] in seen:
             continue
         seen.add(r["dimension"])
-        items.append({"name": f"Auto{pascal(p) if p else 'Sheet'}{len(items) + 1}", "part": p or "", "dimension": r["dimension"]})
+        n, stem = 1, f"Auto{pascal(p) if p else 'Sheet'}"
+        while f"{stem}{n}" in taken:  # a name of its own, also against the values an earlier pass bound
+            n += 1
+        taken.add(f"{stem}{n}")
+        items.append({"name": f"{stem}{n}", "part": p or "", "dimension": r["dimension"]})
     verdicts: list[dict] = []
     if items:  # what a model reads back: the function response of the call, one verdict per item
         parts, _done = execute_calls(wb, [SimpleNamespace(name="define_parameters", args={"items": items})], lambda e: None, LoopState(), Budget(), {})
@@ -377,10 +382,22 @@ def run_case(case: dict, ceiling: bool, domain: str | None, annotation_limit: in
         pack = D.active(domain) if domain else None
         per = {}
         for uid in views_:
-            try:
-                per[uid] = _bind_all(sm, uid, pack)
-            except Exception as exc:  # noqa: BLE001 — one unit's boundary: a crash is a finding, recorded, and the next unit is measured
-                per[uid] = {"crash": f"{type(exc).__name__}: {exc}"[:300]}
+            passes: list[dict] = []
+            for _ in range(4):  # `coverage` lists a part's first open dimensions; once those are bound, the next ones come up — as an agent asks again
+                try:
+                    res = _bind_all(sm, uid, pack)
+                except Exception as exc:  # noqa: BLE001 — one unit's boundary: a crash is a finding, recorded, and the next unit is measured
+                    res = {"crash": f"{type(exc).__name__}: {exc}"[:300]}
+                passes.append(res)
+                if res.get("crash") or not res.get("accepted") or not res.get("committed"):
+                    break
+            refused: dict[str, int] = {}
+            for x in passes:
+                for k, v in (x.get("refused_by") or {}).items():
+                    refused[k] = refused.get(k, 0) + v
+            per[uid] = {"asked": sum(x.get("asked", 0) for x in passes), "accepted": sum(x.get("accepted", 0) for x in passes), "refused_by": refused,
+                        "committed": all(x.get("committed", False) for x in passes if "crash" not in x), "passes": len(passes),
+                        **{k: x[k] for x in passes for k in ("crash", "why_not") if k in x}}
         row["ceiling"] = {**measure(sm, views_, None, annotation_limit), "binding": per}
     row["seconds"] = round(time.time() - t0, 1)
     return row
