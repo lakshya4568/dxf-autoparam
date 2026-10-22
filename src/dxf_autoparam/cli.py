@@ -229,6 +229,13 @@ def main(argv: list[str] | None = None) -> int:
                                         "anything visible that is not drawn (no model, no cost)")
     p.add_argument("dxf", nargs="+")
     p.add_argument("--json", default=None, help="write the full coverage reports here")
+    p = sub.add_parser("rescale", help="redraw one view at another drafting ratio (1:25 → 1:50): its geometry about its own origin, its dimensions "
+                                       "showing the same real sizes, text and symbols at their paper size, its title's ratio rewritten; nothing else changes")
+    p.add_argument("dxf")
+    p.add_argument("--view", required=True, help="the view's id (V01 …, as the page and inspect_sheet list them)")
+    p.add_argument("--to", type=float, required=True, help="the new ratio n of 1:n")
+    p.add_argument("--from", dest="old", type=float, default=None, help="the ratio it is drawn at now (default: what its own title states)")
+    p.add_argument("--out", required=True)
     p = sub.add_parser("bench")
     p.add_argument("fixtures", nargs="?", default="fixtures/library")
     p.add_argument("--domain", choices=["bridge"], default=None)
@@ -341,6 +348,13 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if a.cmd == "fidelity":
         return _fidelity(a)
+    if a.cmd == "rescale":
+        from .crossview import SheetModel
+        from .rescale import rescale_view
+
+        rep = rescale_view(SheetModel.open(a.dxf), a.view, a.to, a.out, a.old)
+        print(json.dumps(rep, indent=1))
+        return 0 if not rep["not_rescaled"] else 2
     if a.cmd == "views":
         dr, _ = read_dxf(a.dxf)
         for v in detect_views(dr):

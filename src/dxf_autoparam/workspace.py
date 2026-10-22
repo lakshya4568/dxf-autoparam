@@ -192,10 +192,13 @@ class SheetSession:
                     "dropped": u.dropped,
                 }
             )
+        from .frames import frames as view_frames
+
+        frames = view_frames(sm)  # each view in its own frame (mm from its own origin, RL where it states a level); units not read yet: their box
         return {
             "file": Path(sm.path).name, "path": sm.path, "units_mm": sm.dr.units_mm, "extent": sm.dr.extent, "frame": lay.frame,
             "opened_s": round(self.opened, 2), "entities": len(sm.dr.items), "notes": lay.notes + sm.dr.notes,
-            "groups": [{**g.to_dict(), "unit": sm.unit_of_view.get(g.id)} for g in lay.groups],
+            "groups": [{**g.to_dict(), "unit": sm.unit_of_view.get(g.id), **({"local": frames.get(g.id)} if g.id in frames else {})} for g in lay.groups],
             "furniture": {"frame": lay.frame_items, "rules": lay.rules, "stray": lay.stray, "watermark": lay.watermark},
             "links": sm.links, "unlinked": sorted(list(k) for k in sm.unlinked), "units": units,
             "shared": [{"id": p.id, "name": p.name, "label": p.label, "value": p.value, "unit": p.unit, "evidence": p.evidence,
@@ -302,16 +305,17 @@ class SheetSession:
 
     def preview(self, changes: dict) -> dict:
         sm = self._sm()
-        sr = sm.preview({k: float(v) for k, v in changes.items()})
+        asked = {k: float(v) for k, v in changes.items()}
+        sr = sm.preview(asked)
         delta = self._prims(set(sr.changed) | self.shown, sr)
         return {"ok": sr.ok, "errors": sr.errors[:20], "warnings": sr.warnings, "by_view": sr.by_view, "measured": sr.measured,
-                "changed": len(sr.changed), "delta": delta, "styles": self.styles}
+                "changed": len(sr.changed), "delta": delta, "styles": self.styles, **({} if sr.ok else {"failures": sm.explain(sr, asked)[:20]})}
 
     def apply(self, changes: dict, live: bool = False) -> dict:
         sm = self._sm()
         sr = sm.apply({k: float(v) for k, v in changes.items()}, live=live)
         if not sr.ok:
-            return {"ok": False, "errors": sr.errors[:20]}
+            return {"ok": False, "errors": sr.errors[:20], "failures": sr.failures[:20]}
         return {"ok": True, **self._commit_delta(), "summary": self.summary(), "by_view": sr.by_view}
 
     def original(self) -> dict:
@@ -1005,7 +1009,7 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
                 op = path.rsplit("/", 1)[1]
                 return handler._json(sheet.edit(op, body)) or True
     except SheetError as exc:
-        handler._json({"ok": False, "error": str(exc)}, 409)
+        handler._json({"ok": False, "error": str(exc), **({"failures": exc.failures[:20]} if exc.failures else {})}, 409)
         return True
     except (KeyError, ValueError, TypeError, IndexError) as exc:  # a malformed request: said, never a crash of the server
         handler._json({"ok": False, "error": f"{type(exc).__name__}: {exc}"}, 400)

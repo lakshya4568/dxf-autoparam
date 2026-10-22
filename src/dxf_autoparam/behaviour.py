@@ -249,8 +249,11 @@ def behaviour_report(sm, changes: dict[str, float], sr=None, plans: bool = True)
         note("views", None, {"why": "no shared value is bound in more than one unit: each view follows its own values"})
     # validity
     if sr.errors:
-        for e in sr.errors[:12]:
-            note("validity", False, {"issue": e})
+        # each error with the kind of refusal it is (refusal.py): an edit that cannot be drawn, a model that does not carry it, a promise, a rule
+        for f in sm.explain(sr, changes)[:12]:
+            note("validity", False, {"issue": f["message"], "unit": f.get("unit"), "check": f["check"], "kind": f["kind"], "says": f["says"],
+                                     "basis": f.get("basis", ""), "existing": f.get("existing", False), "entities": f.get("items", [])[:40],
+                                     "refs": f.get("entities", [])[:8]})
     else:
         note("validity", True, {"issue": "every outline stays valid; every check of the sheet holds" + ("" if clashed else "; no member runs into another")})
     if plans:

@@ -53,7 +53,12 @@ EXPR_KEYS = ("expr", "value")
 
 
 class SheetError(ValueError):
-    """A request the sheet model refuses, with the reason a person can act on."""
+    """A request the sheet model refuses, with the reason a person can act on — and, for a refused change or commit, each failed check with the
+    kind of refusal it is (`failures`, refusal.py)."""
+
+    def __init__(self, message: str = "", failures: list[dict] | None = None):
+        super().__init__(message)
+        self.failures: list[dict] = failures or []
 
 
 # ── projection links ─────────────────────────────────────────────────────────────
@@ -192,6 +197,8 @@ class SheetRegen:
     errors: list[str]
     warnings: list[str]
     measured: dict[str, dict[str, float]]  # shared name → unit → the size its lines measure
+    # each error tagged with the check it comes from (and what it is about); SheetModel.explain adds the kind of refusal and its evidence
+    failures: list[dict] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
@@ -441,6 +448,12 @@ class SheetModel:
         todo = (units or set()) | self._touched(changes)
         pts, radius, texts, turns = {}, {}, {}, {}
         errors, warnings, changed = [], [], []
+        failures: list[dict] = []
+
+        def fail(check: str, uid: str | None, message: str, **about) -> None:
+            errors.append(message)
+            failures.append({"check": check, "unit": uid, "message": message, **about})
+
         by_view: dict[str, int] = {}
         measured: dict[str, dict[str, float]] = {}
         regenerated: dict[str, tuple] = {}
@@ -451,20 +464,23 @@ class SheetModel:
             try:
                 r = regenerate_program(u.prog, vals)
             except (KeyError, ExprError, ArithmeticError) as exc:
-                errors.append(f"{uid}: cannot regenerate: {exc}")
+                fail("SOLVER", uid, f"{uid}: cannot regenerate: {exc}")
                 continue
-            errors += [f"{uid}: {i}" for i in r.issues]
+            for i in r.issues:
+                fail("SOLVER" if i.startswith("transform ") else "POSITIVE" if " must stay positive " in i else "GEOMETRY", uid, f"{uid}: {i}", issue=i)
             regenerated[uid] = (u, vals, r.datum)
             plans = [p for p in (u.answer or {}).get("plans", []) if p.get("status") == "accepted"]
             if plans:  # what a person accepted for this unit holds at the values asked for, not only at the ones tested
-                errors += [f"{uid}: {e}" for e in plan_errors_at(u.prog, plans, vals)]
+                for e in plan_errors_at(u.prog, plans, vals):
+                    fail("SOLVER" if e.startswith("cannot evaluate") else "PLAN", uid, f"{uid}: {e}", issue=e)
                 if any(not design_intent.derived(p) for p in plans):
                     # the crossing check belongs to a plan a person accepted: the engine's own plans (design intent) say which side of a size stays and
                     # must not make the unit stricter than it was — a size that crosses members was said, when the intent was derived, and is still allowed
                     moved_k = {k for k, p in r.pts.items() if any(abs(a[0] - b[0]) > 1e-9 or abs(a[1] - b[1]) > 1e-9
                                                                   for a, b in zip(p, u.sub.items[k].pts, strict=False))}
-                    errors += [f"{uid}: {entity_id(u.sub.items[i])} now crosses {entity_id(u.sub.items[j])} — members run into each other"
-                               for i, j in clashes(u.prog, r.pts, moved_k)[:5]]
+                    for i, j in clashes(u.prog, r.pts, moved_k)[:5]:
+                        fail("CLASH", uid, f"{uid}: {entity_id(u.sub.items[i])} now crosses {entity_id(u.sub.items[j])} — members run into each other",
+                             pair=[i, j])
             for k, p in r.pts.items():
                 s = u.back[k]
                 pts[s] = p
@@ -503,16 +519,18 @@ class SheetModel:
                 want = changes.get(p.name, self._shared_now(p))
                 for b in p.bindings:
                     if b.unit == uid and b.status == "worked_out" and abs(want - p.value) > 1e-9:
-                        errors.append(f"{p.name} cannot change in {uid}: {b.reason}")
+                        fail("WORKED_OUT", uid, f"{p.name} cannot change in {uid}: {b.reason}", value=p.name, param=b.param)
         for name, per in measured.items():
             want = changes.get(name, self._shared_now(self._shared_by_name()[name]))
             for uid, got in per.items():
                 if abs(got - want) > max(0.5, 1e-4 * abs(want)):
-                    errors.append(f"{name}: {uid} measures {got:.1f} mm, not {want:g} — that view did not follow")
-        errors += self._domain_errors(regenerated)
+                    fail("FOLLOW", uid, f"{name}: {uid} measures {got:.1f} mm, not {want:g} — that view did not follow", value=name,
+                         measured_mm=round(got, 3), wanted_mm=want)
+        for e in self._domain_errors(regenerated):
+            fail("RULE", e.split(": ", 1)[0], e)
         warnings += self._overlaps(changed, pts)
         reg = Regenerated(values=dict(changes), datum={}, pts=pts, radius=radius, texts=texts, issues=list(errors), turns=turns)
-        return SheetRegen(reg=reg, changed=sorted(changed), by_view=by_view, errors=errors, warnings=warnings, measured=measured)
+        return SheetRegen(reg=reg, changed=sorted(changed), by_view=by_view, errors=errors, warnings=warnings, measured=measured, failures=failures)
 
     def _overlaps(self, changed: list[int], pts: dict[int, list]) -> list[str]:
         """Words a change pushed onto other words of the same view (they did not overlap as drawn): said, for a person
@@ -621,13 +639,22 @@ class SheetModel:
     def preview(self, changes: dict[str, float]) -> SheetRegen:
         return self.regenerate(changes)
 
+    def explain(self, r: SheetRegen, changes: dict[str, float]) -> list[dict]:
+        """A refused regeneration's failures, each with the kind of refusal (an edit that cannot be drawn, a model that does not carry it, a
+        promise, a rule, a program that cannot be evaluated), the entities and values it is about, its measured basis, and whether the sheet
+        as it stands fails it too (refusal.py). Nothing changes."""
+        from . import refusal
+
+        return refusal.explain(self, r, changes)
+
     def apply(self, changes: dict[str, float], live: bool = False) -> SheetRegen:
-        """Commit a change only if the whole sheet regenerates cleanly; otherwise nothing changes.
+        """Commit a change only if the whole sheet regenerates cleanly; otherwise nothing changes (the refusal says why: `failures`).
 
         `live` is one person stepping a value up and down: every step is committed (the drawing follows), but steps of the same values in a row
         are ONE undoable step, so a single undo goes back to where the stepping began."""
         r = self.regenerate(changes)
         if not r.ok:
+            r.failures = self.explain(r, changes)
             return r
         keys = frozenset(changes)
         if live and self._live == (keys, self.revision):
@@ -1548,11 +1575,17 @@ class SheetModel:
         assert u.an is not None
         assert u.prog is not None
         problems = []
+        own: list[dict] = []  # the commit's own checks, tagged as the sheet's regeneration tags its errors (refusal.py)
+
+        def problem(check: str, message: str, **about) -> None:
+            problems.append(message)
+            own.append({"check": check, "unit": uid, "message": message, **about})
+
         for p in self.shared.values():
             for b in p.bindings:
                 if b.unit == uid and before_status.get((p.name, uid)) == "drives" and b.status != "drives":
-                    problems.append(f"{p.name} is shared with {', '.join(x.unit for x in p.bindings if x.unit != uid)} but would no longer "
-                                    f"drive {uid} ({b.status}: {b.reason or 'not a value of the new answer'}) — that view would stop following")
+                    problem("UNBOUND", f"{p.name} is shared with {', '.join(x.unit for x in p.bindings if x.unit != uid)} but would no longer "
+                                       f"drive {uid} ({b.status}: {b.reason or 'not a value of the new answer'}) — that view would stop following", value=p.name)
         for p in self.shared.values():  # measured, not only named: the shared size still moves its own lines here
             for b in p.bindings:
                 if b.unit != uid or b.status != "drives":
@@ -1570,18 +1603,21 @@ class SheetModel:
                             **u.prog.datum_values(),
                         },
                     ):
-                        problems.append(
-                            f"{p.name} no longer moves its lines in {uid} ({a}–{d}): the views sharing it would not follow"
-                        )
-        problems += [f"{e['item']}: {e['message']}" for e in (u.report.errors() if u.report else []) if e["code"] == "V16"]
+                        problem("UNBOUND", f"{p.name} no longer moves its lines in {uid} ({a}–{d}): the views sharing it would not follow", value=p.name)
+        for e in (u.report.errors() if u.report else []):
+            if e["code"] == "V16":
+                problem("PLAN", f"{e['item']}: {e['message']}", issue=f"plan {e['item'].split(':', 1)[0]}: {e['message']}")
         lost = sorted(n for n in self.values.get(uid, {}) if n not in u.prog.params)
         if lost and not discard_values:
-            problems.append(f"the value(s) you set for {', '.join(lost)} would be lost (the new parametrization has no such value): "
-                            "keep them, or confirm discarding them")
+            problem("VALUES", f"the value(s) you set for {', '.join(lost)} would be lost (the new parametrization has no such value): "
+                              "keep them, or confirm discarding them", values=lost)
         others = {x.unit for p in self.shared.values() if any(b.unit == uid for b in p.bindings) for x in p.bindings}
         r = self.regenerate(units={uid} | others)
         problems += r.errors
         if problems:
+            from . import refusal
+
+            failures = refusal.classify(self, own, {}) + refusal.classify(self, r.failures, {}, r)  # measured with the refused answer in place
             self._restore(state)
             self.history.pop()
             self.revision = rev
@@ -1591,7 +1627,8 @@ class SheetModel:
                         b.status = before_status[(q.name, uid)]
             self.units[uid].prog = None
             self.unit(uid)
-            raise SheetError("refused, nothing changed: " + "; ".join(problems[:4]))
+            refusal.mark_existing(self, failures)  # against the sheet as it stood: what this answer did not cause
+            raise SheetError("refused, nothing changed: " + "; ".join(problems[:4]), failures=failures)
         if lost:  # the person confirmed: the values fall back to the drawing
             self.values[uid] = {k: v for k, v in self.values[uid].items() if k not in lost}
         kept = self._keep_unnamed_as_drawn(uid)[0] if keep_unnamed_as_drawn else []
