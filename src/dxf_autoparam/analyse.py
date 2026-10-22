@@ -1019,9 +1019,12 @@ def _attach_free_points(dr: Drawing, slot_datum, datums: dict[str, Datum]) -> No
         vertex_at[v[3]].append((v[0], v[1]))
 
     def line_through(axis: str, c: float, x: float, y: float) -> str | None:
-        ds = [d for val, d in on_line[axis] if abs(val - c) <= dr.tol and vertex_at.get(d)]
-        if len(ds) > 1:  # two lines at one place (two parts): the one drawn nearest
-            ds.sort(key=lambda d: min((px - x) ** 2 + (py - y) ** 2 for px, py in vertex_at[d]))
+        # A point on a centre line or an axis (no member's vertex lies on it) is ON that line: a dimension from the centre line of a span to a
+        # face is one of the commonest a GAD states. It used to be skipped, the point then took the nearest vertex — the face itself, a span
+        # away — and the dimension slid along with the face, measuring the same length after every change.
+        ds = [d for val, d in on_line[axis] if abs(val - c) <= dr.tol]
+        if len(ds) > 1:  # two lines at one place (two parts, or a face on a centre line): a drawn one first, the one drawn nearest
+            ds.sort(key=lambda d: (not vertex_at.get(d), min(((px - x) ** 2 + (py - y) ** 2 for px, py in vertex_at.get(d, ())), default=0.0)))
         return ds[0] if ds else None
 
     for it in dr.items:

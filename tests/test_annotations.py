@@ -185,3 +185,43 @@ def test_texts_are_shown_by_their_cad_anchor_and_dimension_numbers_by_their_styl
     dim = got["4000"]
     assert dim["h"] == pytest.approx(250.0) and dim["ha"] == "c"   # 2.5 × 100: it zooms with the drawing
     assert dim["at"][1] > -600   # above its dimension line, as drawn
+
+
+def test_a_dimension_from_a_centre_line_measures_the_new_distance(tmp_path):
+    """A dimension from a drawn centre line to a face — one of the commonest a GAD states. Its point on the centre line used to take the nearest
+    member vertex instead (the face itself, the whole distance away), so the dimension slid along with the face and showed the old number after
+    every change. Found on a real L-section; generated here."""
+    import copy
+
+    from dxf_autoparam.crossview import EMPTY_ANSWER
+
+    doc = ezdxf.new("R2018", setup=True)
+    doc.header["$INSUNITS"] = 4
+    doc.layers.add("CL", linetype="CENTER")
+    msp = doc.modelspace()
+    msp.add_lwpolyline([(0, 0), (6000, 0), (6000, 500), (0, 500)], close=True)  # the slab
+    msp.add_lwpolyline([(4000, 500), (4400, 500), (4400, 3000), (4000, 3000)], close=True)  # a wall on it
+    msp.add_line((2000, -600), (2000, 3600), dxfattribs={"layer": "CL"})  # the centre line of the span
+    dim = msp.add_linear_dim(base=(2000, 3400), p1=(2000, 3000), p2=(4000, 3000), dimstyle="Standard")
+    dim.render()
+    handle = dim.dimension.dxf.handle
+    path = tmp_path / "cl.dxf"
+    doc.saveas(str(path))
+    sm = SheetModel.open(str(path))
+    uid = next(iter(sm.units))
+    u = sm.unit(uid)
+    an, um = u.an, u.sub.units_mm
+
+    def line(at):
+        return min((d for d in an.datums.values() if d.axis == "x"), key=lambda d: abs(d.value * um - at)).id
+
+    assert an.datums[line(2000)].source == "drawn-axis"
+    ans = copy.deepcopy(EMPTY_ANSWER)
+    ans["parameters"] = [{"name": "FaceFromCentre", "label": "FaceFromCentre", "component": "", "kind": "length", "from_datum": line(2000),
+                          "to_datum": line(4000), "value": 2000.0}]
+    sm.commit_answer(uid, ans, intent=False)
+    assert sm.apply({f"{uid}.FaceFromCentre": 2500.0}).ok
+    out = tmp_path / "out.dxf"
+    sm.export(str(out))
+    d = ezdxf.readfile(str(out)).entitydb.get(handle)
+    assert float(d.get_measurement()) == pytest.approx(2500.0), "both of its points follow their own lines: it measures the new distance"
