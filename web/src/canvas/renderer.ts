@@ -1,8 +1,9 @@
 // One frame of the drawing, in deliberate layers (bottom to top):
 //   fills (solid hatches, arrowheads, wide polylines; a faint tint under pattern hatches when asked) → hatch pattern lines →
+//   the ORIGINAL geometry of what changed, dashed in its own colour (under everything the drawing is now) →
 //   the drawing's lines in their own colour, lineweight and linetype → wipeouts → control overlays (what a value drives /
-//   moves / holds — translucent, UNDER the text so they never hide a note) → texts → the proposal of a previewed change (the
-//   original ghosted) → selection and hover → validation issues.
+//   moves / holds — translucent, UNDER the text so they never hide a note) → texts → the proposal of a previewed change →
+//   selection and hover → validation issues.
 // Nothing here computes geometry: every point comes from the engine; this file only draws it.
 import type { Prim, Style } from "../api/types";
 import type { GridIndex } from "./spatial";
@@ -20,12 +21,12 @@ export interface Overlays {
   holds: boolean;
   texts: boolean;
   issues: boolean;
-  /** The drawing as it was read, dotted, under what has changed: only when asked for, never as a side effect of editing a value. */
+  /** The drawing as it was read, dashed in its own colour, under what has changed (on unless the person switches it off). */
   original: boolean;
 }
 
 export const DEFAULT_OVERLAYS: Overlays = {
-  dims: true, text: true, hatch: true, hatchTint: false, construction: true, drives: true, follows: true, holds: true, texts: true, issues: true, original: false,
+  dims: true, text: true, hatch: true, hatchTint: false, construction: true, drives: true, follows: true, holds: true, texts: true, issues: true, original: true,
 };
 
 export interface HighlightSets {
@@ -208,6 +209,19 @@ export function render(ctx: CanvasRenderingContext2D, inp: RenderInput): FrameSt
     ctx.fill();
   }
   ctx.globalAlpha = 1;
+  // 2b. the original geometry of what changed: dashed, in a colour no other layer uses, UNDER the drawing as it is now — what moved, grew or
+  // stayed is read by comparing the two, and the reference never covers a line, a dimension or a note of the current drawing
+  if (overlays.original && inp.original?.length) {
+    ctx.setLineDash([6, 4]);
+    ctx.strokeStyle = theme.dark ? "#a3e635" : "#4d7c0f";
+    ctx.globalAlpha = 0.85;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    for (const p of inp.original) if (p.k === "p" && p.p && ok(p)) path(ctx, p.p, !!p.c, cam, W, H);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+  }
   // 3. the drawing's lines, one path per stroke (colour, width, dash)
   const groups = new Map<string, { color: string; width: number; dash: number[] | null; alpha: number; list: Prim[] }>();
   let drawn = 0;
@@ -277,17 +291,7 @@ export function render(ctx: CanvasRenderingContext2D, inp: RenderInput): FrameSt
     if (drawText(ctx, p, inp, color, fontFamily(st))) texts++;
   }
   ctx.globalAlpha = 1;
-  // 7a. the original geometry, dotted — only when the person turned it on
-  if (overlays.original && inp.original?.length) {
-    ctx.setLineDash([2, 3]);
-    ctx.strokeStyle = theme.dark ? "#8b97a7" : "#6b7685";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    for (const p of inp.original) if (p.k === "p" && p.p && ok(p)) path(ctx, p.p, !!p.c, cam, W, H);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
-  // 7b. a proposed change that is not applied (the API's preview): bright
+  // 7. a proposed change that is not applied (the API's preview): bright
   if (preview) {
     ctx.strokeStyle = "#f97316";
     ctx.lineWidth = 1.6;
@@ -298,7 +302,7 @@ export function render(ctx: CanvasRenderingContext2D, inp: RenderInput): FrameSt
   // 8. selection and hover
   const sel = shown.filter((p) => inp.selection.has(p.i));
   if (sel.length) {
-    ctx.strokeStyle = "#2563eb";
+    ctx.strokeStyle = theme.dark ? "#fbbf24" : "#2563eb"; // the dark theme's accent is amber, never blue
     ctx.lineWidth = 2.6;
     ctx.globalAlpha = 0.9;
     ctx.beginPath();
@@ -314,7 +318,7 @@ export function render(ctx: CanvasRenderingContext2D, inp: RenderInput): FrameSt
     ctx.globalAlpha = 1;
   }
   if (inp.hover !== null && !inp.selection.has(inp.hover)) {
-    ctx.strokeStyle = "#60a5fa";
+    ctx.strokeStyle = theme.dark ? "#fde68a" : "#60a5fa";
     ctx.lineWidth = 2;
     ctx.beginPath();
     for (const p of shown) if (p.i === inp.hover && p.k !== "t" && p.p) path(ctx, p.p, !!p.c || p.k === "g", cam, W, H);

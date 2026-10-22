@@ -98,3 +98,13 @@ export function unionBox(boxes: Box[]): Box | null {
   }
   return x0 <= x1 && y0 <= y1 ? [x0, y0, x1, y1] : null;
 }
+
+/** The camera after the canvas moved or resized in the window (a panel opened or closed beside it): the same world point stays at the same place
+ * in the WINDOW, so the drawing does not slide. `before` / `after`: the canvas's left / top in the window and its size, in CSS pixels. */
+export function keepOnScreen(cam: Camera, before: { left: number; top: number; W: number; H: number }, after: { left: number; top: number; W: number; H: number }): Camera {
+  const dx = after.left + after.W / 2 - (before.left + before.W / 2);
+  const dy = after.top + after.H / 2 - (before.top + before.H / 2);
+  if (Math.abs(dx) < 1e-9 && Math.abs(dy) < 1e-9) return cam;
+  const [cx, cy] = toWorld(cam, before.W, before.H, before.W / 2 + dx, before.H / 2 + dy);
+  return { ...cam, cx, cy };
+}

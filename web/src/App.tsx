@@ -26,7 +26,7 @@ function Tabs<T extends string>({ items, value, onChange }: { items: [T, string]
     <div className="flex border-b border-slate-200 dark:border-slate-700 text-[13px]">
       {items.map(([k, label]) => (
         <button key={k} data-testid={`tab-${k}`} onClick={() => onChange(k)}
-          className={`px-3 py-2 -mb-px border-b-2 ${value === k ? "border-blue-600 text-blue-700 dark:text-blue-300 font-medium" : "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"}`}>
+          className={`px-3 py-2 -mb-px border-b-2 ${value === k ? "border-blue-600 text-blue-700 dark:border-amber-400 dark:text-amber-300 font-medium" : "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"}`}>
           {label}
         </button>
       ))}
@@ -40,7 +40,7 @@ function Splitter({ side }: { side: "left" | "right" | "agent" }) {
     <div
       role="separator"
       aria-orientation="vertical"
-      className="w-1.5 shrink-0 cursor-col-resize bg-slate-200/60 hover:bg-blue-400/60 dark:bg-slate-700/60"
+      className="w-1.5 shrink-0 cursor-col-resize bg-slate-200/60 hover:bg-blue-400/60 dark:bg-slate-700/60 dark:hover:bg-amber-400/60"
       onPointerDown={(e) => {
         (e.target as HTMLElement).setPointerCapture(e.pointerId);
         const s = store.get();
@@ -97,11 +97,13 @@ function AutosaveBadge({ initial }: { initial: AutosaveInfo }) {
 }
 
 function TopBar() {
-  const s = useStore(store, (x) => ({ summary: x.summary, busy: x.busy, message: x.message, theme: x.theme, revision: x.revision, leftOpen: x.leftOpen, rightOpen: x.rightOpen, original: x.overlays.original }));
+  const s = useStore(store, (x) => ({ summary: x.summary, busy: x.busy, stepping: x.stepping, message: x.message, theme: x.theme, revision: x.revision, leftOpen: x.leftOpen, rightOpen: x.rightOpen, original: x.overlays.original }));
+  const working = s.busy ?? (s.stepping ? "Regenerating…" : null);
   const file = useRef<HTMLInputElement>(null);
   const btn = "px-2.5 py-1 rounded border border-slate-300 dark:border-slate-600 text-[13px] hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40";
   return (
-    <header className="flex items-center gap-2 px-3 h-11 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-[#11161d] shrink-0">
+    <header className="relative flex items-center gap-2 px-3 h-11 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-[#11161d] shrink-0">
+      {working && <div className="progress-bar" role="progressbar" aria-label={working} data-testid="working" />}
       <button className={btn} title="Show or hide the left panel" onClick={() => store.set({ leftOpen: !s.leftOpen })}>☰</button>
       <strong className="text-[14px] text-slate-800 dark:text-slate-100">Sheet Workspace</strong>
       <span className="text-[13px] text-slate-500 truncate max-w-[22ch]" title={s.summary?.path}>{s.summary?.file ?? "no drawing"}</span>
@@ -112,12 +114,12 @@ function TopBar() {
       <button className={btn} onClick={() => fitSheet()} title="Fit the sheet (F)">Fit</button>
       <button className={btn} onClick={() => back()} title="Back to the previous view (Backspace)">Back</button>
       <button className={`${btn} ${s.original ? "bg-slate-100 dark:bg-slate-800" : ""}`} aria-pressed={s.original} data-testid="show-original" disabled={!s.summary}
-        title="Show the drawing as it was read, dotted, under what has changed (switch off to hide it)" onClick={() => setOverlay("original", !s.original)}>Original</button>
+        title="The drawing as it was read: what has changed is shown dashed under it in its own colour (switch off to hide it)" onClick={() => setOverlay("original", !s.original)}>Original</button>
       {s.summary && <a className={btn} href="/api/sheet/export" data-testid="export">Export DXF</a>}
       <span className="ml-2 text-[12px] text-slate-400 num" data-testid="revision">rev {s.revision}</span>
       {s.summary?.autosave && <AutosaveBadge initial={s.summary.autosave} />}
       <div className="flex-1 min-w-0 px-2">
-        {s.busy ? <span className="block truncate text-[13px] text-slate-500">{s.busy}</span>
+        {working ? <span className="block truncate text-[13px] text-slate-500">{working}</span>
           : s.message && <span data-testid="message" title={s.message.text} className={`block text-[13px] truncate ${s.message.kind === "bad" ? "text-red-600" : s.message.kind === "ok" ? "text-emerald-600" : "text-slate-600"}`}>{s.message.text}</span>}
       </div>
       <button className={btn} onClick={() => store.set({ theme: s.theme === "dark" ? "light" : "dark" })}>{s.theme === "dark" ? "Light" : "Dark"}</button>

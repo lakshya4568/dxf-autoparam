@@ -162,6 +162,21 @@ export interface FrozenRow {
   why: string;
 }
 
+/** A part of a unit, as the engine has it: the tree, the sheet entities it is drawn with (a click shows them), and what the drawing's own labels on
+ * its outline call it — `label_doubt` when they say something its name does not (the agent's hypothesis, contradicted by the drawing's text). */
+export interface ComponentRow {
+  name: string;
+  type: string;
+  regions: string[];
+  parent?: string | null;
+  level?: string;
+  existing?: boolean;
+  entities?: number[];
+  drawing_says?: string[];
+  label_doubt?: string;
+  label_checked?: string;
+}
+
 export interface UnitInfo {
   id: string;
   /** The sheet revision this was read at: the panel reads the unit again when the sheet has moved on. */
@@ -173,7 +188,7 @@ export interface UnitInfo {
   /** The choices a person made to settle an undecided direction in this unit (each can be taken back). */
   settled?: { choice: string; title: string; kind: string }[];
   findings: { code: string; severity: string; item: string; message: string }[];
-  components: { name: string; type: string; regions: string[] }[];
+  components: ComponentRow[];
   /** How many of the unit's dimensions a named value drives, measured by stepping each value (null: nobody parametrized the unit). */
   dimensions?: { total: number; driven: number; constant: number; unread: number; constants: { mm: number; text: string }[]; unsteppable: string[] } | null;
 }
@@ -268,6 +283,8 @@ export interface DeltaResult {
   styles?: Style[];
   summary?: Summary;
   reload?: boolean;
+  /** every entity that now differs from the drawing as read (the page keeps their original, dashed) */
+  differs?: number[];
   by_view?: Record<string, number>;
   changed?: number;
   measured?: Record<string, Record<string, number>>;
@@ -407,7 +424,8 @@ export interface PictureMeta {
 
 /** One event of a run, as the engine emitted it (src/dxf_autoparam/ai/run.py, loop.py, narrate.py). Fields depend on `kind`. */
 export interface RunEvent {
-  kind: string; // run_start · user · stage · turn · call · thought · retry · tool_start · tool · image · applied · state · question · verdict · error · note · budget · status
+  kind: string; // run_start · user · stage · turn · call · thought · say · retry · tool_start · tool · image · applied · state · question · verdict · error · note · budget · status
+  while_working?: boolean; // a `user` event: said while the agent worked (a note), not an answer or a new instruction
   seq?: number;
   t?: number; // seconds since the run started
   turn?: number;
@@ -449,10 +467,22 @@ export interface RunEvent {
 export interface RunQuestion {
   id: string;
   text: string;
+  /** a word or two naming the question (the agent's) */
+  header?: string;
   options?: string[];
-  recommended?: string;
+  /** what each option means, by option */
+  descriptions?: Record<string, string>;
+  /** several options may be chosen (their answers are joined with " | ") */
+  multi?: boolean;
+  recommended?: string | null;
   about?: string;
   why?: string;
+}
+
+/** The engineering libraries a run may use, and the one the sheet's own printed words point at (a suggestion, with the words that matched). */
+export interface LibraryInfo {
+  domains: { name: string; title: string; skills: number }[];
+  suggested: { domain: string; skill: string; score: number; because: string[] } | null;
 }
 
 export interface Criterion {

@@ -26,7 +26,7 @@ export function ViewsPanel() {
               const u = g.unit ? units.get(g.unit) : undefined;
               return (
                 <div key={g.id} data-testid={`view-${g.id}`}
-                  className={`group flex items-center gap-2 rounded px-1.5 py-1 hover:bg-slate-100 dark:hover:bg-slate-800 ${focus === g.id ? "bg-blue-50 dark:bg-blue-950/40" : ""}`}>
+                  className={`group flex items-center gap-2 rounded px-1.5 py-1 hover:bg-slate-100 dark:hover:bg-slate-800 ${focus === g.id ? "bg-blue-50 dark:bg-amber-950/40" : ""}`}>
                   <button className="font-mono text-[12px] text-slate-500 w-9 text-left" onClick={() => fitView(g.id)} title="Fit this view">{g.id}</button>
                   <button className="flex-1 min-w-0 text-left truncate" title={g.name} onClick={() => fitView(g.id)}>
                     {g.name || <span className="text-slate-400">(no title)</span>}

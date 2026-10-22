@@ -45,7 +45,7 @@ function Parametric({ rec }: { rec: EntityRecord }) {
       <p className="mb-1">
         {p.fixed ? <span className="text-slate-500">No value reaches it: it stays where it is.</span>
           : <>Moved by {p.parameters.map((n) => (
-            <button key={n} className="mr-1 rounded bg-blue-50 dark:bg-blue-950/50 px-1 font-mono text-blue-700 dark:text-blue-300" onClick={() => { store.set({ leftTab: "values" }); void focusParam(`${rec.unit}.${n}`); }}>{n}</button>
+            <button key={n} className="mr-1 rounded bg-blue-50 dark:bg-amber-950/50 px-1 font-mono text-blue-700 dark:text-amber-300" onClick={() => { store.set({ leftTab: "values" }); void focusParam(`${rec.unit}.${n}`); }}>{n}</button>
           ))}</>}
         {p.held && <span className="ml-1 rounded bg-amber-100 dark:bg-amber-900/50 px-1 text-[11px]">held (existing)</span>}
       </p>
@@ -81,7 +81,7 @@ export function InspectorPanel() {
         <strong className="text-[13px]">{rec.type}</strong>
         <span className="font-mono text-slate-500">{rec.id}</span>
         {selection.size > 1 && <span className="text-slate-400">({selection.size} selected)</span>}
-        <button className="ml-auto underline text-blue-700 dark:text-blue-300" onClick={() => fitEntities(new Set([rec.index]))} data-testid="zoom-entity">Zoom to it</button>
+        <button className="ml-auto underline text-blue-700 dark:text-amber-300" onClick={() => fitEntities(new Set([rec.index]))} data-testid="zoom-entity">Zoom to it</button>
         <button className="underline text-slate-500" onClick={() => void select(null)}>Clear</button>
       </div>
       <table className="w-full mb-2"><tbody>

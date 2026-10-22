@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
 import { entityList } from "../api/normalize";
-import type { Blocker, FrozenRow, GrowthRow, MeasuredRow, ParamRow, SettleChoice, UnitInfo } from "../api/types";
+import type { Blocker, ComponentRow, FrozenRow, GrowthRow, MeasuredRow, ParamRow, SettleChoice, UnitInfo } from "../api/types";
 import { useStore } from "../state/store";
 import { checkBehaviour, chooseGrowth, clearParam, deriveIntent, fitEntities, focusParam, hideWays, keepUnnamedAsDrawn, liveChange, openUnit, releaseKept, settleGrowth, showWays, store, takeBackChoice, unlockHeldPart } from "../state/workspace";
 
@@ -72,10 +72,10 @@ function ParamEditor({ row }: { row: { key: string; label: string; value: number
   };
   const take = () => { if (valid && Math.abs(value - row.value) > 1e-9) go(value, false); else setText(plain(row.value)); };
   return (
-    <div className="mt-2 rounded border border-blue-200 dark:border-blue-900 bg-blue-50/60 dark:bg-blue-950/30 p-2" data-testid="param-editor">
+    <div className="mt-2 rounded border border-blue-200 dark:border-amber-900 bg-blue-50/60 dark:bg-amber-950/30 p-2" data-testid="param-editor">
       <div className="flex items-center gap-2">
         <div className="flex items-stretch">
-          <input className="h-8 w-24 rounded-l border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 num text-right focus:outline-none focus:ring-2 focus:ring-blue-500" inputMode="decimal" value={text}
+          <input className="h-8 w-24 rounded-l border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 num text-right focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-amber-400" inputMode="decimal" value={text}
             data-testid="param-input" aria-label={`${row.label || row.key} in ${row.unit}`} aria-invalid={!valid || undefined}
             onChange={(e) => setText(e.target.value)} onBlur={take}
             onKeyDown={(e) => {
@@ -99,10 +99,10 @@ function ParamEditor({ row }: { row: { key: string; label: string; value: number
       <GrowthChooser rowKey={row.key} />
       {error && <p className="mt-1 text-[12px] text-red-600" role="alert" data-testid="param-error">Refused, the drawing stays as it was: {error}</p>}
       <div className="mt-1 flex gap-2 text-[12px]">
-        <button className="underline text-blue-700 dark:text-blue-300" onClick={() => void checkBehaviour({ [row.key]: atDrawn ? row.value * 1.05 : row.value })}>Check the assembly</button>
-        <button className="underline text-blue-700 dark:text-blue-300" onClick={() => void api.impact(row.key).then(setImpact)}>What would it change?</button>
+        <button className="underline text-blue-700 dark:text-amber-300" onClick={() => void checkBehaviour({ [row.key]: atDrawn ? row.value * 1.05 : row.value })}>Check the assembly</button>
+        <button className="underline text-blue-700 dark:text-amber-300" onClick={() => void api.impact(row.key).then(setImpact)}>What would it change?</button>
         {param?.key === row.key && param.info && (
-          <button className="underline text-blue-700 dark:text-blue-300" onClick={() => fitEntities(new Set([...entityList(param.info!.highlight.drives), ...entityList(param.info!.highlight.follows)]))}>Zoom to it</button>
+          <button className="underline text-blue-700 dark:text-amber-300" onClick={() => fitEntities(new Set([...entityList(param.info!.highlight.drives), ...entityList(param.info!.highlight.follows)]))}>Zoom to it</button>
         )}
       </div>
       {impact && <ImpactSummary data={impact} />}
@@ -145,7 +145,7 @@ function GrowthLine({ g, rowKey, many }: { g: GrowthRow; rowKey: string; many: b
         <div className="inline-flex overflow-hidden rounded border border-slate-300 dark:border-slate-600 text-[12px]" role="group" aria-label={`Which side of ${rowKey} stays${many ? ` in ${g.unit}` : ""}`}>
           {choices.map(([mode, text]) => (
             <button key={mode} data-testid={`growth-${mode}`} aria-pressed={active === mode}
-              className={`px-2 py-0.5 border-l first:border-l-0 border-slate-300 dark:border-slate-600 ${active === mode ? "bg-blue-600 text-white" : "bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800"}`}
+              className={`px-2 py-0.5 border-l first:border-l-0 border-slate-300 dark:border-slate-600 ${active === mode ? "bg-blue-600 text-white dark:bg-amber-500 dark:text-slate-950" : "bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800"}`}
               onClick={() => void chooseGrowth(rowKey, g.unit, mode)}>{text}</button>
           ))}
         </div>
@@ -196,7 +196,7 @@ function Choice({ c, rowKey, unit }: { c: SettleChoice; rowKey: string; unit: st
     <li className="rounded border border-slate-200 dark:border-slate-700 p-1.5" data-testid="settle-choice" data-choice={c.id}>
       <div className="flex items-start justify-between gap-2">
         <b className="text-[12px]">{c.title}</b>
-        <button className="shrink-0 rounded bg-blue-600 px-2 py-0.5 text-[12px] text-white hover:bg-blue-700" data-testid="settle-choose"
+        <button className="shrink-0 rounded bg-blue-600 px-2 py-0.5 text-[12px] text-white hover:bg-blue-700 dark:bg-amber-500 dark:text-slate-950 dark:hover:bg-amber-400" data-testid="settle-choose"
           title={discards ? `Also resets the value you set for ${c.discards.join(", ")}` : "Written as your own decision; one undo takes it back"}
           onClick={() => void settleGrowth(rowKey, unit, c.id, discards)}>{discards ? "Choose, reset my value" : "Choose"}</button>
       </div>
@@ -219,7 +219,7 @@ function SettleWays({ rowKey, unit }: { rowKey: string; unit: string }) {
   if (ways.loading || !ways.options) return <p className="mt-1 text-[11px] text-slate-500" data-testid="settle-loading">Trying each way for real…</p>;
   const o = ways.options;
   return (
-    <div className="mt-1 rounded border border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/20 p-1.5" data-testid="settle">
+    <div className="mt-1 rounded border border-blue-200 dark:border-amber-900 bg-blue-50/50 dark:bg-amber-950/20 p-1.5" data-testid="settle">
       <div className="mb-1 flex items-center justify-between text-[11px] uppercase tracking-wide text-slate-400">
         <span>{o.choices.length ? "Ways to settle it, each tried on the sheet" : "Nothing single settles it"}</span>
         <button className={link} onClick={hideWays}>Close</button>
@@ -241,7 +241,7 @@ function GrowthChooser({ rowKey }: { rowKey: string }) {
   const rows = param?.key === rowKey ? param.info?.growth : undefined;
   if (!rows || rows.length === 0) return null;
   return (
-    <div className="mt-2 border-t border-blue-200/70 dark:border-blue-900/70 pt-1.5" data-testid="growth">
+    <div className="mt-2 border-t border-blue-200/70 dark:border-amber-900/70 pt-1.5" data-testid="growth">
       <div className="mb-1 text-[11px] uppercase tracking-wide text-slate-400">When it changes</div>
       {rows.map((g) => <GrowthLine key={g.unit} g={g} rowKey={rowKey} many={rows.length > 1} />)}
     </div>
@@ -262,7 +262,7 @@ function ImpactSummary({ data }: { data: Record<string, unknown> }) {
   );
 }
 
-const link = "underline text-blue-700 dark:text-blue-300";
+const link = "underline text-blue-700 dark:text-amber-300";
 
 /** One group of values: a heading with its count; `fold` makes it a collapsed list (nothing is hidden for good, it is one click away). */
 function Group({ title, count, children, fold, open, testid, action }: { title: string; count: number; children: React.ReactNode; fold?: boolean; open?: boolean; testid?: string; action?: React.ReactNode }) {
@@ -287,14 +287,53 @@ function Group({ title, count, children, fold, open, testid, action }: { title: 
   );
 }
 
+/** The unit's parts as a tree: a click selects the part's own geometry on the drawing (the camera stays), a mark where the drawing's own label on
+ * the part says something else than its name. */
+function PartRows({ parts }: { parts: ComponentRow[] }) {
+  const sel = useStore(store, (x) => x.selection);
+  const depth = (c: ComponentRow): number => {
+    let d = 0;
+    let at = c.parent;
+    const seen = new Set<string>();
+    while (at && !seen.has(at) && d < 6) {
+      seen.add(at);
+      d += 1;
+      at = parts.find((q) => q.name === at)?.parent ?? null;
+    }
+    return d;
+  };
+  return (
+    <>
+      {parts.map((c) => {
+        const ents = c.entities ?? [];
+        const on = ents.length > 0 && ents.every((i) => sel.has(i));
+        return (
+          <button key={c.name} data-testid={`part-${c.name}`} disabled={!ents.length}
+            className={`w-full flex items-center gap-2 rounded px-1.5 py-0.5 text-left hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-60 ${on ? "bg-blue-50 dark:bg-amber-950/40" : ""}`}
+            style={{ paddingLeft: `${6 + 12 * depth(c)}px` }}
+            title={[c.label_doubt, c.drawing_says?.length ? `The drawing labels it: ${c.drawing_says.join("; ")}` : "", c.label_checked ? `Kept: ${c.label_checked}` : ""].filter(Boolean).join("\n")}
+            onClick={() => store.set({ selection: on ? new Set() : new Set(ents) })}>
+            <span className="min-w-0 flex-1 truncate">
+              <span className="font-medium">{c.name}</span>
+              <span className="ml-1 text-[11px] text-slate-400">{c.type}{c.existing ? " · existing" : ""}</span>
+            </span>
+            {c.label_doubt && <span className="shrink-0 text-[11px] text-amber-600 dark:text-amber-300" data-testid={`part-doubt-${c.name}`}>⚠ labelled {c.drawing_says?.[0]?.slice(0, 24)}</span>}
+            <span className="num shrink-0 text-[11px] text-slate-400">{ents.length}</span>
+          </button>
+        );
+      })}
+    </>
+  );
+}
+
 function ParamRows({ rows, param, pick }: { rows: ParamRow[]; param: { key: string } | null; pick: (key: string) => void }) {
   return (
     <>
       {rows.map((p) => (
         <div key={p.key}>
-          <button data-testid={`param-${p.name}`} className={`w-full flex items-center gap-2 rounded px-1.5 py-1 text-left hover:bg-slate-100 dark:hover:bg-slate-800 ${param?.key === p.key ? "bg-blue-50 dark:bg-blue-950/40" : ""}`} onClick={() => pick(p.key)}>
+          <button data-testid={`param-${p.name}`} className={`w-full flex items-center gap-2 rounded px-1.5 py-1 text-left hover:bg-slate-100 dark:hover:bg-slate-800 ${param?.key === p.key ? "bg-blue-50 dark:bg-amber-950/40" : ""}`} onClick={() => pick(p.key)}>
             <span className="min-w-0 flex-1">
-              <span className={`block truncate ${p.generic ? "text-slate-500" : "font-medium"}`}>{p.name}{p.shared && <span className="ml-1 text-[10px] text-blue-600">shared</span>}</span>
+              <span className={`block truncate ${p.generic ? "text-slate-500" : "font-medium"}`}>{p.name}{p.shared && <span className="ml-1 text-[10px] text-blue-600 dark:text-amber-300">shared</span>}</span>
               {p.label && p.label !== p.name && <span className="block truncate text-[11px] text-slate-400">{p.label}</span>}
             </span>
             <span className={`num ${p.changed ? "text-orange-600" : "text-slate-600 dark:text-slate-300"}`}>{fmt(p.value, p.unit)}</span>
@@ -388,12 +427,17 @@ export function ValuesPanel() {
         <Group title="Shared across views" count={summary.shared.length} testid="shared-group">
           {summary.shared.map((p) => (
             <div key={p.id}>
-              <button data-testid={`shared-${p.name}`} className={`w-full flex justify-between rounded px-1.5 py-1 hover:bg-slate-100 dark:hover:bg-slate-800 ${param?.key === p.name ? "bg-blue-50 dark:bg-blue-950/40" : ""}`} onClick={() => pick(p.name)}>
+              <button data-testid={`shared-${p.name}`} className={`w-full flex justify-between rounded px-1.5 py-1 hover:bg-slate-100 dark:hover:bg-slate-800 ${param?.key === p.name ? "bg-blue-50 dark:bg-amber-950/40" : ""}`} onClick={() => pick(p.name)}>
                 <span className="font-medium">{p.name}</span><span className="num text-slate-500">{fmt(summary.values[p.name] ?? p.value, p.unit)} {p.unit}</span>
               </button>
               {param?.key === p.name && <ParamEditor row={{ key: p.name, label: p.label, value: summary.values[p.name] ?? p.value, drawn: p.value, unit: p.unit }} />}
             </div>
           ))}
+        </Group>
+      )}
+      {unit && unit.components.length > 0 && (
+        <Group title={`${unit.id} — parts`} count={unit.components.length} fold open={unit.components.some((c) => c.label_doubt)} testid="parts-group">
+          <PartRows parts={unit.components} />
         </Group>
       )}
       <Group title={unit ? `${unit.id} — named values` : "named values"} count={groups.named.length} testid="named-group">

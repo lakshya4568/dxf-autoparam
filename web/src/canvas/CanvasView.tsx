@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 import { pick } from "./hit";
 import { render, visibleFilter } from "./renderer";
 import { DARK, LIGHT } from "./styles";
-import { panBy, toWorld, zoomAt } from "./viewport";
+import { keepOnScreen, panBy, toWorld, zoomAt } from "./viewport";
 import { useStore } from "../state/store";
 import { back, fitSelection, fitSheet, fitView, select, setCamera, setHover, store } from "../state/workspace";
 
@@ -53,18 +53,29 @@ export function CanvasView() {
     };
   }, []);
 
-  // size the canvas to its box (the camera is kept: a resized panel does not refit the drawing)
+  // size the canvas to its box. A panel opening or closing (the inspector on a selection, the agent) resizes it: the drawing stays where it is
+  // ON THE SCREEN — what the person was looking at does not slide away, and nothing is refit. (The camera keeps the world point at the canvas
+  // centre; with the centre itself moving across the window, the content used to jump by half of every panel's width.)
   useEffect(() => {
     const el = wrap.current, c = ref.current;
     if (!el || !c) return;
+    let last: { left: number; top: number; W: number; H: number } | null = null;
     const ro = new ResizeObserver(() => {
       const dpr = window.devicePixelRatio || 1;
       const W = Math.max(50, el.clientWidth), H = Math.max(50, el.clientHeight);
+      const r = el.getBoundingClientRect();
       c.width = Math.round(W * dpr);
       c.height = Math.round(H * dpr);
       c.style.width = `${W}px`;
       c.style.height = `${H}px`;
-      store.set({ W, H });
+      const s = store.get();
+      if (last && s.fitted) {
+        const shift = keepOnScreen(s.cam, last, { left: r.left, top: r.top, W, H });
+        store.set({ W, H, cam: shift });
+      } else {
+        store.set({ W, H });
+      }
+      last = { left: r.left, top: r.top, W, H };
     });
     ro.observe(el);
     return () => ro.disconnect();

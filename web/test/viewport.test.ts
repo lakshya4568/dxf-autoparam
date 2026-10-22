@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Box } from "../src/api/types";
-import { fitBox, padBox, panBy, toScreen, toWorld, unionBox, ViewHistory, visibleBox, zoomAt } from "../src/canvas/viewport";
+import { fitBox, keepOnScreen, padBox, panBy, toScreen, toWorld, unionBox, ViewHistory, visibleBox, zoomAt } from "../src/canvas/viewport";
 
 const W = 1000, H = 600;
 
@@ -84,4 +84,30 @@ describe("boxes", () => {
   it("padBox grows by a fraction, at least the minimum", () => {
     expect(padBox([0, 0, 10, 0], 0.1, 2)).toEqual([-2, -2, 12, 2]);
   });
+});
+
+describe("a panel opening beside the drawing", () => {
+  // The inspector opening on a selection (or the agent) narrows the canvas: the drawing must not slide — every world point stays where it was IN
+  // THE WINDOW (the camera keeps the world point at the canvas centre, and the centre itself moved).
+  const windowX = (cam: ReturnType<typeof fitBox>, c: { left: number; top: number; W: number; H: number }, x: number, y: number) => {
+    const [sx, sy] = toScreen(cam, c.W, c.H, x, y);
+    return [c.left + sx, c.top + sy];
+  };
+  for (const rot of [0, 0.4]) {
+    it(`keeps every point where it was on the screen (rotation ${rot})`, () => {
+      const before = { left: 300, top: 40, W: 1200, H: 800 };
+      const cam = { cx: 5000, cy: 2000, s: 0.08, rot };
+      for (const after of [{ left: 300, top: 40, W: 820, H: 800 }, { left: 0, top: 40, W: 1500, H: 800 }, { left: 300, top: 90, W: 1200, H: 700 }]) {
+        const moved = keepOnScreen(cam, before, after);
+        expect(moved.s).toBe(cam.s);
+        for (const [x, y] of [[5000, 2000], [0, 0], [9000, -3000]]) {
+          const [a, b] = windowX(cam, before, x, y);
+          const [c, d] = windowX(moved, after, x, y);
+          expect(c).toBeCloseTo(a, 6);
+          expect(d).toBeCloseTo(b, 6);
+        }
+      }
+      expect(keepOnScreen(cam, before, { ...before })).toBe(cam);
+    });
+  }
 });

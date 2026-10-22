@@ -2,6 +2,7 @@
 // move the camera. fetch is faked: these tests exercise the state, not the server (that is web/e2e and tests/test_web_contract.py).
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DeltaResult, Prim, Summary } from "../src/api/types";
+import { DEFAULT_OVERLAYS } from "../src/canvas/renderer";
 import { applyChange, cancelPreview, chooseGrowth, deriveIntent, focusParam, hideWays, settleGrowth, showWays, takeBackChoice, openFile, startClean, keepUnnamedAsDrawn, liveChange, mergeDelta, previewChange, releaseKept, rowEntities, setOverlay, store, undo, unlockHeldPart } from "../src/state/workspace";
 
 const L = (i: number, x: number): Prim => ({ i, k: "p", r: "structural", l: "0", v: "V1", p: [x, 0, x + 1, 1] });
@@ -94,8 +95,10 @@ describe("stepping a value: the drawing follows, nothing is applied by hand", ()
     const f = gated();
     const p = liveChange({ "U1.Width": 1200 });
     expect(f.sent).toEqual([{ path: "/api/sheet/apply", body: { changes: { "U1.Width": 1200 }, live: true } }]);
+    expect(store.get().stepping).toBe(true); // the page shows the engine is working while the step is out
     f.release[0]({ ok: true, delta: [L(1, 55)], summary: { ...SUMMARY, revision: 5 } });
     expect(await p).toEqual({ ok: true });
+    expect(store.get().stepping).toBe(false);
     expect(store.get().revision).toBe(5);
     expect(store.get().prims.find((q) => q.i === 1)?.p?.[0]).toBe(55);
     expect(store.get().cam).toEqual(cam);
@@ -139,7 +142,7 @@ describe("stepping a value: the drawing follows, nothing is applied by hand", ()
     quiet.mockRestore();
   });
 
-  it("the original is not fetched, and not shown, while editing — only when switched on", async () => {
+  it("with the original switched off, nothing is read for it while editing", async () => {
     const f = gated();
     const p = liveChange({ "U1.Width": 1200 });
     f.release[0]({ ok: true, delta: [L(1, 55)], summary: { ...SUMMARY, revision: 5 } });
@@ -147,6 +150,28 @@ describe("stepping a value: the drawing follows, nothing is applied by hand", ()
     expect(f.sent.map((x) => x.path)).toEqual(["/api/sheet/apply"]); // no request for the original
     expect(store.get().original).toBeNull();
     expect(store.get().overlays.original).toBe(false);
+  });
+
+  it("the original is on unless switched off: an entity's original is read once, the first time it changes, and dropped when it is back as drawn", async () => {
+    expect(DEFAULT_OVERLAYS.original).toBe(true);
+    store.set({ overlays: { ...store.get().overlays, original: true }, original: null });
+    const f = gated();
+    const p = liveChange({ "U1.Width": 1200 });
+    f.release[0]({ ok: true, delta: [L(1, 55)], differs: [1], summary: { ...SUMMARY, revision: 5 } });
+    await p;
+    await vi.waitFor(() => expect(f.sent.map((x) => x.path)).toEqual(["/api/sheet/apply", "/api/sheet/original"]));
+    f.release[1]({ prims: [L(1, 10)], styles: [] });
+    await vi.waitFor(() => expect(store.get().original?.prims.length).toBe(1));
+    const q = liveChange({ "U1.Width": 1300 });
+    f.release[2]({ ok: true, delta: [L(1, 66)], differs: [1], summary: { ...SUMMARY, revision: 6 } });
+    await q;
+    expect(f.sent.map((x) => x.path)).toEqual(["/api/sheet/apply", "/api/sheet/original", "/api/sheet/apply"]); // the same entity: nothing more read
+    expect(store.get().prims.find((x) => x.i === 1)?.p?.[0]).toBe(66);
+    const r = liveChange({ "U1.Width": 1000 });
+    f.release[3]({ ok: true, delta: [L(1, 10)], differs: [], summary: { ...SUMMARY, revision: 7 } });
+    await r;
+    expect(store.get().original?.prims).toEqual([]); // back as drawn: its original is dropped, and nothing is read
+    expect(f.sent.length).toBe(4);
   });
 
   it("switching the original on reads it; later steps keep it current; switching it off drops it", async () => {

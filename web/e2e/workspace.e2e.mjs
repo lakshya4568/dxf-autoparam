@@ -19,7 +19,8 @@ const args = Object.fromEntries(process.argv.slice(2).reduce((a, v, i, all) => (
 const root = join(here, "../..");
 const port = +(args.port || 8799);
 const cdpPort = +(args["cdp-port"] || 9338);
-const out = args.out || mkdtempSync(join(tmpdir(), "ws-e2e-"));
+// absolute: the screenshots are written from here (web/) and the server's --state-dir is read from the repo root — a relative path meant two places
+const out = resolve(args.out || mkdtempSync(join(tmpdir(), "ws-e2e-")));
 const chromePath = args.chrome || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const W = 1500, H = 950;
 const base = `http://127.0.0.1:${port}`;
@@ -224,11 +225,25 @@ try {
     // a value shared across views is listed once, under "Shared across views"; one that only this unit has is under its named values
     const row = `[data-testid="param-${param.name}"], [data-testid="shared-${param.name}"]`;
     check("the Values panel lists the unit's values", await until(`!!document.querySelector(${JSON.stringify(row)})`, 8000), `${param.unit}.${param.name}`);
+    // the unit's parts as a tree: a click selects the part's own geometry on the drawing, and the camera stays where it is
+    const partsShown = await until("!!document.querySelector('[data-testid=parts-group]')", 8000);
+    let partPicked = false;
+    if (partsShown) {
+      await js("document.querySelector('[data-testid=parts-group]').open = true");
+      const cam0 = await js("JSON.stringify(window.__ws.state().cam)");
+      const part = await js("[...document.querySelectorAll('[data-testid=parts-group] button[data-testid^=part-]')].find((b) => !b.disabled)?.dataset.testid");
+      if (part) {
+        await js(`document.querySelector('[data-testid=${JSON.stringify(part)}]').click()`);
+        partPicked = (await until("window.__ws.state().selection.size > 0", 3000)) && (await js("JSON.stringify(window.__ws.state().cam)")) === cam0;
+        await js("window.__ws.select(null)");
+      }
+    }
+    check("the parts list shows the unit's parts; a click selects a part's own geometry and the camera stays", partsShown && partPicked);
     check("and says how many of the unit's dimensions a named value drives", await until("/Dimensions: \\d+ of \\d+ change with a named value/.test(document.querySelector('[data-testid=dimension-drive]')?.textContent || '')", 20000), await js("document.querySelector('[data-testid=dimension-drive]')?.textContent"));
     await js(`document.querySelector(${JSON.stringify(row)}).click()`);
     check("a click on a value opens its editor", await until("!!document.querySelector('[data-testid=param-editor]')", 60000), param.key);
     check("a click on a value says what it moves", await until("!!window.__ws.state().highlight", 5000));
-    // the editor is a spinner: no Apply, no slider; a step changes the drawing at once and the original is not shown unless it is switched on
+    // the editor is a spinner: no Apply, no slider; a step changes the drawing at once, and the original of what changed is shown dashed under it
     check("the editor has a spinner and no Apply, Reset or slider", await js("!!document.querySelector('[data-testid=param-inc]') && !!document.querySelector('[data-testid=param-dec]') && !document.querySelector('[data-testid=apply]') && !document.querySelector('[data-testid=param-reset]') && !document.querySelector('[data-testid=param-editor] [data-testid=show-original]') && !document.querySelector('[data-testid=param-editor] input[type=range]')"));
     const val = () => js(`window.__ws.state().summary.values[${JSON.stringify(param.key)}]`);
     const sig = () => js("JSON.stringify(window.__ws.state().prims.map((p) => [p.i, p.p, p.at]).sort((a, b) => a[0] - b[0] || String(a[1]).localeCompare(String(b[1]))))");
@@ -253,19 +268,22 @@ try {
     const revStep = await js("window.__ws.state().revision"); // the choice above is a revision of its own: the step is the next one
     await js("document.querySelector('[data-testid=param-inc]').click()");
     check("one step up changes the value and the geometry, with nothing applied by hand", await until(`window.__ws.state().revision > ${revStep} && window.__ws.state().summary.values[${JSON.stringify(param.key)}] > ${v0}`, 60000) && (await val()) > v0 && (await sig()) !== sig0, `${param.key}: ${v0} → ${await val()}`);
-    check("the original is not shown, nor even fetched, while a value is stepped", (await js("window.__ws.state().original === null && window.__ws.state().overlays.original === false")));
+    check("the original of what a step changed is shown dashed, under the drawing as it is now", await until("window.__ws.state().overlays.original === true && (window.__ws.state().original?.prims.length ?? 0) > 0", 20000));
+    const reads = () => js("performance.getEntriesByType('resource').filter((e) => e.name.includes('/api/sheet/original')).length");
+    const readsAfterFirst = await reads();
     const step1 = (await val()) - v0;
     await js("document.querySelector('[data-testid=param-inc]').click()");
     await js("document.querySelector('[data-testid=param-inc]').click()");
     check("three steps up in a row add three equal steps", await until(`Math.abs(window.__ws.state().summary.values[${JSON.stringify(param.key)}] - ${v0 + 3 * step1}) < 1e-6`, 60000) && !(await js("!!document.querySelector('[data-testid=param-error]')")), `${v0} + 3 × ${step1}`);
+    check("the steps of one value read the original no more than once (an entity's original never changes)", (await reads()) <= readsAfterFirst + 1, `${readsAfterFirst} → ${await reads()}`);
     const v3 = await val();
     await shot("04b_value_editor");
-    await js("document.querySelector('[data-testid=show-original]').click()");
-    check("the Original switch is in the top bar, over the whole drawing, and shows it dotted only when switched on", await until("window.__ws.state().overlays.original && (window.__ws.state().original?.prims.length ?? 0) > 0", 20000));
     await sleep(150);
-    await shot("04c_original_dotted");
+    await shot("04c_original_dashed");
     await js("document.querySelector('[data-testid=show-original]').click()");
-    check("and gone when switched off again", await until("window.__ws.state().original === null", 5000) && (await val()) === v3);
+    check("the Original switch in the top bar hides it", await until("window.__ws.state().original === null && window.__ws.state().overlays.original === false", 5000) && (await val()) === v3);
+    await js("document.querySelector('[data-testid=show-original]').click()");
+    check("and shows it again when switched on", await until("window.__ws.state().overlays.original && (window.__ws.state().original?.prims.length ?? 0) > 0", 20000));
     await js("document.querySelector('[data-testid=param-dec]').click()");
     check("a step down shrinks it again", await until(`window.__ws.state().summary.values[${JSON.stringify(param.key)}] < ${v3}`, 60000));
     // the stepping above (up, up, up, down) is ONE undo: it goes back to where the stepping began
