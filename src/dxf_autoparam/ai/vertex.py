@@ -87,14 +87,28 @@ MODEL_CHOICES.append({"id": "gateway:gemini-4-argon", "label": "Gemini 4 Argon Â
 
 
 def model_choices() -> dict:
-    """What the picker offers, and which is the default (the environment's model; it is listed even when it is not in the table)."""
+    """What the picker offers, and which is the default (the environment's model; it is listed even when it is not in the table), with Token
+    Harbor's models (`ai/tokenharbor.py`: the free ones by default) when its key is set."""
     load_env_file()
     default = os.environ.get("VERTEX_MODEL") or os.environ.get("GEMINI_MODEL") or MODEL_CHOICES[0]["id"]
     gateway_ok = bool(os.environ.get("EXPLABS_API_KEY"))  # a gateway model is offered only when its key is set
     models = [{k: m[k] for k in ("id", "label", "thinking")} for m in MODEL_CHOICES if m.get("provider") != "gateway" or gateway_ok]
+    from . import tokenharbor  # it imports this module: not at the top
+
+    models += [{"id": m["id"], "label": m["label"], "thinking": m["thinking"], "free": m["free"]} for m in tokenharbor.picker_entries()]
     if default not in {m["id"] for m in models}:
         models.insert(0, {"id": default, "label": f"{default} Â· {os.environ.get('VERTEX_THINKING_LEVEL', 'high')}", "thinking": os.environ.get("VERTEX_THINKING_LEVEL", "high")})
     return {"default": default, "models": models}
+
+
+def choice_for(model_id: str) -> dict | None:
+    """The table's entry for a picker id: a model of MODEL_CHOICES, or one of Token Harbor's (found in its catalogue by its id)."""
+    got = next((m for m in MODEL_CHOICES if m["id"] == model_id), None)
+    if got is not None:
+        return got
+    from . import tokenharbor
+
+    return tokenharbor.choice(model_id)
 
 
 class GeminiUnavailable(RuntimeError):

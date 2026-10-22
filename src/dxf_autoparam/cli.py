@@ -263,6 +263,9 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("agent-eval", help="score the agent per category (reading, parts, values, anchor, plan, geometry …) on a drawing whose intended result is known")
     p.add_argument("--live", action="store_true", help="run the REAL model (billed): needs --yes-spend; without it the limits are printed and nothing starts")
     p.add_argument("--yes-spend", action="store_true", help="the owner's explicit go-ahead for the paid calls of --live")
+    p.add_argument("--free", metavar="MODEL", default=None,
+                   help="run the case on a FREE Token Harbor model (an id from tools/tokenharbor_check.py): refused unless the catalogue prices both input "
+                        "and output at zero, so it never costs anything")
     p.add_argument("--soft-turns", type=int, default=30)
     p.add_argument("--max-turns", type=int, default=60)
     p.add_argument("--max-tokens", type=int, default=250000)
@@ -294,7 +297,27 @@ def main(argv: list[str] | None = None) -> int:
         budget = Budget.from_env(soft_turns=a.soft_turns, max_turns=a.max_turns, max_tokens=a.max_tokens, wall_s=a.wall_minutes * 60)
         text = Path(a.instruction).read_text() if a.instruction else acc.INSTRUCTION
         report: dict = {"instruction": text}
-        if a.live:
+        if a.free:
+            from .ai import gateway, tokenharbor
+
+            gid = a.free.removeprefix(tokenharbor.PREFIX)
+            m = next((x for x in tokenharbor.catalog() if x["id"] == gid), None) if tokenharbor.key() else None
+            if m is None or not tokenharbor.is_free(m):
+                print(f"Not started: {a.free} is not a free Token Harbor model now (no key, not in the catalogue, or priced) — nothing was sent.")
+                return 3
+            print(f"FREE model acceptance run on {gid} (Token Harbor prices it at zero). Limits:", json.dumps(acc.live_limits(budget)))
+            ent = tokenharbor.entry(m)
+            gw = gateway.Gateway(gateway.GatewayConfig(model=gid, thinking=ent["thinking"], provider="tokenharbor", price=ent["price"]))
+            try:
+                case = acc.make_case(instruction=text)
+                res = acc.evaluate(gw, case, budget={k: v for k, v in budget.to_dict().items() if k in ("soft_turns", "max_turns", "max_tokens", "wall_s")},
+                                   timeout_s=a.wall_minutes * 60)
+            finally:
+                gw.close()
+            report["free"] = {"model": gid, "scores": res["scores"], "usage": res["run"]["usage"], "status": res["run"]["status"], "seconds": res["seconds"]}
+            print(acc.table(res["scores"]))
+            print("usage:", json.dumps(res["run"]["usage"]))
+        elif a.live:
             print("LIVE acceptance run — the real model, billed. Limits:", json.dumps(acc.live_limits(budget)))
             if not a.yes_spend:
                 print("Not started: pass --yes-spend to give the go-ahead for these paid calls.")
