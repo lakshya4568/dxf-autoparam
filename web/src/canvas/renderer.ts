@@ -55,6 +55,8 @@ export interface RenderInput {
   original?: Prim[] | null; // as the drawing was read, for the entities that now differ
   issues: Set<number>;
   focusView: string | null;
+  /** a view open in its own tab: only its own entities are drawn (and picked) — the rest of the sheet is another workspace */
+  isolate?: boolean;
 }
 
 export interface FrameStats {
@@ -67,7 +69,9 @@ const CAP = 0.72; // cap height per em of the canvas fonts: a CAD text height is
 
 export function visibleFilter(inp: RenderInput): (p: Prim) => boolean {
   const { hiddenLayers, hiddenStatus, statusOf, overlays } = inp;
+  const only = inp.isolate && inp.focusView ? inp.focusView : null;
   return (p: Prim) => {
+    if (only !== null && p.v !== only) return false;
     if (hiddenLayers.has(p.l)) return false;
     if (statusOf && hiddenStatus.size && hiddenStatus.has(statusOf[String(p.i)] ?? "unclassified")) return false;
     if (p.k === "t" && !overlays.text && !p.d) return false;

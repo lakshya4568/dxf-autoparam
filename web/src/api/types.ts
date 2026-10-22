@@ -51,6 +51,17 @@ export interface Geometry {
   frame: Box | null;
 }
 
+/** A view in its own coordinate frame (frames.py): real millimetres from the view's own origin, and the reduced level where the view states one —
+ * the frame a generator draws a view in before placing it on the sheet. A pure scale and translation: every point maps to the sheet and back. */
+export interface LocalFrame {
+  view: string;
+  mm_per_unit: number;
+  origin: [number, number];
+  x_from: string;
+  y_from: string;
+  level: { name: string; rl_m: number; at_y: number } | null;
+}
+
 export interface Group {
   id: string;
   kind: "view" | "table" | "notes" | "title_block" | "label";
@@ -60,6 +71,7 @@ export interface Group {
   entities: number;
   scale?: number | null;
   unit?: string | null;
+  local?: LocalFrame;
 }
 
 export interface UnitRow {
@@ -289,6 +301,25 @@ export interface DeltaResult {
   changed?: number;
   measured?: Record<string, Record<string, number>>;
   error?: string;
+  /** a refused change, check by check: what kind of refusal each is and why (the engine's refusal.py) */
+  failures?: Failure[];
+}
+
+/** One failed check of a refused change. `kind`: the edit cannot be drawn, the model does not carry it, an accepted plan says otherwise, a rule
+ * bound to the sheet fails, or the program cannot be evaluated. `existing`: the sheet as it stands fails it too — the change did not cause it. */
+export interface Failure {
+  check: string;
+  kind: "invalid_edit" | "incomplete_model" | "broken_promise" | "rule" | "solver_failure";
+  says: string;
+  unit?: string | null;
+  message: string;
+  basis?: string;
+  existing?: boolean;
+  /** how a person finds them: the unit's id and the DXF handle */
+  entities?: string[];
+  /** the same entities as sheet indices (to zoom to) */
+  items?: number[];
+  parts?: string[];
 }
 
 export interface EntityRecord {

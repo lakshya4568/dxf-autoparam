@@ -1,7 +1,8 @@
 // The drawing canvas: draws the engine's primitives with the renderer, and turns the person's gestures into camera moves and
 // selections. Wheel zooms about the cursor; drag (or middle / right drag, or space + drag) pans; a click picks the nearest
 // entity (shift adds); F fits the sheet, V the selected view, Z the selection, Backspace goes back to the previous view.
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { sayLocal } from "./frames";
 import { pick } from "./hit";
 import { render, visibleFilter } from "./renderer";
 import { DARK, LIGHT } from "./styles";
@@ -16,6 +17,8 @@ export function CanvasView() {
   const drag = useRef<{ x: number; y: number; moved: boolean; button: number } | null>(null);
   const space = useRef(false);
   const theme = useStore(store, (s) => s.theme);
+  const tab = useStore(store, (s) => (s.viewTab ? s.summary?.groups.find((g) => g.id === s.viewTab) ?? null : null));
+  const [cursor, setCursor] = useState<[number, number] | null>(null); // the pointer on the drawing, sheet units
 
   // redraw on any state change (one frame per animation frame)
   useEffect(() => {
@@ -38,7 +41,7 @@ export function CanvasView() {
         prims: s.prims, styles: s.styles, index: s.index, cam: s.cam, W: s.W, H: s.H, theme: s.theme === "dark" ? DARK : LIGHT,
         hiddenLayers: s.hiddenLayers, hiddenStatus: s.hiddenStatus, statusOf: s.statusOf, overlays: s.overlays, selection: s.selection,
         hover: s.hover, highlight: s.highlight, preview: s.preview ? { ents: s.preview.ents, prims: s.preview.prims } : null, original: s.original?.prims ?? null, issues: s.issues,
-        focusView: s.focusView,
+        focusView: s.focusView, isolate: s.viewTab !== null,
       });
       (window as unknown as { __frame?: unknown }).__frame = stats;
     };
@@ -122,7 +125,7 @@ export function CanvasView() {
     const ok = visibleFilter({
       prims: s.prims, styles: s.styles, index: s.index, cam: s.cam, W: s.W, H: s.H, theme: LIGHT, hiddenLayers: s.hiddenLayers,
       hiddenStatus: s.hiddenStatus, statusOf: s.statusOf, overlays: s.overlays, selection: s.selection, hover: null, highlight: null,
-      preview: null, issues: s.issues, focusView: s.focusView,
+      preview: null, issues: s.issues, focusView: s.focusView, isolate: s.viewTab !== null,
     });
     const n = pick(s.prims, ids, x, y, tol, ok);
     return n === null ? null : s.prims[n].i;
@@ -158,6 +161,8 @@ export function CanvasView() {
           }
           const [sx, sy] = local(e);
           setHover(pickAt(sx, sy));
+          const st = store.get();
+          setCursor(toWorld(st.cam, st.W, st.H, sx, sy) as [number, number]);
         }}
         onPointerUp={(e) => {
           const d = drag.current;
@@ -167,8 +172,17 @@ export function CanvasView() {
             void select(pickAt(sx, sy), e.shiftKey);
           }
         }}
-        onPointerLeave={() => setHover(null)}
+        onPointerLeave={() => {
+          setHover(null);
+          setCursor(null);
+        }}
       />
+      {cursor && (
+        <div className="pointer-events-none absolute bottom-1.5 left-2 rounded bg-white/85 dark:bg-slate-900/85 px-1.5 py-0.5 text-[11px] text-slate-600 dark:text-slate-300 num"
+          data-testid="cursor-readout" title={tab?.local ? `x from ${tab.local.x_from}; y from ${tab.local.y_from}` : "sheet coordinates (drawing units)"}>
+          {tab?.local ? `${tab.id}: ${sayLocal(tab.local, cursor[0], cursor[1])}` : `sheet x ${cursor[0].toFixed(0)} · y ${cursor[1].toFixed(0)}`}
+        </div>
+      )}
     </div>
   );
 }

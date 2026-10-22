@@ -1,9 +1,9 @@
 // The workspace state: an edit, a preview, an undo replace the engine's primitives for the entities that changed and never
 // move the camera. fetch is faked: these tests exercise the state, not the server (that is web/e2e and tests/test_web_contract.py).
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { DeltaResult, Prim, Summary } from "../src/api/types";
+import type { DeltaResult, Failure, Prim, Summary } from "../src/api/types";
 import { DEFAULT_OVERLAYS } from "../src/canvas/renderer";
-import { applyChange, cancelPreview, chooseGrowth, deriveIntent, focusParam, hideWays, settleGrowth, showWays, takeBackChoice, openFile, startClean, keepUnnamedAsDrawn, liveChange, mergeDelta, previewChange, releaseKept, rowEntities, setOverlay, store, undo, unlockHeldPart } from "../src/state/workspace";
+import { applyChange, cancelPreview, chooseGrowth, deriveIntent, focusParam, hideWays, settleGrowth, showWays, takeBackChoice, openFile, startClean, keepUnnamedAsDrawn, liveChange, mergeDelta, previewChange, refusalLine, releaseKept, rowEntities, setOverlay, store, undo, unlockHeldPart } from "../src/state/workspace";
 
 const L = (i: number, x: number): Prim => ({ i, k: "p", r: "structural", l: "0", v: "V1", p: [x, 0, x + 1, 1] });
 
@@ -60,6 +60,21 @@ describe("the camera stays where the person left it", () => {
     expect(s.cam).toEqual(cam);
     expect(s.revision).toBe(4);
     expect(s.message?.kind).toBe("bad");
+  });
+
+  it("through a refused apply that says what kind of refusal it is, and a preview that keeps every failed check", async () => {
+    const failure: Failure = { check: "GEOMETRY", kind: "incomplete_model", says: "the model does not carry this change", unit: "U01",
+      message: "U01: LINE 4C (0): an edge flips direction", basis: "L3 ends on x2, which the change moves +60.0 mm, and on x0, which stays", existing: false,
+      entities: ["L3 (4C)"], items: [1] };
+    vi.stubGlobal("fetch", fakeFetch({ ok: false, errors: [failure.message], failures: [failure] } satisfies DeltaResult));
+    expect(await applyChange({ "U1.Width": 1200 })).toBe(false);
+    expect(store.get().message?.text).toContain("the model does not carry this change — U01: LINE 4C (0): an edge flips direction");
+    vi.stubGlobal("fetch", fakeFetch({ ok: false, errors: [failure.message], failures: [{ ...failure, existing: true }], delta: [] } satisfies DeltaResult));
+    await previewChange({ "U1.Width": 1200 });
+    expect(store.get().preview?.failures.map((f) => [f.kind, f.existing])).toEqual([["incomplete_model", true]]);
+    expect(store.get().message?.text).toContain("it already failed before this change");
+    expect(refusalLine({ errors: ["plain"] })).toBe("plain");
+    cancelPreview();
   });
 
   it("through an undo", async () => {

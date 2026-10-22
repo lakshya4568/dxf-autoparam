@@ -119,6 +119,30 @@ try {
   await sleep(300);
   await shot("01_sheet");
 
+  // 1b · each view in its own tab: only its entities, the camera on it, the cursor said in its own frame (mm from its origin, RL where it states a
+  // level); "Sheet" brings the whole sheet back. The sheet itself is not changed by looking at it this way.
+  {
+    const views = await js("window.__ws.state().summary.groups.filter(g => g.kind === 'view').map(g => g.id)");
+    check("a tab per view beside the whole sheet", await until(`document.querySelectorAll('[data-testid^=view-tab-]').length === ${views.length + 1}`, 5000), views.join(", "));
+    const drawnSheet = await js("window.__frame && window.__frame.drawn");
+    const v = views[0];
+    await js(`document.querySelector('[data-testid=view-tab-${v}]').click()`);
+    const onlyIt = await until(`window.__ws.state().viewTab === ${JSON.stringify(v)} && window.__frame && window.__frame.drawn < ${drawnSheet}`, 5000);
+    const own = await js(`window.__ws.state().prims.filter(p => p.v === ${JSON.stringify(v)}).length`);
+    check("a view's tab draws only that view", onlyIt, `${drawnSheet} primitives on the sheet, ${await js("window.__frame.drawn")} in ${v} (it has ${own})`);
+    const rect = await js("(() => { const r = document.querySelector('[data-testid=canvas]').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; })()");
+    await mouse("mouseMoved", rect[0], rect[1], { buttons: 0 });
+    const said = await until("/mm/.test(document.querySelector('[data-testid=cursor-readout]')?.textContent || '')", 3000);
+    check("the cursor is said in the view's own frame (mm from its origin)", said, await js("document.querySelector('[data-testid=cursor-readout]')?.textContent"));
+    const frame = await js(`(window.__ws.state().summary.groups.find(g => g.id === ${JSON.stringify(v)}) || {}).local || null`);
+    const back = frame && await js(`(() => { const f = ${JSON.stringify(frame)}; const x = f.origin[0] + 1234.5 / f.mm_per_unit, y = f.origin[1] - 77 / f.mm_per_unit;
+      const lx = (x - f.origin[0]) * f.mm_per_unit, ly = (y - f.origin[1]) * f.mm_per_unit; return [lx, ly]; })()`);
+    check("the view's frame maps a point to the sheet and back", !!back && Math.abs(back[0] - 1234.5) < 1e-6 && Math.abs(back[1] + 77) < 1e-6, JSON.stringify(frame));
+    await shot("01b_view_tab");
+    await js("document.querySelector('[data-testid=view-tab-sheet]').click()");
+    check("Sheet brings the whole sheet back", await until(`window.__ws.state().viewTab === null && window.__frame.drawn >= ${drawnSheet}`, 5000));
+  }
+
   // 2 · zoom into a view: the camera the person chose
   const gid = await js("(window.__ws.state().summary.groups.find(g => g.kind === 'view') || {}).id || null");
   if (gid) await js(`window.__ws.fitView(${JSON.stringify(gid)})`);

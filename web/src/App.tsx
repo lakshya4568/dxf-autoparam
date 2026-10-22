@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "./api/client";
 import type { AutosaveInfo } from "./api/types";
 import { CanvasView } from "./canvas/CanvasView";
+import { ViewTabs } from "./canvas/ViewTabs";
 import { AgentPanel } from "./agent/AgentPanel";
 import { lifecycle } from "./agent/model";
 import { Spinner } from "./agent/StatusMark";
@@ -154,11 +155,14 @@ export function App() {
               <Splitter side="left" />
             </>
           )}
-          <main className="flex-1 min-w-0 relative">
-            {!s.has && (
-              <div className="absolute inset-0 grid place-items-center text-slate-500 text-sm pointer-events-none">Open a DXF to begin.</div>
-            )}
-            <CanvasView />
+          <main className="flex-1 min-w-0 flex flex-col">
+            <ViewTabs />
+            <div className="relative flex-1 min-h-0">
+              {!s.has && (
+                <div className="absolute inset-0 grid place-items-center text-slate-500 text-sm pointer-events-none">Open a DXF to begin.</div>
+              )}
+              <CanvasView />
+            </div>
           </main>
           {s.agentOpen && (
             <>

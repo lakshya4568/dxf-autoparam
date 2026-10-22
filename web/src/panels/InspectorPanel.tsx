@@ -3,7 +3,8 @@
 // that refer to it and its existing / proposed class. Read-only: values are changed in the Values panel.
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
-import type { Annotation, EntityRecord, PointAxis } from "../api/types";
+import type { Annotation, EntityRecord, Group, PointAxis } from "../api/types";
+import { sayLocal } from "../canvas/frames";
 import { useStore } from "../state/store";
 import { fitEntities, focusParam, select, store } from "../state/workspace";
 
@@ -62,6 +63,29 @@ function Parametric({ rec }: { rec: EntityRecord }) {
   );
 }
 
+/** The entity's points said in its view's own frame (real mm from the view's origin, RL where the view states a level) — read from the sheet's own
+ * points the page draws, so what is said is exactly what is drawn. Only for an entity of the view open in its tab. */
+const NO_GROUPS: Group[] = [];
+
+function LocalPoints({ rec }: { rec: EntityRecord }) {
+  const s = useStore(store, (x) => ({ tab: x.viewTab, groups: x.summary?.groups ?? NO_GROUPS, prims: x.prims }));
+  const g = s.tab && rec.view.id === s.tab ? s.groups.find((x) => x.id === s.tab) : null;
+  if (!g?.local) return null;
+  const pts: [number, number][] = [];
+  for (const p of s.prims) {
+    if (p.i !== rec.index || !p.p) continue;
+    for (let k = 0; k + 1 < p.p.length && pts.length < 8; k += 2) pts.push([p.p[k], p.p[k + 1]]);
+  }
+  if (!pts.length) return null;
+  return (
+    <Row k={`in ${g.id}`}>
+      <span title={`x from ${g.local.x_from}; y from ${g.local.y_from}`} data-testid="local-points">
+        {pts.map(([x, y], j) => <span key={j} className="block num text-[11px]">{sayLocal(g.local!, x, y)}</span>)}
+      </span>
+    </Row>
+  );
+}
+
 export function InspectorPanel() {
   const { rec, selection, revision, statusOf } = useStore(store, (s) => ({ rec: s.entity, selection: s.selection, revision: s.revision, statusOf: s.statusOf }));
   const [anns, setAnns] = useState<Annotation[]>([]);
@@ -89,6 +113,7 @@ export function InspectorPanel() {
         <Row k="role">{rec.role}{status && <span className="ml-2 rounded bg-slate-100 dark:bg-slate-800 px-1">{status}</span>}</Row>
         <Row k="view">{rec.view.id ? `${rec.view.id} · ${rec.view.name || rec.view.kind}` : "outside every view"}</Row>
         <Row k="unit">{rec.unit ?? "—"}</Row>
+        <LocalPoints rec={rec} />
         <Row k="handle"><span className="font-mono">{src.handle ?? "—"}</span>{src.owner && <span className="text-slate-500"> in {src.owner}</span>}{src.inserts && src.inserts.length > 0 && <span className="text-slate-500"> via {src.inserts.join(" › ")}</span>}</Row>
         {src.linetype !== undefined && <Row k="as filed">colour {src.color === 256 ? "BYLAYER" : src.color === 0 ? "BYBLOCK" : src.color} · {src.linetype} · weight {src.lineweight === -1 ? "BYLAYER" : src.lineweight === -2 ? "BYBLOCK" : src.lineweight === -3 ? "default" : `${(src.lineweight ?? 0) / 100} mm`}</Row>}
         {src.dimstyle && <Row k="dim style">{src.dimstyle}</Row>}

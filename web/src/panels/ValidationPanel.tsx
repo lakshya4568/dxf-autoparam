@@ -2,7 +2,7 @@
 // warnings, the assembly check category by category (requested sizes, components, invariants, interfaces, held geometry,
 // annotations, views, validity) and the unit's findings. A row that names entities zooms to them.
 import { useState } from "react";
-import type { CheckRow } from "../api/types";
+import type { CheckRow, Failure } from "../api/types";
 import { useStore } from "../state/store";
 import { fitEntities, rowEntities, store } from "../state/workspace";
 
@@ -16,6 +16,34 @@ const BADGE: Record<string, string> = {
   fail: "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200",
   "not checked": "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
 };
+
+const KIND: Record<Failure["kind"], string> = {
+  invalid_edit: "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200",
+  incomplete_model: "bg-amber-100 text-amber-900 dark:bg-amber-900/50 dark:text-amber-200",
+  broken_promise: "bg-violet-100 text-violet-800 dark:bg-violet-900/50 dark:text-violet-200",
+  rule: "bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-200",
+  solver_failure: "bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-100",
+};
+
+/** One failed check of a refused change: what kind of refusal it is, the check, why (measured), and — when the sheet as it stands fails it
+ * too — that this change did not cause it. Its entities zoom on a click. */
+export function FailureRow({ f }: { f: Failure }) {
+  const ents = f.items ?? [];
+  return (
+    <li className="mb-1.5" data-testid="failure" data-kind={f.kind}>
+      <div className="flex items-start gap-1.5">
+        <span className={`shrink-0 rounded px-1.5 text-[11px] ${KIND[f.kind] ?? KIND.solver_failure}`}>{f.says}</span>
+        {ents.length ? (
+          <button className="text-left text-[12px] hover:underline" onClick={() => fitEntities(new Set(ents))}>{f.message}</button>
+        ) : (
+          <span className="text-[12px]">{f.message}</span>
+        )}
+      </div>
+      {f.existing && <p className="ml-1 text-[11px] text-amber-700 dark:text-amber-300">It already fails on the sheet as it stands — this change did not cause it.</p>}
+      {f.basis && <p className="ml-1 text-[11px] text-slate-500 dark:text-slate-400">{f.basis}</p>}
+    </li>
+  );
+}
 
 /** One line of a check, in words: what it is about, then what was found. */
 export function describe(r: CheckRow): string {
@@ -48,8 +76,11 @@ function Category({ name, label, cat }: { name: string; label: string; cat: { st
             const ents = rowEntities(r);
             return (
               <li key={j} className={`text-[12px] ${r.status === "fail" ? "text-red-700 dark:text-red-300" : r.status === "pass" ? "" : "text-slate-500"}`}>
+                {typeof r.says === "string" && <span className={`mr-1 rounded px-1 text-[10px] ${KIND[r.kind as Failure["kind"]] ?? ""}`}>{r.says}</span>}
                 {ents.length ? <button className="text-left hover:underline" onClick={() => fitEntities(new Set(ents))}>{describe(r)}</button> : describe(r)}
                 {typeof r.unit === "string" && <span className="ml-1 text-[10px] text-slate-400">{r.unit}</span>}
+                {r.existing === true && <span className="ml-1 text-[10px] text-amber-700 dark:text-amber-300">already failing before this change</span>}
+                {typeof r.basis === "string" && r.basis && <p className="text-[11px] text-slate-500 dark:text-slate-400">{r.basis}</p>}
               </li>
             );
           })}
@@ -67,7 +98,11 @@ export function ValidationPanel() {
         <section className="mb-3">
           <h3 className="mb-1 text-[11px] uppercase tracking-wide text-slate-400">Preview (not applied)</h3>
           <p>{Object.entries(preview.changes).map(([k, v]) => `${k} = ${v}`).join(", ")} → {preview.ents.size} entities change.</p>
-          {preview.errors.map((e) => <p key={e} className="text-red-600">✗ {e}</p>)}
+          {preview.failures.length ? (
+            <ul data-testid="failures">{preview.failures.map((f, j) => <FailureRow key={j} f={f} />)}</ul>
+          ) : (
+            preview.errors.map((e) => <p key={e} className="text-red-600">✗ {e}</p>)
+          )}
           {preview.warnings.slice(0, 8).map((w) => <p key={w} className="text-amber-700 dark:text-amber-300">! {w}</p>)}
           {preview.ok && !preview.errors.length && <p className="text-emerald-700 dark:text-emerald-300">Every check of the sheet holds.</p>}
         </section>
