@@ -24,6 +24,7 @@ plans (source "design intent"), so it is measured every time, undone with the st
 from __future__ import annotations
 
 import copy
+import json
 import re
 from collections import Counter
 from collections.abc import Callable
@@ -288,20 +289,30 @@ def _named(prog: Program, blocked: list[dict]) -> list[dict]:
 
 
 def _plans_for(prog: Program, base: dict, sheet: dict | None, group: list[Driver], asm: str, suffix: str, policy: str, centre: str | None,
-               evidence: list[str], status: str, follow_all: bool) -> tuple[list[dict] | None, str, str | None, dict]:
+               evidence: list[str], status: str, follow_all: bool, memo: dict | None = None) -> tuple[list[dict] | None, str, str | None, dict]:
     """One accepted plan per driver of the group, all with this anchor: (plans, "", None, {}); or (None, why, the driver that has none, what stood
-    in the way: {names: the sizes it is about, blocked: the lines nothing may move})."""
+    in the way: {names: the sizes it is about, blocked: the lines nothing may move}). `memo`: plans already built for the same request on the
+    same program — a driver's plan depends on its own request only, not on the others of the group, and the group is tried again as it shrinks."""
+
+    def plan_of(req: dict) -> dict:
+        if memo is None:
+            return build_plan(prog, base, req, sheet=sheet, reader=False)
+        key = json.dumps(req, sort_keys=True, default=str)
+        if key not in memo:
+            memo[key] = build_plan(prog, base, req, sheet=sheet, reader=False)
+        return copy.deepcopy(memo[key])  # the caller writes into the plan it gets
+
     plans: list[dict] = []
     for d in group:
         req: dict = {"id": f"I_{d.name}{suffix}", "driver": {"parameter": d.name, "pairs": [list(p) for p in d.pairs],
                                                              "extra_pairs": [list(p) for p in d.extra]},
                      "anchor": {"policy": policy, "centre": centre, "source": SOURCE}, "directives": [dict(FOLLOW)]}
-        plan = build_plan(prog, base, req, sheet=sheet, reader=False)
+        plan = plan_of(req)
         if plan["status"] == "needs_decision":
             if any(not str(q["about"]).startswith("attached:") for q in plan["questions"]):
                 return None, "; ".join(q["text"] for q in plan["questions"][:1]), d.name, {"names": [d.name]}
             req["decisions"] = {q["about"]: ("follow" if follow_all else q.get("recommended") or "follow") for q in plan["questions"]}
-            plan = build_plan(prog, base, req, sheet=sheet, reader=False)
+            plan = plan_of(req)
         if plan["status"] != "ready":
             alt = next((a for a in (plan.get("anchor") or {}).get("alternatives", []) if a.get("policy") == policy and a.get("centre") == centre), None)
             why = "; ".join((plan["conflicts"] + [q["text"] for q in plan["questions"]])[:1]) or f"the plan is {plan['status']}"
@@ -371,11 +382,12 @@ def _attempt(prog: Program, base: dict, sheet: dict | None, build: Build, asm: A
     direction, and is said — and the rest are tried again: one size must not undo the intent of all the others."""
     group = list(asm.drivers)
     dropped: list[dict] = []
+    memo: dict = {}  # each driver's plan for this anchor, built once while the group shrinks
     while group:
         who: str | None = None
         why = ""
         for follow_all in (False, True):  # a part only hung on the assembly by the set-out stays; when that breaks a binding, it follows
-            plans, why, who, extra = _plans_for(prog, base, sheet, group, asm.id, suffix, policy, centre, evidence, status, follow_all)
+            plans, why, who, extra = _plans_for(prog, base, sheet, group, asm.id, suffix, policy, centre, evidence, status, follow_all, memo)
             if plans is None:
                 tried.append({"policy": policy, "centre": centre, "why": why, "left_out": [d["name"] for d in dropped],
                               "names": extra.get("names", []), "blocked": extra.get("blocked", [])})

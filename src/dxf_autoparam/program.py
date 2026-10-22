@@ -110,10 +110,15 @@ def parse(expr: str) -> ast.Expression:
     return tree
 
 
-def names_in(expr: str) -> set[str]:
+@lru_cache(maxsize=1 << 17)  # deriving the design intent asks the same few hundred formulas for their names half a million times
+def _names(expr: str) -> frozenset[str]:
     tree = parse(expr)
     calls = {n.func.id for n in ast.walk(tree) if isinstance(n, ast.Call)}
-    return {n.id for n in ast.walk(tree) if isinstance(n, ast.Name)} - calls - set(CONSTS)
+    return frozenset({n.id for n in ast.walk(tree) if isinstance(n, ast.Name)} - calls - set(CONSTS))
+
+
+def names_in(expr: str) -> set[str]:
+    return set(_names(expr))  # a set of its own: callers may add to it
 
 
 _GLOBALS = {"__builtins__": {}, **FUNCS, **CONSTS}
