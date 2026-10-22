@@ -2,7 +2,7 @@
 {"id": "relate-views-and-levels", "title": "Relate views, parts and levels across a sheet", "kind": "recipe",
  "purpose": "State which components and sizes appear in more than one view, how they relate, and how the levels chain — as bound relations or as noted ones.",
  "applies_to": ["sheets with more than one view", "level chains", "repeated parts"],
- "tools": ["inspect_sheet", "describe_views", "share_sizes", "state_plan", "set_levels", "set_relation", "get_reference", "record_finding"],
+ "tools": ["inspect_sheet", "describe_views", "search_drawing", "compare_views", "calculate", "share_sizes", "state_plan", "set_levels", "set_relation", "get_reference", "record_finding"],
  "related": ["gad-workflow", "name-and-bind-sizes", "handle-uncertainty"],
  "derived_from": ["skills/propose-geometric-relationships/SKILL.md"]}
 ---
@@ -24,7 +24,9 @@ Whenever a sheet has more than one view, repeated parts (cells, spans, bays), or
 
 ## Procedure
 1. `describe_views`: name and type each view; relate projections, same-structure views and details (only where the geometry allows).
-2. List what appears in more than one view; for each: which part or value in each view, and how they relate.
+2. Look across the views before you say two of them show the same thing: `compare_views` lists what several views state alike (a level, a size, the same
+   words), what they state differently, and which dimensions run between two stated levels; `search_drawing` finds every place a part or a number is
+   mentioned; `calculate` checks a relation's arithmetic. List what appears in more than one view; for each: which part or value in each view, and how they relate.
 3. Bind what can be bound: a shared value (`share_sizes`) or views in projection; say as `noted_only`, with the reason, what cannot.
 4. Levels: name the stated levels with `set_levels` (role: site input, check only, or derived). Express a derived level as a relation over
    named levels and values (`set_relation`); a relation that names nothing is refused. Do not add levels unless the drawing, or a
@@ -34,6 +36,10 @@ Whenever a sheet has more than one view, repeated parts (cells, spans, bays), or
 
 ## Engineering rules
 - A relation is stated only with its evidence (the drawing's lines, dimensions or notes).
+- Equal numbers are not one size: link only what is the same part and the same dimension in each view, read from the pictures. The same words stated at two
+  different numbers (two views, one wording) are a finding to report to the person — name them apart, never link them.
+- A level is each view's own, not a value two views can share: bind a relation through a shared length that runs from a stated level in each view
+  (`compare_views` lists the dimensions that do), or say it is only noted.
 - A level that is superseded or disputed in the library is not used to derive another.
 - A library level chain is a pattern to look for; the numbers come from this drawing.
 

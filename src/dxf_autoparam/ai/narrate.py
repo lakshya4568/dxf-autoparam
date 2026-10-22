@@ -23,6 +23,7 @@ STAGE_OF = {
     "review_parameters": "inspecting", "update_checklist": "planning", "record_learned": "planning", "accept_semantics": "understanding the views",
     "rename_values": "binding values", "define_transforms": "binding values",
     "list_skills": "consulting the library", "load_skill": "consulting the library", "search_library": "consulting the library", "record_finding": "consulting the library",
+    "search_drawing": "inspecting", "compare_views": "inspecting", "calculate": "measuring",
 }
 STAGES = ("inspecting", "looking", "interpreting", "understanding the views", "naming the parts", "binding values", "stating intent", "planning",
           "measuring", "linking the views", "stating the plan", "asking", "validating", "committing", "consulting the library")
@@ -46,6 +47,7 @@ WORDS = {
     "review_parameters": "reviewed the value names", "update_checklist": "updated the checklist", "record_learned": "recorded what it learned",
     "accept_semantics": "recorded a decision", "rename_values": "renamed values", "define_transforms": "defined transforms",
     "list_skills": "listed library skills", "load_skill": "read a library skill", "search_library": "searched the library", "record_finding": "recorded library findings",
+    "search_drawing": "searched the whole sheet", "compare_views": "compared what the views state", "calculate": "did the arithmetic",
 }
 
 # What each tool is doing while it runs, in the present tense (WORDS above is the past tense, for a finished call).
@@ -64,6 +66,7 @@ DOING = {
     "update_checklist": "Updating its checklist", "record_learned": "Recording what it learned", "accept_semantics": "Recording an existing/proposed decision",
     "rename_values": "Renaming values", "define_transforms": "Defining rotations, translations and scales",
     "list_skills": "Listing matching library skills", "load_skill": "Reading a library skill", "search_library": "Searching the library", "record_finding": "Recording what the library gave",
+    "search_drawing": "Searching the whole sheet for words and numbers", "compare_views": "Comparing what the views state", "calculate": "Working out an expression",
 }
 
 
@@ -160,8 +163,17 @@ def summarise(name: str, a: dict, res) -> str:
             if v.get("ok") is False:
                 return f"plan refused: {str((v.get('rejected') or ['?'])[0])[:120]}"
             return f"plan {v.get('plan')}: {_n(v.get('questions'))} question(s) for you" + (f", {_n(v.get('conflicts'))} conflict(s)" if v.get("conflicts") else "")
+        if name == "search_drawing" and isinstance(res, dict) and "total" in res:
+            return f"{res['total']} place(s) state {', '.join(str(x) for x in [*(a.get('words') or []), *(a.get('numbers') or [])][:4]) or 'it'}"
+        if name == "compare_views" and isinstance(res, dict):
+            differ = _n(res.get("levels_stated_differently")) + _n(res.get("sizes_stated_differently"))
+            return (f"{_n(res.get('levels_stated_in_several_views'))} level(s) and {_n(res.get('sizes_stated_in_several_views'))} size(s) stated in several views, "
+                    f"{differ} stated differently, {_n(res.get('dimensions_between_stated_levels'))} dimension(s) between stated levels")
+        if name == "calculate" and isinstance(res, dict) and "result_mm" in res:
+            return f"{res.get('expression')} = {res['result_mm']:g} mm"
         if name == "ask_person":
-            return f"asked: {str(a.get('question', ''))[:120]}"
+            qs = a.get("questions") or []
+            return (f"asked {len(qs)} question(s): {str((qs[0] or {}).get('question', ''))[:100]}" if qs else f"asked: {str(a.get('question', ''))[:120]}")
         if name == "finish":
             r = res if isinstance(res, dict) else {}
             return "finished" if r.get("done") else f"not finished yet: {str(r.get('hint') or r.get('waiting_for') or '')[:140]}"

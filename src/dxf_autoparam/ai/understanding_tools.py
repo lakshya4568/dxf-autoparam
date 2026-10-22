@@ -74,6 +74,22 @@ UNDERSTANDING_TOOL_SPECS = [
                            "proposed from the drawing's own evidence (the dimension or note that states the size, the part it sizes, the kind of gap) — "
                            "proposals with their evidence; rename_values applies what you accept."),
      _obj({"unit": S}, ["unit"])),
+    ("search_drawing", ("Where words and numbers are stated on the WHOLE sheet — notes, dimensions, levels, titles, the views' names, and the parts and "
+                        "values already named — each hit with its unit, view and the id every other tool takes. A hit has any of the words (or the number); "
+                        "the best matches come first. Use it to find every place a part or a size is mentioned before you say how the views relate."),
+     _obj({"words": LIST, "numbers": {"type": "array", "items": N},
+           "kinds": {"type": "array", "items": {"type": "string", "enum": ["note", "title", "level", "dimension", "view", "part", "value"]}},
+           "limit": N})),
+    ("compare_views", ("What the views state side by side, from the engine's reading of every note, dimension and level: levels stated in several views, "
+                       "levels stated at different values under the same words, sizes (dimensions and notes) stated in several views, notes with the same words "
+                       "and different numbers, and vertical dimensions that run between two stated levels (a size that IS the difference of two levels). "
+                       "Evidence, not a verdict: equal numbers are not one size, and the same words with two numbers are for the person. `units` narrows to "
+                       "those units; `focus` to the words and numbers it names."),
+     _obj({"units": LIST, "focus": S})),
+    ("calculate", ("Arithmetic over the drawing's named values and levels, in millimetres (a level in metres is taken as millimetres), by the engine's safe "
+                   "evaluator: numbers, names, + - * / ^ and its functions. Names are values of the open unit, of a unit you give, or shared values. Use it "
+                   "to check a relation before you state it, instead of working it out in your head."),
+     _obj({"expression": S, "unit": S}, ["expression"])),
     ("update_checklist", ("Your checklist for this task — what you learned, what you will do, how you will check it — kept on the sheet with the "
                           "revision of each item, shown to the person and given back to you every turn. Items with the same id are replaced."),
      _obj({"items": {"type": "array", "items": _obj({"id": S, "text": S, "status": {"type": "string", "enum": ["todo", "doing", "done", "blocked"]},
@@ -93,8 +109,10 @@ UNDERSTANDING_TOOL_SPECS = [
                        "own value is fine — it is a separate value there; use share_sizes if it is the same size seen again."),
      _obj({"items": {"type": "array", "items": _obj({"from": S, "to": S, "why": S}, ["from", "to"])}}, ["items"])),
 ]
+for _n, _d, _sch in UNDERSTANDING_TOOL_SPECS:  # every call may say, for the person watching, what it is for (the model's own words)
+    _sch["properties"].setdefault("why", {"type": "string", "description": "One short sentence for the person watching: what you are doing with this call and why."})
 UNDERSTANDING_READ = {"drawing_overview", "inspect_view", "inspect_component", "inspect_annotations", "inspect_layers", "find_duplicates",
-                      "impact_plan", "check_behaviour", "review_parameters"}
+                      "impact_plan", "check_behaviour", "review_parameters", "search_drawing", "compare_views", "calculate"}
 UNDERSTANDING_WRITE = {"update_checklist", "record_learned", "accept_semantics", "rename_values"}
 
 
@@ -564,6 +582,18 @@ class UnderstandingSession:
                 return {"ok": rep["ok"], "failed": rep["failed"], "categories": cats, "changed_entities": rep["changed_entities"]}
             if name == "review_parameters":
                 return parameter_review(sm, a["unit"])
+            if name == "search_drawing":
+                from .crosscheck import search_drawing
+
+                return search_drawing(sm, a.get("words"), a.get("numbers"), a.get("kinds"), a.get("limit") or 40)
+            if name == "compare_views":
+                from .crosscheck import compare_views
+
+                return compare_views(sm, [str(u) for u in a.get("units") or []] or None, str(a.get("focus") or ""))
+            if name == "calculate":
+                from .crosscheck import calculate
+
+                return calculate(a.get("expression", ""), lambda n: self.bench.value_of(n, a.get("unit") or None))
         raise KeyError(name)
 
     def write(self, name: str, a: dict) -> tuple[str, str]:
