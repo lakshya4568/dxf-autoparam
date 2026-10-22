@@ -176,7 +176,9 @@ def verify(dest: Path, src: Path | None = None) -> list[str]:
             sp = src / e["path"]
             if not sp.is_file() or sha256_file(sp) != e["sha256"]:
                 problems.append(f"the source file differs or is gone: {e['path']}")
-    on_disk = {p.relative_to(dest).as_posix() for p in dest.rglob("*") if p.is_file()} - {MANIFEST, "MIGRATION.md"}
+    # what the migration never copies is not looked for either: importing the migrated package (its own tests do) writes a __pycache__ next to it
+    on_disk = {p.relative_to(dest).as_posix() for p in dest.rglob("*") if p.is_file() and not (
+        SKIP_DIRS & set(p.relative_to(dest).parts[:-1]) or p.name in SKIP_NAMES or p.suffix in SKIP_SUFFIXES)} - {MANIFEST, "MIGRATION.md"}
     extra = on_disk - {e["stored"] for e in manifest["files"]}
     problems += [f"not in the manifest: {x}" for x in sorted(extra)]
     return problems
