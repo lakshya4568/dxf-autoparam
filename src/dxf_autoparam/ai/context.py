@@ -198,6 +198,53 @@ class SheetScope:
             return []
         return self.sm.namesakes(name, {self.uid})
 
+    def dimension_values(self) -> dict[int, list[tuple[str, str, float]]]:
+        """What every unit's DIMENSIONS state, in mm at its own scale, by the rounded number: {mm: [(unit, dimension id, mm)]}. Read from the
+        units already analysed (the sheet keeps them); a unit never opened is not analysed for this."""
+        from ..cadjson import entity_id
+
+        if getattr(self, "_dims", None) is not None:
+            return self._dims
+        out: dict[int, list[tuple[str, str, float]]] = {}
+        for uid, u in self.sm.units.items():
+            an = getattr(u, "an", None)
+            if an is None:
+                continue
+            um = an.drawing.units_mm
+            for it in an.drawing.items:
+                if it.dxftype == "DIMENSION" and it.extra.get("measurement"):
+                    mm = float(it.extra["measurement"]) * um
+                    out.setdefault(round(mm), []).append((uid, entity_id(it), round(mm, 1)))
+        self._dims = out
+        return out
+
+    def drivers(self, a: str, b: str) -> list[str]:
+        """The values somebody named that move the distance between two set-out lines of this unit AS THE SHEET STANDS — its committed
+        answer with the design intent the engine derived (which side of each size stays): a size they move is a result of them (a sum, a
+        difference), not a free input. Empty for a unit nothing was committed for. Measured once per revision, every named value stepped."""
+        from ..generic import is_generated
+
+        if getattr(self, "_drv_rev", None) != self.sm.revision:
+            self._drv_rev, self._drv = self.sm.revision, None
+            u = self.sm.units.get(self.uid)
+            if u is not None and u.answer and u.answer.get("parameters"):
+                prog = self.sm.unit(self.uid).prog
+                vals = {**prog.defaults(), **self.sm._values_for(u, {})}
+                try:
+                    v0 = prog.datum_values(vals)
+                    steps = {n: prog.datum_values({**vals, n: float(vals[n]) + (1e-3 if p.kind == "level" else 1.0)})
+                             for n, p in prog.params.items() if p.kind in ("length", "level") and not (is_generated(n) and p.source != "ai")}
+                except (KeyError, ValueError, ArithmeticError) as exc:  # a program that cannot be stepped drives nothing that can be measured here
+                    steps, v0 = {}, {}
+                    self._drv_error = f"{type(exc).__name__}: {exc}"[:160]
+                self._drv = (v0, steps)
+        if not self._drv:
+            return []
+        v0, steps = self._drv
+        if a not in v0 or b not in v0:
+            return []
+        return sorted(n for n, v1 in steps.items() if abs((v1[b] - v1[a]) - (v0[b] - v0[a])) > 1e-9)
+
     def views_of_items(self, items) -> list[str]:
         group = self.sm.layout.item_group
         return sorted({group.get(self.back[i]) for i in items if 0 <= i < len(self.back)} - {None})

@@ -240,6 +240,19 @@ def view_context(sm, vid: str) -> dict:
         u = sm.units[uid]
         out["view"]["unit"] = uid
         out["view"]["unit_views"] = u.views
+        try:  # the view's own coordinates, as the person's view tab shows them: where 0,0 is, what it is set from, and the level a height reads
+            from ..frames import view_frame
+
+            fr = view_frame(sm, vid)
+            (x0, y0), (x1, y1) = fr.to_local(g.bbox[0], g.bbox[1]), fr.to_local(g.bbox[2], g.bbox[3])
+            rl0 = fr.rl(fr.origin[1])
+            out["view"]["frame"] = {"x_from": fr.x_from, "y_from": fr.y_from, "local_bbox_mm": [round(v, 1) for v in (x0, y0, x1, y1)],
+                                    **({"level_at_y0_m": round(rl0, 3), "level_from": fr.level.get("name")} if rl0 is not None and fr.level else {}),
+                                    "origin_dxf": [round(v, 3) for v in fr.origin], "mm_per_dxf_unit": fr.mm_per_unit,
+                                    "how": "the person's view tab shows this view in these coordinates: local mm = (DXF point − origin_dxf) × mm_per_dxf_unit"
+                                           + ("; a height y (mm) in it is at level level_at_y0_m + y/1000" if rl0 is not None else "")}
+        except (KeyError, ValueError, ArithmeticError, AttributeError) as exc:
+            out["view"]["frame"] = {"unavailable": f"{type(exc).__name__}: {exc}"[:160]}
         an = sm.analysis(uid)
         comps = []
         labels_on: dict[int, list[str]] = {}
@@ -576,8 +589,10 @@ class UnderstandingSession:
                 from ..behaviour import behaviour_report
 
                 rep = behaviour_report(sm, {k: float(v) for k, v in (a.get("changes") or {}).items()})
-                # only what failed is given in full; what passed is counted (the model does not need every pass every time)
-                cats = {k: {"status": c["status"], "failed": [r for r in c["items"] if r["status"] == "fail"][:8],
+                # only what failed is given in full; what passed is counted (the model does not need every pass every time). A row that names its
+                # entities by id (refs) does not need their sheet indices too: those are for the page to zoom to
+                cats = {k: {"status": c["status"], "failed": [{x: v for x, v in r.items() if not (x == "entities" and r.get("refs"))}
+                                                              for r in c["items"] if r["status"] == "fail"][:8],
                             "passed": sum(1 for r in c["items"] if r["status"] == "pass")} for k, c in rep["categories"].items()}
                 return {"ok": rep["ok"], "failed": rep["failed"], "categories": cats, "changed_entities": rep["changed_entities"]}
             if name == "review_parameters":

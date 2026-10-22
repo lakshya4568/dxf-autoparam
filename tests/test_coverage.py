@@ -1,109 +1,184 @@
-"""Which units of the drawing a run really covered — said by the sheet, not by the model.
+"""How parametric a unit is, measured on the drawing's own dimensions — and the agent told so, part by part, until each is bound, renamed or kept.
 
-A live run's closing words said "U05–U09 were accounted for and left as drawn" while the sheet held work for U05, U06 and U07 and never opened U08 or U09;
-and the gate said "1 thing remains" without saying that two of ten units were untouched."""
+Found on a real sheet: a long section got 13 tool calls and 8 named values while 33 of its 46 dimensions stayed as drawn; 29 of those measured gaps
+that no value set at all (a constant offset in the set-out), so renaming could not reach them and the candidate list never showed them. Nothing said
+which dimensions were left, and the run finished. Generated drawing, scripted model, real engine."""
 
 from __future__ import annotations
 
-import copy
+import ezdxf
+from test_agent import ScriptedGemini, call
 
-from test_crossview import mini_gad
-from test_run import Scripted, wait
-
-from dxf_autoparam.ai.coverage import sentence, table_md, unit_rows
-from dxf_autoparam.ai.run import Run, SheetBench
-from dxf_autoparam.ai.scripted import call
-from dxf_autoparam.crossview import EMPTY_ANSWER, SheetModel
-from dxf_autoparam.generic import is_generated
-from dxf_autoparam.workspace import SheetSession
+from dxf_autoparam.ai.agent import agent_parametrize
+from dxf_autoparam.ai.parametrize import prepare
+from dxf_autoparam.coverage import dimension_rows, unit_coverage
+from dxf_autoparam.topology import of
+from dxf_autoparam.validator import baseline
 
 
-def two_unit_sheet(tmp_path, name_it: bool = True):
-    sheet = SheetSession()
-    sheet.sm = sm = SheetModel.open(mini_gad(tmp_path / "mini.dxf"))
-    one, two = list(sm.units)[:2]
-    if name_it:  # the first unit is parametrized: one value named
-        sm.rename(f"{one}.{next(n for n, p in sm.unit(one).prog.params.items() if is_generated(n))}", "ClearSpan")
-    return sheet, sm, one, two
+def footing_and_stem(path) -> str:
+    doc = ezdxf.new("R2018", setup=True)
+    doc.header["$INSUNITS"] = 4
+    msp = doc.modelspace()
+    msp.add_lwpolyline([(0, 0), (2000, 0), (2000, 400), (0, 400)], close=True)  # a footing
+    msp.add_lwpolyline([(800, 400), (1100, 400), (1100, 2400), (800, 2400)], close=True)  # a stem on it
+    msp.add_line((-1500, 1200), (3500, 1200))  # a loose level line
+    msp.add_text("GROUND LEVEL", height=100, dxfattribs={"insert": (2200, 1250)})
+    for base, p1, p2, angle in [((-600, 0), (0, 0), (0, 1200), 90),  # footing bottom to the level line
+                                ((0, -500), (0, 0), (800, 0), 0),  # the toe
+                                ((2400, 0), (2000, 400), (2000, 0), 90),  # the footing's thickness
+                                ((1500, 2800), (800, 2400), (1100, 2400), 0)]:  # the stem's width
+        msp.add_linear_dim(base=base, p1=p1, p2=p2, angle=angle).render()
+    doc.saveas(str(path))
+    return str(path)
 
 
-def test_a_unit_is_parametrized_skipped_on_the_record_looked_at_or_untouched(tmp_path):
-    _sheet, sm, one, two = two_unit_sheet(tmp_path)
-    units = [one, two, "U98", "U99"]  # unknown units are not rows: a scope names the units the sheet has
-    assert [r["unit"] for r in unit_rows(sm, units, {}, [], [])] == [one, two]
-    rows = {r["unit"]: r for r in unit_rows(sm, [one, two], {}, [], [])}
-    assert rows[one]["state"] == "parametrized" and rows[one]["covered"] and rows[one]["inputs"] >= 1
-    assert rows[two]["state"] == "untouched" and not rows[two]["covered"]
-    # opened, nothing kept: not covered, and not the same thing as skipped
-    assert unit_rows(sm, [two], {two: {}}, [], [])[0]["state"] == "looked_at"
-    assert not unit_rows(sm, [two], {two: {}}, [], [])[0]["covered"]
-    # work in a workbench that is not applied yet counts for the gate that asks before applying — once it has a named value; parts alone are not it
-    assert unit_rows(sm, [two], {two: {"components": [{"name": "Box"}], "parameters": [{"name": "ClearSpan"}]}}, [], [])[0]["state"] == "parametrized"
-    assert unit_rows(sm, [two], {two: {"components": [{"name": "Box"}]}}, [], [])[0]["state"] == "parts_only"
-    # skipped counts only with the reason ON THE CHECKLIST, for that unit, in words
-    said = [{"id": "C1", "text": f"{two}: a single-line schematic, nothing to parametrize", "status": "skipped"}]
-    row = unit_rows(sm, [two], {}, said, [])[0]
-    assert row["state"] == "skipped" and row["covered"] and "schematic" in row["reason"]
-    assert unit_rows(sm, [two], {}, [{"id": "C1", "text": f"{two} first", "status": "todo"}], [])[0]["state"] == "untouched", "a plan to do it is not a reason to skip it"
-    assert unit_rows(sm, [two], {}, [{"id": "C1", "text": f"{two}0 and {two}x are other units", "status": "skipped"}], [])[0]["state"] == "untouched", "U2 is not U20"
+def regions(path):
+    an, *_ = prepare(path)
+    rs = of(an).regions
+    footing = next(r for r in rs if abs(r.bbox[2] - r.bbox[0] - 2000) < 1e-6 and abs(r.bbox[3] - r.bbox[1] - 400) < 1e-6)
+    stem = next(r for r in rs if abs(r.bbox[2] - r.bbox[0] - 300) < 1e-6)
+    dims = {round(float(it.extra["measurement"])): f"D{it.index}" for it in an.drawing.items if it.dxftype == "DIMENSION"}
+    return footing.id, stem.id, dims
 
 
-def test_the_sentence_and_the_table_say_what_the_sheet_holds(tmp_path):
-    _sheet, sm, one, two = two_unit_sheet(tmp_path)
-    rows = unit_rows(sm, [one, two], {}, [], [{"unit": one, "item": "ClearHeight", "why": "x"}])
-    assert sentence(rows) == f"1 of 2 units parametrized ({two} untouched)"
-    md = table_md(rows)
-    assert md.splitlines()[0].startswith("| unit |") and f"| {one} |" in md and f"| {two} |" in md and "ClearHeight" in md and "untouched" in md
-    rows = unit_rows(sm, [one, two], {two: {}}, [], [])
-    assert sentence(rows) == f"1 of 2 units parametrized ({two} looked at, nothing kept)"
+def test_each_dimension_is_driven_unnamed_or_fixed_and_sorted_onto_the_part_it_measures(tmp_path):
+    path = footing_and_stem(tmp_path / "stem.dxf")
+    an, *_ = prepare(path)
+    rows = {r["id"]: r for r in dimension_rows(baseline(an))}
+    assert {r["status"] for r in rows.values()} == {"unnamed"}, "the engine measured every dimensioned gap, nobody named one"
+    assert all(r["by"] for r in rows.values()), "each says which value moves it (what rename_values would rename)"
 
 
-def test_the_gate_asks_for_the_uncovered_units_only_when_the_whole_drawing_was_asked(tmp_path):
-    sheet, _sm, _one, two = two_unit_sheet(tmp_path)
-    whole = SheetBench(Run(sheet, "R1", "Make this whole drawing parametric.", {"kind": "drawing"}))
-    rows, asked = whole.coverage()
-    assert asked and [r["unit"] for r in rows if not r["covered"]] == [two]
-    matter = next(m for m in whole.open_matters() if "units parametrized" in m)
-    assert two in matter and "update_checklist" in matter and "skipped" in matter, "it says how a unit is skipped properly"
-    # one view of the drawing: nothing is asked of the other unit
-    part = SheetBench(Run(sheet, "R2", "Name the parts of this view.", {"views": ["V01"]}))
-    assert part.coverage()[1] is False and not any("units parametrized" in m for m in part.open_matters())
-    # a change of one value is not a promise to parametrize every unit
-    change = SheetBench(Run(sheet, "R3", "Reduce the clear span to 2500.", {"kind": "drawing"}))
-    change.ledger.append({"quote": "Reduce the clear span", "kind": "change_value", "meaning": "x", "handled_by": "plan", "quote_norm": "x"})
-    assert change.coverage()[1] is False
+def test_the_agent_is_told_part_by_part_and_finish_holds_until_every_dimension_is_accounted_for(tmp_path):
+    path = footing_and_stem(tmp_path / "stem.dxf")
+    footing, stem, d = regions(path)
+    script = [
+        [call("define_parts", items=[{"name": "Footing", "type": "footing", "regions": [footing]}, {"name": "Stem", "type": "stem", "regions": [stem]}])],
+        [call("define_parameters", items=[{"name": "FootingThickness", "part": "Footing", "dimension": d[400]}])],
+        [call("finish", summary="done")],
+        [call("coverage")],
+        [call("define_parameters", items=[{"name": "ToeWidth", "part": "Footing", "dimension": d[800]},
+                                          {"name": "StemThickness", "part": "Stem", "dimension": d[300]}]),
+         call("keep_dimensions", items=[{"dimension": d[1200], "why": "the level line is the site's, not a size of the footing"}])],
+        [call("finish", summary="done")],
+    ]
+    gem = ScriptedGemini(script)
+    prog, _rep, info = agent_parametrize(path, gem=gem, log=lambda *a: None)
+    first = gem.seen[2][0]
+    assert first["done"] is False and "dimensions" in first["hint"] and "coverage" in first["hint"], first.get("hint")
+    assert "1 of 4 driven" in first["dimensions"], first["dimensions"]
+    cov = gem.seen[3][0]
+    open_ids = {r["dimension"] for e in cov["parts"].values() for r in e.get("open", [])} | {r["dimension"] for r in cov["unassigned"]}
+    assert open_ids == {d[800], d[300], d[1200]}, cov
+    assert d[300] in {r["dimension"] for r in cov["parts"]["Stem"]["open"]}, "the stem's width is the stem's"
+    kept = gem.seen[4][1]["result"][0]
+    assert kept["ok"], kept
+    assert info["complete"] and info["stopped"] == "finished", "the second finish is taken: every dimension is accounted for"
+    cov = unit_coverage(prog, kept=set(info["answer"]["kept_dimensions"]))
+    assert (cov["driven"], cov["kept"], cov["fixed"] + cov["unnamed"]) == (3, 1, 0), {k: cov[k] for k in ("driven", "kept", "fixed", "unnamed")}
 
 
-def test_a_run_over_the_drawing_cannot_end_finished_ok_while_a_unit_was_never_touched(tmp_path):
-    sheet, _sm, one, two = two_unit_sheet(tmp_path)
-    script = [[call("inspect_sheet")], [call("finish", summary="Every unit is parametrized; the rest is left as drawn.")],
-              [call("finish", summary="Every unit is parametrized; the rest is left as drawn.")]]
-    gem = Scripted(script)
-    sheet.gem_factory = lambda: gem
-    r = sheet.start_run({"instruction": "Make this whole drawing parametric.", "scope": {"kind": "drawing"}})
-    p = wait(sheet, r["run"])
-    v = p["verdict"]
-    crit = {c["id"]: c for c in v["criteria"]}
-    assert crit["all_units_covered"]["ok"] is False and v["state"] != "completed"
-    assert v["headline"].startswith(("Partly done: ", "Failed: ")) and f"1 of 2 units parametrized ({two} untouched)" in v["headline"], v["headline"]
-    rows = {x["unit"]: x for x in v["coverage"]}
-    assert rows[one]["state"] == "parametrized" and rows[two]["state"] == "untouched"
-    assert v["coverage_sentence"] == f"1 of 2 units parametrized ({two} untouched)"
-    assert "left as drawn" in v["finish_summary"], "the model's words are kept, as its words"
-    assert f"| {two} |" in v["engine_summary"] and "untouched" in v["engine_summary"], "and the engine's table says what the sheet holds"
+def test_a_kept_dimension_needs_a_dimension_of_the_unit_and_a_reason(tmp_path):
+    path = footing_and_stem(tmp_path / "stem.dxf")
+    _footing, _stem, d = regions(path)
+    script = [[call("keep_dimensions", items=[{"dimension": "D9999", "why": "x"}, {"dimension": d[1200], "why": " "}, {"dimension": d[400], "why": "fixed by the site"}])],
+              [call("finish", summary="done")]]
+    gem = ScriptedGemini(script)
+    agent_parametrize(path, gem=gem, log=lambda *a: None)
+    got = {v["item"]: v for v in gem.seen[0][0]["result"]}
+    assert not got["D9999"]["ok"] and not got[d[1200]]["ok"] and got[d[400]]["ok"], got
 
 
-def test_a_unit_with_parts_and_no_named_value_is_not_parametrized_and_is_said_so(tmp_path):
-    """A paid run ended "9 of 10 units parametrized (U09 untouched)": one of the nine held three parts, no named value, and 48 sizes kept as drawn."""
-    _sheet, sm, one, two = two_unit_sheet(tmp_path)
-    answer = copy.deepcopy(EMPTY_ANSWER)
-    answer["components"] = [{"name": "Box", "existing": False}]
-    sm.units[two].answer, sm.units[two].prog = answer, None
-    rows = unit_rows(sm, [one, two], {}, [], [])
-    assert {r["unit"]: r["state"] for r in rows} == {one: "parametrized", two: "parts_only"}
-    assert not rows[1]["covered"] and rows[1]["parts"] == 1 and rows[1]["inputs"] == 0
-    assert sentence(rows) == f"1 of 2 units parametrized ({two} parts defined, no named value)"
-    assert "parts only" in table_md(rows)
-    # the model's word on the checklist that there was nothing to name is a reason on the record
-    said = [{"id": "C1", "text": f"{two}: a schematic, nothing to name", "status": "skipped"}]
-    assert unit_rows(sm, [two], {}, said, [])[0]["state"] == "skipped"
+def test_the_coverage_of_a_parametrized_unit_counts_what_its_answer_left_as_drawn(tmp_path):
+    path = footing_and_stem(tmp_path / "stem.dxf")
+    footing, _stem, d = regions(path)
+    script = [[call("define_parts", items=[{"name": "Footing", "type": "footing", "regions": [footing]}]),
+               call("define_parameters", items=[{"name": "FootingThickness", "part": "Footing", "dimension": d[400]}])],
+              [call("finish", summary="done")], [call("finish", summary="done")]]
+    gem = ScriptedGemini(script)
+    prog, _rep, _info = agent_parametrize(path, gem=gem, log=lambda *a: None)
+    cov = unit_coverage(prog)
+    assert cov["driven"] == 1 and cov["driven"] + cov["unnamed"] + cov["fixed"] == 4, {k: cov[k] for k in ("driven", "unnamed", "fixed")}
+
+
+def test_a_part_of_a_known_kind_gets_what_such_a_part_has_from_the_library_and_only_with_the_library(tmp_path):
+    from dxf_autoparam.ai import library
+
+    lib = library.open_domain("bridge")
+    assert [c["id"] for c in lib.component_cards({"return", "wall"})][:1] == ["return_wall"]
+    assert lib.component_cards({"wall"}) == [], "every word of a name: a wall is not a return wall"
+    assert lib.reference("component:return_wall")["found"] and not lib.reference("component:nothing")["found"]
+    path = footing_and_stem(tmp_path / "stem.dxf")
+    footing, stem, _d = regions(path)
+    for pack in ("bridge", None):
+        script = [[call("define_parts", items=[{"name": "ReturnWall", "type": "return_wall", "regions": [stem]},
+                                               {"name": "Footing", "type": "footing", "regions": [footing]}])],
+                  [call("coverage")], [call("finish", summary="done")], [call("finish", summary="done")]]
+        gem = ScriptedGemini(script)
+        agent_parametrize(path, gem=gem, log=lambda *a: None, domain_name=pack)
+        cov = gem.seen[1][0]
+        rows = {p: e for p, e in cov["parts"].items()} | {q["part"]: q for q in cov.get("parts_without_dimensions", [])}
+        if pack:
+            know = rows["ReturnWall"]["knowledge"]
+            assert know["component"] == "component:return_wall" and any(t.startswith("ToeWidth") for t in know["parameters"]), know
+            assert any("FootingWidth" in r for r in know["relations"]) and "cross_view" in know
+            assert "knowledge" not in rows.get("Footing", {}), "no card names a plain footing"
+        else:
+            assert not any("knowledge" in e for e in rows.values()), "without the library the model names things itself"
+
+
+
+def test_a_dimension_that_writes_another_number_than_it_measures_is_said_to_disagree(tmp_path):
+    """A drafter's number over geometry not drawn to it (a real sheet: a dimension measuring 3425 that says 3600): the number cannot follow any change
+    of the geometry, so the agent and the page are told — never silently counted as following."""
+    doc = ezdxf.new("R2018", setup=True)
+    doc.header["$INSUNITS"] = 4
+    msp = doc.modelspace()
+    msp.add_lwpolyline([(0, 0), (3425, 0), (3425, 400), (0, 400)], close=True)
+    msp.add_linear_dim(base=(0, -500), p1=(0, 0), p2=(3425, 0), text="3600").render()  # the drafter's number
+    msp.add_linear_dim(base=(3900, 0), p1=(3425, 0), p2=(3425, 400), angle=90, text="<>").render()  # the measurement
+    msp.add_linear_dim(base=(0, 900), p1=(0, 400), p2=(3425, 400), text="3.425 M").render()  # the measurement, in metres
+    path = str(tmp_path / "written.dxf")
+    doc.saveas(path)
+    an, *_ = prepare(path)
+    rows = sorted(dimension_rows(baseline(an)), key=lambda r: r["mm"])
+    assert [(r["mm"], r.get("writes")) for r in rows] == [(400.0, None), (3425.0, 3600.0), (3425.0, None)] or \
+        [(r["mm"], r.get("writes")) for r in rows] == [(400.0, None), (3425.0, None), (3425.0, 3600.0)]
+    cov = unit_coverage(baseline(an))
+    briefs = [b for e in cov["parts"].values() for b in e.get("open", [])] + cov["unassigned"]
+    assert any("writes 3600 but measures 3425 mm" in (b.get("disagrees") or "") for b in briefs)
+
+
+def test_a_sum_the_sheet_already_works_out_is_driven_and_binding_it_as_an_input_is_refused(tmp_path, monkeypatch):
+    """The agent's workbench works on its answer without what the engine derived (which side of each size stays). There the box's overall width
+    looked free: listed as a dimension to bind, it was bound as an input, held the outer faces, and a wider clear span could then only run into the
+    wall between the cells — the 2- and 4-cell boxes fell from 88 % to 50 % and 40 % of their dimensions editable. As the sheet stands the overall
+    width is a result of the clear span and the walls: driven, never listed, and refused as an input with what it is made of."""
+    from types import SimpleNamespace
+
+    from test_intent_plan import box_sheet
+
+    from dxf_autoparam import design_intent
+    from dxf_autoparam.ai.agent import Workbench
+    from dxf_autoparam.ai.context import SheetScope
+    from dxf_autoparam.ai.loop import Budget, LoopState, execute_calls
+    from dxf_autoparam.plan_bench import Box
+    from dxf_autoparam.viewimg import box_around
+
+    monkeypatch.setenv("AUTOPARAM_DOMAIN", "bridge")
+    sm, uid, _g = box_sheet(tmp_path, Box(cells=2))
+    u = sm.unit(uid)
+    wb = Workbench(sm.path, region=box_around([sm.layout.group(v).bbox for v in u.views], 0.0), start=design_intent.strip(u.answer), drawing=u.sub,
+                   analysis=sm.pristine_analysis(uid), scope=SheetScope(sm, uid))
+    rows = wb._coverage()["rows"]
+    summed = [r for r in rows if r.get("as_the_sheet_stands")]
+    assert summed and all(r["status"] == "driven" for r in summed)
+    overall = max(summed, key=lambda r: r["mm"])
+    assert "ClearSpan" in overall["by"], overall
+    assert overall["id"] not in {b["dimension"] for e in wb.coverage()["parts"].values() for b in e.get("open", [])}, "never listed as open"
+    parts, _ = execute_calls(wb, [SimpleNamespace(name="define_parameters", args={"items": [{"name": "OverallWidth", "dimension": overall["id"]}]})],
+                             lambda e: None, LoopState(), Budget(), {})
+    (v,) = parts[0].function_response.response["result"]["result"]
+    assert not v["ok"] and v["failure"]["code"] == "SUM" and "ClearSpan" in v["failure"]["measured"] and "set_relation" in v["failure"]["hint"]
+    assert "OverallWidth" not in wb.prog.params, "nothing written"

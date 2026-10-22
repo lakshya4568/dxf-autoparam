@@ -1,0 +1,176 @@
+{
+  "format": "dxf-autoparam/components-1",
+  "title": "Components as the production generator builds them: parameters, relations, views, behaviour",
+  "source": {
+    "repository": "aagento-bridge",
+    "folder": "src/app/features/bridges",
+    "read": "2026-10-22",
+    "family": "railway RCC box (utils/rcc-box-railway) and its parameter panel (components/bridge-workspace/panels/rcc-box-params.ts)",
+    "trust": "production_code: what the generator draws and computes, read from its source (file:line cited per entry). A value here is the generator's DEFAULT, never a value of the drawing in hand: every size is still measured on the drawing and bound by the engine. A relation is a HYPOTHESIS to check on the drawing (calculate, check its arithmetic; set_relation or set_formulas to bind it), not a rule to apply."
+  },
+  "components": [
+    {
+      "id": "box_barrel",
+      "title": "RCC box barrel (cells, walls, slabs, haunches)",
+      "names": ["rcc box", "box barrel", "barrel", "box culvert", "box", "cell", "top slab", "bottom slab", "side wall", "outer wall", "inner wall", "haunch"],
+      "what": "The monolithic box: N cells of clear span × box height, outer and inner walls, top and bottom slabs, a haunch at each inside corner.",
+      "parameters": [
+        {"name": "ClearSpan", "meaning": "clear width of one cell, between the inner faces of its walls", "production": "geometry.clear_w", "default": "5.000 m", "source": "models/rcc-box.defaults.ts; rcc-box-rule-engine.ts compute"},
+        {"name": "BoxHeight", "meaning": "inside height of a cell from the TOP OF THE BOTTOM SLAB to the soffit (the panel's 'Box Height H')", "production": "geometry.clear_h", "default": "3.331 m", "source": "rcc-box-params.ts:375-380"},
+        {"name": "ClearHeight", "meaning": "clear opening above the wearing course: BoxHeight − WearingCourseThickness (the panel's 'Clear Height H')", "production": "derived (derivedClearHeight)", "source": "rcc-box-params.ts:375-380; rcc-box-mapper.ts:101"},
+        {"name": "OuterWallThickness", "meaning": "thickness of the two outer walls", "production": "geometry.t_wall_o", "default": "0.400 m", "source": "rcc-box-rule-engine.ts compute"},
+        {"name": "InnerWallThickness", "meaning": "thickness of a wall between cells (only with more than one cell)", "production": "geometry.t_wall_i", "default": "0.400 m", "source": "rcc-box-rule-engine.ts compute"},
+        {"name": "TopSlabThickness", "meaning": "top slab thickness", "production": "geometry.t_slab_t", "default": "0.400 m (the panel takes it from an RDSO lookup)", "source": "rcc-box-params.ts:244"},
+        {"name": "BottomSlabThickness", "meaning": "bottom slab thickness", "production": "geometry.t_slab_b", "default": "0.400 m (RDSO lookup)", "source": "rcc-box-params.ts:245"},
+        {"name": "HaunchSize", "meaning": "leg of the 45° haunch at each inside corner, written 'HAUNCH a X a'", "production": "geometry.haunch_size", "default": "0.300 m", "source": "rcc-box-params.ts:357-373"},
+        {"name": "Cells", "meaning": "number of cells (a count: changing it adds or removes geometry)", "production": "project.cells", "default": "2", "source": "rcc-box-rule-engine.ts compute"},
+        {"name": "BarrelLength", "meaning": "length of the barrel along its axis (the longitudinal section's overall box length)", "production": "project.span_length", "source": "rcc-box-params.ts:409-417, 437-444"}
+      ],
+      "relations": [
+        {"expr": "TotalWidth = ClearSpan * Cells + 2 * OuterWallThickness + InnerWallThickness * (Cells - 1)", "kind": "geometry", "source": "rcc-box-rule-engine.ts compute (total_w, verified by execution)"},
+        {"expr": "TotalHeight = BoxHeight + TopSlabThickness + BottomSlabThickness", "kind": "geometry", "source": "rcc-box-rule-engine.ts compute (total_h, verified by execution)"},
+        {"expr": "ClearHeight = BoxHeight - WearingCourseThickness", "kind": "geometry", "source": "rcc-box-params.ts:375-380"},
+        {"expr": "SoffitLevel = BedLevel + ClearHeight", "kind": "level", "source": "rcc-box-params.ts:382-386"},
+        {"expr": "TopOfSlabLevel = SoffitLevel + TopSlabThickness", "kind": "level", "source": "rcc-box-params.ts:388-392"},
+        {"expr": "BottomOfBoxLevel = BedLevel - WearingCourseThickness - BottomSlabThickness", "kind": "level", "source": "rcc-box-rule-engine.ts compute (z_bot)"},
+        {"expr": "EarthCushion = FormationLevel - TopOfSlabLevel", "kind": "level", "source": "rcc-box-params.ts:400-406, 429-435 (clamped at 0)"},
+        {"expr": "BarrelLength = FormationWidthLeft + FormationWidthRight + 2 * EmbankmentSlope * EarthCushion", "kind": "geometry", "source": "rcc-box-params.ts:409-417 (written as + 4 × cushion for a 2H:1V slope each side; multi-bridge clipping can shorten it)"},
+        {"expr": "HaunchSize from max(ClearSpan, BoxHeight): <3.0 m → 0.200, <3.5 → 0.300, <4.0 → 0.350, <4.5 → 0.400, <5.0 → 0.450, <5.5 → 0.500, <6.0 → 0.550, else 0.600", "kind": "table", "source": "rcc-box-params.ts:357-373 (labelled an RDSO table)"}
+      ],
+      "views": [
+        {"view": "half section / cross section", "how": "cells, walls, slabs and haunches in section; built in metres from the centre line, y as reduced level (wy = bedY − (z − bedLvl)·scale)", "source": "rcc-box-half-section-view.ts:157-158"},
+        {"view": "longitudinal section", "how": "the barrel's length between its two ends with the top and bottom slabs, the side wall seen beyond (dashed), the earth retainer on the top slab at each end, the return walls and the embankment slopes", "source": "rcc-box-longitudinal-view.ts:135-145"}
+      ],
+      "behaviour": [
+        "BoxHeight up: the soffit and the top of the box rise from the bed level; ClearHeight rises with it; the earth cushion under the formation shrinks and the barrel shortens where the embankment slopes come down to the box (rcc-box-params.ts:419-444)",
+        "ClearSpan up: the box widens; on a symmetric box both outer faces move apart about the centre line"
+      ]
+    },
+    {
+      "id": "deck_layers",
+      "title": "Wearing course, PCC base course, granular (sand) filling",
+      "names": ["wearing course", "cc wearing course", "pcc", "base course", "pcc base course", "levelling course", "leveling course", "granular filling", "sand filling", "filter media"],
+      "what": "Layers above and under the bottom slab: the wearing course on it (the road or bed surface), the PCC base course under it, the granular filling under that.",
+      "parameters": [
+        {"name": "WearingCourseThickness", "meaning": "wearing course on the bottom slab", "production": "deck.wearing_course", "default": "0.150 m", "source": "rcc-box-mapper.ts:100; rcc-box-shear-key-view.ts:176-177"},
+        {"name": "PccBaseThickness", "meaning": "PCC base course under the bottom slab", "production": "foundation.pcc_sub_base", "default": "0.150 m", "source": "rcc-box-rule-engine.ts compute (pccB)"},
+        {"name": "PccProjection", "meaning": "how far the PCC projects past the box's outer faces", "production": "panel 'P.C.C. Projection'", "default": "0.150 m", "source": "the panel (BOX GEOMETRY)"},
+        {"name": "GranularFillingDepth", "meaning": "granular / sand filling under the PCC", "production": "foundation.sand_fill_depth", "default": "0.700 m", "source": "rcc-box-rule-engine.ts compute (sandFill)"}
+      ],
+      "relations": [
+        {"expr": "PccBottomLevel = BottomOfBoxLevel - PccBaseThickness", "kind": "level", "source": "rcc-box-rule-engine.ts compute (pccBot)"},
+        {"expr": "GranularBottomLevel = PccBottomLevel - GranularFillingDepth", "kind": "level", "source": "rcc-box-rule-engine.ts compute (granBot)"},
+        {"expr": "RoadLevel (bed) = top of bottom slab + WearingCourseThickness", "kind": "level", "source": "rcc-box-rule-engine.ts compute (z_bot = bed − wearC − tSB)"}
+      ],
+      "behaviour": ["a layer keeps its thickness and follows what it lies on; with the bed / road level held, the bottom slab and the layers under it hang from it"]
+    },
+    {
+      "id": "earth_retainer",
+      "title": "Earth retainer (trapezium on the top slab at a barrel end)",
+      "names": ["earth retainer", "ballast retainer", "retainer"],
+      "what": "A small trapezoidal wall standing on the top slab at each end of the barrel, holding the ballast / earth.",
+      "parameters": [
+        {"name": "EarthRetainerHeight", "meaning": "height above the top of the top slab", "production": "RCC_BOX_RW_PARAMS.rw_h", "default": "0.225 m", "source": "rcc-box.constants.ts:2"},
+        {"name": "EarthRetainerTopWidth", "meaning": "width at the top", "production": "RCC_BOX_RW_PARAMS.rw_top_w", "default": "0.450 m", "source": "rcc-box.constants.ts:3"},
+        {"name": "EarthRetainerBaseWidth", "meaning": "width on the slab", "production": "RCC_BOX_RW_PARAMS.rw_base_w", "default": "0.675 m", "source": "rcc-box.constants.ts:4"}
+      ],
+      "relations": [
+        {"expr": "its outer face is the barrel end (vertical); its inner face slopes from TopWidth at the top to BaseWidth on the slab", "kind": "geometry", "source": "rcc-box-longitudinal-view.ts:1232-1246"},
+        {"expr": "stands on TopOfSlabLevel: TopOfRetainer = TopOfSlabLevel + EarthRetainerHeight", "kind": "level", "source": "rcc-box-longitudinal-view.ts:1235"}
+      ],
+      "views": [{"view": "longitudinal section", "how": "a trapezium at each barrel end on the top slab"}, {"view": "earth retainer detail", "how": "the same trapezium with the top slab (TopSlabThickness) under it", "source": "rcc-box-earth-retainer-view.ts"}],
+      "behaviour": ["follows the top of the slab and the barrel end; keeps its own sizes when the box changes"]
+    },
+    {
+      "id": "return_wall",
+      "title": "Return wall (RCC cantilever: stem, footing, lean concrete, coping)",
+      "names": ["return wall", "r/w", "retaining wall", "wing wall", "rcc return wall"],
+      "what": "A cantilever wall at each end of the barrel retaining the embankment: a stem whose outer face is vertical and whose inner face is battered, on a footing with a toe and a heel whose top slopes down to its edges, on lean concrete.",
+      "parameters": [
+        {"name": "StemTopThickness", "meaning": "stem thickness at its top", "production": "geometry.rw_stem_top_thick (cw_base_w)", "default": "0.300 m", "source": "rcc-box.constants.ts:5, 26"},
+        {"name": "StemBatter", "meaning": "how much thicker the stem is at its bottom than at its top (its inner face is battered)", "production": "rw_inner_slant_dx = rw_stem_thick − rw_stem_top_thick", "default": "0.150 m", "source": "rcc-box.constants.ts:15, 27-28"},
+        {"name": "StemBottomThickness", "meaning": "stem thickness where it meets the footing", "production": "geometry.rw_stem_thick", "default": "0.450 m", "source": "rcc-box.constants.ts:27"},
+        {"name": "ToeWidth", "meaning": "footing projection in front of the stem's outer face", "production": "geometry.rw_toe_width (rw_horiz_ext_w)", "default": "1.000 m", "source": "rcc-box.constants.ts:11, 29"},
+        {"name": "HeelWidth", "meaning": "footing projection behind the stem's bottom inner face", "production": "geometry.rw_heel_width (rw_horiz_inner_ext_w)", "default": "0.950 m", "source": "rcc-box.constants.ts:12, 30"},
+        {"name": "FootingDepth", "meaning": "footing thickness at the stem", "production": "geometry.rw_depth (rw_horiz_base_h)", "default": "0.450 m", "source": "rcc-box.constants.ts:13, 31"},
+        {"name": "FootingEdgeDepth", "meaning": "footing thickness at its toe and heel edges (its top slopes down to them)", "production": "geometry.rw_depth_sec", "default": "0.250 m", "source": "rcc-box.constants.ts:33-35"},
+        {"name": "DepthBelowScour", "meaning": "from the scour level down to the footing bottom", "production": "geometry.rw_depth_scour", "default": "1.750 m", "source": "rcc-box.constants.ts:32; rcc-box-longitudinal-view.ts:1195-1197"},
+        {"name": "LeanConcreteThickness", "meaning": "lean concrete under the footing", "production": "cw_lean_thickness_rw / dash_thickness", "default": "0.120 m", "source": "rcc-box.constants.ts:17-18"},
+        {"name": "LeanConcreteProjection", "meaning": "how far the lean concrete projects past the footing each side", "default": "0.150 m", "source": "rcc-box-longitudinal-view.ts:1561-1562"},
+        {"name": "HeightAboveRoad", "meaning": "in the wall's own cross section: from the road / ground level to the top of the wall", "production": "C/S of return wall", "source": "rcc-box-retaining-wall-view.ts"},
+        {"name": "Embedment", "meaning": "in the wall's own cross section: from the road / ground level down to the foundation level", "production": "C/S of return wall", "source": "rcc-box-retaining-wall-view.ts"},
+        {"name": "ReturnWallLength", "meaning": "length of the wall along the embankment (plan)", "production": "abutment.return_wall_length / geometry.rw_length", "default": "2.000 m", "source": "rcc-box.constants.ts:36-37"}
+      ],
+      "relations": [
+        {"expr": "StemBottomThickness = StemTopThickness + StemBatter", "kind": "geometry", "source": "rcc-box.constants.ts:26-28"},
+        {"expr": "FootingWidth = ToeWidth + StemBottomThickness + HeelWidth", "kind": "geometry", "source": "rcc-box-longitudinal-view.ts:1559-1560"},
+        {"expr": "FootingBottomLevel = ScourLevel - DepthBelowScour", "kind": "level", "source": "rcc-box-longitudinal-view.ts:1195-1197"},
+        {"expr": "FootingTopAtStem = FootingBottomLevel + FootingDepth; at the edges FootingBottomLevel + FootingEdgeDepth", "kind": "geometry", "source": "rcc-box-longitudinal-view.ts:1501-1506"},
+        {"expr": "TotalHeight = HeightAboveRoad + Embedment (the wall's own cross section)", "kind": "geometry", "source": "the C/S of return wall states both and the total"},
+        {"expr": "TopOfWallLevel = RoadLevel + HeightAboveRoad; FoundationLevel = RoadLevel - Embedment", "kind": "level", "source": "the C/S states TOP OF RETURN WALL, ROAD LEVEL, FND. LEVEL"}
+      ],
+      "views": [
+        {"view": "longitudinal section", "how": "at each barrel end: the stem's outer face solid and vertical from the footing up to the top of the box; its top, battered inner face and bottom DASHED (hidden); the footing dashed with toe, heel and sloped top; lean concrete hatched under it; an RL label at the footing bottom and a dimension from the scour level", "source": "rcc-box-longitudinal-view.ts:1497-1700"},
+        {"view": "C/S of return wall (its own detail, often 1:50)", "how": "the same stem, footing, lean concrete in full section, with the road / ground, top-of-wall and foundation levels, the boulder backing behind it and weep holes", "source": "rcc-box-retaining-wall-view.ts:96-260"}
+      ],
+      "cross_view": "The SAME parameters in the longitudinal section and in the wall's own cross section: toe, heel, footing depth at the stem and at the edges, stem thickness, depth below the reference level. A size stated in both is one value (share_sizes) — check the numbers agree first.",
+      "behaviour": ["the stem rises with the top of the box it retains; the footing hangs from the scour / foundation level; toe and heel grow away from the stem; a thicker stem grows on its inner (earth) side, the outer face stays on the barrel end"]
+    },
+    {
+      "id": "toe_wall",
+      "title": "Toe wall (small wall at the toe of the pitching / apron)",
+      "names": ["toe wall", "toewall"],
+      "what": "A small wall at the outer edge of the stone pitching or apron, on a footing and a levelling course.",
+      "parameters": [
+        {"name": "ToeWallHeight", "meaning": "stem height above the ground / road", "production": "geometry.toe_wall_h", "default": "0.500 m", "source": "rcc-box-toe-wall-view.ts"},
+        {"name": "ToeWallStemThickness", "meaning": "stem thickness (at its top)", "production": "geometry.toe_wall_stem_thick", "default": "0.200 m", "source": "rcc-box-toe-wall-view.ts"},
+        {"name": "ToeWallEmbedment", "meaning": "stem depth below the ground / road", "production": "geometry.toe_wall_depth", "default": "0.200 m", "source": "rcc-box-toe-wall-view.ts"},
+        {"name": "ToeWallFoundationThickness", "meaning": "footing thickness", "production": "geometry.toe_wall_base_thick", "default": "0.300 m", "source": "rcc-box-toe-wall-view.ts"},
+        {"name": "ToeWallFoundationProjection", "meaning": "footing projection each side of the stem (left / right)", "production": "geometry.toe_wall_form_w_left / _right", "default": "0.300 m each", "source": "rcc-box-toe-wall-view.ts"},
+        {"name": "LevelingCourseThickness", "meaning": "levelling course under the footing", "production": "geometry.toe_wall_leveling_course_thick", "default": "0.075 m", "source": "rcc-box-toe-wall-view.ts"},
+        {"name": "LevelingCourseOffset", "meaning": "levelling course projection past the footing (left / right)", "production": "geometry.toe_wall_lc_offset_left / _right", "default": "0.075 m each", "source": "rcc-box-toe-wall-view.ts"}
+      ],
+      "relations": [
+        {"expr": "ToeWallStemBottom = ToeWallStemThickness + LeftSlant + RightSlant", "kind": "geometry", "source": "rcc-box-params.ts:300-315"},
+        {"expr": "ToeWallFoundationWidth = ProjectionLeft + ToeWallStemBottom + ProjectionRight", "kind": "geometry", "source": "rcc-box-toe-wall-view.ts"}
+      ],
+      "behaviour": ["stands on its footing; keeps its sizes when the box changes"]
+    },
+    {
+      "id": "shear_key",
+      "title": "Shear key (a key under the bottom slab at a barrel end)",
+      "names": ["shear key"],
+      "what": "A downward key of concrete under the bottom slab at a barrel end, with PCC under it.",
+      "parameters": [
+        {"name": "ShearKeyTotalDepth", "meaning": "from the top of the bottom slab to the key's bottom", "production": "constant in the view", "default": "1.200 m", "source": "rcc-box-shear-key-view.ts:174"},
+        {"name": "ShearKeyDepth", "meaning": "depth below the bottom slab: ShearKeyTotalDepth − BottomSlabThickness", "production": "sk_depth", "source": "rcc-box-shear-key-view.ts:174"},
+        {"name": "ShearKeyToeWidth", "meaning": "flat bottom of the key from the barrel end", "default": "0.225 m", "source": "rcc-box-shear-key-view.ts:208-209"},
+        {"name": "ShearKeySlopeRun", "meaning": "horizontal run of the key's sloped side up to the slab", "default": "0.450 m (0.675 − 0.225)", "source": "rcc-box-shear-key-view.ts:208-211"},
+        {"name": "PccUnderKey", "meaning": "PCC under the key", "default": "0.150 m", "source": "rcc-box-shear-key-view.ts:195-199"}
+      ],
+      "relations": [{"expr": "ShearKeyDepth = ShearKeyTotalDepth - BottomSlabThickness", "kind": "geometry", "source": "rcc-box-shear-key-view.ts:174"}],
+      "behaviour": ["follows the bottom of the box at the barrel end"]
+    },
+    {
+      "id": "curtain_drop_wall",
+      "title": "Curtain wall / drop wall (cut-off walls below the scour level)",
+      "names": ["curtain wall", "drop wall", "cut off wall", "cutoff wall"],
+      "what": "A cut-off wall going down below the scour level at the upstream / downstream end of the apron.",
+      "parameters": [
+        {"name": "CurtainWallThickness", "meaning": "wall thickness", "production": "side.curtain_d / side.drop_d", "default": "0.400 m", "source": "rcc-box-curtain-wall-view.ts; rcc-box-drop-wall-view.ts"},
+        {"name": "CurtainWallBaseHeight", "meaning": "height of its base block", "production": "side.base_height / side.drop_base_height", "default": "0.300 m", "source": "rcc-box-curtain-wall-view.ts"},
+        {"name": "CurtainWallBaseOffset", "meaning": "base projection each side (left / right)", "production": "side.left_offset / right_offset", "default": "0.300 m each", "source": "rcc-box-curtain-wall-view.ts"},
+        {"name": "CurtainWallDepthBelowScour", "meaning": "depth below the scour level", "production": "side.length_below_scour / side.drop_length_below_scour", "default": "1.800 m", "source": "rcc-box-curtain-wall-view.ts"}
+      ],
+      "behaviour": ["hangs from the scour level"]
+    }
+  ],
+  "levels": [
+    {"name": "FormationLevel", "role": "site input (railway)", "production": "deck.formation_lvl"},
+    {"name": "RailLevel", "role": "site input or formation + a fixed offset", "production": "deck.rail_level"},
+    {"name": "BedLevel / RoadLevel", "role": "site input: the top of the wearing course in the box", "production": "hydraulics.bed_lvl"},
+    {"name": "HFL", "role": "check only (the soffit must stay above it)", "production": "hydraulics.hfl"},
+    {"name": "ScourLevel", "role": "site input for the foundations of the walls at the ends", "production": "hydraulics.scour_lvl"},
+    {"name": "SoffitLevel / TopOfSlabLevel", "role": "derived (see box_barrel relations)"}
+  ]
+}

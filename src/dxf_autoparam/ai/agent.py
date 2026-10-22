@@ -78,6 +78,12 @@ PLAYBOOK — small steps, each checked at once:
      a different line, a slope). Between two fixed levels one size in the chain is the result: the engine keeps it
      as a worked-out quantity and tells you; set_formulas makes it an input instead if that is the design intent.
   6. Verify with what_moves(parameter): the parts that should grow grow, the rest stay. Fix with set_formulas.
+  7. coverage: the drawing's own dimensions, part by part — each is driven by a value you named, or bound now
+     (define_parameters with its dimension id: a fixed one becomes an input, an unnamed one gets your name), or kept as
+     drawn with why (keep_dimensions).
+     The small parts tied to the main structure count as much as the main ones.
+  8. A relation between sizes (a part's knowledge in coverage, a standard, a note) is a hypothesis: check_relation it on this
+     drawing, then bind what it says needs binding (set_formulas / set_relation with its source).
   7. state_behaviours and add_constraints for the intent that must hold (fixed levels, symmetry, connections).
   8. finish. Any rejection comes back at once with its reason: fix that one item, never redo the rest.
 
@@ -159,6 +165,20 @@ TOOL_SPECS = [
     ("inspect_dimensions", ("Dimensions and notes with numbers (annotation ids; none = all of them, briefly): what each states, "
      "the pair of lines it is tied to (occurrence), how (native definition points / a note beside its lines) and whether "
      "it can be bound. Ambiguous ones say so."), _schema({"ids": LIST})),
+    ("coverage", ("How parametric this unit is, measured on the drawing's own DIMENSIONS — what a drafter thought worth stating: per part, how "
+                  "many of its dimensions a value you named drives, and each one nothing named drives yet: `fixed` (no value sets it — bind it with "
+                  "define_parameters {dimension: its id, name, part}), `unnamed` (only a value the engine measured moves it — rename that value with "
+                  "rename_values), and the ones on no part (a part's outline does not carry their lines: define the part, or bind them as they are). "
+                  "A dimension that is not a design input (a drafting offset, a reference size) is kept with keep_dimensions and why. `part`: that part's "
+                  "rows in full. Where another unit states the same number, it is said: share_sizes when it is the same size seen again."),
+     _schema({"part": S})),
+    ("check_relation", ("Check a relation you propose — LEFT = RIGHT over named values (lengths mm, levels m taken as mm), set-out lines (x… y…: "
+                        "their position, mm) and numbers — on THIS drawing before you bind it: whether it holds at the drawn values (the residual in mm), "
+                        "whether the drawing already carries it when each value that takes part changes (`follows`), which of its terms move for each "
+                        "(`gives`: carried, but perhaps with another side giving way than a designer would choose), and what binding it would take "
+                        "(`binding`: nothing, set_relation, or set_formulas). A relation from a component's knowledge or a standard is a hypothesis until this "
+                        "says it holds; `source`: where it comes from (a component id, a note), kept with the answer. Nothing is changed."),
+     _schema({"equation": S, "source": S}, ["equation"])),
     ("resolve_labels", ("What labels refer to — any id you see on a picture or read in the overview: lines (x… y… ax…), "
      "regions (R…), candidates (c…), occurrences (g…), entities (L… PL… D… T…), views (V…), units (U…)."),
      _schema({"labels": LIST}, ["labels"])),
@@ -175,6 +195,10 @@ TOOL_SPECS = [
                       "has `label_doubt`: look closer, rename or redefine it, or keep it with `label_checked` (why the label does not name it)."),
      _batch({"name": S, "type": S, "level": _enum("assembly", "component", "subcomponent"), "parent": S, "regions": LIST, "entities": LIST,
              "existing": B, "parametrize": B, "evidence": LIST, "description": S, "label_checked": S}, ["name", "type"])),
+    ("keep_dimensions", ("Dimensions that stay as drawn on purpose — not a design input (a drafting offset, a reference or construction size, a "
+                         "number the person said not to change) — each with why, all in one call. coverage and finish stop asking about them; binding "
+                         "one later (define_parameters with its dimension) replaces this."),
+     _batch({"dimension": S, "why": S}, ["dimension", "why"])),
     ("remove", "Remove things, as many as you like in one call: parts, parameters, constraints (by description), your formulas (by line), transforms.",
      _schema({"parts": LIST, "parameters": LIST, "constraints": LIST, "formulas": LIST, "transforms": LIST})),
     ("define_parameters", ("Create or replace design inputs, as many as you like in one call: each names WHERE the size is — a "
@@ -200,8 +224,9 @@ TOOL_SPECS = [
      "{line: 'y18', expr: 'y10 + Height'}. An empty expression removes your formula (the engine's own comes back)."),
      _batch({"line": S, "expr": S}, ["line", "expr"])),
     ("set_relation", ("A reported quantity worked out from named values and levels (a sum, a difference, a ratio of what it follows); empty expr "
-                      "removes it. The expression must name what it follows: a bare number is refused."),
-     _schema({"name": S, "label": S, "expr": S, "from_line": S, "to_line": S}, ["name", "expr"])),
+                      "removes it. The expression must name what it follows: a bare number is refused. `source`: where the relation comes from (a "
+                      "component id, a standard, a note) — check_relation it first."),
+     _schema({"name": S, "label": S, "expr": S, "from_line": S, "to_line": S, "source": S}, ["name", "expr"])),
     ("add_constraints", ("Things that must stay true under every change: distance (lines [a, b] stay `value` apart), fixed (lines "
      "never move), symmetric (lines [a, b, axis]), centred, equal (lines [a, b, c, d]: b-a = d-c), connected (parts [A, B]), slope "
      "(parts), parallel / perpendicular / collinear (entities)."),
@@ -254,13 +279,14 @@ TOOL_SPECS = [
 WHY = {"type": "string", "description": "One short sentence for the person watching: what you are doing with this call and why."}
 for _n, _d, _sch in [*TOOL_SPECS, *library.LIBRARY_TOOL_SPECS]:  # every call may say, for the run's timeline, what it is for (the model's own words)
     _sch["properties"].setdefault("why", WHY)
-READ_TOOLS = {"inspect_regions", "inspect_lines", "find_values", "what_moves", "knowledge", "inspect_candidates", "inspect_dimensions",
+READ_TOOLS = {"inspect_regions", "inspect_lines", "find_values", "what_moves", "knowledge", "inspect_candidates", "inspect_dimensions", "coverage", "check_relation",
               "resolve_labels", "inspect_assembly", *library.LIBRARY_TOOLS}
 BEHAVIOUR_EDITS = ("set_formula", "add_constraint", "state_behaviour", "set_relation")  # wait for the plan when a change was asked
 # a batch tool applies the single edit to each of its items; each item gets its own verdict
 BATCH = {"define_parts": "define_part", "define_parameters": "define_parameter", "set_formulas": "set_formula", "set_levels": "set_level",
          "define_transforms": "define_transform",
-         "add_constraints": "add_constraint", "state_behaviours": "state_behaviour", "account_instruction": "account_clause"}
+         "add_constraints": "add_constraint", "state_behaviours": "state_behaviour", "account_instruction": "account_clause",
+         "keep_dimensions": "keep_dimension"}
 
 
 def tools(extra: list | None = None, pack: dict | None = None):
@@ -841,6 +867,21 @@ class Workbench:
             if gone_t and A.get("transforms"):
                 A["transforms"] = [t for t in A["transforms"] if t.get("name") not in gone_t]
             return "removed", f"removed {sum(len(v) for v in gone.values()) + len(gone_t)} item(s)"
+        if name == "keep_dimension":
+            eid, why = str(a.get("dimension") or ""), str(a.get("why") or "").strip()
+            self.prechecked.pop(eid, None)
+            i = entity_index(eid)
+            items = self.an.drawing.items
+            if i is None or not 0 <= i < len(items) or entity_id(items[i]) != eid or items[i].dxftype != "DIMENSION":
+                self.prechecked[eid] = _failure("V1", eid, [eid], "a dimension of this unit", "none", f"no dimension {eid} here", "agent",
+                                                "use an id coverage lists")
+                return eid, ""
+            if not why:
+                self.prechecked[eid] = _failure("WHY", eid, [eid], "why it is not a design input", "none", "a kept dimension needs its reason",
+                                                "agent", "say why it stays as drawn")
+                return eid, ""
+            A.setdefault("kept_dimensions", {})[eid] = why[:200]
+            return eid, "kept as drawn"
         if name == "define_parameter" and (a.get("kind") == "angle" or a.get("angle_of") or a.get("stated_by")):
             return self._define_angle(a)
         if name == "define_transform":
@@ -856,7 +897,9 @@ class Workbench:
             a = {**a, "name": pascal(a["name"]), "part": pascal(a.get("part", "")) if a.get("part") else ""}
             self.prechecked.pop(a["name"], None)
             a, refused = self._locate(a)
-            if refused:  # nothing is written: the reference does not say which geometry is meant
+            if refused is None:
+                refused = self._a_sum(a)
+            if refused:  # nothing is written: the reference does not say which geometry is meant, or it is a result already
                 self.prechecked[a["name"]] = refused
                 return a["name"], ""
             value, note = self._measure(a)
@@ -894,7 +937,8 @@ class Workbench:
             A["relations"] = [r for r in A["relations"] if r.get("name") != a["name"]]
             if (a.get("expr") or "").strip():
                 A["relations"].append({"name": a["name"], "label": a.get("label") or a["name"], "expr": a["expr"].strip(),
-                                       "from_datum": a.get("from_line") or None, "to_datum": a.get("to_line") or None})
+                                       "from_datum": a.get("from_line") or None, "to_datum": a.get("to_line") or None,
+                                       **({"source": str(a["source"])[:160]} if (a.get("source") or "").strip() else {})})
             return a["name"], ""
         if name == "add_constraint":
             self._upsert("constraints", "description", a["description"],
@@ -1054,6 +1098,29 @@ class Workbench:
         return {"ok": True, "plan": "accepted and measured", **brief, "checks": res.get("summary"),
                 "outcome": {"value": out.get("value"), "parts": dict(list((out.get("parts") or {}).items())[:12]),
                             "dimensions": out.get("dimensions_changed", [])[:6], "notes": out.get("notes_changed", [])[:4]}}
+
+    def _a_sum(self, a: dict) -> dict | None:
+        """A new input on lines whose distance values of this answer already move as the sheet stands is refused: held as an input, the sum would
+        leave them nowhere to go (a wider span with the overall width held runs into the wall between). What it is: a worked-out quantity."""
+        an = self.an
+        pairs = [(a["from_line"], a["to_line"])] if a.get("from_line") and a.get("to_line") else []
+        cid = a.get("candidate")
+        if cid and cid in an.clusters:
+            occ = a.get("occurrences")
+            gids = an.clusters[cid].gaps if occ in (None, "all", ["all"]) else occ
+            pairs += [(an.gaps[g].a, an.gaps[g].b) for g in gids if g in an.gaps]
+        for p, q in pairs:
+            dp, dq = an.datums.get(p), an.datums.get(q)
+            if dp is None or dq is None or dp.axis != dq.axis:
+                continue  # not a size (two lines of one axis): the validator says what is wrong with it
+            drv = self._sheet_drives(p, q, but=a["name"])
+            if drv:
+                return _failure("SUM", a["name"], [p, q, *drv], "a size no value of this answer already works out",
+                                f"{p}–{q} moves with {', '.join(drv[:4])} as the sheet stands",
+                                f"as an input it would hold that distance: {', '.join(drv[:4])} could then no longer change without breaking the drawing",
+                                "agent", f"name it as the result it is — set_relation {{name: '{a['name']}', expr over {', '.join(drv[:4])}}} reports it worked "
+                                         "out (check_relation first); if THIS is the design input, make one of them worked out first")
+        return None
 
     def _locate(self, a: dict) -> tuple[dict, dict | None]:
         """WHERE a size is, made exact before anything is written: a dimension becomes the one occurrence it is tied to
@@ -1242,7 +1309,10 @@ class Workbench:
                 # not an error: a size other inputs fix at both ends is a result; say so, and how to make it an input
                 return {"ok": True, "worked_out": (why or f"{item} is worked out by the set-out")[:300]}
             errs = [f"not kept: {item} measures no two lines — name a candidate (c…) or from_line / to_line"]
-        warns = [f"{f.code}: {f.message}"[:200] for f in self.rep.findings if f.severity == "warn" and f.item == item][:2]
+        # a warning, and a formula the engine took the other way round (a loop it closed by keeping the relation from the other line): what was
+        # kept is not what was written, and the model must read that or it reasons from a formula the drawing does not have
+        warns = [f"{f.code}: {f.message}"[:200] for f in self.rep.findings if f.item == item and (
+            f.severity == "warn" or (f.code == "V4" and "would close a loop" in f.message))][:2]
         out = {"ok": not errs, **({"rejected": errs[:3]} if errs else {}), **({"note": warns} if warns else {})}
         if raw:
             out["failure"] = _from_finding(raw[0], item)
@@ -1255,6 +1325,13 @@ class Workbench:
         out = {"parts": len(self.answer["components"]), "regions_without_part": len(I.get("uncovered_regions", [])),
                "parameters": len(named), "open_problems": len(errs),
                "first_problems": [f"{e['code']} {e['item']}: {e['message']}"[:180] for e in errs[:3]]}
+        cov = self._coverage()
+        if cov["dimensions"]:
+            open_parts = [f"{p} {e.get('fixed', 0) + e.get('unnamed', 0)}" for p, e in cov["parts"].items() if e.get("fixed", 0) + e.get("unnamed", 0)]
+            loose = len(cov["unassigned"])
+            out["dimensions"] = (f"{cov['driven']} of {cov['dimensions']} driven by a named value" + (f", {cov['kept']} kept as drawn" if cov["kept"] else "")
+                                 + (" · nothing named drives: " + ", ".join(open_parts[:5] + ([f"on no part {loose}"] if loose else [])) + " (coverage)"
+                                    if open_parts or loose else ""))
         if self.plan_required or self.answer.get("plans"):
             out["plans"] = [f"{p.get('id')}: {p.get('status')}" + (f", {len(p.get('questions', []))} question(s) for the person" if p.get("questions") else "")
                             for p in self.answer.get("plans", [])] or ["none yet: you read the instruction as a change — propose_plan"]
@@ -1381,6 +1458,89 @@ class Workbench:
             if also:
                 v["also_named_in"] = also
 
+    def _coverage(self, part: str | None = None) -> dict:
+        from ..coverage import unit_coverage
+
+        kept = dict(self.answer.get("kept_dimensions") or {})
+        key = (id(self.prog), tuple(sorted(kept)), part, self.scope.sm.revision if self.scope is not None else None)
+        if getattr(self, "_cov_key", None) != key:
+            self._cov_key, self._cov = key, unit_coverage(self.prog, kept=set(kept), part=part,
+                                                          also_driven=self._sheet_drives if self.scope is not None else None)
+        return self._cov
+
+    def _sheet_drives(self, a: str, b: str, but: str = "") -> list[str]:
+        """The values of THIS answer that move lines a–b as the sheet stands (its committed set-out, the design intent derived): the distance is a
+        result of them. The workbench works on the answer without what the engine derived, where such a sum can look free — bound as an input,
+        it would hold the sum and leave the values it is made of nowhere to go."""
+        if self.scope is None:
+            return []
+        return [n for n in self.scope.drivers(a, b) if n != but and n in self.prog.params and self.prog.params[n].source == "ai"]
+
+    def check_relation(self, equation: str, source: str | None = None) -> dict:
+        from ..relations import check
+
+        out = check(self.prog, equation)
+        if source:
+            out["source"] = str(source)[:160]  # said back: set_relation keeps it with the relation it binds
+        return out
+
+    def open_dimensions(self) -> int:
+        """How many of the unit's dimensions nothing named drives and nobody kept — counted only once the unit carries a named value (a unit
+        nobody parametrized is said by the sheet's own coverage, not here)."""
+        if self.plan_required or not any(p.source == "ai" for p in self.prog.params.values()):
+            return 0  # a change the person asked for is a plan's matter; a unit nobody parametrized is the sheet's
+        return _open_dimensions(self._coverage())
+
+    def coverage(self, part: str | None = None) -> dict:
+        cov = {k: v for k, v in self._coverage(pascal(part) if part else None).items() if k != "rows"}
+        if self.scope is not None:  # the same number stated in another unit: a lead for share_sizes, never a link by itself
+            elsewhere = self.scope.dimension_values()
+            for rows in [*(e.get("open", []) for e in cov["parts"].values()), cov["unassigned"]]:
+                for r in rows:
+                    same = [f"{u} {d}" for u, d, mm in elsewhere.get(round(r.get("mm") or -1), []) if u != self.scope.uid][:3]
+                    if same:
+                        r["also_stated_in"] = same
+        if self.lib_session is not None:  # what a part of its kind normally has, as a generator builds it — hypotheses to check on this drawing
+            self._attach_components(cov)
+        cov["kept"] = dict(self.answer.get("kept_dimensions") or {})
+        cov["how"] = ("fixed or unnamed → define_parameters {dimension, name, part} (in a sheet, rename_values also names the unnamed value in "
+                      "moved_by); not a design input → keep_dimensions {dimension, why}. A dimension that sets one part out from another (sets_out) is a "
+                      "size of the assembly")
+        return cov
+
+    def _attach_components(self, cov: dict) -> None:
+        """Each leaf part whose own words (its name, type and the labels on its outline) name a component of the library gets that component's
+        parameters and relations, briefly — and the parts no dimension states are listed with theirs: what to look for on the drawing."""
+        lib = self.lib_session.lib
+        parts = self.prog.intent.get("parts") or {}
+        parents = {q.parent for q in parts.values() if q.parent}
+        pointed = labels.pointed_labels(self.an)
+        quiet = []
+        for c in self.answer["components"]:
+            name = c.get("name")
+            if not name or name in parents or name not in parts:
+                continue
+            words = labels.words(name) | labels.words(c.get("type", ""))
+            for lab in labels.part_labels(self.prog, parts, name, pointed):
+                words |= labels.words(lab["text"])
+            cards = lib.component_cards(words)
+            if not cards:
+                continue
+            card = cards[0]
+            brief = {"component": f"component:{card['id']}", "title": card.get("title"),
+                     "parameters": [f"{q['name']}: {q['meaning'][:90]}" + (f" (generator default {q['default']})" if q.get("default") else "")
+                                    for q in card.get("parameters", [])][:10],
+                     "relations": [r["expr"][:140] for r in card.get("relations", []) if r.get("kind") in ("geometry", "level")][:5],
+                     **({"cross_view": card["cross_view"][:260]} if card.get("cross_view") else {})}
+            if f"component:{card['id']}" not in self.lib_session.references:
+                self.lib_session.references.append(f"component:{card['id']}")
+            if name in cov["parts"]:
+                cov["parts"][name]["knowledge"] = brief
+            else:
+                quiet.append({"part": name, "knowledge": brief})
+        if quiet:
+            cov["parts_without_dimensions"] = quiet[:6]
+
     def _also_named(self, name: str) -> list[str]:
         """Other units of the sheet that already carry a value of this name, said where the name is given: the same size seen again (share_sizes
         joins the views) or one word for two sizes (rename one). The engine cannot tell which; it says what it measured and leaves the choice."""
@@ -1414,8 +1574,10 @@ class Workbench:
                     "hint": "the person has to decide first: the run asks them and continues you with their answers"}, False
         gaps = self.uncovered()
         doubts = [labels.sentence(c) for c in labels.conflicts(self.prog, self.answer["components"])]  # parts the drawing's own labels contradict
+        open_dims = self.open_dimensions()
         problems = (st["open_problems"] or any("NOT " in x for x in st.get("shared_here", []))
-                    or (self.plan_required and not (self.answer.get("plans") or (self.plans_anywhere and self.plans_anywhere()))) or gaps or doubts)
+                    or (self.plan_required and not (self.answer.get("plans") or (self.plans_anywhere and self.plans_anywhere()))) or gaps or doubts
+                    or open_dims)
         if problems and self.finish_calls < 2:
             hint = "fix these, or call finish again to stop with what is valid"
             if gaps:
@@ -1423,8 +1585,15 @@ class Workbench:
                         "with the clause they come from): " + " | ".join(g[:100] for g in gaps[:3]) + ". Then finish.")
             elif doubts:
                 hint = "the drawing labels some parts as something else: " + " | ".join(d[:220] for d in doubts[:3]) + ". Then finish."
+            elif open_dims:
+                hint = (f"{open_dims} of this unit's dimensions nothing you named drives (coverage lists them, part by part): bind each with "
+                        "define_parameters {dimension, name, part}, rename the value that moves it (rename_values), or keep_dimensions with why. Then finish.")
             return {"done": False, **st, "hint": hint, **({"label_doubts": doubts[:4]} if doubts else {})}, False
         return {"done": True, **st, **({"label_doubts": doubts[:4]} if doubts else {})}, True
+
+
+def _open_dimensions(cov: dict) -> int:
+    return int(cov.get("fixed", 0)) + int(cov.get("unnamed", 0))
 
 
 def _norm(text: str) -> str:

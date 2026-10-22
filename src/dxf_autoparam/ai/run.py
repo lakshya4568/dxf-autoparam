@@ -172,6 +172,17 @@ plainly, with where you read it (view, note, number) — and parametrize nothing
     something to link.
   • PARAMETRIZE: open_unit(unit or view) opens the unit the edit tools work on (define_parts, define_parameters, set_levels, set_formulas,
     constraints, behaviours). Opening another unit applies the previous one's edits to the sheet, checked on the whole sheet.
+  • COVER THE DRAWING'S OWN DIMENSIONS: the status says how many of the open unit's dimensions a value you named drives; coverage lists
+    the rest part by part — the small parts tied to the main structure as much as the main ones. Each is bound (define_parameters with its dimension id, the name a draftsman would use, its part), renamed (an unnamed value
+    that moves it: rename_values), shared with the same size in another view (share_sizes), or kept as drawn with why
+    (keep_dimensions: a drafting offset, a reference size). A unit with most of its dimensions still undriven is not done.
+  • RELATE what depends on what: a relation from a component's knowledge (coverage shows it), a standard or the drawing's notes is a
+    hypothesis — check_relation it on the drawing (does it hold, does the drawing already carry it), then bind what it says needs binding
+    (set_formulas for lines that must follow, set_relation for a quantity worked out) with its source. One size often moves others.
+  • READ A REFUSAL BY ITS KIND (check_behaviour, a commit, a value set): "the model does not carry this change" — bind what it names
+    (the line it says to set out, the part it says is missing) and check again; "the edit cannot be drawn" — the size would pass zero or
+    run into another member: do not force it, say so; "an accepted plan says otherwise" — the person decides; "already failed before this
+    change" — your edit did not cause it: report it, do not undo good work for it.
   • PLAN a change the person asked for (propose_plan) — never write behaviour for it ad hoc. The engine measures the plan; a failure
     comes back with expected / measured / cause.
   • LINK sizes two views state (share_sizes) only when the task asks for it or a change must reach the other view.
@@ -353,7 +364,9 @@ class SheetBench:
                 done = commit_unit(self.sm, uid, wb.answer, self.own_revision, lock=self._lock())
                 self.sync_revision()
         except SheetError as exc:  # the sheet's refusal (stale, a shared size that would stop driving, a broken promise) is a result, not a crash
-            res = {"ok": False, "error": str(exc)}
+            from ..refusal import compact
+
+            res = {"ok": False, "error": str(exc), **({"failures": compact(exc.failures)} if exc.failures else {})}
             self.commit_results[uid] = res
             return res
         kept = done["commit"].get("kept_as_drawn") or []
@@ -1187,12 +1200,43 @@ class SheetBench:
                 out += [f"plan: {g}" for g in gap_lines(plan_gaps(self.sm, plan))]
         out += self.unexamined_doubts()
         out += self.label_doubts()
+        if self.parametrizing():
+            out += self.dimension_gaps()
         rows, asked = self.coverage()  # last: what the model can still repair comes first, and the units nobody covered are said in full after it
         if asked and any(not r["covered"] for r in rows):
             todo = [r for r in rows if not r["covered"]]
             out.append(f"{sentence(rows)} — open_unit each of {', '.join(r['unit'] for r in todo[:12])} and parametrize it; where a unit has nothing to parametrize, "
                        "say so on the checklist (update_checklist: status 'skipped', its id and the reason in the text) — not only in your closing words")
         return out
+
+    def dimension_gaps(self, limit: int = 6) -> list[str]:
+        """The units this run parametrized whose own DIMENSIONS nothing named drives yet (coverage.py), part by part — said until each is bound,
+        renamed or kept as drawn with why. A unit with no named value is the sheet coverage's matter, not this one."""
+        from ..coverage import unit_coverage
+
+        out: list[str] = []
+        with self._lock():
+            for uid in sorted(set(self.touched) | set(self.units)):
+                if uid not in self.sm.units:
+                    continue
+                w = self.units.get(uid)
+                if w is not None:
+                    prog, answer = w.prog, w.answer
+                else:
+                    unit = self.sm.unit(uid)
+                    prog, answer = unit.prog, unit.answer or {}
+                if prog is None or not any(p.source == "ai" for p in prog.params.values()):
+                    continue
+                cov = unit_coverage(prog, kept=set((answer or {}).get("kept_dimensions") or {}))
+                n = cov["fixed"] + cov["unnamed"]
+                if not n:
+                    continue
+                where = [f"{p} {e.get('fixed', 0) + e.get('unnamed', 0)}" for p, e in cov["parts"].items() if e.get("fixed", 0) + e.get("unnamed", 0)]
+                if cov["unassigned"]:
+                    where.append(f"on no part {len(cov['unassigned'])}")
+                out.append(f"{uid}: {n} of its {cov['dimensions']} dimensions nothing named drives ({', '.join(where[:6])}) — open_unit {uid}, coverage lists "
+                           "them: bind each (define_parameters with its dimension), rename the value that moves it, or keep_dimensions with why")
+        return out[:limit] + ([f"… and {len(out) - limit} more unit(s) with dimensions nothing named drives"] if len(out) > limit else [])
 
     def label_doubts(self, limit: int = 6) -> list[str]:
         """Parts whose own outline the drawing labels as something their name does not say (ai/labels.py), in the units this run worked on —

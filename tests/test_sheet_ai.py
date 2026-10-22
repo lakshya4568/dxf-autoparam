@@ -95,7 +95,8 @@ def test_unit_stage_runs_the_agent_on_the_units_own_drawing(sheet):
     el = view(sheet, "ELEVATION")
     uid = sheet.unit_of_view[el]
     cid = opening(sheet, uid, 12000, "void")
-    gem = ScriptedGemini([[call("define_parameters", items=[{"name": "ClearSpan", "candidate": cid}])], [call("finish", summary="done")]])
+    gem = ScriptedGemini([[call("define_parameters", items=[{"name": "ClearSpan", "candidate": cid}])], [call("finish", summary="done")],
+                          [call("finish", summary="done")]])  # the first finish is held once: the unit's other dimensions are not driven yet
     res = sheet_ai.parametrize_unit(sheet, uid, gem, log=lambda *a: None)
     assert res["named"] >= 1 and "ClearSpan" in sheet.unit(uid).prog.params
     assert sheet.current()[f"{uid}.ClearSpan"] == pytest.approx(12000)

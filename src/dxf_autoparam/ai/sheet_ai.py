@@ -256,6 +256,8 @@ def commit_unit(sm: SheetModel, uid: str, answer: dict, expected_revision: int |
     sheet must hold at it, or it is not set (and the refusal is said). Raises SheetError when the commit is refused."""
     from contextlib import nullcontext
 
+    from ..refusal import compact
+
     with lock or nullcontext():
         commit = sm.commit_answer(uid, answer, expected_revision=expected_revision, discard_values=discard_values, keep_unnamed_as_drawn=True)
         applied, refused = [], []
@@ -268,7 +270,7 @@ def commit_unit(sm: SheetModel, uid: str, answer: dict, expected_revision: int |
                 applied.append({"name": key, "value": want, "already": True})
                 continue
             r = sm.apply({key: float(want)})
-            (applied if r.ok else refused).append({"name": key, "value": want, **({} if r.ok else {"why": r.errors[:3]})})
+            (applied if r.ok else refused).append({"name": key, "value": want, **({} if r.ok else {"why": r.errors[:3], "failures": compact(r.failures, 3)})})
         return {"commit": commit, "values_applied": applied, "values_refused": refused, "revision": sm.revision}
 
 

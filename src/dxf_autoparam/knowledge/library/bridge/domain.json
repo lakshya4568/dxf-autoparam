@@ -24,5 +24,6 @@
     "outputs": "set_structure in the model's own words; parts and values named from the drawing with evidence; the levels and relations the drawing shows; findings (record_finding) that cite this skill and the records used.",
     "validation": "The engine validates every edit and the finish gate. For the definitions in `rules`, check_rule on the model's own values (advisory). A fact in `representation` the drawing does not state is reported as a gap, never filled."
   },
-  "production_knowledge": "../../production"
+  "production_knowledge": "../../production",
+  "components": "components.json"
 }

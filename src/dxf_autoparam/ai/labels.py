@@ -36,6 +36,19 @@ def words(text: str) -> set[str]:
     return out
 
 
+def _loose_line(an, i: int) -> bool:
+    """A straight line on a set-out line that only loose lines carry (a level, water or ground line drawn across a view, its ends touching
+    nothing): what a label on it names is that line — not a part it happens to cross."""
+    it = an.drawing.items[i]
+    if len(it.pts) != 2 or it.closed:
+        return False
+    for ax in ("x", "y"):
+        d0, d1 = an.slot_datum.get((i, 0, ax)), an.slot_datum.get((i, 1, ax))
+        if d0 and d1 and d0[0] == d1[0] and d0[0] in an.datums and an.datums[d0[0]].weak:
+            return True
+    return False
+
+
 def pointed_labels(an) -> dict[int, list[dict]]:
     """entity index → the labels whose leader's tip the engine resolved onto it: [{id, text}]."""
     model = an.cache.get("annotations")
@@ -44,7 +57,7 @@ def pointed_labels(an) -> dict[int, list[dict]]:
         if a.kind not in LABEL_KINDS or a.status != "resolved" or not words(a.text or ""):
             continue
         for t in a.targets[:3]:
-            if t.kind == "entity" and t.index is not None and t.score >= 0.5:
+            if t.kind == "entity" and t.index is not None and t.score >= 0.5 and not _loose_line(an, t.index):
                 out.setdefault(t.index, []).append({"id": a.id, "text": " ".join(a.text.split())[:90]})
     return out
 

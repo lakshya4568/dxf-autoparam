@@ -70,6 +70,7 @@ def test_the_agent_edits_step_by_step_and_each_edit_is_checked_at_once():
                                           {"name": "Wrong", "part": "Box", "from_line": x_line, "to_line": y_line}])],  # mixed axes: rejected
         [call("remove", parameters=["Wrong"]), call("what_moves", parameter="ClearSpan"),
          call("state_behaviours", items=[{"parameter": "ClearSpan", "target": "Box", "behaviour": "grows", "axis": "x"}])],
+        [call("finish", summary="done")],  # held once: the drawing's other dimensions are still driven by nothing named
         [call("finish", summary="done")],
     ]
     gem = ScriptedGemini(script)
@@ -88,7 +89,9 @@ def test_the_agent_edits_step_by_step_and_each_edit_is_checked_at_once():
     assert gem.seen[2][2]["result"][0]["ok"]  # the behaviour holds
     assert any(e["kind"] == "tool" and e["name"] == "finish" and e["ok"] for e in events)
     assert rep.errors() == [] and prog.params["ClearSpan"].value == 3000
-    assert info["agent"] and info["steps"] == 4
+    held = gem.seen[3][0]
+    assert held["done"] is False and "coverage" in held["hint"] and "driven by a named value" in held["dimensions"], held
+    assert info["agent"] and info["steps"] == 5
     assert {"tool", "status", "thought"} <= {e["kind"] for e in events}
 
 

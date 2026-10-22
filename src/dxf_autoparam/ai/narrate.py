@@ -12,6 +12,7 @@ import json
 STAGE_OF = {
     "inspect_sheet": "inspecting", "open_unit": "inspecting", "inspect_regions": "inspecting", "inspect_lines": "inspecting",
     "inspect_candidates": "inspecting", "inspect_dimensions": "inspecting", "resolve_labels": "inspecting", "find_values": "inspecting",
+    "coverage": "measuring", "keep_dimensions": "binding values", "check_relation": "measuring",
     "knowledge": "inspecting", "what_moves": "measuring", "inspect_assembly": "measuring", "zoom_view": "looking",
     "account_instruction": "interpreting", "describe_views": "understanding the views", "share_sizes": "linking the views", "state_plan": "stating the plan",
     "set_structure": "naming the parts", "define_parts": "naming the parts", "define_parameters": "binding values",
@@ -36,6 +37,7 @@ PHASE_OF = {"interpreting": "planning", "planning": "planning", "stating the pla
 WORDS = {
     "inspect_sheet": "looked at the sheet", "open_unit": "opened a view", "inspect_regions": "inspected regions", "inspect_lines": "inspected lines",
     "inspect_candidates": "inspected candidate sizes", "inspect_dimensions": "inspected dimensions", "resolve_labels": "resolved labels",
+    "coverage": "measured which dimensions a named value drives", "keep_dimensions": "kept dimensions as drawn", "check_relation": "checked a relation on the drawing",
     "find_values": "searched for sizes", "knowledge": "consulted the knowledge pack", "what_moves": "measured what a value moves",
     "inspect_assembly": "inspected the assembly", "zoom_view": "zoomed into the drawing", "account_instruction": "read the instruction",
     "describe_views": "described the views", "share_sizes": "linked sizes across views", "state_plan": "stated the plan", "set_structure": "named the structure",
@@ -54,6 +56,7 @@ WORDS = {
 DOING = {
     "inspect_sheet": "Reading the sheet's views and units", "open_unit": "Opening a view's unit", "inspect_regions": "Inspecting regions",
     "inspect_lines": "Inspecting set-out lines", "inspect_candidates": "Inspecting candidate sizes", "inspect_dimensions": "Reading the dimensions",
+    "coverage": "Checking which dimensions a named value drives", "keep_dimensions": "Keeping dimensions as drawn", "check_relation": "Checking a relation on the drawing",
     "resolve_labels": "Resolving labels to geometry", "find_values": "Searching for sizes", "knowledge": "Consulting the knowledge pack",
     "what_moves": "Measuring what a value moves", "inspect_assembly": "Inspecting the assembly", "zoom_view": "Looking at a picture of the drawing",
     "account_instruction": "Reading the instruction clause by clause", "describe_views": "Identifying and naming the views", "share_sizes": "Linking sizes across views",
@@ -120,6 +123,16 @@ def summarise(name: str, a: dict, res) -> str:
             return f"{_n(a.get('ids'))} item(s): {_ids(a.get('ids'))}"
         if name == "inspect_dimensions":
             return f"{_n(res)} dimension row(s)"
+        if name == "check_relation" and isinstance(res, dict) and "equation" in res:
+            if res.get("error"):
+                return f"could not check {res['equation'][:60]}: {res['error'][:80]}"
+            if not res.get("holds"):
+                return f"{res['equation'][:70]}: differs by {res.get('residual_mm')} mm"
+            carried = str(res.get("binding", "")).startswith("already carried")
+            return f"{res['equation'][:70]}: holds" + (", and the drawing already keeps it" if carried else ", not yet kept when values change")
+        if name == "coverage" and isinstance(res, dict) and "dimensions" in res:
+            left = int(res.get("fixed", 0)) + int(res.get("unnamed", 0))
+            return f"{res.get('driven', 0)} of {res['dimensions']} dimensions driven by a named value" + (f", {left} not yet" if left else "")
         if name == "find_values":
             return f"{_n(res)} candidate(s) near {a.get('value_mm', a.get('region', 'the request'))}"
         if name == "inspect_sheet" and isinstance(res, dict):

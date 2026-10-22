@@ -68,7 +68,8 @@ DEFAULT_SECTIONS = ["purpose", "applicability", "inputs", "recognition", "prereq
                     "conventions", "rules", "dependencies", "outputs", "validation"]
 ALL_SECTIONS = DEFAULT_SECTIONS + ["hazards", "scope", "scope_note", "permitted", "blocked", "evidence_requests", "sources"]
 
-LIBRARY_ID_PREFIXES = ("kb:", "kb.", "skill:", "family:", "chunk:", "ontology:", "issue:", "rdso-doc:", "rdso-extract:", "rdso:", "proposal:", "teach:")
+LIBRARY_ID_PREFIXES = ("kb:", "kb.", "skill:", "family:", "chunk:", "ontology:", "issue:", "rdso-doc:", "rdso-extract:", "rdso:", "proposal:", "teach:",
+                       "component:")
 SHEET_ID = re.compile(r"^(v-)?[0-9a-f]{12}-p\d+(#[A-Za-z0-9_.-]+)?$")
 
 
@@ -314,6 +315,36 @@ class Library:
         p = self.dir / self.meta.get("protocol", "protocol.md")
         return p.read_text(encoding="utf-8").strip() if p.is_file() else ""
 
+    # ── components: the parametric definition of a part as a production generator builds it (components.json) ──────────────
+
+    @property
+    def components(self) -> list[dict]:
+        def build():
+            p = self.dir / self.meta.get("components", "components.json")
+            return json.loads(p.read_text(encoding="utf-8")).get("components", []) if p.is_file() else []
+
+        return self._once("components", build)
+
+    def component(self, ident: str) -> dict | None:
+        ident = (ident or "").strip().removeprefix("component:")
+        return next((c for c in self.components if c.get("id") == ident), None)
+
+    def component_cards(self, words: set[str]) -> list[dict]:
+        """The cards whose names share the most content words with a part's own (its name, type and the labels on it) — best first. Words
+        are compared as words (labels.words); a card needs every word of one of its names to match: 'return wall' is not 'wall'."""
+        from .labels import words as wordset
+
+        hits = []
+        for c in self.components:
+            best = 0
+            for n in c.get("names", []):
+                w = wordset(n)
+                if w and w <= words:
+                    best = max(best, len(w))
+            if best:
+                hits.append((best, c))
+        return [c for _n, c in sorted(hits, key=lambda h: -h[0])]
+
     # ── skills ───────────────────────────────────────────────────────────────────
 
     @property
@@ -545,6 +576,8 @@ class Library:
             return False
         if ident.startswith("skill:") or ident in self.skills:
             return self.skill(ident) is not None
+        if ident.startswith("component:"):
+            return self.component(ident) is not None
         if self.record(ident) is not None:
             return True
         for src in self.sources:
@@ -560,6 +593,12 @@ class Library:
 
     def reference(self, ident: str, full: bool = False) -> dict:
         cap = MAX_LOAD_CHARS if full else REFERENCE_CHARS
+        if ident.startswith("component:"):
+            c = self.component(ident)
+            if c is None:
+                return {"found": False, "id": ident, "hint": "the component ids are in coverage's `knowledge` (component:…)"}
+            return {"found": True, "kind": "component", "id": f"component:{c['id']}", **{k: v for k, v in c.items() if k != "id"},
+                    "context_only": "production defaults and relations: hypotheses to check on this drawing, never its values"}
         sk = self.skill(ident) if (ident.startswith(("skill:", "family:")) or ident in self.skills) else None
         if sk is not None:
             return {"found": True, "kind": "skill", "id": sk.id, "hint": f"load_skill(id='{sk.id}')", "title": sk.title, "purpose": sk.purpose,
