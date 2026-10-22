@@ -36,15 +36,16 @@ engine that checks every claim. Read this first; the details are in `README.md` 
 | Instruction-guided plans and anchors (which side of an assembly stays) compiled into the set-out and measured | `plan.py` `assembly.py` |
 | **Design intent**: which side of each size stays when it changes (symmetry → fixed → existing → convention), tried for real, stored as plans of source `design intent`; how to settle what is undecided | `design_intent.py`, `docs/DESIGN_INTENT.md` §13 |
 | Validator: every claim of the agent checked against the geometry (V1–V16); level roles; value migration for a unit read at another scale | `validator.py` `intent.py` |
-| The agent: tools, loop, run state machine, verdict, model transport, cost log | `ai/agent.py` `ai/loop.py` `ai/run.py` `ai/vertex.py` `ai/requestlog.py` `ai/statement.py` `ai/coverage.py` |
+| The agent: tools, loop, run state machine, verdict, model transport, cost log | `ai/agent.py` `ai/loop.py` `ai/run.py` `ai/vertex.py` `ai/gateway.py` (OpenAI-compatible providers) `ai/tokenharbor.py` (its catalogue, the free models) `ai/requestlog.py` `ai/statement.py` `ai/coverage.py` `ai/labels.py` (what the drawing's own labels call a part) |
+| What the views state side by side (search the sheet, compare views, arithmetic) | `ai/crosscheck.py` (tools `search_drawing` `compare_views` `calculate`) |
 | Checks on a change: interfaces, notes, held parts, validity | `behaviour.py`; how parametric a unit is: `status.dimension_drive` |
 | Server, page API, autosave (one owner per drawing), status | `server.py` `workspace.py` `autosave.py` `status.py` |
 | The page (React + Tailwind + TypeScript; the built bundle is tracked in `src/dxf_autoparam/static/app/`) | `web/src` `web/test` `web/e2e` |
-| Tools | `tools/monitor_run.py` (watch a run), `tools/preflight_run.py` (before a paid run), `tools/audit_run.py` (after), `tools/replay_trace.py` (replay a recorded run free), `tools/serve_scripted.py` / `serve_replay.py` (the app with a scripted / replayed model), `tools/ui_check.mjs` |
+| Tools | `tools/monitor_run.py` (watch a run), `tools/preflight_run.py` (before a paid run), `tools/audit_run.py` (after), `tools/replay_trace.py` (replay a recorded run free), `tools/serve_scripted.py` / `serve_replay.py` (the app with a scripted / replayed model), `tools/tokenharbor_check.py` (list Token Harbor's models; `--test`: one tiny call to a free one), `tools/sweep_sides.py` (every value stepped and every side choice tried on a copy: what a person meets in the Values panel), `tools/ui_check.mjs` |
 | Docs | `docs/ARCHITECTURE.md` (start), `AGENT_SESSION.md` (runs, budgets, cost, verdict), `DESIGN_INTENT.md`, `MULTIVIEW.md`, `AUTO_PARAMETRIZATION.md` |
 
 State and logs: autosave `~/.local/state/dxf-autoparam/<drawing>-<hash>.autoparam.json` (+ `.prev.json`, `.owner.json`, dated `.replaced.json` after a clean start); model-call
-ledger `.cache/ai/usage.jsonl`; run logs, backups and findings in `out/agent-logs/` (git-ignored); `.env` (git-ignored; Vertex settings, see `.env.example`).
+ledger `.cache/ai/usage.jsonl`; run logs, backups and findings in `out/agent-logs/` (git-ignored); `.env` (git-ignored; Vertex and gateway settings, see `.env.example`).
 
 ## 3. Commands
 
@@ -56,6 +57,8 @@ uv run ruff check src tests tools
 cd web && bun run typecheck && bun run test && bun run build      # rebuild the bundle after any web/src change (it is committed)
 cd web && node e2e/workspace.e2e.mjs [--dxf F --project P --out DIR]    # headless Chrome on its own scratch server (port 8799); also e2e/agent.e2e.mjs
 uv run python tools/audit_run.py "<drawing>.dxf" <copy of the autosave> [--sweep] [--out FILE]
+uv run python tools/sweep_sides.py "<drawing>.dxf" <copy of the autosave> [--from-drawn] [--out FILE.jsonl]   # side choices accepted / refused by cause
+uv run dxf-autoparam agent-eval [--free <Token Harbor free model id>]   # the agent scored per category on a generated box: scripted (free), or a model priced at zero
 ```
 
 Don't run tests, builds or e2e while a paid run is in flight (they compete for the machine and the run is what matters). A test that writes into the real ledger or the real state
@@ -69,6 +72,10 @@ folder is a bug (`vertex.CACHE`, `DXF_AUTOPARAM_STATE`): point it at `tmp_path`.
 - A parameter's `value` is the engine's measurement (the model never types a number). Units drawn at another scale read their own scale.
 - Finish is a gate (the verdict is derived from the engine, never from the model's words). Notes in the verdict are things to read, not failures.
 - The model never sees what the engine derived (`design_intent.strip`); the benchmark fixtures' values never appear in prompts or tool text.
+- The page shows what the agent said and which tools it used — by name, never their inputs or outputs — with its thinking shut until opened; there are no
+  detail modes. A clarifying question is multiple choice and needs no open unit; a note typed while it works reaches its next turn. Every unit is owed work only
+  when the instruction asks for the drawing to be made parametric (`SheetBench.parametrizing`): a question or a check is answered in `finish`'s summary.
+- `compare_views` is evidence, not a verdict: equal numbers are not one size and the same words at two numbers are for the person (never link them).
 - A plan answers for its own assembly. A value drawn in two views side by side has an occurrence in each; the parts the value moves through the other one are that
   assembly's (`plan._sibling_parts`), and a candidate must leave every occurrence of every size driving (`design_intent._holds`). Don't verify one view's plan against
   the whole unit again: every candidate fails the same way and a symmetric structure is left growing from the left.
@@ -158,4 +165,5 @@ audit of the last run's saved work). One run per verified change set. If the own
 | Cache collapse after a thinking-level change | Adaptive thinking is opt-in (`AUTOPARAM_AGENT_ADAPTIVE_THINKING=1`); leave it off |
 | Cost shows "no price" | Set `VERTEX_PRICES` (`.env.example`); the repo does not guess a price |
 | Turns take minutes, `RETRY — 429` in `run.log` | The primary model is out of capacity. A model that could not answer is not asked first again for `VERTEX_BREAKER_S` (300 s); the log says "…could not answer … the next turns start on <fallback>", and the verdict notes a run answered by two models |
+| Vertex credits or capacity are out | Put `TOKENHARBOR_API_KEY` in `.env` and restart the server (after copying the autosave if work is open): the picker lists Token Harbor's free models (`TOKENHARBOR_MODELS=all` for every one, with its price). `uv run python tools/tokenharbor_check.py [--test]` checks the key and one free model. A model is a free one only when the catalogue prices both input and output at zero |
 | A headless browser or test drops out | Something heavy is running; wait, never overlap with a live run |

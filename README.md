@@ -64,6 +64,7 @@ How it works, results, limitations and the plan for aagento-bridge: **[docs/AUTO
 | `src/dxf_autoparam/` | the generic engine (`analyse`, `build`, `regen`, `dxf_read`, `dxf_write`, `views`, `pipeline`), `topology` (regions), `cadjson`, `intent` (behaviours, constraints, selection), `graph`, `learn`, `validator`, `ai/`, CLI, demo server |
 | `sheet.py`, `crossview.py`, `workspace.py`, `ai/sheet_ai.py`, `static/workspace.html` | a whole sheet: views found and named, views drawn in projection analysed as one unit, sizes shared across views, the canvas workspace and its API — see `docs/MULTIVIEW.md`. **The agent is one session** (`ai/run.py`, `ai/loop.py`, `viewimg.py`, `baseline.py`, `status.py`): one instruction, the model decides the stages, the engine checks and measures — see `docs/AGENT_SESSION.md` |
 | `src/dxf_autoparam/domains/` | optional semantic packs (`bridge.py`: site levels, names) — the only domain vocabulary |
+| `ai/crosscheck.py` | what the views state side by side: the agent's `search_drawing` (where words and numbers are stated on the whole sheet), `compare_views` (what views state alike, what they state differently, which sizes run between stated levels) and `calculate` — evidence, never a verdict; see `docs/AGENT_SESSION.md` |
 | `ai/library.py`, `knowledge/library/`, `knowledge/agent_context/` | the **engineering library**: skills, definitions and rules the agent retrieves on demand when a domain pack is on (migrated, hash-verified source knowledge + authored recipes) — see `docs/KNOWLEDGE_LIBRARY.md`; `dxf-autoparam library list \| search \| show \| discover` |
 | `production/`, `ai/production.py`, `tools/production/bridge_rules.ts`, `knowledge/production/` | the **production bridge rule engines**: aagento-bridge's `BRIDGE_REGISTRY` bundled and run through one boundary, its knowledge extracted (verified formulas, measured dependencies, views, findings) with provenance and freshness, bound to a drawing's own values and guarding every change — see `docs/PRODUCTION_RULES.md`; `dxf-autoparam production build \| extract \| status \| show \| bench` |
 | `examples/` | drawings to try (box sections, RCC box half-section GAD, girder deck, deck slab, pier, retaining wall, well, a 3-cell box drawn as loose lines) |
@@ -96,6 +97,18 @@ Two caches:
 
 Every call's tokens — including `vertex_cached_tokens` and `prompt_cache` (created / reused / unavailable) — are logged
 in `.cache/ai/usage.jsonl`.
+
+## Other providers: Token Harbor
+
+When Vertex is not an option (its credits are out, or its capacity is), the page's model picker can also list models reached through an
+OpenAI-compatible gateway: put `TOKENHARBOR_API_KEY` in `.env` ([Token Harbor](https://tokenharbor.ai); the key stays in the server's environment,
+never in the page) and restart the server. The picker then offers the models Token Harbor prices at zero ("… · free (Token Harbor)"; a free model is not
+asked about cost; `TOKENHARBOR_MODELS=all` lists every model with its price instead). They run the same agent session — the same tools and engine — through
+`ai/gateway.py`, which translates the loop's turns to chat-completions messages. What a model refuses is given up once, said, and remembered for the run: a
+picture (a text-only model then works from the numbers the tools return), "a tool call is required" (it is asked to choose), the optional request fields.
+A rate limit (HTTP 429; the free tier was slowed down for minutes at a time in one test) is waited out, with a note of the run each time, before a turn fails.
+`uv run python tools/tokenharbor_check.py` lists the catalogue (no tokens spent); `--test` makes one tiny call to a free model through the adapter.
+These checks prove the transport, not the quality: how well a free model carries a whole drawing is measured only by running it.
 
 ## Rules the engine applies itself (whatever the AI proposes)
 

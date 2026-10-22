@@ -7,8 +7,16 @@ script in every test, so nothing has been billed.
 ## What the person does
 
 The Agent tab has one prompt, a scope (this view · the selection · the value in focus · the whole drawing — context for the prompt, never
-a second set of instructions), **Run**, and while it works **Stop**. The agent decides which stages the task needs. A run is always in one
-state of a machine, and the page shows only what the server reports:
+a second set of instructions), **Run**, and while it works **Stop**. The agent decides which stages the task needs. The thread is one standard
+agent view, with no detail modes: the agent's progress as it works (its own short sentence for each turn), the tools it used **by name** — never
+what they were given or returned, which stays in the run's events and in the monitor's log —, its thinking summaries in a section that stays
+shut until the person opens it, and, when the work ends, its result: the engine's verdict word first (the page never says "done" over what the
+engine refused), then the agent's own summary, what remains, and the checks under *Details*. The box stays open while the agent works: what is
+typed there is a **note** — handed to the agent at the start of its next turn as the person's own words (`POST /api/sheet/ai/note`; no Stop, no call
+in flight lost) — and Stop is its own button. Under the box: the model, the engineering library (on when the engine suggests one from the sheet's
+own printed words — the words that matched are its tooltip —, the person's choice going with the run as `options.domain`), and how often the run
+pauses (30 turns, 60, never: `options.budget.soft_turns`). A run is always in one state of a machine, and the page shows only what the server
+reports:
 
 ```
 queued → running ⇄ paused (a chunk of 30 turns ended)  ⇄ awaiting_user (a decision is the person's)
@@ -41,22 +49,68 @@ turns were answered by more than one model says which (`notes`).
 | names views (`describe_views`), parts, values, levels, links (`share_sizes`), formulas, constraints | validates every edit at once (V1–V15), measures every binding, takes back what breaks the drawing; a relation that names nothing (a bare number) is refused |
 | states the plan across views (`state_plan`): which components and dimensions appear in more than one view, as which part or value, how they relate, how that is bound — and what it assumed | checks every unit, view, part and value exists and every binding it claims is on the sheet (a shared value that drives each unit, views in projection, a relation between the views) or is said to be only noted; counts what the plan leaves out |
 | proposes the plan (`propose_plan`: value, anchor, directives with the person's words, its own questions) | resolves references, predicts each anchor, asks what only a person can decide, compiles the accepted plan into the set-out, measures it (V16) |
-| asks (`ask_person`) | pauses the run, applies the person's answers itself (not relayed by the model) and rebuilds the waiting plans |
+| asks (`ask_person`: up to four multiple-choice questions — options each with what it means, the one the model would pick, several choices where they may apply — at the **sheet** level, so a clarifying question needs no open unit) | pauses the run, applies the person's answers itself (not relayed by the model; a choice among the options is not the person's words, anything they type is) and rebuilds the waiting plans |
 | `finish` | the gate, then the sheet's transaction: refused as a whole, with nothing changed, if the sheet changed meanwhile or would no longer hold |
 
 No second engine or solver: the closed-form datum program (`program.py`, `assembly.py`, `plan.py`) is what compiles and regenerates. A general
 constraint solver was not needed for what is supported (linear set-out, anchors, equalities); a case outside that is refused or asked,
 not approximated.
 
+## Tasks that are not "make it parametric"
+
+The instruction decides the task. The model reads it clause by clause (`account_instruction`) and gives each clause a kind — `change_value`, `keep`,
+`scope`, `link_views`, `parametrize`, `annotate`, `question` (something to answer or explain), `check` (something to verify or compare and report),
+`process`, `context` — and what handles it (`handled_by`: a plan, parts, values, views, links, `answer` — the closing summary —, a question to the
+person, or nothing, with why). Every unit is owed work only when the instruction asks for the drawing to be made parametric: a run whose clauses are
+questions or checks and none of which is `parametrize` or `annotate` owes no unit anything — the `all_units_covered` criterion, the first `finish`'s
+"open_unit each …" and the note "views never parametrized" belong to a run that asks for the work (`SheetBench.parametrizing`). The default stays that
+the work is owed: a clause mislabelled `context` or `scope` is not a way out of it. The model is made to call a tool every turn (Vertex function-calling
+mode `ANY`), so `finish`'s `summary` is the only way it can answer: it is the person's answer (the result first, then what was done, what was left
+alone and why, what they must decide), and a clause handled by `answer` is kept only if that summary is not empty. A clause handled by `question` is kept
+only when a question was asked (`ask_person`) or answered — or the model accounts for it again with `handled_by: none` and why the condition did not
+arise; until then `finish` lists it, together with the growth directions of named sizes that rest on convention or that the drawing could not decide
+(the cases "if you are unsure, ask me" is about; a 173A run read "ask me", asked nothing and recorded an assumption, and the gate passed it).
+
+**What the drawing calls a part** (`ai/labels.py`). A part is the model's hypothesis about what some geometry is; the drawing often says so with a label
+whose leader points at the outline. `inspect_regions` reports those labels per region (`labelled`); `define_parts` answers each part with what the drawing
+says (`drawing_says`) and a `label_doubt` when the part's name shares no word with any label on its own outline (a 173A run called two height-gauge
+frames "ToeWalls" with the gauge's note readable on its picture). `finish` lists the doubts until the part is renamed or redefined, or kept with
+`label_checked` and why. Only leader-resolved labels on the part's own entities count; nothing knows what any structure is called.
+
+## Looking across the views (`ai/crosscheck.py`)
+
+The agent works on one unit at a time and used to have no way to ask where else the sheet states something. Three read tools, no model call, bounded:
+
+| Tool | Does |
+|---|---|
+| `search_drawing(words, numbers, kinds, limit)` | where words and numbers are stated on the whole sheet — notes, dimensions, levels, titles, the views' names, the parts and values already named — each hit with its unit, view and the id every other tool takes; the best matches first |
+| `compare_views(units, focus)` | levels stated in several views (whatever the words); levels stated at different values under the same words; sizes (dimensions and notes) stated in several views; notes with the same words and different numbers; and vertical dimensions whose two end lines stand at levels the sheet states — a size that **is** the difference of two stated levels, measured from the dimension's own lines, not an arithmetic coincidence |
+| `calculate(expression, unit)` | arithmetic over named values and levels in mm, by the engine's own safe evaluator (`program.evaluate`: numbers, names, `+ - * / ^`, its functions — nothing else runs) |
+
+A dimension that a named value of its unit already measures says so (`value`, and `shared_as` when a shared value binds it), so the evidence names what
+`share_sizes` takes as a target (a unit's own value, by its name). It is evidence, not a verdict, and says so: equal numbers are not one size (a sheet states 400 for several members), and the same words at two numbers
+are for the person, not something to link. The words are the drawing's own, weighted by how sparingly the sheet uses them (no vocabulary is built
+in) and compared **in order** — "TOP OF BOTTOM SLAB" and "BOTTOM OF TOP SLAB" share every word and name two faces. Measured on a nine-view railway
+subway sheet, in 0.6 s: the same road level stated six ways, the top of a slab and the top of a return wall at one level, the bottom of the foundation
+at three levels (606.501 / 606.751 / 607.551 m), a granular fill of 850 mm in two places (one of them the sheet's own note table) and 600 mm in a third,
+and thirteen dimensions between stated levels (one of 3250 mm, in two views, equal to top of slab minus road level). `share_sizes` accepts any equal
+numbers that drive, including two that only happen to be equal — what is the same part stays the model's reading of the pictures, now with evidence.
+A level is each view's own, not a shareable value (`SheetModel.unlinked_repeats`, `share`): the relation is bound through a shared *length* anchored to
+a stated level in each view, or noted. `check_behaviour`, the page's check and the audit sweep also report **members that run into each other**
+(`plan.clashes`: a structural entity that moved and crosses one it did not cross as drawn) under `validity` — a span closed up past its haunches used
+to pass every check because no single outline turned inside out.
+
 ## Budgets never cut good work (`ai/loop.py`)
 
 `Budget`: `soft_turns` (a chunk: **30 turns by default** — the run pauses with everything it holds and is continued when the person says go on,
 nothing lost, nothing done twice; 0 never pauses), `unit_turns` (**12**: a unit that has taken that many turns is told, in the result it reads next, to
 keep what holds and move on — with the units still without work — and the person is told it was; a word, not a limit; 0 never says it), `max_turns` (1000), `max_tool_calls` (6000), `wall_s` (4 h of working time; waiting for a person does not
-count), `max_tokens` (2 M output + thinking), `call_s` (one model call), and a limit on turns of only looking. The hard limits are safety nets
+count), `max_tokens` (2 M output + thinking), `call_s` (one model call), and a limit on turns of only looking (after the first edit, the reads that verify
+an edit — `what_moves`, `check_behaviour`, `validate_views`, `inspect_assembly`, `calculate`, `compare_views`, `inspect_lines` — get twice that allowance:
+a 173A run was refused `what_moves` while checking the anomaly an edit had made). The hard limits are safety nets
 against a model that loops, set so that a sheet of any size finishes inside them. When a run does reach one, **continuing lifts exactly the
 limit that was reached** by another allowance of its own size (and says so in the timeline); nobody has to type a number. Set per run in the
-page (Options and budget) or by `AUTOPARAM_SOFT_TURNS` / `AUTOPARAM_UNIT_TURNS` / `AUTOPARAM_*` / `VERTEX_AGENT_MAX_STEPS`. Stop abandons the
+page (the Pause control under the box; the other limits by the environment) or by `AUTOPARAM_SOFT_TURNS` / `AUTOPARAM_UNIT_TURNS` / `AUTOPARAM_*` / `VERTEX_AGENT_MAX_STEPS`. Stop abandons the
 call in flight; the turn it would have made does not happen. A change made by a person while the run works is never overwritten silently:
 the run asks whether to apply its edits on top of it.
 
@@ -73,6 +127,16 @@ So:
   call before and — when it was not — which cut changed it, what the provider billed, how much of that it served from its cache, the thinking level and why.
   `GET /api/sheet/ai/requests?run=R1` (the latest 50; `&since=n` to follow, `&brief=1` without each request's contents) and `&call=57` for that request whole,
   the pictures' bytes left out (the last three calls only).
+- **The provider is the person's choice; the session is the same.** The picker's models come from Vertex (`ai/vertex.py`) and, with a key, from Token Harbor
+  (`ai/tokenharbor.py`: its catalogue is `GET /v1/models`, kept 15 minutes and on disk; the models priced at zero by default). A Token Harbor model runs through
+  `ai/gateway.py`: the same turn translated to chat-completions, `reasoning_effort` = the picker's level, `tool_choice` required. What a model refuses (HTTP 400 /
+  422) is given up once, in this order — a picture (it then works from the numbers the tools return), "a tool call is required" (it is asked to choose; the loop
+  asks again when it answers in words), the optional fields — said in a note of the run, kept in the call's `dropped`, and remembered for the rest of the run. A rate limit (HTTP 429: a free tier is slowed down for minutes at a time) is waited out instead — as long as
+  `Retry-After` asks, else 10 s growing to 60 s, six tries, a note of the run each time, Stop heard within a second. A
+  call's cost is the gateway's own figure, else the model's listed price × its tokens (zero for a free model, which is not asked about before a run). How well a
+  model does this session is not known until it has been run: the first run on a free model is a measurement. (Measured 2026-10-21 on a fixture drawing and a
+  one-sentence question: `deepseek-v4-flash:free` and `deepseek-v4.1-flash:free` each finished in two turns and 36 s through the real tool request, 22–28k tokens in per
+  call and no prompt-cache hits — that proves the transport, not the quality on a whole sheet.)
 - **A saving that turns into a cost is switched off, and said**: no caching although each of three requests was mostly the same as the one before (then
   the explicit cache takes over); a change of thinking level followed, twice and more often than not, by a collapse of the cached tokens (then thinking is
   fixed).
@@ -135,7 +199,9 @@ Nothing the model reads names a kind of structure, a family or a value (`tests/t
 model names parts, values and levels the way a designer of *this* drawing would, from what it sees, and the engine keeps the names as written.
 A pack (`knowledge/<name>.json`: concept names, structure families, formulas, and a drafting guide) is a person's choice for a run
 (`options.domain`) or the process (`AUTOPARAM_DOMAIN`); when on, its names are *offered* in the overview and the system prompt, and the
-`knowledge` tool exists. The bridge pack is the only one shipped. The engine (analysis, validation, regeneration, the sheet model) never reads it.
+`knowledge` tool exists. The engine's own default stays off (the CLI, the tests, a scripted model); the page turns the library on when the engine
+suggests one for the open sheet (`GET /api/sheet/ai/library`: `suggested`, from the words the sheet prints) unless the person unticks it — for a
+long time the React page did not, and no page-started run had the library or the production rule engines. The bridge pack is the only one shipped. The engine (analysis, validation, regeneration, the sheet model) never reads it.
 
 ## Replaying a recorded run (`tools/replay_trace.py`)
 
@@ -156,7 +222,9 @@ too wide for that comes as an **overview** (for structure) and up to six **TILE*
 dimensions can be read: placed where the notes are, at the ideal scale, when that holds nine tenths of them (else a 15%-overlap grid over the unit, the
 finest the model's limits allow, leaving out cells with next to nothing in them). On the live 20A sheet that read U01 at 14 px text (was 11.4 px in a grid) and U05 at
 14 px (was 8.6 px). The set-out lines are drawn under the drawing in the margin, labelled by the most salient first, and
-labels that would collide are packed along four tracks with leaders. A picture the model still has in its conversation is named, not sent again. The person's
+labels that would collide are packed along four tracks with leaders — at most 24 lines labelled (`viewplan.MAX_LABELLED`), hairlines across the drawing
+only when 16 or fewer are, and the tiles marked on the overview by corner brackets and a small chip instead of frames over the drawing (a 173A tile carried
+~100 margin labels and the overview's frames covered the parts it was about). A picture the model still has in its conversation is named, not sent again. The person's
 Agent panel lists every picture the model was given (**Pictures** in its header; one large, with its scale, text height, revision and turn) — read from the run's
 `image` events. For a size nothing states (`candidate` / `weak`), `inspect_candidates` says which `zoom_view` to ask for, with the box.
 
@@ -168,7 +236,12 @@ the whole sheet holds; **Reset drawing** returns to the imported state (values, 
 undoable step and keeps the undo history. Clicking a value highlights, by category and across views: what it controls directly, what moves
 with it (measured), the notes and dimensions that state it, what a plan keeps fixed or outside the edit, and what waits for a decision;
 with the original, the evidence, the lines it sets out, whether it is *validated* (changed a little either way: the sheet regenerates and
-something moves), and "Go to view". The **Original** toggle draws the imported geometry of what changed, dotted, from the file's own points.
+something moves), and "Go to view". The **Original** (on unless switched off) draws the imported geometry of what changed, dashed in its own colour
+(lime in dark, olive in light) UNDER the drawing as it is now, from the file's own points; an entity's original is read once, the first time it changes,
+and dropped when it is back as drawn (`differs` in each commit). Opening or closing a panel (the inspector on a selection, the agent) keeps the drawing
+where it is on the screen (`viewport.keepOnScreen`); a thin bar under the top bar says the engine is working (reading, regenerating a stepped value,
+applying). The Values panel lists the unit's parts as a tree: a click selects the part's own geometry (the camera stays), ⚠ where the drawing's label on
+the part says something else. The dark theme's accent is amber; blue stays only in the light theme.
 
 ## Evaluation: the AI and the engine separately (`ai/acceptance.py`)
 

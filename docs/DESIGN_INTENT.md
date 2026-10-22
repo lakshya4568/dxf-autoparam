@@ -498,3 +498,33 @@ Not done, measured: building the group up one size at a time when cutting it dow
 decide 6 of the 18 axes the nine examples leave undecided, and two more of the real sheet's — but it adds half again to the derivation of a large unit
 (94 → 141 s for the 974-entity section), leaves the dropped sizes without the ways-to-settle that an undecided axis offers, and gives "decided" to an axis of
 which one size in five is kept. It waits for a person to say it is wanted.
+
+### 13.3 A person's side choice — the levels a box hangs from, a gap that gives, a middle nobody drew (2026-10-22)
+
+Found on the 173A sheet (`docs/INVESTIGATION_173A.md`): 137 of 183 side choices refused, and the accepted value steps moving the wrong lines. Four rules
+changed, each held on generated drawings before the real sheet:
+
+- **A size that spans a held level is a sum across it, not an input** (`build.py`, `deferred`). An overall dimension whose two ends touch no level, with a
+  site level strictly inside it, was taken as an inside size — and the box was hung from the road by its clear height and the bottom slab from the top slab
+  by the overall height. Such a gap is now ordered after every gap that does not span a level (and an unnamed opening the engine only guessed after the
+  named sizes), so it is worked out whenever both sides can be set out from the level: the wearing course and the bottom slab hang from the road level, as
+  the production box engine and the CAD agent's level chain set them out. `tests/test_levels_chain.py` (5 of its 9 tests fail on the code before).
+- **A push into a held line is taken by a gap nothing holds on the way** (`assembly.absorb`). The nearest gap between the size and the held line that is not
+  set out from either side, and not spanned by a named size, gives (an earth cushion under a formation level); the choice is refused only when every gap on
+  the way is held, and the refusal names each one with why ("WearingCourseThickness holds it"). A line that may not be rewritten but is itself set out from
+  the assembly (a person's formula on it, a slope's foot) is not in the way: it moves with what it hangs on, and it is never taken as the line that stays.
+  Only for a side somebody chose (a person, the agent's plan): the engine's own default never makes a gap give (`stack(give=False)` for design intent) —
+  with it, a generated box's slabs started growing down into the cell, the cell's clear height giving, because that left no size out
+  (`tests/test_design_intent.py` holds that a box still stands on its base).
+- **Centred without a drawn middle is about the size's own middle** (`assembly.MID`): each occurrence grows half each way about its own centre — a
+  construction line, never drawn. Asked for, never assumed: the design intent still centres only about evidence (§13).
+- **A choice is one transaction** (`SheetModel.anchor`): refused, the sheet is exactly as it was (it used to keep the formulas it had cleared on the way);
+  accepted, it is one undo step. A refusal says which side would keep what may not move ("— its end (right / top) staying keeps what may not move"), or
+  that none would.
+
+Measured on a copy of the owner's work (`tools/sweep_sides.py`, every value stepped, every side tried and undone): side choices accepted 46 of 183 → 74 of
+192 at the owner's values, 82 of 192 from the drawing as drawn; value steps 255 of 260 → 271 of 272; no refusal changes the sheet. What still refuses, by
+cause: members that would cross (25), a shared value that would stop driving in another view (20 — the stacking is one-dimensional per axis: it pushes a
+line beyond the size on another layer too), a held line in the push (27 — most of them right: the road level under a clear height), a size on both axes (6),
+one side per axis and assembly (4, below). Not done: two sizes of one assembly on
+one axis with different sides (`compile_plans` still refuses plans that disagree on the anchor).
