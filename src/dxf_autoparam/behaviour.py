@@ -17,7 +17,8 @@ Categories (each pass / fail / not checked, with what was expected and what was 
   annotations  a leader's tip stays on what it points at, a label stays with its part, a level note follows its line,
                a title or a sheet note does not move, a dimension reads its new length
   views        the views that change, and every shared value measured in each unit that binds it
-  validity     no outline collapses, inverts or crosses itself; no value leaves its valid range
+  validity     no outline collapses, inverts or crosses itself; no member runs into another one it did not cross as drawn; no value
+               leaves its valid range
 """
 
 from __future__ import annotations
@@ -126,6 +127,7 @@ def behaviour_report(sm, changes: dict[str, float], sr=None, plans: bool = True)
             c["status"] = PASS
 
     touched = sm._touched(changes)
+    clashed = False
     for uid in sorted(touched):
         u, vals0, vals1, d0, d1, pts0, pts1 = _unit_state(sm, uid, changes)
         an, prog = u.an, u.prog
@@ -197,6 +199,22 @@ def behaviour_report(sm, changes: dict[str, float], sr=None, plans: bool = True)
         cats["components"]["basis"] = basis
         if not moved_any and changed:
             cats["components"].setdefault("notes", []).append(f"{uid}: no component moved")
+        # members that now run into each other: a structural entity that moved and crosses one it did not cross as drawn (the plan check's own
+        # measure) — a correct span next to a haunch through a wall is two findings, and no single outline turns inside out to say so
+        from .cadjson import entity_id
+        from .plan import clashes
+
+        moved_struct = {i for i, it in enumerate(items) if it.role.value == "structural" and any(
+            math.dist(a, b) > tol for a, b in zip(pts0.get(i, it.pts), pts1.get(i, it.pts), strict=False))}
+        part_of = {i: name for name, ents in comps.items() for i in ents}
+        crossed = clashes(prog, pts1, moved_struct) if moved_struct else []
+        for i, j in crossed[:6]:
+            who = [f"{entity_id(items[k])}{f' ({part_of[k]})' if k in part_of else ''}" for k in (i, j)]
+            note("validity", False, {"unit": uid, "issue": f"members cross: {who[0]} runs into {who[1]}, which it did not cross as drawn",
+                                     "entities": [u.back[i], u.back[j]]})
+        if len(crossed) > 6:
+            cats["validity"].setdefault("notes", []).append(f"{uid}: {len(crossed) - 6} more crossing(s) not listed")
+        clashed = clashed or bool(crossed)
         # interfaces between named parts: what touched still touches
         parts = prog.intent.get("parts") or {}
         if parts:
@@ -234,7 +252,7 @@ def behaviour_report(sm, changes: dict[str, float], sr=None, plans: bool = True)
         for e in sr.errors[:12]:
             note("validity", False, {"issue": e})
     else:
-        note("validity", True, {"issue": "every outline stays valid; every check of the sheet holds"})
+        note("validity", True, {"issue": "every outline stays valid; every check of the sheet holds" + ("" if clashed else "; no member runs into another")})
     if plans:
         cats["validity"]["warnings"] = sr.warnings[:8]
     failed = [k for k, c in cats.items() if c["status"] == FAIL]

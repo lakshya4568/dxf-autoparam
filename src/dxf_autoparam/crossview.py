@@ -737,11 +737,19 @@ class SheetModel:
               source: str = "person") -> SharedParam:
         """One named size driving several units: each target names it in a unit — (unit, candidate c…) or (unit, from
         line, to line). All must measure the same; each unit is rebuilt by the validated engine and must DRIVE it there.
-        Refused as a whole (nothing changes) if any target does not hold."""
+        Refused as a whole (nothing changes) if any target does not hold.
+
+        A name that is already shared takes the views it does not have yet (a third view drawing the same slab): each new one must measure the
+        size as drawn, is bound to it, and takes its current value — refused as a whole if one does not hold. It used to be refused ("already
+        shared"), and the third view kept a value of its own that a person could change alone."""
         if not PASCAL.match(name or "") or GENERIC.match(name):
             raise SheetError(f"{name!r} is not a PascalCase engineering name")
-        if name in self._shared_by_name():
-            raise SheetError(f"{name} is already shared")
+        existing = self._shared_by_name().get(name)
+        if existing is not None:
+            have = {b.unit for b in existing.bindings}
+            targets = [t for t in targets if t[0] not in have]
+            if not targets:
+                return existing  # every view named is bound to it already: nothing to do
         if len(targets) < 1:
             raise SheetError("name at least one view's size")
         before = self._state()
@@ -799,22 +807,39 @@ class SheetModel:
             u.answer = answer
             u.prog = None
             bindings.append(b)
-        ref = measured[0][1]
+        ref = existing.value if existing is not None else measured[0][1]
         bad = [(uid, v) for uid, v in measured if abs(v - ref) > max(1.0, 2e-3 * ref)]
         if bad:
             self._restore(before)
-            raise SheetError(f"{name}: the views do not state one size ({', '.join(f'{u}: {v:.1f} mm' for u, v in measured)})")
-        sid = f"S{len(self.shared) + 1}"
-        while sid in self.shared:
-            sid = f"S{int(sid[1:]) + 1}"
-        p = SharedParam(id=sid, name=name, label=label or name, value=ref, unit="mm", bindings=bindings, evidence=list(evidence or []), source=source)
-        self.shared[sid] = p
+            shown = ([f"{', '.join(b.unit for b in existing.bindings)}: {existing.value:.1f} mm"] if existing is not None else []) + \
+                [f"{u}: {v:.1f} mm" for u, v in measured]
+            raise SheetError(f"{name}: the views do not state one size ({', '.join(shown)})")
+        if existing is not None:
+            p = existing
+            now = self._shared_now(p)
+            p.bindings.extend(bindings)
+            p.evidence = list(p.evidence) + [e for e in (evidence or []) if e not in p.evidence]
+        else:
+            sid = f"S{len(self.shared) + 1}"
+            while sid in self.shared:
+                sid = f"S{int(sid[1:]) + 1}"
+            p = SharedParam(id=sid, name=name, label=label or name, value=ref, unit="mm", bindings=bindings, evidence=list(evidence or []), source=source)
+            self.shared[sid] = p
+            now = ref
         for b in bindings:
             self._bind_status(self.unit(b.unit), b)
         refused = [b for b in bindings if b.status != "drives"]
         if refused and all(b.status == "refused" for b in refused) and len(refused) == len(bindings):
             self._restore(before)
-            raise SheetError(f"{name} drives none of its views: " + "; ".join(f"{b.unit}: {b.reason}" for b in refused))
+            raise SheetError(f"{name} drives none of its {'new ' if existing is not None else ''}views: " + "; ".join(f"{b.unit}: {b.reason}" for b in refused))
+        if existing is not None and abs(now - p.value) > 1e-9:  # the views it already drove are at another value now: the new ones follow it
+            for b in bindings:
+                if b.status == "drives":
+                    self.values.setdefault(b.unit, {})[b.param] = now
+            r = self.regenerate()
+            if not r.ok:
+                self._restore(before)
+                raise SheetError(f"{name}: the new view(s) cannot follow its value {now:g} mm: " + "; ".join(r.errors[:3]))
         self.history.append(before)
         self.future.clear()
         self.revision += 1
@@ -902,23 +927,34 @@ class SheetModel:
         pairs = pairs_of(u.prog, u.answer, local)
         lines = {x for p in pairs for x in p}
         ans = copy.deepcopy(u.answer) if u.answer else copy.deepcopy(EMPTY_ANSWER)
-        # an earlier choice written as formulas on these lines (by the old pair-only anchor) is cleared first
-        ans["datum_formulas"] = [f for f in ans.get("datum_formulas", []) if f.get("datum") not in lines]
-        if ans != (u.answer or {}):
-            self.commit_answer(uid, ans)
-            u = self.unit(uid)
-            assert u.prog is not None
-        prog0, ans0 = self._plain(uid)
-        plan = build_plan(prog0, ans0, {"id": f"A_{local}", "driver": {"parameter": local, "pairs": pairs},
-                                        "anchor": {"policy": policy, "source": "person"}}, sheet=self._plan_sheet(uid))
-        # this is a choice about one value: questions about attached parts are answered by what the set-out does now
-        if plan["status"] == "needs_decision" and all(q["about"].startswith("attached:") for q in plan["questions"]):
-            decisions = {q["about"]: "follow" for q in plan["questions"]}
+        # ONE step, all or nothing: a refused choice leaves the sheet exactly as it was (it used to keep the formulas it cleared on the way, and a
+        # second step), and an accepted one is undone by one undo
+        before, rev, depth, future, live = self._state(), self.revision, len(self.history), list(self.future), self._live
+        try:
+            # an earlier choice written as formulas on these lines (by the old pair-only anchor) is cleared first
+            ans["datum_formulas"] = [f for f in ans.get("datum_formulas", []) if f.get("datum") not in lines]
+            if ans != (u.answer or {}):
+                self.commit_answer(uid, ans)
+                u = self.unit(uid)
+                assert u.prog is not None
+            prog0, ans0 = self._plain(uid)
             plan = build_plan(prog0, ans0, {"id": f"A_{local}", "driver": {"parameter": local, "pairs": pairs},
-                                            "anchor": {"policy": policy, "source": "person"}, "decisions": decisions}, sheet=self._plan_sheet(uid))
-        if plan["status"] != "ready":
-            raise SheetError(f"{name} cannot grow from its {mode} in {uid}: " + "; ".join(plan["conflicts"][:2] + [q["text"] for q in plan["questions"]][:1]))
-        self.commit_answer(uid, with_plan(ans0, accept(plan)))
+                                            "anchor": {"policy": policy, "source": "person"}}, sheet=self._plan_sheet(uid))
+            # this is a choice about one value: questions about attached parts are answered by what the set-out does now
+            if plan["status"] == "needs_decision" and all(q["about"].startswith("attached:") for q in plan["questions"]):
+                decisions = {q["about"]: "follow" for q in plan["questions"]}
+                plan = build_plan(prog0, ans0, {"id": f"A_{local}", "driver": {"parameter": local, "pairs": pairs},
+                                                "anchor": {"policy": policy, "source": "person"}, "decisions": decisions}, sheet=self._plan_sheet(uid))
+            if plan["status"] != "ready":
+                raise SheetError(f"{name} cannot grow from its {mode} in {uid}: " + "; ".join(plan["conflicts"][:2] + [q["text"] for q in plan["questions"]][:1]))
+            self.commit_answer(uid, with_plan(ans0, accept(plan)))
+        except SheetError:
+            self._restore(before)
+            del self.history[depth:]
+            self.future, self.revision, self._live = future, rev, live
+            self.units[uid].prog = None  # built again from the answer it has, when something asks
+            raise
+        del self.history[depth + 1:]  # the steps on the way are one step: one undo goes back to before the choice
         g = next(x for x in self.growth(name) if x["unit"] == uid)
         return {**g, "plan": plan["id"], "anchor_line": (plan.get("anchor") or {}).get("line")}
 

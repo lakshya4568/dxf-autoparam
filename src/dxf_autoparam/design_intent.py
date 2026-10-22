@@ -30,7 +30,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from .assembly import AXIS_SOURCES, assembly_lines, centre_candidates, is_axis, level_of, line_values_mm, mirror_stats, mirrored, protected_lines, rates
+from .assembly import AXIS_SOURCES, MID, assembly_lines, centre_candidates, is_axis, level_of, line_values_mm, mirror_stats, mirrored, protected_lines, rates
 from .plan import accept, build_plan, core_parts, drives_pairs, pairs_of
 from .program import Program
 
@@ -193,6 +193,8 @@ def _person_choice(answer: dict, asm: Assembly, axis: str, prog: Program) -> dic
 
 
 def _centre_kind(prog: Program, c: str) -> str:
+    if c not in prog.analysis.datums:  # the middle of the size itself (assembly.MID): a construction, not a line of the drawing
+        return "the middle of the size itself"
     src = prog.analysis.datums[c].source
     return {"drawn-axis": "a drawn centre line", "global-axis": "the drawing's axis of symmetry",
             "loop-axis": "the centre of a closed outline"}.get(src, "a line")
@@ -465,7 +467,7 @@ def _decide(prog: Program, base: dict, sheet: dict | None, build: Build, axis: s
     person = _person_choice(base, asm, axis, prog)
     if person:  # a person's choice governs the assembly: the sizes without a plan of their own adopt it
         pol, centre = person["policy"], person.get("centre")
-        ev = [f"chosen by {person.get('source') or 'a person'} for {person.get('driver')}: {pol.replace('_', ' ')}{' about ' + centre if centre else ''}"]
+        ev = [f"chosen by {person.get('source') or 'a person'} for {person.get('driver')}: {pol.replace('_', ' ')}{' about its own middle' if centre == MID else ' about ' + centre if centre else ''}"]
         mine_asm = Assembly(asm.id, asm.members, [d for d in asm.drivers if d.name != person.get("driver")])
         if pol != "as_set_out" and mine_asm.drivers:
             got = _attempt(prog, base, sheet, build, mine_asm, suffix, pol, centre, ev, "person", tried, watch)

@@ -31,6 +31,7 @@ from typing import cast
 
 from .ai import domain
 from .assembly import (
+    MID,
     POLICIES,
     POLICY_WORDS,
     Driver,
@@ -597,12 +598,17 @@ def _effect(prog: Program, parts: dict[str, Part], drv: str, axis: str, an, fixe
     return out
 
 
+# the sides as the chooser under a value names them (the line that stays)
+SIDE_WORDS = {"start_fixed": "its start (left / bottom) staying", "centered": "centred", "end_fixed": "its end (right / top) staying"}
+
+
 def _trial(prog: Program, parts: dict[str, Part], name: str, pairs, axis: str, policy: str, centre: str | None,
-           members: set[str], fixed: set[str], named, held: set[str] | None = None) -> dict:
-    """What a policy would do, without keeping it: the stacking on the program, measured per part, then undone."""
+           members: set[str], fixed: set[str], named, held: set[str] | None = None, give: bool = True) -> dict:
+    """What a policy would do, without keeping it: the stacking on the program, measured per part, then undone. `give`: as `stack` (False for the
+    engine's own default)."""
     saved = (dict(prog.formulas), dict(prog.origin))
     try:
-        st = stack(prog, axis, [Driver(name, pairs, policy, centre)], members, still=fixed, named=named)
+        st = stack(prog, axis, [Driver(name, pairs, policy, centre)], members, still=fixed, named=named, give=give)
         eff = _effect(prog, parts, name, axis, prog.analysis, held) if st.ok else {}
         moved = sorted(d for d, k in rates(prog, name).items() if abs(k) > 1e-9 and prog.analysis.datums[d].axis == axis) if st.ok else []
     finally:
@@ -977,10 +983,11 @@ def _decide_anchor(prog, plan, request, reading, decisions, dirs, parts, name, p
             fixed_lines |= entity_lines(prog, part_entities(prog, parts, n), axis) & members
     owned = set(protected_lines(prog)) & members  # set by a person, a level, a slope: evidence of what may not move
     cands = centre_candidates(prog, members, pairs)
+    give = (request.get("anchor") or {}).get("source") != "design intent"  # a gap may give for a side somebody chose, never for the engine's default
     alts = []
     for pol in ("centered", "start_fixed", "end_fixed", "as_set_out"):
         for centre in ([c for c, _w in cands[:2]] if pol == "centered" else [None]):
-            t = _trial(prog, parts, name, pairs, axis, pol, centre, members, fixed_lines, named, fixed_parts)
+            t = _trial(prog, parts, name, pairs, axis, pol, centre, members, fixed_lines, named, fixed_parts, give)
             if pol == "centered":
                 t["evidence"] = next((w for c, w in cands if c == centre), "")
                 t["symmetric"] = (
@@ -1028,10 +1035,23 @@ def _decide_anchor(prog, plan, request, reading, decisions, dirs, parts, name, p
                                              next((a["centre"] for a in alts if a["policy"] == "centered"), None)) if pol == "centered" else None)
         alt = next((a for a in alts if a["policy"] == pol and (pol != "centered" or a["centre"] == centre)), None)
         if alt is None and pol == "centered" and centre:
-            alt = _trial(prog, parts, name, pairs, axis, pol, centre, members, fixed_lines, named, fixed_parts)
+            alt = _trial(prog, parts, name, pairs, axis, pol, centre, members, fixed_lines, named, fixed_parts, give)
             alts.append(alt)
+        if pol == "centered" and not want.get("centre") and (alt is None or not alt["available"]):
+            # no line is drawn at the middle (a thickness, a course): the size grows half each way about its own middle — asked for, never assumed
+            mid = _trial(prog, parts, name, pairs, axis, pol, MID, members, fixed_lines, named, fixed_parts, give)
+            mid["evidence"] = "the middle of the size itself (no line is drawn there)"
+            alts.append(mid)
+            if mid["available"] or alt is None or alt.get("centre") is None:
+                alt, centre = mid, MID
         if alt is None or not alt["available"]:
-            plan["conflicts"].append(f"anchor {pol}{' about ' + centre if centre else ''} is not possible here: {(alt or {}).get('why', 'no such line')}")
+            about = " about its own middle" if centre == MID else f" about {centre}" if centre else ""
+            # what a person can do instead: the sides the stacking allows (tried above, nothing kept) — checked on the whole sheet once chosen
+            other = [w for p, w in SIDE_WORDS.items() if p != pol and any(a["policy"] == p and a["available"] for a in alts)]
+            instead = (f" — {' or '.join(other)} keeps what may not move (choose it to have it checked on the sheet)" if other
+                       else " — no side keeps what may not move: leave it to the set-out as it stands, or release what holds it (a held part or level, "
+                            "a named size on the way)")
+            plan["conflicts"].append(f"anchor {pol}{about} is not possible here: {(alt or {}).get('why', 'no such line')}{instead}")
             out.update(policy=None, status="unresolved")
             return out
         out.update(policy=pol, centre=centre, status="accepted", source=src, line=alt.get("anchor_line"))
@@ -1106,7 +1126,7 @@ def _dependency(prog: Program, plan: dict, name: str, pairs, parts, sheet) -> li
     out.append(f"  sets {len(pairs)} occurrence(s): " + ", ".join(f"{a}–{b}" for a, b in pairs[:8]))
     anc = plan.get("anchor") or {}
     if anc.get("policy"):
-        out.append(f"  anchor: {anc['policy']}{' about ' + anc['centre'] if anc.get('centre') else ''} ({anc.get('source')}) — "
+        out.append(f"  anchor: {anc['policy']}{' about its own middle' if anc.get('centre') == MID else ' about ' + anc['centre'] if anc.get('centre') else ''} ({anc.get('source')}) — "
                    + POLICY_WORDS[anc["policy"]])
     for d in plan.get("directives", []):
         if d["status"] == "accepted" and d["kind"] in ("part", "parameter", "level", "line"):
@@ -1199,8 +1219,9 @@ def prepare_plans(prog: Program, answer: dict, parts: dict[str, Part]) -> dict:
             continue
         axis = an.datums[pairs[0][0]].axis
         # one anchor per assembly: the plans of separate assemblies on one axis (two views of a unit, a detail beside a section) each have their own
-        out["groups"].setdefault((axis, anc.get("assembly") or ""), {"items": []})["items"].append(
-            (row, Driver(name, pairs, anc["policy"], anc.get("centre")), dirs))
+        grp = out["groups"].setdefault((axis, anc.get("assembly") or ""), {"items": [], "chosen": False})
+        grp["items"].append((row, Driver(name, pairs, anc["policy"], anc.get("centre")), dirs))
+        grp["chosen"] = grp["chosen"] or not derived  # somebody chose this side (a gap may give for it): not only the engine's default
     for (axis, _assembly), g in out["groups"].items():
         drivers = [drv for _r, drv, _d in g["items"]]
         followers = {d["target"] for _r, _drv, ds in g["items"] for d in ds if d["kind"] == "part" and d["mode"] in MOVING_MODES}
@@ -1232,7 +1253,7 @@ def compile_plans(prog: Program, answer: dict, rep, pre: dict) -> dict:
             for row, _d, _x in g["items"]:
                 row["problems"].append(f"plans on the {axis} axis disagree on the anchor ({', '.join(f'{d.name}: {d.policy}' for d in drivers)})")
             continue
-        st = stack(prog, axis, drivers, set(g["members"]), still=g["still"], named=named)
+        st = stack(prog, axis, drivers, set(g["members"]), still=g["still"], named=named, give=g.get("chosen", True))
         pinned = _pin(prog, g.get("pinned", set()), drivers, answer) if st.ok else {}
         for row, _d, _x in g["items"]:
             row["stack"] = {"axis": axis, "policy": st.policy, "anchor_line": st.root, "rewritten": {k: v[1] for k, v in st.written.items()},
@@ -1479,7 +1500,7 @@ def verify_plan(prog: Program, plan: dict, parts: dict[str, Part], compiled: dic
                         check("thickness", t, abs(e1 - e0) <= tol, f"{e0:.1f} mm", f"{e1:.1f} mm", f"{t}'s faces are set out from different things",
                               "set one face out from the other", at=w)
             elif d_["mode"] == "preserve" and d_.get("relation") == "symmetry" and (d_["kind"] == "line" or t in parts) \
-                    and (d_["kind"] == "line" or (plan.get("anchor") or {}).get("centre")):
+                    and (d_["kind"] == "line" or (plan.get("anchor") or {}).get("centre") not in (None, MID)):
                 # about the line itself, or (for parts) about the centre line the anchor keeps
                 c = t if d_["kind"] == "line" else plan["anchor"]["centre"]
                 c0, c1 = v0[c], dv.get(c, v0[c])

@@ -156,7 +156,33 @@ def build(an: Analysis, dec: Decisions | None = None) -> Model:
                 return (0, 0.0)
             return (1, min(datums[e].value for e in ends) if axis == "y" else 0.0)
 
-        order = sorted(ax_gaps, key=lambda g: (group(g), pin_key(g), 0 if g.dims else 1, _tier(g), between(g), KIND_ORDER.get(g.kind, 9), -conf(g), g.value))
+        # A gap with a level the structure is set out from strictly inside it is a SUM across that level (an overall height that runs from
+        # the bottom of a box past the road level to its top): with the level an input, each side is set out from the level and the sum is
+        # worked out. Taken as an inside size it would hang one side of the structure from the other through the level — the bottom slab
+        # following the top slab while the road it stands under holds — and push the real size between the level and that side (a wearing
+        # course) out as the result. So it comes after every gap that does not span a level, whatever its strength.
+        roots_in = sorted(datums[d].value for d in pinned_ids - dec.reference_only if d in datums and datums[d].axis == axis)
+        named = set(dec.rename) | set(dec.rename.values())
+
+        def deferred(g, roots_in=roots_in, named=named) -> int:
+            """0: an ordinary size. 2: a sum across a level the structure is set out from (see above). 1: with such a level on this axis, an
+            empty space between two faces that nobody named and no dimension states — the engine's own guess at a size. What lies between a
+            structure and its levels is worked out from them ("sized from inside, then hung on the level"): a guessed open gap taken first
+            would hang a line from the far side of the structure (a kink of the road profile set out from the top of the slab, 2950 mm away),
+            where its own neighbours — 300 mm away, on the level — say where it belongs."""
+            if not roots_in:
+                return 0
+            lo, hi = sorted((datums[g.a].value, datums[g.b].value))
+            t = an.drawing.tol
+            if bisect_left(roots_in, hi - t) > bisect_right(roots_in, lo + t):
+                return 2
+            c = clusters.get(g.cluster) if g.cluster else None
+            if g.kind == GapKind.OPEN and not g.dims and not (c and ({c.id, c.name} & named)):
+                return 1
+            return 0
+
+        order = sorted(ax_gaps, key=lambda g: (deferred(g), group(g), pin_key(g), 0 if g.dims else 1, _tier(g), between(g), KIND_ORDER.get(g.kind, 9),
+                                               -conf(g), g.value))
         uf = _UF()
         # The set-out origin: a pinned datum (a stated input level), else the drawing's
         # symmetry axis, else the drawn centre line most gaps are centred on, else the

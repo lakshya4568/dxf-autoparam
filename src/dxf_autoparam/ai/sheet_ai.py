@@ -236,7 +236,7 @@ def apply_shared(sm: SheetModel, answer: dict) -> dict:
         targets = [tuple(t) for t in s.get("targets", []) if len(t) in (2, 3)]
         key = f"share:{s.get('name')}"
         units = sorted({t[0] for t in targets})
-        if len(targets) < 2:
+        if len(targets) < 2 and s.get("name") not in sm._shared_by_name():  # one more view may join a size that is shared already
             refused.append(f"{s.get('name')}: needs two or more units")
             items.append({"key": key, "why": refused[-1], "units": units, "targets": [list(t) for t in targets]})
             continue

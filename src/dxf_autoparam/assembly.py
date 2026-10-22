@@ -45,6 +45,9 @@ POLICY_WORDS = {
 KEEP_ORIGINS = ("ai", "held", "existing", "slope")  # set by a person / the AI, existing work, a slope: never rewritten here
 AXIS_SOURCES = ("drawn-axis", "loop-axis", "global-axis")
 EPS = 1e-6
+# "Centred" with no line drawn at the middle: each occurrence of the size grows half each way about its own middle — a construction the
+# person asked for, never a line of the drawing (and never the engine's default, which needs a drawn axis or the faces' own symmetry).
+MID = "@mid"
 
 
 # ── linear forms ─────────────────────────────────────────────────────────────────
@@ -131,6 +134,9 @@ class Stack:
     # the same conflicts as data: {line, kind (a key of PROTECTION_WORDS, or "kept" / "follows"), driver, has, wants} — which line stood in the way, what sets
     # it, and how it moves per mm of the driver against how the policy needs it to
     blocked: list[dict] = field(default_factory=list)
+    # driver → held line → what gave where the policy pushed into it: {"absorbed_by": [lo, hi], "mm"} (a gap nothing holds), or {"absorbed_by": None,
+    # "held_gaps": [...]} (every gap on the way is held: why the choice is refused)
+    absorbed: dict[str, dict[str, dict]] = field(default_factory=dict)
 
 
 def line_values_mm(prog: Program) -> dict[str, float]:
@@ -388,13 +394,15 @@ def predicted(prog: Program, drv: Driver, members: set[str], cur: dict[str, floa
     if drv.policy == "as_set_out":
         return {s: cur.get(s, 0.0) for s in members}
     tol = max(prog.analysis.drawing.tol * prog.analysis.drawing.units_mm, 1e-6)
-    A = v[drv.centre] if drv.centre else None
+    A = v[drv.centre] if drv.centre and drv.centre != MID else None
 
     def outer(x: float) -> float:
         if drv.policy == "start_fixed":
             return float(sum(1 for a, b in pairs if v[b] <= x + tol))
         if drv.policy == "end_fixed":
             return -float(sum(1 for a, b in pairs if v[a] >= x - tol))
+        if A is None:  # about each occurrence's own middle: half of each change goes either way
+            return 0.5 * sum(1 for a, b in pairs if v[b] <= x + tol) - 0.5 * sum(1 for a, b in pairs if v[a] >= x - tol)
         if x >= A - tol:
             return sum(1.0 for a, b in pairs if v[a] >= A - tol and v[b] <= x + tol) \
                 + sum(0.5 for a, b in pairs if v[a] < A - tol and v[b] > A + tol and v[b] <= x + tol)
@@ -424,6 +432,70 @@ def predicted(prog: Program, drv: Driver, members: set[str], cur: dict[str, floa
     return out
 
 
+def _set_out_from(prog: Program) -> dict[str, set[str]]:
+    """For every line, every line it is set out from (through its formula, transitively)."""
+    memo: dict[str, set[str]] = {}
+    for d in prog.order():
+        refs = {n for n in names_in(prog.formulas[d]) if n in prog.formulas}
+        memo[d] = set(refs).union(*(memo.get(r, set()) for r in refs)) if refs else set()
+    return memo
+
+
+def absorb(prog: Program, drv: Driver, pred: dict[str, float], cur: dict[str, float], members: set[str], protect: dict[str, str],
+           named: dict[str, list[tuple[str, str]]] | None = None) -> tuple[dict[str, float], dict[str, dict]]:
+    """Where a side of the size pushes into a line nothing may move (a site level, a held part, a person's formula), what gives.
+
+    Pushing every line beyond the size by the change is the policy's own statement; at a held line it cannot be done. Between the size and that
+    line the drawing may have a gap NOTHING holds — neither line is set out from the other, no named size spans it: an earth cushion between the
+    fill on a slab and the formation level, a clearance to a level. That gap is the one that gives: the lines from it to the held line and beyond
+    stay with the held line (`pred` reduced by the push there). Taken nearest the held line: what is set out from the structure moves with it,
+    what stands on the level stays on it. Where every gap on the way is held, nothing gives and the choice is refused — said with the gaps
+    that hold (`blocked[line]`: {"held_gaps": [...], "absorbed_by": None}); where one gives, it is said too ({"absorbed_by": [lo, hi]}).
+    Returns (pred with the absorption, what happened at each held line)."""
+    an = prog.analysis
+    v = line_values_mm(prog)
+    tol = max(an.drawing.tol * an.drawing.units_mm * 2, 0.5)
+    pairs = [(a, b) if v[a] <= v[b] else (b, a) for a, b in drv.pairs]
+    spans = {frozenset(p): drv.name for p in pairs} | {frozenset(p): n for n, ps in (named or {}).items() for p in ps}
+    dep = _set_out_from(prog)
+    lines = sorted((d for d in members if d in v), key=lambda d: v[d])
+    out = dict(pred)
+    said: dict[str, dict] = {}
+    for up in (True, False):
+        for p in (lines if up else lines[::-1]):
+            if p not in protect:
+                continue
+            e = out.get(p, 0.0) - cur.get(p, 0.0)
+            if (e > 1e-9) != up or abs(e) <= 1e-9:
+                continue
+            ends = [v[b] for a, b in pairs if v[b] <= v[p] + tol] if up else [v[a] for a, b in pairs if v[a] >= v[p] - tol]
+            if not ends:
+                continue
+            src = max(ends) if up else min(ends)
+            on_way = [d for d in lines if (src - tol <= v[d] <= v[p] + tol if up else v[p] - tol <= v[d] <= src + tol)]
+            seq = sorted(on_way, key=lambda d: v[d], reverse=up)  # from the held line toward the size
+            held, gap = [], None
+            for s, t in pairwise(seq):
+                if abs(v[s] - v[t]) <= tol:
+                    continue
+                size = spans.get(frozenset((s, t)))
+                why = (f"{size} holds it" if size else "one is set out from the other" if (s in dep.get(t, set()) or t in dep.get(s, set())) else "")
+                if why:
+                    held.append({"lines": sorted((s, t), key=lambda d: v[d]), "mm": round(abs(v[s] - v[t]), 1), "why": why})
+                    continue
+                gap = (t, s)  # t nearer the size, s nearer the held line
+                break
+            if gap is None:
+                said[p] = {"absorbed_by": None, "held_gaps": held[:6]}
+                continue
+            lim = v[gap[1]]
+            for d in lines:
+                if (v[d] >= lim - tol) if up else (v[d] <= lim + tol):
+                    out[d] = out.get(d, 0.0) - e
+            said[p] = {"absorbed_by": sorted(gap, key=lambda d: v[d]), "mm": round(abs(v[gap[0]] - v[gap[1]]), 1)}
+    return out, said
+
+
 def _chain_edges(prog: Program, axis: str) -> dict[str, list[tuple[str, dict[str, float], float, str]]]:
     """For each line, the lines it can be set out from by a size the drawing's own set-out already states: its formula
     `s = p + E` (E without other lines), and the same relation read the other way round."""
@@ -448,12 +520,14 @@ def _chain_edges(prog: Program, axis: str) -> dict[str, list[tuple[str, dict[str
 
 
 def stack(prog: Program, axis: str, drivers: list[Driver], members: set[str], still: set[str] | None = None,
-          named: dict[str, list[tuple[str, str]]] | None = None) -> Stack:
+          named: dict[str, list[tuple[str, str]]] | None = None, give: bool = True) -> Stack:
     """Rewrite the set-out of `members` (lines on `axis`) so every driver behaves as its policy says (one policy for
     the assembly: `drivers` share it). `still`: lines that must not move (a part a person keeps fixed is drawn on them):
-    a policy that would move one is refused. `named`: named sizes and their pairs (kept as the sizes they are). On
-    success the program is changed (origin "plan" on every line rewritten) and the result says which lines were
-    rewritten and what each is expected to do; on refusal nothing changes."""
+    a policy that would move one is refused. `named`: named sizes and their pairs (kept as the sizes they are). `give`:
+    a push into a held line may be taken by a gap nothing holds (`absorb`) — for a side somebody CHOSE; the engine's own
+    default (design intent) passes False: it never changes a gap nobody asked to change (a cell's clear height giving
+    for a slab that could grow the other way). On success the program is changed (origin "plan" on every line rewritten)
+    and the result says which lines were rewritten and what each is expected to do; on refusal nothing changes."""
     an = prog.analysis
     u = an.drawing.units_mm
     policy = drivers[0].policy if drivers else "as_set_out"
@@ -486,10 +560,26 @@ def stack(prog: Program, axis: str, drivers: list[Driver], members: set[str], st
     rer = {d for d in members if d not in protect}
     cur = {drv.name: rates(prog, drv.name) for drv in drivers}
     pred = {drv.name: predicted(prog, drv, members, cur[drv.name]) for drv in drivers}
+    # a push into a line nothing may move is taken by a gap nothing holds on the way, where there is one (absorb). Only a line that STANDS ON ITS
+    # OWN is in the way (a site level, a held part, existing work): one that may not be rewritten but is set out from the assembly (a person's
+    # formula on it, a slope's foot) moves with what it hangs on — the stacking below follows it, nothing has to give for it
+    dep0 = _set_out_from(prog)
+    hold = {d: why for d, why in {**protect, **{d: "a part kept fixed is drawn on it" for d in (still or set()) & members}}.items()
+            if not (dep0.get(d, set()) & members)}
+    st.absorbed = {}
+    for drv in drivers:
+        if give:
+            pred[drv.name], st.absorbed[drv.name] = absorb(prog, drv, pred[drv.name], cur[drv.name], members, hold, named)
     st.expected = pred
 
     # the anchor: the line that stays
-    if policy == "centered":
+    virtual = policy == "centered" and all(d.centre in (None, MID) for d in drivers)
+    if virtual:  # about each occurrence's own middle: what stays is a line the change does not move — between occurrences, else outside it
+        dep = _set_out_from(prog)
+        resting = [d for d in members if not (dep.get(d, set()) & rer - {d}) and all(abs(pred[n].get(d, 0.0)) <= 1e-9 for n in pred)]
+        mids = [(v[a] + v[b]) / 2 for drv in drivers for a, b in drv.pairs]
+        root = min(resting, key=lambda d: (min(abs(v[d] - m) for m in mids), d)) if resting else None
+    elif policy == "centered":
         root = drivers[0].centre
         if not root or root not in prog.formulas:
             st.why = "no centre line to stay about"
@@ -501,7 +591,13 @@ def stack(prog: Program, axis: str, drivers: list[Driver], members: set[str], st
             pred[drv.name][root] = 0.0
     else:
         pool = sorted(members, key=lambda d: (v[d], d))
-        root = pool[0] if policy == "start_fixed" else pool[-1]
+        # a held line the policy leaves where it is (a site level under the size, a part kept fixed) is what the assembly is set out from: anchored
+        # there, the lines that hang from it keep their own sizes. Anchored at the assembly's extreme line instead, that line was re-hung from the
+        # held one by its drawn distance — a base course under a road-level box then stayed put while the slab and the wearing course above it moved
+        dep = _set_out_from(prog)  # a held line set out from a line this policy rewrites (a person's formula on the assembly) moves with it: not an anchor
+        resting = [d for d in pool if d in hold and not (dep.get(d, set()) & rer)
+                   and all(abs(pred[n].get(d, 0.0)) <= 1e-9 and abs(cur[n].get(d, 0.0)) <= 1e-9 for n in pred)]
+        root = (resting[0] if policy == "start_fixed" else resting[-1]) if resting else (pool[0] if policy == "start_fixed" else pool[-1])
     st.root = root
 
     # what depends on a line that may be rewritten (it cannot be a parent: that would close a loop)
@@ -533,9 +629,12 @@ def stack(prog: Program, axis: str, drivers: list[Driver], members: set[str], st
         for drv in drivers:
             want, got = pred[drv.name].get(d, 0.0), cur[drv.name].get(d, 0.0)
             if abs(want - got) > 1e-6:
+                held = (st.absorbed.get(drv.name, {}).get(d) or {}).get("held_gaps") or []
+                way = ("; nothing between it and the size may give — " + ", ".join(f"{'–'.join(g['lines'])} ({g['mm']:g} mm, {g['why']})" for g in held[:4])
+                       if held else "")
                 st.conflicts.append(f"{d} is set by {protect.get(d, 'something fixed')} and moves {got:+g} mm per mm of {drv.name}; "
-                                    f"{POLICY_WORDS[policy]} needs {want:+g}")
-                st.blocked.append({"line": d, "kind": kinds.get(d, "other"), "driver": drv.name, "has": got, "wants": want})
+                                    f"{POLICY_WORDS[policy]} needs {want:+g}{way}")
+                st.blocked.append({"line": d, "kind": kinds.get(d, "other"), "driver": drv.name, "has": got, "wants": want, "held_gaps": held[:6]})
     for d in sorted((still or set()) & members):
         for drv in drivers:
             k = pred[drv.name].get(d, 0.0)
@@ -568,7 +667,7 @@ def stack(prog: Program, axis: str, drivers: list[Driver], members: set[str], st
             lo, hi = (a, b) if v[a] <= v[b] else (b, a)
             extra.setdefault(lo, []).append((hi, {drv.name: 1.0}, v[hi] - v[lo] - prog.params[drv.name].value, "driver"))
             extra.setdefault(hi, []).append((lo, {drv.name: -1.0}, v[lo] - v[hi] + prog.params[drv.name].value, "driver"))
-            if policy == "centered" and v[lo] + tol_mm < v[root] < v[hi] - tol_mm:
+            if policy == "centered" and root is not None and v[lo] + tol_mm < v[root] < v[hi] - tol_mm:
                 half = prog.params[drv.name].value / 2
                 extra.setdefault(root, []).append((lo, {drv.name: -0.5}, v[lo] - v[root] + half, "driver"))
                 extra.setdefault(root, []).append((hi, {drv.name: 0.5}, v[hi] - v[root] - half, "driver"))
@@ -612,6 +711,9 @@ def stack(prog: Program, axis: str, drivers: list[Driver], members: set[str], st
             same_ = all(abs(placed[p_][n] - pred[n].get(s_, 0.0)) <= 1e-9 for n in pred)
             return (0 if same_ else 1, 0 if p_ in members else 1, abs(v[s_] - v[p_]), s_, p_)
 
+        if not placed:  # nothing on this axis stays put to set the assembly out from
+            st.why = "nothing on this axis stays where it is to set the size out from"
+            return st
         s, p = min(((s, p) for s in left for p in placed), key=fit)
         coefs = {n: pred[n].get(s, 0.0) - placed[p][n] for n in pred}
         coefs = {n: c for n, c in coefs.items() if abs(c) > 1e-12}
