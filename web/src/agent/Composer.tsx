@@ -1,14 +1,15 @@
-// The persistent message composer. Enter sends, Shift+Enter is a new line. While the agent works the send button becomes Stop. Sending
-// calls a paid model, so the first send for a model (per page session) asks, naming the model; the model, the scope and the cost are
-// always visible under the box.
+// The persistent message composer. Enter sends, Shift+Enter is a new line. While the agent works the box stays open: Enter says it to the
+// agent, which reads it on its next turn (Stop is its own button). Sending calls a paid model, so the first send for a model (per page
+// session) asks, naming the model (a model listed as free does not ask); the model, the library, how often it pauses, the scope and the cost are always visible under the box.
 import { useEffect, useRef } from "react";
 import { useStore } from "../state/store";
-import { agent, cancelCost, canSend, confirmCost, costAccepted, currentRun, isActive, requestResume, requestSend, setDraft, setModel, setScopeKind, stop } from "../state/agent";
+import { agent, canNote, cancelCost, canSend, confirmCost, costAccepted, currentRun, DEFAULT_PAUSE, isActive, libraryOn, modelIsFree, note, requestResume, requestSend, setDraft, setModel, setPauseEvery, setScopeKind, setUseLibrary, stop } from "../state/agent";
 import { store as workspace } from "../state/workspace";
 import type { Life } from "./model";
 
 export function Composer({ life }: { life: Life }) {
-  const s = useStore(agent, (x) => ({ draft: x.draft, models: x.models, model: x.model, busy: x.busy, confirm: x.confirm, scopeKind: x.scopeKind, run: currentRun(x), ok: canSend(x), paid: costAccepted(x) }));
+  const s = useStore(agent, (x) => ({ draft: x.draft, models: x.models, model: x.model, busy: x.busy, confirm: x.confirm, scopeKind: x.scopeKind, run: currentRun(x), ok: canSend(x), paid: costAccepted(x), free: modelIsFree(x),
+    noteOk: canNote(x), library: x.library, libOn: libraryOn(x), pause: x.pauseEvery }));
   const ws = useStore(workspace, (x) => ({ sel: x.selection.size, view: x.focusView }));
   const box = useRef<HTMLTextAreaElement>(null);
   const active = isActive(s.run);
@@ -25,7 +26,7 @@ export function Composer({ life }: { life: Life }) {
     el.style.height = `${Math.min(el.scrollHeight, 168)}px`;
   }, [s.draft]);
 
-  const placeholder = active ? "The agent is working — Stop it to send something else"
+  const placeholder = active ? "Say something to the agent while it works — it reads it on its next turn"
     : awaiting ? "Answer above, or say in your own words what to do…"
     : resumable ? "Add a note and continue, or give a new instruction…"
     : "Tell the agent what to do with this drawing…";
@@ -33,7 +34,11 @@ export function Composer({ life }: { life: Life }) {
   const onKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
-      if (active || s.busy) return;
+      if (s.busy) return;
+      if (active) {
+        void note();
+        return;
+      }
       if (awaiting) {
         if (s.draft.trim()) requestResume();
       } else requestSend();
@@ -53,7 +58,7 @@ export function Composer({ life }: { life: Life }) {
           </div>
         </div>
       )}
-      <div className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500/40">
+      <div className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500/40 dark:focus-within:border-amber-400 dark:focus-within:ring-amber-400/40">
         <textarea ref={box} rows={1} value={s.draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={onKey} placeholder={placeholder} aria-label="Message to the agent" data-testid="composer-input"
           className="block w-full resize-none bg-transparent px-3 pt-2 pb-1 text-[13px] outline-none placeholder:text-slate-400" />
         <div className="flex items-center gap-2 px-2 pb-1.5">
@@ -65,22 +70,36 @@ export function Composer({ life }: { life: Life }) {
           </select>
           <span className="flex-1" />
           {active ? (
-            <button className="rounded-md bg-red-600 px-2.5 py-1 text-[12px] font-medium text-white disabled:opacity-50" onClick={() => void stop()} disabled={s.busy === "stopping" || life.key === "stopping"} data-testid="stop" title="Stop the run (Esc)">
-              {s.busy === "stopping" || life.key === "stopping" ? "Stopping…" : "Stop"}
-            </button>
+            <>
+              {s.noteOk && <button className="rounded-md bg-blue-600 px-2.5 py-1 text-[12px] font-medium text-white dark:bg-amber-500 dark:text-slate-950" onClick={() => void note()} data-testid="note" title="Say it to the agent now (Enter): it reads it on its next turn">Send note</button>}
+              <button className="rounded-md bg-red-600 px-2.5 py-1 text-[12px] font-medium text-white disabled:opacity-50" onClick={() => void stop()} disabled={s.busy === "stopping" || life.key === "stopping"} data-testid="stop" title="Stop the run (Esc)">
+                {s.busy === "stopping" || life.key === "stopping" ? "Stopping…" : "Stop"}
+              </button>
+            </>
           ) : (
-            <button className="rounded-md bg-blue-600 px-2.5 py-1 text-[12px] font-medium text-white disabled:opacity-40" onClick={() => (awaiting ? requestResume() : requestSend())} disabled={!s.ok && !(awaiting && s.draft.trim()) || s.busy !== null} data-testid="send" title="Send (Enter)">
+            <button className="rounded-md bg-blue-600 px-2.5 py-1 text-[12px] font-medium text-white dark:bg-amber-500 dark:text-slate-950 disabled:opacity-40" onClick={() => (awaiting ? requestResume() : requestSend())} disabled={!s.ok && !(awaiting && s.draft.trim()) || s.busy !== null} data-testid="send" title="Send (Enter)">
               {resumable && s.draft.trim() ? "Continue" : "Send"}
             </button>
           )}
         </div>
       </div>
-      <div className="mt-1 flex items-center gap-2 px-1 text-[11px] text-slate-400">
+      <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 px-1 text-[11px] text-slate-400">
         <select className="min-w-0 truncate rounded bg-transparent hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-60" value={s.model} onChange={(e) => setModel(e.target.value)} disabled={active} data-testid="model" title="The model that runs the agent">
           {s.models.length === 0 && <option value="">no model</option>}
           {s.models.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
         </select>
-        <span className="whitespace-nowrap" title="Enter sends, Shift+Enter starts a new line">{s.paid ? "cost accepted" : "paid · billed per turn"}</span>
+        {s.library && s.library.domains.length > 0 && (
+          <label className="flex items-center gap-1 whitespace-nowrap" title={s.library.suggested ? `Engineering library: ${s.library.domains[0].title}. Suggested because this drawing prints: ${s.library.suggested.because.slice(0, 6).join(", ")}` : `Engineering library: ${s.library.domains[0].title}`} data-testid="library-option">
+            <input type="checkbox" checked={s.libOn} onChange={(e) => setUseLibrary(e.target.checked)} disabled={active} data-testid="library" />
+            Library{s.library.suggested && s.libOn ? " · suggested" : ""}
+          </label>
+        )}
+        <select className="min-w-0 truncate rounded bg-transparent hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-60" value={s.pause} onChange={(e) => setPauseEvery(Number(e.target.value))} disabled={active} data-testid="pause" title="How often the agent pauses so you can see what it cost and say go on">
+          <option value={DEFAULT_PAUSE}>Pause: {DEFAULT_PAUSE} turns</option>
+          <option value={60}>Pause: 60 turns</option>
+          <option value={0}>Pause: never</option>
+        </select>
+        <span className="whitespace-nowrap" title="Enter sends, Shift+Enter starts a new line">{s.free ? "free model" : s.paid ? "cost accepted" : "paid · billed per turn"}</span>
       </div>
     </div>
   );

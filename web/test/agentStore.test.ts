@@ -1,7 +1,7 @@
 // The agent store against a fake engine: what is sent, what is refused, and when polling stops. No model is ever involved.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RunEvent, RunProgress } from "../src/api/types";
-import { agent, answer, canSend, confirmCost, currentRun, follow, requestAnswer, requestResume, requestSend, resume, send, setDraft, setMode, stop, stopFollowing } from "../src/state/agent";
+import { agent, answer, canNote, canSend, confirmCost, currentRun, follow, libraryOn, note, refreshLibrary, requestAnswer, requestResume, requestSend, resume, runOptions, send, setDraft, setPauseEvery, setUseLibrary, stop, stopFollowing } from "../src/state/agent";
 
 type Call = { method: string; path: string; body: unknown };
 
@@ -13,6 +13,7 @@ class FakeEngine {
   runs = 0;
   fail: string | null = null;
   startDelay = 0;
+  library: unknown = { domains: [{ name: "bridge", title: "Bridge drawings", skills: 13 }], suggested: { domain: "bridge", skill: "family:rcc_box", score: 31.7, because: ["RCC BOX", "WING WALL"] } };
 
   handle = async (url: string, init?: RequestInit): Promise<Response> => {
     const u = new URL(url, "http://x");
@@ -33,6 +34,8 @@ class FakeEngine {
       case "/api/sheet/ai/stop":
         this.status = "stopped";
         return json({ ok: true, status: "stopped" });
+      case "/api/sheet/ai/library":
+        return json(this.library);
       case "/api/sheet/ai/progress": {
         const since = Number(u.searchParams.get("since") ?? 0);
         const p: RunProgress = { run: u.searchParams.get("run"), status: this.status, events: this.events.slice(since), next: this.events.length, can: this.can, phase: null };
@@ -57,7 +60,7 @@ class FakeEngine {
 
 let eng: FakeEngine;
 const reset = () =>
-  agent.set({ runs: {}, order: [], currentId: null, draft: "", busy: null, confirm: null, error: null, paidFor: null, model: "m1", models: [{ id: "m1", label: "Model 1" }], loaded: true, folds: {} });
+  agent.set({ runs: {}, order: [], currentId: null, draft: "", busy: null, confirm: null, error: null, paidFor: null, model: "m1", models: [{ id: "m1", label: "Model 1" }], loaded: true, folds: {}, library: null, useLibrary: null, pauseEvery: 30 });
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -94,6 +97,19 @@ describe("sending", () => {
     expect(agent.get().confirm).toEqual({ action: "send" });
     await settle();
     expect(eng.count("/api/sheet/ai/run")).toBe(0);
+  });
+
+  it("a model listed as free is not asked about, and a paid one in the same list still is", async () => {
+    agent.set({ model: "f1", models: [{ id: "f1", label: "Free 1", free: true }, { id: "m1", label: "Model 1" }] });
+    setDraft("Name the values");
+    requestSend();
+    expect(agent.get().confirm).toBeNull();
+    await settle(50);
+    expect(eng.count("/api/sheet/ai/run")).toBe(1);
+    expect(agent.get().paidFor).toBeNull();
+    agent.set({ model: "m1", currentId: null, runs: {}, order: [], draft: "again" });
+    requestSend();
+    expect(agent.get().confirm).toEqual({ action: "send" });
   });
 
   it("accepting the cost starts one run with the person's words, the scope and the model; later sends do not ask again", async () => {
@@ -255,20 +271,105 @@ describe("stopping and answering", () => {
   });
 });
 
-describe("the detail mode", () => {
-  it("is compact or verbose and is remembered where the browser allows it", () => {
-    const store: Record<string, string> = {};
-    vi.stubGlobal("localStorage", { getItem: (k: string) => store[k] ?? null, setItem: (k: string, v: string) => (store[k] = v) });
-    setMode("verbose");
-    expect(agent.get().mode).toBe("verbose");
-    expect(Object.values(store)).toEqual(["verbose"]);
-    setMode("compact");
-    expect(agent.get().mode).toBe("compact");
+describe("what goes with a run", () => {
+  const offered = { domains: [{ name: "bridge", title: "Bridge drawings", skills: 13 }], suggested: { domain: "bridge", skill: "family:rcc_box", score: 31.7, because: ["RCC BOX", "WING WALL"] } };
+
+  it("the library the engine suggests from the sheet's own words is on until the person says otherwise", async () => {
+    await refreshLibrary();
+    expect(agent.get().library).toMatchObject({ suggested: { domain: "bridge" } });
+    expect(libraryOn()).toBe(true);
+    expect(runOptions()).toEqual({ model: "m1", domain: "bridge" });
+    setUseLibrary(false);
+    expect(libraryOn()).toBe(false);
+    expect(runOptions()).toEqual({ model: "m1" });
+    setUseLibrary(true);
+    expect(runOptions()).toMatchObject({ domain: "bridge" });
   });
 
-  it("still works when storage is blocked", () => {
-    vi.stubGlobal("localStorage", { getItem: () => { throw new Error("blocked"); }, setItem: () => { throw new Error("blocked"); } });
-    expect(() => setMode("verbose")).not.toThrow();
-    expect(agent.get().mode).toBe("verbose");
+  it("no library offered, or none suggested, means none unless the person turns it on", async () => {
+    agent.set({ library: null });
+    expect(libraryOn()).toBe(false);
+    expect(runOptions()).toEqual({ model: "m1" });
+    agent.set({ library: { ...offered, suggested: null } });
+    expect(libraryOn()).toBe(false);
+    setUseLibrary(true);
+    expect(runOptions()).toEqual({ model: "m1", domain: "bridge" });
+    eng.library = { domains: [], suggested: null };
+    await refreshLibrary();
+    expect(runOptions()).toEqual({ model: "m1" });
+  });
+
+  it("an engine that cannot say what libraries it has is no library, not an error", async () => {
+    eng.fail = "/ai/library";
+    await refreshLibrary();
+    expect(agent.get()).toMatchObject({ library: null, error: null });
+  });
+
+  it("the pause length goes with the run only when it is not the engine's own", () => {
+    expect(runOptions()).toEqual({ model: "m1" });
+    setPauseEvery(0);
+    expect(runOptions()).toMatchObject({ budget: { soft_turns: 0 } });
+    setPauseEvery(60);
+    expect(runOptions()).toMatchObject({ budget: { soft_turns: 60 } });
+    setPauseEvery(30);
+    expect(runOptions()).toEqual({ model: "m1" });
+  });
+
+  it("a run starts with the library and the pause the person chose", async () => {
+    await refreshLibrary();
+    setPauseEvery(0);
+    agent.set({ paidFor: "m1" });
+    setDraft("Which views state the span?");
+    await send();
+    expect(eng.calls.find((c) => c.path === "/api/sheet/ai/run")?.body).toMatchObject({ options: { model: "m1", domain: "bridge", budget: { soft_turns: 0 } } });
+  });
+});
+
+describe("saying something while the agent works", () => {
+  it("a note goes to the working run, is cleared from the box once the engine has it, and starts no run", async () => {
+    agent.set({ paidFor: "m1" });
+    setDraft("one");
+    await send();
+    eng.status = "running";
+    await settle(700);
+    expect(canNote()).toBe(false); // nothing written yet
+    setDraft("leave the pitching detail alone");
+    expect(canNote()).toBe(true);
+    await note();
+    expect(eng.calls.find((c) => c.path === "/api/sheet/ai/note")?.body).toEqual({ run: "R1", note: "leave the pitching detail alone" });
+    expect(agent.get().draft).toBe("");
+    expect(eng.count("/api/sheet/ai/run")).toBe(1);
+  });
+
+  it("only a run that is working takes one: not a paused, finished or queued run, and not an empty note", async () => {
+    agent.set({ paidFor: "m1" });
+    setDraft("one");
+    await send();
+    await settle(50);
+    expect(currentRun()?.progress?.status).toBe("queued");
+    setDraft("hello");
+    expect(canNote()).toBe(false);
+    eng.status = "running";
+    await settle(700);
+    setDraft("   ");
+    expect(canNote()).toBe(false);
+    eng.status = "paused";
+    await settle(1500);
+    setDraft("hello");
+    expect(canNote()).toBe(false);
+    await note();
+    expect(eng.count("/api/sheet/ai/note")).toBe(0);
+  });
+
+  it("a note the engine refuses is shown and kept in the box", async () => {
+    agent.set({ paidFor: "m1" });
+    setDraft("one");
+    await send();
+    eng.status = "running";
+    await settle(700);
+    setDraft("late");
+    eng.fail = "/ai/note";
+    await note();
+    expect(agent.get()).toMatchObject({ error: "refused by the engine", draft: "late" });
   });
 });

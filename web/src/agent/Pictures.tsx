@@ -48,7 +48,7 @@ function Card({ p, stale }: { p: PictureInfo; stale: boolean }) {
   return (
     <li>
       <button
-        className="block w-full overflow-hidden rounded border border-slate-200 dark:border-slate-700 text-left hover:border-sky-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-500"
+        className="block w-full overflow-hidden rounded border border-slate-200 dark:border-slate-700 text-left hover:border-sky-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-500 dark:hover:border-amber-400 dark:focus-visible:outline-amber-400"
         onClick={() => showPicture(p.id)} data-testid="gallery-item" data-id={p.id} data-kind={p.kind} aria-label={`${p.id}, ${pictureTitle(p)}`}
       >
         <div className="flex h-24 items-center justify-center bg-white">

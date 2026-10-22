@@ -37,11 +37,14 @@ try {
   b = await launch({ port: 9340, out });
   await b.goto(`${base}/`);
   await b.until("window.__ws && window.__ws.state().prims.length && window.__ws.state().fitted && window.__agent", 30000);
-  const cam = () => b.js("JSON.stringify(window.__ws.state().cam)");
+  // what the person sees: two corners of the drawing in the window, and the zoom. A panel opening beside the canvas changes the camera state (the
+  // world point at the canvas centre) and keeps the drawing where it is on the screen — that is not the camera moving
+  const view = () => b.js("(() => { const s = window.__ws.state(); const e = s.summary.extent; return [window.__ws.windowPoint(e[0], e[1]), window.__ws.windowPoint(e[2], e[3]), s.cam.s, s.cam.rot]; })()");
+  const sameView = (a, c) => a.slice(0, 2).every((p, i) => Math.abs(p[0] - c[i][0]) < 0.5 && Math.abs(p[1] - c[i][1]) < 0.5) && Math.abs(a[2] - c[2]) <= 1e-12 * a[2] && a[3] === c[3];
   const text = (sel) => b.js(`(document.querySelector(${JSON.stringify(sel)}) || {}).textContent || ''`);
   const count = (sel) => b.js(`document.querySelectorAll(${JSON.stringify(sel)}).length`);
   const life = () => b.js("(document.querySelector('[data-testid=life]') || {dataset: {}}).dataset.life || ''");
-  const cam0 = await cam();
+  const view0 = await view();
 
   // 1 · the dock and its empty state
   await b.click("[data-testid=agent-toggle]");
@@ -51,7 +54,9 @@ try {
   check("the drawing keeps room beside the dock", (await b.js("window.__ws.state().W")) >= 560, `canvas ${await b.js("window.__ws.state().W")} px wide`);
   await b.shot("01_empty");
 
-  // 2 · the paid model is never called before the person accepts its cost
+  // 2 · the paid model is never called before the person accepts its cost. The model list comes first (Send needs a model; the server may wait a
+  // few seconds for a gateway's catalogue — a slow or busy one is not this page's failure)
+  check("the model picker names a model", await b.until("!!document.querySelector('[data-testid=model]')?.value", 20000), await b.js("document.querySelector('[data-testid=model]')?.value || ''"));
   await b.click("[data-testid=composer-input]");
   await b.type(INSTRUCTION);
   await b.enter();
@@ -70,22 +75,27 @@ try {
   check("the run starts and the instruction is the first message", await b.until("!!document.querySelector('[data-testid=user-message]')", 8000), (await text("[data-testid=user-message]")).slice(0, 50));
   check("the composer is emptied and the send control becomes Stop", (await b.js("document.querySelector('[data-testid=composer-input]').value")) === "" && !!(await b.until("!!document.querySelector('[data-testid=stop]')", 5000)));
   await b.click("[data-testid=composer-input]");
-  await b.type("a second instruction typed while it works");
+  await b.type("Look at the section first.");
   await b.enter();
   await sleep(500);
-  check("pressing Enter while it works does not start a second run", (await api("/api/sheet/ai/runs")).runs.length === 1);
+  check("pressing Enter while it works says it to the agent and does not start a second run", (await api("/api/sheet/ai/runs")).runs.length === 1);
+  check("the note is the engine's record and a message of the person's, marked as a note", await b.until("[...document.querySelectorAll('[data-testid=user-message]')].some(x => /Note while it works/.test(x.textContent) && /Look at the section first/.test(x.textContent))", 8000)
+    && (await api("/api/sheet/ai/progress?run=R1&since=0")).events.some((e) => e.kind === "user" && e.while_working && e.text === "Look at the section first."));
+  check("the box is emptied once the engine has the note", (await b.js("document.querySelector('[data-testid=composer-input]').value")) === "");
   check("the status says what the run is doing, from the engine", /^(starting|planning|inspecting|tool|thinking|applying|validating)$/.test(await life()), `life=${await life()}`);
-  await b.until("document.querySelectorAll('[data-testid=activity]').length > 0 && document.querySelector('[data-testid=activity]').textContent.includes('call')", 20000);
-  check("compact: the activity is one folded line with the latest tool names", (await count("[data-testid=activity-body]")) === 0 && (await text("[data-testid=activity]")).length > 0, (await text("[data-testid=activity]")).slice(0, 90));
-  await b.shot("03_live_compact");
+  await b.until("document.querySelectorAll('[data-testid=tool-row]').length > 0", 20000);
+  check("there is no Compact / Verbose switch: one standard view", (await count("[data-testid=mode-compact]")) + (await count("[data-testid=mode-verbose]")) === 0);
+  check("while it works the activity is open: a progress line, then the tools it used", (await count("[data-testid=activity-body]")) === 1 && (await count("[data-testid=progress]")) > 0 && (await count("[data-testid=tool-row]")) > 0, (await text("[data-testid=progress]")).slice(0, 80));
+  check("a tool entry is its name and nothing else — no input, no output", await b.js("[...document.querySelectorAll('[data-testid=tool-row]')].every(r => r.textContent.replace(/[✓✗○–]/g, '').trim() === r.dataset.tool)") && !(await b.js("/\\b(Input|Output)\\b/.test(document.querySelector('[data-testid=activity-body]').innerText)")));
+  check("the thinking is a section of its own, shut by default", (await count("[data-testid=thinking]")) === 1 && (await b.js("document.querySelector('[data-testid=thinking]').dataset.open")) === "false" && (await count("[data-testid=thinking-body]")) === 0);
+  await b.shot("03_live");
 
-  // 4 · verbose opens the same data
-  await b.click("[data-testid=mode-verbose]");
-  check("verbose: the timeline opens, grouped by stage, with tool rows", await b.until("!!(document.querySelector('[data-testid=activity-body]') && document.querySelector('[data-testid=phase]') && document.querySelector('[data-testid=tool-row]'))", 8000));
-  await b.shot("04_live_verbose");
-  await b.click("[data-testid=mode-compact]");
-  check("compact again folds it", await b.until("!document.querySelector('[data-testid=activity-body]')", 5000));
-  await b.click("[data-testid=mode-verbose]");
+  // 4 · the thinking opens on demand and shuts again
+  await b.click("[data-testid=thinking] button");
+  check("opening the thinking shows the agent's summaries turn by turn", await b.until("!!document.querySelector('[data-testid=thinking-body]') && /Turn 1/.test(document.querySelector('[data-testid=thinking-body]').textContent)", 5000), (await text("[data-testid=thinking-body]")).slice(0, 80));
+  await b.shot("04_thinking_open");
+  await b.click("[data-testid=thinking] button");
+  check("and it shuts again", await b.until("!document.querySelector('[data-testid=thinking-body]')", 5000));
 
   // 5 · the run asks the person (the anchor was not said)
   check("the run waits for the person's decision", await b.until("!!document.querySelector('[data-testid=questions]')", 90000));
@@ -99,26 +109,25 @@ try {
     `${rows.filter((r) => r.state === "failed").length} failed, ${rows.filter((r) => r.state === "done").length} done`);
   check("no call is shown running or queued while the run waits", rows.every((r) => r.state !== "running" && r.state !== "queued"));
   await b.shot("05_awaiting");
-  const failedRow = rows.findIndex((r) => r.state === "failed");
-  if (failedRow >= 0) {
-    await b.js(`document.querySelectorAll('[data-testid=tool-row]')[${failedRow}].scrollIntoView({block:'center'})`);
-    check("a failed call says why without being opened", (await b.js(`document.querySelectorAll('[data-testid=tool-row]')[${failedRow}].textContent.length`)) > 20);
-  }
+  check("a failed call is marked failed and is still only its name", rows.filter((r) => r.state === "failed").length === 0 || await b.js("[...document.querySelectorAll('[data-testid=tool-row][data-state=failed]')].every(r => r.textContent.replace(/[✓✗○–]/g, '').trim() === r.dataset.tool)"));
+  check("the question is multiple choice: options, the recommended one marked, and a way to answer in words", (await count("[data-testid=option]")) >= 2 && (await count("[data-testid=questions] input[aria-label='in your own words']")) >= 1);
 
   // 6 · answer; the run finishes and the drawing reflects the change
   const rev0 = await b.js("window.__ws.state().revision");
   await b.click("[data-testid=answer-send]");
   check("the run goes on after the answer", await b.until("['thinking','inspecting','tool','applying','validating','planning','starting'].includes(document.querySelector('[data-testid=life]').dataset.life)", 8000));
-  check("the answer is a message of its own", await b.until("document.querySelectorAll('[data-testid=user-message]').length === 2", 8000));
+  check("the answer is a message of its own", await b.until("document.querySelectorAll('[data-testid=user-message]').length === 3", 8000));
   check("the run completes", await b.until("document.querySelector('[data-testid=life]').dataset.life === 'completed'", 60000), `life=${await life()}`);
   check("the result is shown with its state", (await count("[data-testid=result][data-state=completed]")) === 1, (await text("[data-testid=result]")).slice(0, 80));
+  check("the result leads with the engine's word, then the agent's summary, and keeps the checks under Details", /^Complete/.test(await text("[data-testid=result]")) && (await count("[data-testid=result-details]")) === 1 && (await b.js("document.querySelector('[data-testid=result-details]').open")) === false);
+  check("once the work has ended the activity folds into one line", (await b.js("document.querySelector('[data-testid=activity]').dataset.open")) === "false" && (await count("[data-testid=activity-body]")) === 0);
   check("nothing is left running or queued", (await b.js("[...document.querySelectorAll('[data-testid=tool-row]')].filter(r => ['running','queued'].includes(r.dataset.state)).length")) === 0 && (await count("[data-testid=life] .animate-spin")) === 0);
   await b.until("window.__ws.state().revision > " + rev0, 10000);
   const rev1 = await b.js("window.__ws.state().revision");
   const engineRev = (await api("/api/sheet")).revision;
   check("the drawing follows the engine's revision", rev1 > rev0 && rev1 === engineRev, `revision ${rev0} → ${rev1} (engine ${engineRev})`);
-  check("the camera did not move during the whole run", (await cam()) === cam0);
-  await b.shot("06_completed_verbose");
+  check("the drawing did not move on the screen during the whole run (the dock opening included)", sameView(view0, await view()), JSON.stringify(await view()));
+  await b.shot("06_completed");
 
   // 6b · the pictures the agent was given: a gallery with what the engine says of each, and one shown large
   const given = [...new Map((await api("/api/sheet/ai/progress?run=R1&since=0")).events.filter((e) => e.kind === "image").map((e) => [e.id, e])).values()];
@@ -137,25 +146,45 @@ try {
   await b.shot("06c_lightbox");
   await b.key("ArrowRight", "ArrowRight", 39);
   check("the arrow keys move between pictures", await b.until(`document.querySelector('[data-testid=lightbox]')?.dataset.id !== "${firstId}"`, 3000), await b.js("document.querySelector('[data-testid=lightbox]')?.dataset.id"));
-  check("the canvas did not pan behind the picture", (await cam()) === cam0);
+  check("the canvas did not pan behind the picture", sameView(view0, await view()));
   await b.key("Escape", "Escape", 27);
   check("Escape closes the picture and focus returns to its card", await b.until("!document.querySelector('[data-testid=lightbox]')", 3000) && (await b.js("document.activeElement?.dataset?.testid")) === "gallery-item");
   await b.click("[data-testid=gallery-close]");
   check("the gallery closes and the thread is where it was", await b.until("!document.querySelector('[data-testid=gallery]')", 3000) && (await count("[data-testid=thread]")) === 1);
-  await b.click("[data-testid=picture-item] button");
-  check("the line in the activity that says pictures were given opens one", await b.until("!!document.querySelector('[data-testid=lightbox]')", 5000));
-  await b.key("Escape", "Escape", 27);
+  check("the activity carries no picture lines: pictures are the gallery's", (await count("[data-testid=picture-item]")) === 0);
 
-  // 7 · a follow-up continues the conversation, and Stop ends it cleanly
+  // 7 · a follow-up continues the conversation: a QUESTION about the drawing, which the agent answers with multiple-choice questions of its own
+  await b.click("[data-testid=composer-input]");
+  await b.js("document.querySelector('[data-testid=composer-input]').select()");
+  await b.type("Ask me which view holds the shared value.");
+  await b.enter();
+  check("the follow-up starts a second run that follows the first", await b.until("!!document.querySelector('[data-testid=stop]')", 8000) && (await api("/api/sheet/ai/progress?run=R2&since=0")).parent === "R1");
+  check("the agent asks two multiple-choice questions", await b.until("document.querySelectorAll('[data-testid=question]').length === 2", 90000), `${await count("[data-testid=question]")} questions`);
+  check("each has its header, what each option means, and the recommended one is marked and chosen", (await count("[data-testid=question-header]")) === 2 && /the half section/.test(await text("[data-testid=questions]")) && /\(recommended\)/.test(await text("[data-testid=questions]"))
+    && (await b.js("document.querySelector('[data-testid=question] input[type=radio]:checked')?.parentElement.textContent.includes('Section')")));
+  check("a question where several choices apply has checkboxes", (await count("[data-testid=question][data-multi=true] input[type=checkbox]")) === 3);
+  check("an answer is needed on every question", await b.js("document.querySelector('[data-testid=answer-send]').disabled"), "nothing ticked on the second question yet");
+  await b.shot("07a_questions");
+  await b.js("(() => { const boxes = document.querySelectorAll('[data-testid=question][data-multi=true] input[type=checkbox]'); boxes[0].click(); boxes[2].click(); })()");
+  check("ticking enables the answer", await b.until("!document.querySelector('[data-testid=answer-send]').disabled", 3000));
+  await b.click("[data-testid=answer-send]");
+  check("the question-only run completes without parametrizing a single unit", await b.until("document.querySelector('[data-testid=life]').dataset.life === 'completed'", 60000), `life=${await life()}`);
+  const r2 = (await api("/api/sheet/ai/progress?run=R2&since=0")).events;
+  const chosen = r2.find((e) => e.kind === "user" && e.answers);
+  check("the engine got the choices: one option, and the several ticked joined", !!chosen && Object.values(chosen.answers).includes("Section") && Object.values(chosen.answers).includes("Clear span | Slab thickness"), JSON.stringify(chosen?.answers));
+  check("the result is the agent's answer, led by the engine's word", /^Complete/.test(await text("[data-testid=result]")) && /I used your choices/.test(await text("[data-testid=result]")));
+  await b.shot("07b_answered");
+
+  // 7c · a third instruction: Stop ends it cleanly
   await b.click("[data-testid=composer-input]");
   await b.js("document.querySelector('[data-testid=composer-input]').select()");
   await b.type("Now do it again for a different span");
   await b.enter();
-  check("the follow-up starts a second run that follows the first", await b.until("!!document.querySelector('[data-testid=stop]')", 8000) && (await api("/api/sheet/ai/progress?run=R2&since=0")).parent === "R1");
-  await b.until("document.querySelectorAll('[data-testid=tool-row]').length > " + rows.length, 20000);
+  check("the next instruction starts a third run that follows the second", await b.until("!!document.querySelector('[data-testid=stop]')", 8000) && (await api("/api/sheet/ai/progress?run=R3&since=0")).parent === "R2");
+  await b.until("document.querySelectorAll('[data-testid=tool-row]').length > 0", 20000);
   await b.click("[data-testid=stop]");
   check("stopping ends the run as stopped", await b.until("document.querySelector('[data-testid=life]').dataset.life === 'cancelled'", 20000), `life=${await life()}`);
-  check("the engine agrees", (await api("/api/sheet/ai/progress?run=R2&since=0")).status === "stopped");
+  check("the engine agrees", (await api("/api/sheet/ai/progress?run=R3&since=0")).status === "stopped");
   check("no call is shown as still running after the stop", (await b.js("[...document.querySelectorAll('[data-testid=tool-row]')].filter(r => ['running','queued'].includes(r.dataset.state)).length")) === 0);
   check("a stopped run can be continued", !!(await b.until("!!document.querySelector('[data-testid=resume]')", 5000)));
   await b.shot("07_stopped");
@@ -164,7 +193,7 @@ try {
   await b.goto(`${base}/`);
   await b.until("window.__agent && window.__ws && window.__ws.state().prims.length", 30000);
   await b.js("document.querySelector('[data-testid=agent-toggle]').click()");
-  check("after a reload the conversation is rebuilt from the engine's events", await b.until("document.querySelectorAll('[data-testid=user-message]').length === 3", 15000), `${await count("[data-testid=user-message]")} messages from the person`);
+  check("after a reload the conversation is rebuilt from the engine's events", await b.until("document.querySelectorAll('[data-testid=user-message]').length === 6", 15000), `${await count("[data-testid=user-message]")} messages from the person`);
   check("and the stopped run still reads as stopped", (await life()) === "cancelled");
 
   // 9 · themes

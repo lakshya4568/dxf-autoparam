@@ -1,9 +1,9 @@
 // The agent beside the drawing: a conversation. The header says what the run is doing (from the engine's own state), the thread
-// holds the person's messages and the agent's folded activity, the composer is always at the foot. Compact and verbose are two
-// levels of detail over the same data.
+// holds the person's messages, the agent's progress lines with the tools it used (by name), its thinking (shut until opened) and its
+// result; the composer is always at the foot.
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useStore } from "../state/store";
-import { agent, currentRun, dismissError, initAgent, isActive, setDraft, setMode, stop } from "../state/agent";
+import { agent, currentRun, dismissError, initAgent, isActive, refreshLibrary, setDraft, stop } from "../state/agent";
 import { AgentBubble, EarlierBubble, UserBubble } from "./Messages";
 import { Composer } from "./Composer";
 import { buildConversation, lifecycle, type Life } from "./model";
@@ -43,13 +43,13 @@ function Plan() {
   );
 }
 
-const STARTERS = ["Name the values by what they are", "Make this view parametric", "What changes if the span grows by 5%?"];
+const STARTERS = ["Which sizes do the views state alike, and where do they disagree?", "Make this view parametric", "What changes if the span grows by 5%?"];
 
 function Empty() {
   return (
     <div className="px-4 py-8 text-center" data-testid="agent-empty">
       <div className="text-[14px] font-medium">Work with the agent on this drawing</div>
-      <p className="mx-auto mt-1 max-w-[30ch] text-[12px] text-slate-500">Describe what you want. It reads the drawing, uses the engine’s tools and shows every step; the engine checks each change before it is kept.</p>
+      <p className="mx-auto mt-1 max-w-[32ch] text-[12px] text-slate-500">Ask a question, check the views against each other, or make the drawing parametric. It says what it is doing and which tools it uses; the engine checks each change before it is kept.</p>
       <div className="mt-3 flex flex-wrap justify-center gap-1.5">
         {STARTERS.map((t) => <button key={t} className="rounded-full border border-slate-300 dark:border-slate-600 px-2.5 py-0.5 text-[12px] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => setDraft(t)}>{t}</button>)}
       </div>
@@ -58,8 +58,9 @@ function Empty() {
 }
 
 export function AgentPanel() {
-  const s = useStore(agent, (x) => ({ mode: x.mode, runs: x.runs, order: x.order, currentId: x.currentId, busy: x.busy, error: x.error, model: x.model, gallery: x.gallery.open }));
+  const s = useStore(agent, (x) => ({ runs: x.runs, order: x.order, currentId: x.currentId, busy: x.busy, error: x.error, model: x.model, gallery: x.gallery.open }));
   const hasSheet = useStore(workspace, (x) => !!x.summary);
+  const drawing = useStore(workspace, (x) => x.summary?.path ?? "");
   const run = currentRun({ ...agent.get(), runs: s.runs, currentId: s.currentId });
   const life = lifecycle(run, s.busy === "starting");
   const messages = buildConversation(s.order.map((id) => s.runs[id]).filter(Boolean), s.currentId);
@@ -68,6 +69,7 @@ export function AgentPanel() {
   const events = run?.events.length ?? 0;
 
   useEffect(() => { void initAgent(); }, []);
+  useEffect(() => { if (drawing) void refreshLibrary(); }, [drawing]); // what the engine suggests depends on the words this drawing prints
   useLayoutEffect(() => {
     const el = scroller.current;
     if (el && stuck) el.scrollTop = el.scrollHeight;
@@ -75,18 +77,13 @@ export function AgentPanel() {
 
   const usage = run?.progress?.usage;
   return (
-    <div className="flex h-full min-h-0 flex-col" data-testid="agent-panel" data-mode={s.mode}>
+    <div className="flex h-full min-h-0 flex-col" data-testid="agent-panel">
       <header className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-700 px-3 py-2">
         <StatusPill life={life} />
         {run && <span className="font-mono text-[11px] text-slate-400" title={run.progress?.instruction}>{run.id}</span>}
         <span className="min-w-0 flex-1 truncate text-[12px] text-slate-500" title={life.detail}>{life.detail}</span>
         {isActive(run) && <button className="rounded border border-red-300 px-1.5 text-[11px] text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30" onClick={() => void stop()}>Stop</button>}
         <PicturesButton />
-        <div className="flex overflow-hidden rounded border border-slate-300 dark:border-slate-600 text-[11px]" role="group" aria-label="Detail level">
-          {(["compact", "verbose"] as const).map((m) => (
-            <button key={m} className={`px-2 py-0.5 ${s.mode === m ? "bg-slate-200 dark:bg-slate-700 font-medium" : "text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"}`} onClick={() => setMode(m)} aria-pressed={s.mode === m} data-testid={`mode-${m}`}>{m === "compact" ? "Compact" : "Verbose"}</button>
-          ))}
-        </div>
       </header>
       <Plan />
       <div className="relative flex min-h-0 flex-1 flex-col">

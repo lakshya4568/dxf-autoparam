@@ -1,7 +1,7 @@
 // The conversation, built from what the engine actually emitted. Nothing here invents activity: a message is an instruction the
-// person gave, a tool call is a call the agent made (its stage, words and result are the engine's), a notice is a state change,
-// a question or an error the run reported. Everything is a pure function of the run's events and progress, so the same data
-// serves the compact and the verbose view and is tested without a browser.
+// person gave, a step is one model turn (what it said it was doing, its thinking summary, the tools it called — by name), a notice
+// is a state change, a question or an error the run reported. Everything is a pure function of the run's events and progress, so
+// it is tested without a browser. Tool inputs and outputs are not kept here: the page shows which tool, never what it returned.
 import type { RunEvent, RunProgress, RunQuestion, RunSummary, RunVerdict } from "../api/types";
 
 export const ACTIVE = new Set(["queued", "running", "stopping"]);
@@ -11,38 +11,30 @@ export type ToolState = "running" | "queued" | "done" | "failed" | "interrupted"
 export interface ToolCall {
   id: string;
   name: string;
+  /** what the engine says the tool is doing, in the present tense (the header while it runs) — never what it returned */
   doing: string;
   state: ToolState;
   stage: string | null;
   phase: string | null;
   turn: number;
-  summary?: string;
-  said?: string;
-  why?: string;
-  ms?: number;
   unit?: string | null;
-  args?: unknown;
-  result?: unknown;
-  image?: { id?: string; revision?: number; state?: string };
 }
 
 export type Tone = "info" | "ok" | "warn" | "bad";
 
-export type Item =
-  | { type: "tool"; call: ToolCall }
-  | { type: "thought"; turn: number; text: string }
-  | { type: "notice"; tone: Tone; text: string; detail?: string }
-  | { type: "applied"; text: string }
-  | { type: "picture"; ids: string[]; text: string } // consecutive pictures given together (an overview and its tiles) are one line
-  | { type: "budget"; text: string };
-
-/** Consecutive items that belong to one stage of the work (inspecting, binding values, validating …). */
-export interface Group {
-  key: string;
-  stage: string;
-  phase: string | null;
-  items: Item[];
+/** One model turn: what it said it was doing, its thinking summary, and the tools it called. */
+export interface Step {
+  turn: number;
+  /** the agent's own short sentence about the turn (its `why`, or words it wrote beside its calls); empty when it gave none */
+  progress: string;
+  thought: string;
+  calls: ToolCall[];
 }
+
+export type Item =
+  | { type: "step"; step: Step }
+  | { type: "notice"; tone: Tone; text: string; detail?: string }
+  | { type: "applied"; text: string };
 
 export interface UserMessage {
   type: "user";
@@ -50,6 +42,8 @@ export interface UserMessage {
   text: string;
   scope?: Record<string, unknown>;
   answers?: Record<string, string>;
+  /** said while the agent worked (a note), not an instruction or an answer */
+  note?: boolean;
   t?: number;
 }
 
@@ -57,7 +51,7 @@ export interface AgentMessage {
   type: "agent";
   key: string;
   runId: string;
-  groups: Group[];
+  items: Item[];
   turns: number;
   model?: string;
   /** the state this stretch of work ended in (a `state` event), or null while it is still going */
@@ -104,16 +98,6 @@ export const STATE_WORDS: Record<string, string> = {
   exhausted: "Out of budget", completed: "Complete", partial: "Partly done", failed: "Failed",
 };
 
-function stageLabel(stage: string | null | undefined): string {
-  const s = (stage ?? "working").trim();
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-function pictureLine(ids: string[], e: RunEvent): string {
-  if (ids.length === 1) return `Picture ${ids[0]} given to the model — ${str(e.state)}, revision ${str(e.revision)}`;
-  return `${ids.length} pictures given to the model — ${ids.length <= 3 ? ids.join(", ") : `${ids[0]} … ${ids[ids.length - 1]}`}`;
-}
-
 /** One picture the agent was given, as the person's gallery shows it: read off the run's `image` events, never invented. */
 export interface PictureInfo {
   id: string;
@@ -158,45 +142,44 @@ export const pictureStale = (p: PictureInfo, revision: number | null | undefined
 /** What the picture is of, in words: the engine's caption (e.g. "U01 · TILE_2"), else its kind. */
 export const pictureTitle = (p: PictureInfo): string => p.caption || p.kind;
 
+/** The line a step shows above its tools: what the agent said it was doing, else what the engine says its first tool is doing. */
+export const stepLine = (st: Step): string => st.progress || st.calls[0]?.doing || "";
+
 /** Events → messages. `active`: the run is still working (a call with no result is then in flight or queued, otherwise interrupted). */
 export function buildRunMessages(run: RunData, isLastRun: boolean): Message[] {
   const status = run.progress?.status ?? "queued";
   const active = ACTIVE.has(status);
   const messages: Message[] = [];
   let seg: AgentMessage | null = null;
-  let group: Group | null = null;
+  let step: Step | null = null;
   let turn = 0;
-  let thoughts: string[] = [];
   const calls = new Map<string, ToolCall>();
   const order: ToolCall[] = [];
 
   const open = (key: string): AgentMessage => {
-    const m: AgentMessage = { type: "agent", key, runId: run.id, groups: [], turns: 0, ended: null, last: false };
+    const m: AgentMessage = { type: "agent", key, runId: run.id, items: [], turns: 0, ended: null, last: false };
     messages.push(m);
-    group = null;
-    thoughts = [];
+    step = null;
     return m;
   };
-  const ensureGroup = (m: AgentMessage, stage: string | null | undefined, phase: string | null | undefined): Group => {
-    const label = stageLabel(stage);
-    if (!group || group.stage !== label) {
-      group = { key: `${m.key}/g${m.groups.length}`, stage: label, phase: phase ?? null, items: [] };
-      m.groups.push(group);
+  const stepOf = (m: AgentMessage): Step => {
+    if (!step) {
+      step = { turn, progress: "", thought: "", calls: [] };
+      m.items.push({ type: "step", step });
     }
-    return group;
+    return step;
   };
-  const push = (m: AgentMessage, item: Item, stage?: string | null, phase?: string | null) => {
-    const g = stage !== undefined || !group ? ensureGroup(m, stage ?? group?.stage ?? null, phase) : group;
-    g.items.push(item);
-  };
-  const flushThoughts = (m: AgentMessage, stage?: string | null, phase?: string | null) => {
-    if (!thoughts.length) return;
-    push(m, { type: "thought", turn, text: thoughts.join("\n\n") }, stage, phase);
-    thoughts = [];
+  const push = (m: AgentMessage, item: Item) => {
+    m.items.push(item);
   };
   const user = (e: RunEvent, text: string): AgentMessage => {
-    messages.push({ type: "user", key: `${run.id}/u${e.seq ?? messages.length}`, text, scope: e.scope, answers: e.answers, t: e.t });
+    messages.push({ type: "user", key: `${run.id}/u${e.seq ?? messages.length}`, text, scope: e.scope, answers: e.answers, note: !!e.while_working, t: e.t });
     return open(`${run.id}/a${e.seq ?? messages.length}`);
+  };
+  const said = (e: RunEvent): string => {
+    const a = e.args_full;
+    const why = a && typeof a === "object" ? (a as Record<string, unknown>).why : undefined;
+    return typeof why === "string" ? why.trim() : "";
   };
 
   for (const e of run.events) {
@@ -216,27 +199,29 @@ export function buildRunMessages(run: RunData, isLastRun: boolean): Message[] {
       case "turn":
         turn = e.turn ?? turn + 1;
         m.turns += 1;
-        thoughts = [];
+        step = null;
+        stepOf(m).turn = turn;
         break;
       case "call":
         if (e.model) m.model = e.model;
         break;
       case "thought":
-        if (e.text) thoughts.push(e.text);
+        if (e.text) {
+          const st = stepOf(m);
+          st.thought = st.thought ? `${st.thought}\n\n${e.text}` : e.text;
+        }
+        break;
+      case "say":
+        if (e.text) stepOf(m).progress = str(e.text).trim();
         break;
       case "retry":
         push(m, { type: "notice", tone: "warn", text: `Retrying: ${str(e.why)}` });
         break;
-      case "stage":
-        if (e.stage !== "validating" && e.text) push(m, { type: "notice", tone: "info", text: e.text }, e.stage, e.phase);
-        break;
       case "tool_start": {
-        const call: ToolCall = {
-          id: str(e.id), name: str(e.name), doing: e.doing || str(e.name), state: "running", stage: e.stage ?? null, phase: e.phase ?? null, turn,
-          unit: e.unit, args: e.args_full ?? e.args,
-        };
-        flushThoughts(m, call.stage, call.phase);
-        push(m, { type: "tool", call }, call.stage, call.phase);
+        const call: ToolCall = { id: str(e.id), name: str(e.name), doing: e.doing || str(e.name), state: "running", stage: e.stage ?? null, phase: e.phase ?? null, turn, unit: e.unit };
+        const st = stepOf(m);
+        st.calls.push(call);
+        if (!st.progress) st.progress = said(e);
         calls.set(call.id, call);
         order.push(call);
         break;
@@ -245,29 +230,12 @@ export function buildRunMessages(run: RunData, isLastRun: boolean): Message[] {
         let call = calls.get(str(e.id));
         if (!call) {
           call = { id: str(e.id), name: str(e.name), doing: e.doing || str(e.name), state: "done", stage: e.stage ?? null, phase: e.phase ?? null, turn };
-          flushThoughts(m, call.stage, call.phase);
-          push(m, { type: "tool", call }, call.stage, call.phase);
+          stepOf(m).calls.push(call);
           calls.set(call.id, call);
         }
         call.state = e.ok === false ? "failed" : "done";
-        call.summary = e.summary || undefined;
-        call.said = e.said || undefined;
-        call.why = e.why || undefined;
-        call.ms = e.ms;
         call.unit = e.unit ?? call.unit;
-        call.args = e.args_full ?? call.args;
-        call.result = e.result;
-        call.image = e.image;
-        break;
-      }
-      case "image": {
-        const id = str(e.id);
-        const lastGroup = m.groups[m.groups.length - 1];
-        const prev = lastGroup?.items[lastGroup.items.length - 1];
-        if (prev?.type === "picture") {
-          prev.ids.push(id);
-          prev.text = pictureLine(prev.ids, e);
-        } else push(m, { type: "picture", ids: [id], text: pictureLine([id], e) });
+        if (step && !(step as Step).progress && e.said) (step as Step).progress = e.said;
         break;
       }
       case "applied": {
@@ -300,14 +268,10 @@ export function buildRunMessages(run: RunData, isLastRun: boolean): Message[] {
       case "note":
         push(m, { type: "notice", tone: "info", text: str(e.text) });
         break;
-      case "budget":
-        push(m, { type: "budget", text: `${str(e.turns)} turns · ${str(e.tool_calls)} tool calls · ${Number(e.tokens ?? 0).toLocaleString()} tokens` });
-        break;
       default:
-        break;
+        break; // stage, image, budget, status, verdict: the header, the pictures button and the result say them
     }
   }
-  if (seg) flushThoughts(seg);
 
   // a call with no result: the first is in flight, the rest wait behind it (one turn's calls run in order after all are announced);
   // when the run is no longer active none of them is running — they were cut short
@@ -319,6 +283,13 @@ export function buildRunMessages(run: RunData, isLastRun: boolean): Message[] {
   if (lastSeg && isLastRun) lastSeg.last = true;
   return messages;
 }
+
+/** Every call of a message, in order. */
+export const callsOf = (m: AgentMessage): ToolCall[] => m.items.flatMap((i) => (i.type === "step" ? i.step.calls : []));
+
+/** The agent's thinking summaries of a message, turn by turn (only the turns that have one). */
+export const thoughtsOf = (m: AgentMessage): { turn: number; text: string }[] =>
+  m.items.flatMap((i) => (i.type === "step" && i.step.thought ? [{ turn: i.step.turn, text: i.step.thought }] : []));
 
 /** The whole conversation: earlier runs (summaries only), then every run this page has the events of, oldest first. */
 export function buildConversation(runs: RunData[], currentId: string | null): Message[] {
@@ -384,18 +355,17 @@ export function lifecycle(run: RunData | null, starting = false): Life {
   }
   // running
   const msgs = buildRunMessages(run, true);
-  const calls = msgs.flatMap((m) => (m.type === "agent" ? m.groups.flatMap((g) => g.items) : [])).filter((i): i is Extract<Item, { type: "tool" }> => i.type === "tool");
-  const live = calls.find((c) => c.call.state === "running");
+  const live = msgs.flatMap((m) => (m.type === "agent" ? callsOf(m) : [])).find((c) => c.state === "running");
   if (live) {
-    const k = live.call.phase ? PHASE_LIFE[live.call.phase] ?? "tool" : "tool";
-    return mk(k, `${live.call.doing}${live.call.unit ? ` · ${live.call.unit}` : ""}`, true);
+    const k = live.phase ? PHASE_LIFE[live.phase] ?? "tool" : "tool";
+    return mk(k, `${live.doing}${live.unit ? ` · ${live.unit}` : ""}`, true);
   }
   if (run.events.some((e) => e.kind === "turn")) return mk("thinking", "", true);
   const k = p.phase ? PHASE_LIFE[p.phase] ?? "planning" : "planning";
   return mk(k, "", true);
 }
 
-// ── summaries for the collapsed view ──────────────────────────────────────────────
+// ── summaries for the activity header ────────────────────────────────────────────
 
 export interface Counts {
   calls: number;
@@ -408,26 +378,15 @@ export interface Counts {
 
 export function countCalls(m: AgentMessage): Counts {
   const c: Counts = { calls: 0, done: 0, failed: 0, running: 0, queued: 0, interrupted: 0 };
-  for (const g of m.groups)
-    for (const i of g.items)
-      if (i.type === "tool") {
-        c.calls += 1;
-        c[i.call.state === "done" ? "done" : i.call.state === "failed" ? "failed" : i.call.state === "running" ? "running" : i.call.state === "queued" ? "queued" : "interrupted"] += 1;
-      }
+  for (const call of callsOf(m)) {
+    c.calls += 1;
+    c[call.state === "done" ? "done" : call.state === "failed" ? "failed" : call.state === "running" ? "running" : call.state === "queued" ? "queued" : "interrupted"] += 1;
+  }
   return c;
 }
 
 export function currentCall(m: AgentMessage): ToolCall | null {
-  for (const g of [...m.groups].reverse())
-    for (const i of [...g.items].reverse()) if (i.type === "tool" && i.call.state === "running") return i.call;
-  return null;
-}
-
-/** The engine's own sentence about the latest finished call: what the agent just learned or did. */
-export function latestFinding(m: AgentMessage): string {
-  for (const g of [...m.groups].reverse())
-    for (const i of [...g.items].reverse()) if (i.type === "tool" && (i.call.state === "done" || i.call.state === "failed") && i.call.summary) return i.call.summary;
-  return "";
+  return [...callsOf(m)].reverse().find((c) => c.state === "running") ?? null;
 }
 
 export function questionsOf(run: RunData | null): RunQuestion[] {
@@ -436,9 +395,4 @@ export function questionsOf(run: RunData | null): RunQuestion[] {
 
 export function verdictOf(run: RunData | null): RunVerdict | null {
   return run?.progress?.verdict ?? null;
-}
-
-export function fmtMs(ms: number | undefined): string {
-  if (ms === undefined) return "";
-  return ms >= 1000 ? `${(ms / 1000).toFixed(1)} s` : `${ms} ms`;
 }

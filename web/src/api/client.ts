@@ -10,6 +10,7 @@ import type {
   EntityRecord,
   Geometry,
   LayerRow,
+  LibraryInfo,
   ParamInfo,
   Prim,
   RunProgress,
@@ -106,11 +107,13 @@ export const api = {
   rename: (old: string, name: string) => call<{ ok: boolean; summary: Summary }>("POST", "/api/sheet/rename", { old, new: name }),
   resetValue: (name: string) => call<DeltaResult>("POST", "/api/sheet/reset_value", { name }),
   runs: () => call<{ runs: RunSummary[]; current: string | null }>("GET", "/api/sheet/ai/runs"),
-  models: () => call<{ models: { id: string; label: string; thinking?: string }[]; default: string }>("GET", "/api/sheet/ai/models"),
+  models: () => call<{ models: { id: string; label: string; thinking?: string; free?: boolean }[]; default: string }>("GET", "/api/sheet/ai/models"),
   startRun: (instruction: string, scope: Record<string, unknown>, options: Record<string, unknown>, parent?: string) =>
     call<{ ok: boolean; run: string }>("POST", "/api/sheet/ai/run", { instruction, scope, options, ...(parent ? { parent } : {}) }),
   progress: (run: string | null, since: number) => call<RunProgress>("GET", `/api/sheet/ai/progress?${q({ run, since })}`),
   stopRun: (run: string) => call<Record<string, unknown>>("POST", "/api/sheet/ai/stop", { run }),
+  noteRun: (run: string, note: string) => call<{ ok: boolean; run: string }>("POST", "/api/sheet/ai/note", { run, note }),
+  library: () => call<LibraryInfo>("GET", "/api/sheet/ai/library"),
   continueRun: (run: string, body: { note?: string; answers?: Record<string, string>; more_turns?: number }) =>
     call<{ ok: boolean; run: string }>("POST", "/api/sheet/ai/continue", { run, ...body }),
   applyRun: (run: string) => call<DeltaResult>("POST", "/api/sheet/ai/apply", { run }),

@@ -3,20 +3,18 @@
 // sent them; the conversation is derived from them (agent/model.ts). A run is paid model time, so one is started only by the person's
 // own send, and only after they accepted the cost for the chosen model.
 import { api } from "../api/client";
-import type { AgentNotes, RunProgress } from "../api/types";
+import type { AgentNotes, LibraryInfo, RunProgress } from "../api/types";
 import { ACTIVE, type RunData } from "../agent/model";
 import { Store } from "./store";
 import { refreshSheet, store as workspace } from "./workspace";
 
-export type Mode = "compact" | "verbose";
 export type ScopeKind = "auto" | "drawing" | "view" | "selection";
 
 export interface AgentState {
   runs: Record<string, RunData>;
   order: string[]; // oldest first
   currentId: string | null;
-  mode: Mode;
-  models: { id: string; label: string }[];
+  models: { id: string; label: string; free?: boolean }[];
   model: string;
   paidFor: string | null; // the model whose cost the person accepted in this page session
   draft: string;
@@ -27,25 +25,24 @@ export interface AgentState {
   error: string | null;
   notes: AgentNotes | null;
   loaded: boolean;
-  /** group / tool keys the person opened or closed by hand (they win over the mode's default) */
+  /** sections the person opened or closed by hand (thinking, the activity): they win over the default (thinking shut; the activity open while it works) */
   folds: Record<string, boolean>;
+  /** the engineering libraries the engine offers, and the one it suggests for this sheet from the sheet's own printed words */
+  library: LibraryInfo | null;
+  /** the person's choice about the library for the next run; null follows the engine's suggestion */
+  useLibrary: boolean | null;
+  /** turns between pauses where the person sees what it cost and says go on (0: never pause) */
+  pauseEvery: number;
   /** the pictures the agent was given: the gallery open over the thread, and the picture shown large (independent of each other) */
   gallery: { open: boolean; shown: string | null };
 }
 
-const MODE_KEY = "dxf-autoparam.agent.mode";
-
-function savedMode(): Mode {
-  try {
-    return localStorage.getItem(MODE_KEY) === "verbose" ? "verbose" : "compact";
-  } catch {
-    return "compact"; // storage blocked: the mode just does not persist
-  }
-}
+/** Turns between pauses unless the person chooses otherwise (the engine's own default). */
+export const DEFAULT_PAUSE = 30;
 
 export const agent = new Store<AgentState>({
-  runs: {}, order: [], currentId: null, mode: savedMode(), models: [], model: "", paidFor: null, draft: "", scopeKind: "auto", busy: null, confirm: null, error: null, notes: null,
-  loaded: false, folds: {}, gallery: { open: false, shown: null },
+  runs: {}, order: [], currentId: null, models: [], model: "", paidFor: null, draft: "", scopeKind: "auto", busy: null, confirm: null, error: null, notes: null,
+  loaded: false, folds: {}, gallery: { open: false, shown: null }, library: null, useLibrary: null, pauseEvery: DEFAULT_PAUSE,
 });
 
 const POLL_MS = 600;
@@ -71,15 +68,6 @@ function fail(e: unknown): void {
   agent.set({ error: e instanceof Error ? e.message : String(e) });
 }
 
-export function setMode(mode: Mode): void {
-  agent.set({ mode });
-  try {
-    localStorage.setItem(MODE_KEY, mode);
-  } catch {
-    /* the mode is kept for this page only */
-  }
-}
-
 export function setDraft(draft: string): void {
   agent.set({ draft });
 }
@@ -90,6 +78,36 @@ export function setModel(model: string): void {
 
 export function setScopeKind(scopeKind: ScopeKind): void {
   agent.set({ scopeKind });
+}
+
+export function setUseLibrary(useLibrary: boolean): void {
+  agent.set({ useLibrary });
+}
+
+export function setPauseEvery(pauseEvery: number): void {
+  agent.set({ pauseEvery });
+}
+
+/** Whether the next run has the engineering library: the person's choice, else what the engine suggests from the sheet's own words. */
+export function libraryOn(s: AgentState = agent.get()): boolean {
+  return s.useLibrary ?? !!s.library?.suggested;
+}
+
+/** What goes with a run besides the instruction: the model, the library when it is on, and the pause length when it is not the default. */
+export function runOptions(s: AgentState = agent.get()): Record<string, unknown> {
+  const options: Record<string, unknown> = { model: s.model };
+  const domain = s.library?.suggested?.domain ?? s.library?.domains[0]?.name;
+  if (libraryOn(s) && domain) options.domain = domain;
+  if (s.pauseEvery !== DEFAULT_PAUSE) options.budget = { soft_turns: s.pauseEvery };
+  return options;
+}
+
+export async function refreshLibrary(): Promise<void> {
+  try {
+    agent.set({ library: await api.library() });
+  } catch {
+    agent.set({ library: null }); // no library on offer: a run has none
+  }
 }
 
 export function toggleFold(key: string, now: boolean): void {
@@ -208,6 +226,7 @@ export async function initAgent(): Promise<void> {
   agent.set({ loaded: true });
   api.models().then((m) => agent.set((s) => ({ models: m.models, model: s.model || m.default }))).catch(() => agent.set({ models: [] }));
   void refreshNotes();
+  void refreshLibrary();
   await loadRuns();
 }
 
@@ -222,8 +241,13 @@ export function scopePayload(): Record<string, unknown> {
   return { kind: "drawing" };
 }
 
+/** A model the gateway lists at no price (Token Harbor's free ones): nothing is billed, so nothing asks first. */
+export function modelIsFree(s: AgentState = agent.get()): boolean {
+  return s.models.find((m) => m.id === s.model)?.free === true;
+}
+
 export function costAccepted(s: AgentState = agent.get()): boolean {
-  return !!s.model && s.paidFor === s.model;
+  return !!s.model && (s.paidFor === s.model || modelIsFree(s));
 }
 
 /** Each of these calls the model again, so each asks first (once per model per page session) and then does the action. */
@@ -262,6 +286,11 @@ export function canSend(s: AgentState = agent.get()): boolean {
   return !s.busy && !isActive(r) && s.draft.trim().length > 0 && !!s.model;
 }
 
+/** Something the person can say to an agent that is working: it reads it at the start of its next turn (no Stop, no call lost). */
+export function canNote(s: AgentState = agent.get()): boolean {
+  return !s.busy && currentRun(s)?.progress?.status === "running" && s.draft.trim().length > 0;
+}
+
 /** The person's message. A run that can be continued takes it as a note and goes on; otherwise it starts a new run that follows the
  * conversation so far (the engine's parent link). Refused while anything is in flight, so a double send cannot start two runs. */
 export async function send(): Promise<void> {
@@ -276,13 +305,27 @@ export async function send(): Promise<void> {
       agent.set({ draft: "" });
       follow(r.id, true);
     } else {
-      const started = await api.startRun(text, scopePayload(), { model: s.model }, r && !r.saved ? r.id : undefined);
+      const started = await api.startRun(text, scopePayload(), runOptions(s), r && !r.saved ? r.id : undefined);
       putRun(started.run, (cur) => cur);
       agent.set({ draft: "", currentId: started.run });
       follow(started.run);
     }
   } catch (e) {
     agent.set({ busy: null });
+    fail(e);
+  }
+}
+
+/** Say something to the agent while it works. Nothing is billed for the note itself; the agent reads it on its next turn. */
+export async function note(): Promise<void> {
+  const s = agent.get();
+  const r = currentRun(s);
+  const text = s.draft.trim();
+  if (!r || !canNote(s)) return;
+  try {
+    await api.noteRun(r.id, text);
+    agent.set({ draft: "" });
+  } catch (e) {
     fail(e);
   }
 }

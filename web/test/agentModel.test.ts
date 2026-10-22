@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type { PictureMeta, RunEvent, RunProgress } from "../src/api/types";
 import {
-  buildConversation, buildRunMessages, countCalls, currentCall, latestFinding, lifecycle, pictureStale, picturesOf, pictureTitle, plainError, type AgentMessage, type RunData,
-  type ToolCall,
+  buildConversation, buildRunMessages, callsOf, countCalls, currentCall, lifecycle, pictureStale, picturesOf, pictureTitle, plainError, stepLine, thoughtsOf, type AgentMessage,
+  type RunData, type Step,
 } from "../src/agent/model";
 
 let seq = 0;
 const ev = (kind: string, rest: Partial<RunEvent> = {}): RunEvent => ({ kind, seq: seq++, t: seq / 10, ...rest });
 const start = (instruction = "Reduce the span") => ev("run_start", { instruction, scope: { kind: "drawing" } });
 const turn = (n: number) => ev("turn", { turn: n });
-const ts = (id: string, name: string, stage: string, phase: string) => ev("tool_start", { id, name, doing: `doing ${name}`, stage, phase, args_full: { a: 1 } });
+const ts = (id: string, name: string, stage: string, phase: string, why?: string) => ev("tool_start", { id, name, doing: `doing ${name}`, stage, phase, args_full: { a: 1, ...(why ? { why } : {}) } });
 const tr = (id: string, name: string, stage: string, phase: string, extra: Partial<RunEvent> = {}) =>
   ev("tool", { id, name, doing: `doing ${name}`, stage, phase, ok: true, summary: `did ${name}`, ms: 12, result: { ok: true }, ...extra });
 
@@ -17,7 +17,9 @@ function run(events: RunEvent[], status = "running", extra: Partial<RunProgress>
   return { id: "R1", events, since: events.length, progress: { run: "R1", status, events: [], next: events.length, ...extra } };
 }
 const agentOf = (r: RunData) => buildRunMessages(r, true).filter((m): m is AgentMessage => m.type === "agent");
-const tools = (m: AgentMessage): ToolCall[] => m.groups.flatMap((g) => g.items).flatMap((i) => (i.type === "tool" ? [i.call] : []));
+const steps = (m: AgentMessage): Step[] => m.items.flatMap((i) => (i.type === "step" ? [i.step] : []));
+const tools = callsOf;
+const notices = (m: AgentMessage) => m.items.filter((i) => i.type === "notice");
 
 describe("a run becomes a conversation", () => {
   it("starts with the instruction the person gave and the scope it applied to", () => {
@@ -26,15 +28,18 @@ describe("a run becomes a conversation", () => {
     expect(msgs[1].type).toBe("agent");
   });
 
-  it("pairs a call with its result: the engine's words, status, time, input and output", () => {
+  it("pairs a call with its result: the tool's name and whether it ran — and keeps nothing it was given or returned", () => {
     const m = agentOf(run([start(), turn(1), ts("c1", "inspect_view", "looking", "inspecting"), tr("c1", "inspect_view", "looking", "inspecting", { said: "look first" })]))[0];
     const [c] = tools(m);
-    expect(c).toMatchObject({ name: "inspect_view", state: "done", summary: "did inspect_view", said: "look first", ms: 12, doing: "doing inspect_view", args: { a: 1 }, result: { ok: true } });
+    expect(c).toMatchObject({ name: "inspect_view", state: "done", doing: "doing inspect_view", turn: 1 });
+    // no arguments, no result, no summary of it: the page cannot show what it does not hold
+    expect(Object.keys(c).sort()).toEqual(["doing", "id", "name", "phase", "stage", "state", "turn", "unit"]);
   });
 
-  it("a failed call stays failed, with the reason", () => {
+  it("a failed call stays failed (the progress and the result say why, the entry says only which tool)", () => {
     const m = agentOf(run([start(), turn(1), ts("c1", "define_parts", "naming the parts", "applying"), tr("c1", "define_parts", "naming the parts", "applying", { ok: false, why: "no such region" })]))[0];
-    expect(tools(m)[0]).toMatchObject({ state: "failed", why: "no such region" });
+    expect(tools(m)[0]).toMatchObject({ name: "define_parts", state: "failed" });
+    expect(JSON.stringify(m)).not.toContain("no such region");
     expect(countCalls(m)).toMatchObject({ calls: 1, failed: 1, done: 0 });
   });
 
@@ -57,17 +62,36 @@ describe("a run becomes a conversation", () => {
     }
   });
 
-  it("groups consecutive calls by the engine's stage and attaches the turn's thinking summary to the first call after it", () => {
+  it("a model turn is one step: what the agent said it was doing, its thinking summary, and the tools it called", () => {
     const m = agentOf(run([
       start(), turn(1), ev("thought", { text: "**Plan** read first" }), ev("thought", { text: "then the views" }),
-      ts("c1", "inspect_sheet", "inspecting", "inspecting"), tr("c1", "inspect_sheet", "inspecting", "inspecting"),
-      turn(2), ts("c2", "inspect_view", "inspecting", "inspecting"), tr("c2", "inspect_view", "inspecting", "inspecting"),
-      turn(3), ts("c3", "define_parts", "naming the parts", "applying"), tr("c3", "define_parts", "naming the parts", "applying"),
+      ts("c1", "inspect_sheet", "inspecting", "inspecting", "Reading the sheet before I touch anything"), tr("c1", "inspect_sheet", "inspecting", "inspecting"),
+      turn(2), ts("c2", "inspect_view", "inspecting", "inspecting"), ts("c3", "inspect_view", "inspecting", "inspecting"), tr("c2", "inspect_view", "inspecting", "inspecting"),
+      tr("c3", "inspect_view", "inspecting", "inspecting"),
+      turn(3), ts("c4", "define_parts", "naming the parts", "applying", "Naming the parts of U01"), tr("c4", "define_parts", "naming the parts", "applying"),
     ], "completed"))[0];
-    expect(m.groups.map((g) => g.stage)).toEqual(["Inspecting", "Naming the parts"]);
-    expect(m.groups[0].items[0]).toMatchObject({ type: "thought", text: "**Plan** read first\n\nthen the views" });
-    expect(m.groups[0].items.filter((i) => i.type === "tool")).toHaveLength(2);
+    const st = steps(m);
+    expect(st.map((x) => x.turn)).toEqual([1, 2, 3]);
+    expect(st.map((x) => x.calls.map((c) => c.name))).toEqual([["inspect_sheet"], ["inspect_view", "inspect_view"], ["define_parts"]]);
+    expect(st[0]).toMatchObject({ progress: "Reading the sheet before I touch anything", thought: "**Plan** read first\n\nthen the views" });
+    expect(stepLine(st[1])).toBe("doing inspect_view");  // it said nothing: the engine's present-tense words for its first tool stand in
+    expect(stepLine(st[2])).toBe("Naming the parts of U01");
     expect(m.turns).toBe(3);
+  });
+
+  it("the thinking is listed turn by turn, only for the turns that had any", () => {
+    const m = agentOf(run([start(), turn(1), ev("thought", { text: "first" }), ts("c1", "a", "inspecting", "inspecting"), turn(2), ts("c2", "b", "inspecting", "inspecting"), turn(3), ev("thought", { text: "third" })]))[0];
+    expect(thoughtsOf(m)).toEqual([{ turn: 1, text: "first" }, { turn: 3, text: "third" }]);
+  });
+
+  it("words the model wrote beside its calls are the turn's progress, ahead of the reason it gave a call", () => {
+    const m = agentOf(run([start(), turn(1), ev("say", { text: "Opening the first unit." }), ts("c1", "open_unit", "inspecting", "inspecting", "the reason")]))[0];
+    expect(steps(m)[0].progress).toBe("Opening the first unit.");
+  });
+
+  it("the model's reason on a finished call is the progress when the call was announced without one", () => {
+    const m = agentOf(run([start(), turn(1), ts("c1", "a", "inspecting", "inspecting"), tr("c1", "a", "inspecting", "inspecting", { said: "Looking at the plan." })]))[0];
+    expect(steps(m)[0].progress).toBe("Looking at the plan.");
   });
 
   it("records what the engine applied, a state change, a question and an error as notices", () => {
@@ -75,7 +99,7 @@ describe("a run becomes a conversation", () => {
       start(), turn(1), ev("applied", { unit: "U01", revision: 3, values: ["ClearSpan"] }),
       ev("error", { text: "429 RESOURCE_EXHAUSTED" }), ev("state", { from: "running", to: "awaiting_user", reason: "a decision is needed" }),
     ], "awaiting_user"))[0];
-    const items = m.groups.flatMap((g) => g.items);
+    const items = m.items;
     expect(items.find((i) => i.type === "applied")).toMatchObject({ text: "Applied values ClearSpan to U01 — sheet revision 3" });
     expect(items.find((i) => i.type === "notice" && i.tone === "bad")).toMatchObject({ detail: "429 RESOURCE_EXHAUSTED" });
     expect(m.ended).toEqual({ to: "awaiting_user", reason: "a decision is needed" });
@@ -83,16 +107,15 @@ describe("a run becomes a conversation", () => {
 
   it("where a stretch of work ended is said once (as `ended`), not again inside the timeline; a non-final state change stays in it", () => {
     const m = agentOf(run([start(), turn(1), ev("state", { from: "running", to: "stopping", reason: "stop requested" }), ev("state", { from: "stopping", to: "stopped", reason: "stopped by you" })], "stopped"))[0];
-    const notices = m.groups.flatMap((g) => g.items).filter((i) => i.type === "notice");
-    expect(notices).toHaveLength(1);
-    expect(notices[0]).toMatchObject({ text: "Stopping — stop requested" });
+    expect(notices(m)).toHaveLength(1);
+    expect(notices(m)[0]).toMatchObject({ text: "Stopping — stop requested" });
     expect(m.ended).toEqual({ to: "stopped", reason: "stopped by you" });
   });
 
   it("a long question is cut in the timeline (the decision card holds it whole) and a unit already named in the values is not repeated", () => {
     const q = "x".repeat(400);
     const m = agentOf(run([start(), turn(1), ev("question", { text: q }), ev("applied", { unit: "U01", revision: 2, values: ["U01.Span"] })], "awaiting_user"))[0];
-    const items = m.groups.flatMap((g) => g.items);
+    const items = m.items;
     expect((items.find((i) => i.type === "notice") as { text: string }).text).toHaveLength(148);
     expect(items.find((i) => i.type === "applied")).toMatchObject({ text: "Applied values U01.Span — sheet revision 2" });
   });
@@ -107,9 +130,15 @@ describe("a run becomes a conversation", () => {
 
   it("text from the drawing or the model is kept as plain text, never interpreted", () => {
     const hostile = '<img src=x onerror="alert(1)">';
-    const m = agentOf(run([start(hostile), turn(1), ts("c1", "inspect_view", "looking", "inspecting"), tr("c1", "inspect_view", "looking", "inspecting", { summary: hostile })]))[0];
-    expect(tools(m)[0].summary).toBe(hostile);
-    expect(latestFinding(m)).toBe(hostile);
+    const m = agentOf(run([start(hostile), turn(1), ts("c1", "inspect_view", "looking", "inspecting", hostile), tr("c1", "inspect_view", "looking", "inspecting")]))[0];
+    expect(steps(m)[0].progress).toBe(hostile);
+  });
+
+  it("a note made while the agent worked is a message of the person's, marked as one, and opens the next stretch of work", () => {
+    const msgs = buildRunMessages(run([start("one"), turn(1), ev("user", { text: "look at the section first", while_working: true }), turn(2)]), true);
+    expect(msgs.map((m) => m.type)).toEqual(["user", "agent", "user", "agent"]);
+    expect(msgs[2]).toMatchObject({ text: "look at the section first", note: true });
+    expect(msgs[0]).toMatchObject({ note: false });
   });
 
   it("earlier runs known only by their summary are shown as such", () => {
@@ -167,8 +196,6 @@ describe("the pictures the agent was given", () => {
       id, revision: 102, unit: "U01", state: "drawn", why: "", pic: { kind: "tile", size: [1200, 800], mm_per_px: 4.2, text_px: 11.4, legible: true, box_mm: [0, 0, 5000, 3000], turn: 3, tiles: [], caption: "U01 · TILE_2", ...pic },
       ...rest,
     });
-  const pictureItems = (r: RunData) => agentOf(r).flatMap((m) => m.groups.flatMap((g) => g.items)).flatMap((i) => (i.type === "picture" ? [i] : []));
-
   it("lists every picture in the order given, with what the engine said about it, and each id once", () => {
     const pics = picturesOf(run([start(), turn(1), img("IMG1", { kind: "overview", caption: "U01 · overview", legible: false, text_px: 6.1, tiles: ["TILE_1", "TILE_2"] }), img("IMG2"), img("IMG2")]));
     expect(pics.map((p) => p.id)).toEqual(["IMG1", "IMG2"]);
@@ -196,17 +223,9 @@ describe("the pictures the agent was given", () => {
     expect(pictureStale(p, undefined)).toBe(false);
   });
 
-  it("pictures given together are one line of the activity — counted, named, and the first is the one it opens", () => {
-    const r = run([start(), turn(1), ts("c1", "open_unit", "looking", "inspecting"), img("IMG1", { kind: "overview" }), img("IMG2"), img("IMG3"), img("IMG4"), img("IMG5"), tr("c1", "open_unit", "looking", "inspecting")]);
-    const items = pictureItems(r);
-    expect(items).toHaveLength(1);
-    expect(items[0].ids).toEqual(["IMG1", "IMG2", "IMG3", "IMG4", "IMG5"]);
-    expect(items[0].text).toBe("5 pictures given to the model — IMG1 … IMG5");
-  });
-
-  it("one picture is named with the state and revision it shows; pictures after another tool call are a new line", () => {
-    const r = run([start(), turn(1), img("IMG1"), ts("c1", "zoom_view", "looking", "inspecting"), img("IMG2", {}, { state: "current", revision: 103 }), tr("c1", "zoom_view", "looking", "inspecting")]);
-    const items = pictureItems(r);
-    expect(items.map((i) => i.text)).toEqual(["Picture IMG1 given to the model — drawn, revision 102", "Picture IMG2 given to the model — current, revision 103"]);
+  it("pictures are for the gallery, not the activity: a run that gave pictures shows no picture line among its steps", () => {
+    const r = run([start(), turn(1), ts("c1", "open_unit", "looking", "inspecting"), img("IMG1", { kind: "overview" }), img("IMG2"), tr("c1", "open_unit", "looking", "inspecting")]);
+    expect(agentOf(r)[0].items.map((i) => i.type)).toEqual(["step"]);
+    expect(picturesOf(r).map((p) => p.id)).toEqual(["IMG1", "IMG2"]);
   });
 });

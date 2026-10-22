@@ -2,7 +2,7 @@
 import type { ToolState } from "./model";
 
 export function Spinner({ className = "" }: { className?: string }) {
-  return <span aria-hidden className={`inline-block h-3 w-3 shrink-0 animate-spin rounded-full border-[1.5px] border-blue-500 border-t-transparent ${className}`} />;
+  return <span aria-hidden className={`inline-block h-3 w-3 shrink-0 animate-spin rounded-full border-[1.5px] border-blue-500 border-t-transparent dark:border-amber-400 dark:border-t-transparent ${className}`} />;
 }
 
 export function ToolMark({ state }: { state: ToolState }) {
