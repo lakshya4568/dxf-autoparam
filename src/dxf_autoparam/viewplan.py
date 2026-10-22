@@ -38,6 +38,11 @@ GUTTER = 124  # the margin that holds the labels (four tracks along the top, two
 TRACKS = 4
 LABEL_GAP = 6.0
 MIN_LINE_PX = 22.0  # room one labelled line needs along its axis
+# at most this many labelled lines per axis on one picture: a tile of a long section labelled ~100 lines in its margins and ran a hairline across
+# the drawing for each — the drawing was the least visible thing on it. The lines a dimension, a named size, a level or an axis stands on come
+# first; the rest are a band ("zoom") or a resolve_labels away
+MAX_LABELLED = 24
+HAIRLINES_MAX = 16  # hairlines across the drawing only when this few lines are labelled in all: more of them hide the drawing they locate
 
 
 # ── how big ─────────────────────────────────────────────────────────────────────
@@ -238,11 +243,13 @@ class Band:
         return f"{self.first}..{self.last} ({self.count} lines — zoom)"
 
 
-def admit(lines: list[Line], span_px: float, min_gap: float = MIN_LINE_PX, dense_px: float = 6.0) -> tuple[list[Line], list[Band]]:
-    """Which lines to label along an axis `span_px` long: no more than fit (a label needs `min_gap` px) — the anchors first, the best of them if there are
-    more than fit, then the best of the rest — never two lines closer than 2 px. The ones left out, where they crowd (a run of at least three, less than
-    `dense_px` apart), are a band."""
+def admit(lines: list[Line], span_px: float, min_gap: float = MIN_LINE_PX, dense_px: float = 6.0, cap: int | None = MAX_LABELLED) -> tuple[list[Line], list[Band]]:
+    """Which lines to label along an axis `span_px` long: no more than fit (a label needs `min_gap` px) and no more than `cap` — the anchors first, the
+    best of them if there are more than fit, then the best of the rest — never two lines closer than 2 px. The ones left out, where they crowd (a run
+    of at least three, less than `dense_px` apart), are a band."""
     capacity = max(1, int(span_px // min_gap))
+    if cap:
+        capacity = min(capacity, cap)
     keep: list[Line] = []
     ranked = sorted(lines, key=lambda x: (not x.anchor, -x.score, x.pos))  # anchors first, each group best first
     for x in ranked:

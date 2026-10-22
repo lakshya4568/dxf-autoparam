@@ -6,7 +6,9 @@ AI call or cost.
 The sheet is a generated two-view RCC box (known sizes, so the result of the change can be checked exactly). Each run plays what a model
 could do with the instruction below: read it, look at the sheet and zoom, name the parts and values from the drawing (one wrong claim the
 engine refuses, then repaired), inspect the assembly, propose the plan — leaving the one thing the instruction does not say (which side
-stays) to the person — and finish. Every thought is marked [scripted]: nothing shown here is a model's own.
+stays) to the person — and finish. The SECOND run of a server is another task: a question, which the model answers by asking two multiple-choice
+questions (one with a recommendation, one where several choices may apply) before it finishes — to look at that card. Every thought is marked
+[scripted]: nothing shown here is a model's own.
 """
 
 from __future__ import annotations
@@ -25,6 +27,7 @@ from dxf_autoparam.workspace import SheetSession
 
 INSTRUCTION = ("Reduce the clear span to 2500 mm. Keep the middle wall centered, preserve the wall and slab thicknesses, keep the existing foundation fixed. "
                "The wing walls follow the box. Keep the unrelated pitching detail unchanged. Show me anything ambiguous before applying the change.")
+ASK_INSTRUCTION = "Ask me which view holds the shared value."
 READING = [("Reduce the clear span to 2500 mm", "change_value", "ClearSpan becomes 2500", "plan"),
            ("Keep the middle wall centered", "keep", "the middle wall stays on the centre line", "plan"),
            ("preserve the wall and slab thicknesses", "keep", "wall and slab thicknesses keep their values", "plan"),
@@ -96,6 +99,21 @@ def make_script(sheet: SheetSession, uid: str, g: dict, delay: float = 0.0):
          call("finish", summary="applied with the person's answers; the plan across the views is stated")]], thoughts=thoughts, delay=delay)
 
 
+def make_questions_script(delay: float = 0.0) -> DemoModel:
+    """A question-only task: the model reads it, asks two multiple-choice questions, and answers with what the person chose."""
+    return DemoModel([
+        [call("account_instruction", why="read the instruction first",
+              items=[{"quote": ASK_INSTRUCTION.rstrip("."), "kind": "question", "meaning": "the person wants to choose where the shared value lives", "handled_by": "question"}])],
+        [call("ask_person", why="two things only you can decide", questions=[
+            {"question": "Which view should hold the shared value?", "header": "View", "recommended": "Section",
+             "options": [{"label": "Section", "description": "the half section, where the clear span is dimensioned"}, {"label": "Plan", "description": "the plan, where the barrel length is"}]},
+            {"question": "Which sizes may I name?", "header": "Sizes", "multi_select": True,
+             "options": [{"label": "Clear span"}, {"label": "Wall thickness"}, {"label": "Slab thickness"}]}])],
+        [call("finish", summary="I used your choices: the shared value lives where you said, and only the sizes you ticked are named.")]],
+        thoughts=[f"[scripted] {t}" for t in ("Read the instruction: it asks for a choice only the person can make.", "Ask both questions at once, with the options the drawing offers.",
+                                              "Finish with what was chosen.")], delay=delay)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=8799)
@@ -106,7 +124,13 @@ def main() -> None:
     sheet = SheetSession(g["path"])
     uid = next(k for k, u in sheet.sm.units.items() if len(u.views) == 2)
     sheet.gem_per_run = True
-    sheet.gem_factory = lambda: make_script(sheet, uid, g, a.delay)
+    runs = {"n": 0}
+
+    def factory() -> DemoModel:
+        runs["n"] += 1
+        return make_questions_script(a.delay) if runs["n"] == 2 else make_script(sheet, uid, g, a.delay)
+
+    sheet.gem_factory = factory
     httpd = ThreadingHTTPServer(("127.0.0.1", a.port), make_handler(Session(None), sheet))
     print(f"scripted demo on http://127.0.0.1:{httpd.server_address[1]}/  (the instruction to type:)\n{INSTRUCTION}\n", flush=True)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()

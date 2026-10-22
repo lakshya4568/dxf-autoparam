@@ -146,11 +146,15 @@ THINKING_BOOKKEEPING = frozenset({"account_instruction", "rename_values", "updat
 THINKING_MECHANICAL = (frozenset(A.READ_TOOLS) | frozenset(SHEET_READ) | frozenset(UT.UNDERSTANDING_READ) | THINKING_BOOKKEEPING) - THINKING_HEAVY - THINKING_OPENING
 
 SESSION = """THIS IS A SESSION ON A WHOLE SHEET of an existing, fully digitised General Arrangement Drawing (a DXF with several views).
-You never draw anything new: you turn what is drawn into a parametric model, as the person's ONE instruction asks. You decide which
-stages the task needs and skip the rest; use the tools for each:
+You never draw anything new. The person's ONE instruction decides the task, and you decide which stages it needs and skip the rest: it may
+ask you to make the drawing parametric, to change a value while other things stay, to link what several views state, to check or compare what
+the views say, or only to answer a question about the drawing. A question or a check needs no edits: look, then answer in `finish`'s summary —
+plainly, with where you read it (view, note, number) — and parametrize nothing the person did not ask for. Use the tools for each stage:
 
   • READ the instruction first — account_instruction (their words quoted, what you take them to mean, what handles each). Nobody reads it
     for you, and every sentence of it must be accounted for before you finish.
+  • PLAN before you edit, when the task has more than a few steps: update_checklist with the whole task — what you will look at, name, change,
+    link and check — and keep it current as you work. The person reads it.
   • LOOK. You are given the whole sheet and the view you work on as PICTURES (each stamped with the sheet revision it shows) and an
     OVERVIEW of the open unit. inspect_sheet shows the sheet's structure, and what each group that is not a view holds: a group
     that holds drawn linework and dimensions may be a view the engine took for a table — look (zoom_view with its id) and say what it
@@ -161,6 +165,11 @@ stages the task needs and skip the rest; use the tools for each:
     dimensions and notes. Text under about 9 px is not readable: zoom_view a smaller box_mm for it. Never name a value from text you could
     not read — go closer, or leave it as drawn.
   • UNDERSTAND THE VIEWS (describe_views) when they are unnamed, mistyped or unrelated and the task needs it. Not otherwise.
+  • LOOK ACROSS THE VIEWS before you say that two views show the same thing: search_drawing finds where words and numbers are stated on the
+    whole sheet; compare_views lists what several views state alike (a size, a level, the same words), what they state differently, and which
+    stated sizes are the difference of two stated levels; calculate does arithmetic over the drawing's named values and levels. Equal numbers
+    alone are not one size — read the pictures — and two views that state different numbers for the same words are a finding to report, not
+    something to link.
   • PARAMETRIZE: open_unit(unit or view) opens the unit the edit tools work on (define_parts, define_parameters, set_levels, set_formulas,
     constraints, behaviours). Opening another unit applies the previous one's edits to the sheet, checked on the whole sheet.
   • PLAN a change the person asked for (propose_plan) — never write behaviour for it ad hoc. The engine measures the plan; a failure
@@ -171,14 +180,18 @@ stages the task needs and skip the rest; use the tools for each:
     describe_views, or only noted — say why), and what you assumed. The engine checks every reference and every binding you claim;
     say what you did not tie as noted, never as bound.
   • ASK (ask_person, or propose_plan questions) whatever the person did not settle: a word that names nothing on the drawing, "don't touch"
-    without saying what it means, which side stays. The run waits for the answer and continues you with it. A guess is a failure.
+    without saying what it means, which side stays. Ask as multiple choice: the options you see, each with what it means, the one you would pick
+    marked as recommended, up to four questions in one call. The run waits for the answers and continues you with them. A guess is a failure.
   • FINISH. The engine checks every edit, plan and view and commits only what holds. It reports what is complete and what is not:
-    never say more than it does.
+    never say more than it does. Your summary is the person's answer: the result first, then what you did, what you left alone and why, and
+    anything they must decide.
 
 A session takes as many turns as the drawing needs, in chunks of 30: when a chunk ends you are paused and, once the person says go on,
 continued with everything you have — nothing is lost, nothing is done twice. Every status says how many turns are left. Pace yourself:
 a unit has a budget of about 12 turns. Keep what holds, name the sizes that matter and leave the rest as drawn (the engine keeps it as
-drawn), then open the next unit; a drawing whose last units were never opened is not done. Keep each turn small and checked.
+drawn), then open the next unit; when the task is to make the drawing parametric, a drawing whose last units were never opened is not done.
+Keep each turn small and checked. Give `why` on the first call of every turn — one short plain sentence about what you are doing and why: it is
+the progress the person reads.
 
 """
 
@@ -260,6 +273,10 @@ class SheetBench:
         self.decisions: dict[str, str] = {}  # the person's answers about a change of count
         self.proposed = False  # a plan for a change was proposed in this run (units opened and closed again keep no memory of it)
         self.finish_summary = ""  # what the model said it did, in its own words, when the engine let it finish
+        self._summary_now = ""  # the summary of the `finish` being judged: the gate reads it before it is kept
+        self.asked: list[dict] = []  # what the model asked the person, at the sheet level (asking needs no open unit): id, text, choices, recommendation
+        self.answered: dict[str, str] = {}  # sheet-level question id → what the person answered
+        self._pause = False  # the model has asked and the run is to wait for the answers
         self.rebase: dict | None = None  # the sheet changed under the run: the person decides whether the edits go on the current sheet
         lib = library.for_pack(run.pack)
         # the engineering library for the whole run (the domain pack on has one): one trace, the sheet's own words, the values of any open unit
@@ -431,6 +448,8 @@ class SheetBench:
             return self._bind_production(a)
         if name == "account_clause":
             return self._account(a)
+        if name == "ask_person":
+            return self._ask(a)
         if name == "propose_plan" and a.get("operation"):
             return self._propose_operation(a)
         out = self.wb.write(name, a)
@@ -464,6 +483,22 @@ class SheetBench:
         self.ledger[:] = [x for x in self.ledger if x["quote_norm"] != norm(quote)] + [
             {**{k: a.get(k, "") for k in ("quote", "kind", "meaning", "handled_by", "why")}, "quote_norm": norm(quote)}]
         return item, ""
+
+    def _ask(self, a: dict) -> tuple[str, str]:
+        """Questions for the person, asked at the sheet level: a clarifying question comes before any unit is opened, so it cannot belong to one."""
+        asked, note = A.mcq(a)
+        for q in asked:
+            if any(x["text"] == q["text"] for x in self.asked):
+                continue
+            k = len(self.asked) + 1
+            self.asked.append({"id": f"S{k}", "about": f"say:S{k}", "text": q["text"], "options": q["options"], "recommended": q["recommended"], "why": "",
+                               "source": "the model", "unit": None, **{x: q[x] for x in ("header", "descriptions", "multi") if q[x]}})
+        self._pause = True
+        self.sheet_results["question"] = {"ok": True}
+        return "question", note
+
+    def _open_asked(self) -> list[dict]:
+        return [q for q in self.asked if q["id"] not in self.answered]
 
     def validate(self, final: bool = False) -> None:
         if self.active is not None:
@@ -556,7 +591,7 @@ class SheetBench:
         return self.wb.nudge() if self.active is not None else "open a unit (open_unit) and make your edits, or ask_person / finish"
 
     def person_questions(self) -> list[dict]:
-        out = []
+        out = list(self._open_asked())
         for uid, w in self.units.items():
             out += [{**q, "id": f"{uid}:{q['id']}", "unit": uid} for q in w.person_questions()]
         if self.pending_feature:
@@ -571,15 +606,21 @@ class SheetBench:
         return out
 
     def wants_person(self) -> bool:
-        return any(w.wants_person() for w in self.units.values()) or bool(self.rebase) or bool(self.pending_feature)
+        return (self._pause and bool(self._open_asked())) or any(w.wants_person() for w in self.units.values()) or bool(self.rebase) or bool(self.pending_feature)
 
     def record_answers(self, answers: dict[str, str]) -> list[str]:
         lines = []
         open_ = {q["id"]: q for q in self.person_questions()}
         for key, val in answers.items():
             q = open_.get(key)
-            if q is not None and str(val).strip() and str(val).strip() not in (q.get("options") or []):
+            if q is not None and str(val).strip() and not A.chosen(q, str(val)):
                 self.said += f"\n[the person, answering '{q['text'][:80]}': {str(val).strip()}]"
+        for q in self._open_asked():
+            val = str(answers.get(q["id"]) or "").strip()
+            if val:
+                self.answered[q["id"]] = val
+                lines.append(f"- {q['text'][:200]} → {val}")
+        self._pause = bool(self._open_asked()) and self._pause
         for uid, w in self.units.items():
             mine = {k.split(":", 1)[1]: v for k, v in answers.items() if k.startswith(f"{uid}:")}
             if mine:
@@ -641,8 +682,10 @@ class SheetBench:
         for w in self.units.values():
             w.validate()
         self.finish_calls += 1
+        self._summary_now = (a.get("summary") or "").strip()
         qs = self.person_questions()
         if qs:
+            self._pause = self._pause or bool(self._open_asked())
             for w in self.units.values():
                 w._pause = w._pause or bool(w.person_questions())
             return {"done": False, "waiting_for": [q["text"][:200] for q in qs[:6]], "hint": "the person has to decide first: the run asks them and continues you with their answers"}, False
@@ -1088,10 +1131,18 @@ class SheetBench:
                                       f"{' …' if len(loose) > 4 else ''}: share_sizes each (the unit's own value, by its name), or say in the plan that it is only noted")
             elif by == "views":  # the views were described, or the work was done in them
                 ok, why = self.described > 0 or bool(self.units) or bool(self.touched), "no view was described or worked in (describe_views, open_unit)"
+            elif by == "answer":  # a question or a check is answered in the closing summary, which this very finish carries
+                ok, why = bool(self._summary_now or self.finish_summary), "no answer was given: put it in finish's summary"
             elif by == "parts":
                 ok, why = parts, "no part was defined"
             elif by == "values":
                 ok, why = values, "no value was named"
+            elif by == "question":  # the person was to be asked: a question must have been put to them in this run. It used to pass unchecked — a
+                # run told "if you are unsure, ask me" asked nothing, recorded an assumption instead, and the gate said every commitment was kept
+                # (a plan's own questions — an unstated anchor, the AI's inference — put to the person and answered count too: it was asked)
+                asked = bool(self.asked) or bool(self.answered) or any(w.person_questions() or w.decisions or w.answered for w in self.units.values())
+                ok, why = asked, ("no question was asked: ask_person with the choices you see (what the drawing could not settle is listed below), "
+                                  "or account for the clause again with handled_by none and why no question was needed")
             out.append({"clause": i.get("quote", ""), "handled_by": by, "ok": bool(ok), "why": "" if ok else why})
         return out
 
@@ -1102,31 +1153,63 @@ class SheetBench:
             return []
         return [f["doubt"] for f in group_facts(self.sm) if f.get("doubt") and f["id"] not in self.looked]
 
+    def parametrizing(self) -> bool:
+        """Whether every unit is owed work: yes, unless the model read the instruction as a question or a check and as nothing that asks for the drawing to
+        be made parametric (a clause it took for parametrize or annotate). The default is to ask for the work — a mislabelled clause must not be the
+        way out of it — and a question or a check about the drawing is not a promise to parametrize every unit."""
+        kinds = {i.get("kind") for i in self.ledger}
+        return not (kinds & {"question", "check"}) or bool(kinds & {"parametrize", "annotate"})
+
     def coverage(self) -> tuple[list[dict], bool]:
         """Which units of the run's scope the sheet really holds work for (coverage.py), and whether that is asked of this run: a run over the whole
-        drawing that is not carrying out a change. A change asked of one value is not a promise to parametrize every unit."""
+        drawing that asks for it to be made parametric and is not carrying out a change. A change asked of one value is not a promise to parametrize
+        every unit, and neither is a question about the drawing."""
         scope_units = list(self.run.scope.get("units") or [])
         rows = unit_rows(self.sm, scope_units, {uid: w.answer for uid, w in self.units.items()}, UT.notes_of(self.sm)["checklist"], self.open_refusals())
         change_asked = any(i.get("kind") in ("change_value", "keep") and i.get("handled_by") == "plan" for i in self.ledger)
-        return rows, self.run.scope.get("kind") == "drawing" and len(scope_units) > 1 and not change_asked
+        return rows, self.run.scope.get("kind") == "drawing" and len(scope_units) > 1 and not change_asked and self.parametrizing()
 
     def open_matters(self) -> list[str]:
         """What the engine knows is still open, as sentences for the model's first `finish`: refusals nobody repaired, commitments not kept,
         what the plan leaves out, a doubted group nobody looked at, units of the drawing nobody covered."""
         out = [f"refused and never repaired: {r['item']} ({r['why'][:100]}) — repair it, or leave it out on purpose (remove it; or say in the plan it is only noted)"
                for r in self.open_refusals()[:6]]
-        out += [f"you said “{c['clause'][:70]}” is handled by {c['handled_by']}: {c['why']}" for c in self.commitments() if not c["ok"]]
+        broken = [c for c in self.commitments() if not c["ok"]]
+        out += [f"you said “{c['clause'][:70]}” is handled by {c['handled_by']}: {c['why']}" for c in broken]
+        if any(c["handled_by"] == "question" for c in broken):  # what to ask about: what the engine could not settle from the drawing
+            unsure = [n for n in self.intent_notes(limit=40) if "convention" in n or "no side could" in n]
+            if unsure:
+                out.append("not settled by the drawing — the side of a size that stays when it changes: " + "; ".join(unsure[:5])
+                           + (f" (+{len(unsure) - 5} more)" if len(unsure) > 5 else ""))
         with self._lock():
             plan = self.sm.stated_plan if self.sm.stated_plan.get("run") == self.run.id else {}
             if plan.get("links") or plan.get("summary"):
                 out += [f"plan: {g}" for g in gap_lines(plan_gaps(self.sm, plan))]
         out += self.unexamined_doubts()
+        out += self.label_doubts()
         rows, asked = self.coverage()  # last: what the model can still repair comes first, and the units nobody covered are said in full after it
         if asked and any(not r["covered"] for r in rows):
             todo = [r for r in rows if not r["covered"]]
             out.append(f"{sentence(rows)} — open_unit each of {', '.join(r['unit'] for r in todo[:12])} and parametrize it; where a unit has nothing to parametrize, "
                        "say so on the checklist (update_checklist: status 'skipped', its id and the reason in the text) — not only in your closing words")
         return out
+
+    def label_doubts(self, limit: int = 6) -> list[str]:
+        """Parts whose own outline the drawing labels as something their name does not say (ai/labels.py), in the units this run worked on —
+        a hypothesis the drawing's text contradicts, said until it is renamed, redefined, or kept with the model's reason (label_checked)."""
+        from . import labels
+
+        out: list[str] = []
+        with self._lock():
+            for uid in sorted(set(self.touched) | set(self.units)):
+                if uid not in self.sm.units:
+                    continue
+                w = self.units.get(uid)
+                prog, comps = (w.prog, w.answer.get("components")) if w is not None else (self.sm.unit(uid).prog, (self.sm.units[uid].answer or {}).get("components"))
+                if prog is None:
+                    continue
+                out += [f"label: {labels.sentence(c, uid)}" for c in labels.conflicts(prog, comps or [])]
+        return out[:limit] + ([f"… and {len(out) - limit} more part(s) the drawing labels otherwise"] if len(out) > limit else [])
 
     def intent_notes(self, limit: int = 8) -> list[str]:
         """Which side of each size stays when it changes (design intent) wherever that is not settled by evidence — a convention, or nothing that
@@ -1206,7 +1289,7 @@ class SheetBench:
             return bool(u.answer) or bool(w and (w.answer.get("components") or w.answer.get("parameters")))
 
         untouched = [uid for uid, u in self.sm.units.items() if not parametrized(uid, u)]
-        if untouched and self.run.scope.get("kind") == "drawing":
+        if untouched and self.run.scope.get("kind") == "drawing" and self.parametrizing():
             out.append(f"views never parametrized in this run: {', '.join(untouched)}")
         parts_only = [r["unit"] for r in self.coverage()[0] if r["state"] == "parts_only"]
         if parts_only:
@@ -1354,6 +1437,7 @@ class Run:
         self.units_touched: list[str] = []
         self.model = None
         self.closed = False
+        self._inbox: list[str] = []  # what the person said while the agent worked: read at the start of its next turn
 
     # ── events and states ───────────────────────────────────────────────────────
 
@@ -1440,6 +1524,29 @@ class Run:
         elif self.status in ("paused", "awaiting_user", "exhausted", "queued"):
             self.to("stopped", "stopped by you")
 
+    def say(self, note: str) -> dict:
+        """The person says something while the agent works. No Stop, no call in flight lost: the agent reads it at the start of its next turn, and it
+        is the person's own words from then on (a quote may come from it, like an answer to a question)."""
+        note = (note or "").strip()
+        if not note:
+            raise RunError("write the note first")
+        if self.status != "running":
+            raise RunError(f"a run that is {self.status} takes no note while it works: continue it with the note, or start a new run")
+        with self._ev:
+            self._inbox.append(note)
+        self.emit({"kind": "user", "text": note, "while_working": True})
+        return {"ok": True, "run": self.id}
+
+    def take_notes(self) -> list[str]:
+        """The notes the person made since the agent last looked, handed over once (the loop asks before every turn)."""
+        with self._ev:
+            heard, self._inbox = self._inbox, []
+        if heard and self.bench is not None:
+            self.bench.said += "".join(f"\n[the person, while the agent worked: {h}]" for h in heard)
+            for w in self.bench.units.values():
+                w.instructions += "".join(f"\n[the person, while the agent worked: {h}]" for h in heard)
+        return heard
+
     def apply_valid(self) -> dict:
         """Apply what a paused / stopped / out-of-budget run holds that is valid, and report honestly what is not done."""
         if self.status not in ("paused", "awaiting_user", "stopped", "exhausted", "failed") or self.bench is None:
@@ -1517,7 +1624,7 @@ class Run:
         compactor = None if self.options.get("full_history") else self._working_state
         self.loop = AgentLoop(model, unified_system(self.pack), unified_tools(self.pack), parts, key, history, bench, self.budget, self._on_event, self._stop.is_set,
                               label_prefix="turn", compactor=compactor, keep_turns=int(self.options.get("keep_turns") or 6),
-                              compact_every=int(self.options.get("compact_every") or 6))
+                              compact_every=int(self.options.get("compact_every") or 6), inbox=self.take_notes)
 
     def _prefix(self, bench: SheetBench):
         """The cached start of every request: the pictures (the whole sheet; the open view as drawn with its set-out lines, and its regions;
@@ -1639,6 +1746,9 @@ class Run:
         if self.bench is None or self.loop is None:
             raise RunError("the run has not started")
         b, st = self.bench, self.loop.state
+        if self._inbox:  # said as the run ended: the agent never read it, and the person is told rather than left to think it was heard
+            self.emit({"kind": "note", "text": f"{len(self._inbox)} note(s) you made as the run ended were not read by the agent: send them again"})
+            self._inbox = []
         self.emit({"kind": "budget", "turns": st.turns, "tool_calls": st.tool_calls, "tokens": st.tokens, "seconds": round(st.seconds, 1), "limits": self.budget.to_dict(), "reason": reason})
         if reason == "finished":
             self._finalize("finished")
@@ -1688,6 +1798,8 @@ class Run:
             f"the run ended without a finish ({ended_by}): what was valid was applied, the rest was not worked on")
         with b._lock():
             coverage, coverage_asked = b.coverage()
+        if not b.parametrizing():  # a question or a check does not touch the units: listing them all as untouched would say the opposite of what was asked
+            coverage = []
         if coverage_asked:  # said by the sheet, not by the model: a unit the run left untouched is not "left as drawn"
             add("all_units_covered", all(r["covered"] for r in coverage),
                 sentence(coverage) + ("" if all(r["covered"] for r in coverage) else " — no named value was kept for them, and no reason is on the checklist"))

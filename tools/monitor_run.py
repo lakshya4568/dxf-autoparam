@@ -139,7 +139,10 @@ def event_lines(e: dict, log: Log, verbose_results: int) -> None:
     if k == "run_start":
         log.line(f"RUN START — instruction:\n{e.get('instruction')}\nscope: {json.dumps(e.get('scope'), default=str)}\nbudget: {json.dumps(e.get('budget'), default=str)}", tag)
     elif k == "user":
-        log.line(f"YOU (follow-up): {e.get('text') or '(answers only)'}  answers={json.dumps(e.get('answers') or {}, ensure_ascii=False)}", tag)
+        log.line(f"YOU ({'a note while it works' if e.get('while_working') else 'follow-up'}): {e.get('text') or '(answers only)'}  "
+                 f"answers={json.dumps(e.get('answers') or {}, ensure_ascii=False)}", tag)
+    elif k == "say":
+        log.line(f"THE MODEL SAYS (words it wrote beside its calls): {clip(e.get('text', ''), 600)}", tag)
     elif k == "stage":
         log.line(f"stage: {e.get('text')}", tag)
     elif k == "turn":
@@ -164,7 +167,9 @@ def event_lines(e: dict, log: Log, verbose_results: int) -> None:
     elif k == "state":
         log.line(f"STATE {e.get('from')} → {e.get('to')} — {e.get('reason') or e.get('label')}", tag)
     elif k == "question":
-        log.line(f"QUESTION FOR YOU: {clip(e.get('text'), 600)}  options={e.get('options')}  suggested={e.get('recommended')}", tag)
+        log.line(f"QUESTION FOR YOU{' [' + e['header'] + ']' if e.get('header') else ''}{' (several may apply)' if e.get('multi') else ''}: {clip(e.get('text'), 600)}  "
+                 f"options={e.get('options')}  suggested={e.get('recommended')}"
+                 + (f"  meaning={json.dumps(e.get('descriptions'), ensure_ascii=False)}" if e.get('descriptions') else ""), tag)
     elif k == "error":
         log.line(f"ERROR: {e.get('text')}", tag)
     elif k == "note":

@@ -47,6 +47,7 @@ The agent — ONE instruction, one session (ai/run.py):
     POST /api/sheet/ai/run {instruction, scope, options}   start a run (options.model: one of those models)
     GET  /api/sheet/ai/progress?run=R1&since=n             its events, state, budget, questions, verdict
     POST /api/sheet/ai/continue {run, answers, note}       after it asked, or after a budget pause
+    POST /api/sheet/ai/note {run, note}                    something said while it works: read at its next turn (no stop)
     POST /api/sheet/ai/stop | apply | revert {run}
     GET  /api/sheet/ai/runs                                the history; GET /api/sheet/ai/image?run=R1&id=IMG3
     GET  /api/sheet/ai/requests?run=R1&since=0&limit=50    (&brief=1) every model call: what it was made of, what was the same as the call before, what it cost and
@@ -293,7 +294,9 @@ class SheetSession:
         now = set(sr.changed)
         touched = now | self.shown
         self.shown = now
-        return {"delta": self._prims(touched, sr), "styles": self.styles, "errors": sr.errors}
+        # `differs`: every entity that now differs from the drawing as read — the page keeps the original of those (fetched once per entity) and
+        # drops the rest, so the dashed original shows exactly what changed without being read again at every step
+        return {"delta": self._prims(touched, sr), "styles": self.styles, "errors": sr.errors, "differs": sorted(now)}
 
     # ── actions ───────────────────────────────────────────────────────────────
 
@@ -397,13 +400,13 @@ class SheetSession:
                 self.gem = self.gem_factory()
                 self.gem_model = target
             else:
-                from .ai.vertex import MODEL_CHOICES, Gemini, config
+                from .ai.vertex import Gemini, choice_for, config
 
-                choice = next((m for m in MODEL_CHOICES if m["id"] == target), None)
-                if choice and choice.get("provider") == "gateway":
+                choice = choice_for(target) if target else None
+                if choice and choice.get("provider") in ("gateway", "tokenharbor"):
                     from .ai.gateway import Gateway, GatewayConfig
 
-                    self.gem = Gateway(GatewayConfig(model=choice["gateway_model"], thinking=choice["thinking"]))
+                    self.gem = Gateway(GatewayConfig(model=choice["gateway_model"], thinking=choice["thinking"], provider=choice["provider"], price=choice.get("price")))
                     self.gem_model = target
                 else:
                     cfg = config(target)
@@ -493,6 +496,10 @@ class SheetSession:
         run = self._run(body.get("run"))
         run.stop()
         return {"ok": True, "run": run.id, "status": run.status}
+
+    def note_run(self, body: dict) -> dict:
+        """What the person says while the agent works: read at its next turn (no stop, no lost call)."""
+        return self._run(body.get("run")).say(body.get("note", ""))
 
     def apply_run(self, body: dict) -> dict:
         run = self._run(body.get("run"))
@@ -723,10 +730,7 @@ class SheetSession:
                     {"name": r.name, "label": r.label, "expr": r.expr}
                     for r in u.prog.relations
                 ][:40],
-                "components": [
-                    {"name": c.name, "type": c.type, "regions": c.regions}
-                    for c in u.prog.components
-                ],
+                "components": self._components(u),
                 "findings": [f.as_dict() for f in (rep.findings if rep else [])][:80],
                 "dropped": u.dropped,
                 "candidates": sorted(
@@ -766,6 +770,29 @@ class SheetSession:
             part = next((c for c in u.prog.components if len(ends) == 2 and ends[0] in c.datums and ends[1] in c.datums), None)
             out.append({"name": r.name, "label": r.label or r.name, "value": value, "unit": "mm", "expr": r.expr, "between": ends if len(ends) == 2 else None,
                         "part": part.name if part else None, "held": bool(part and part.held), "existing": bool(part and part.existing)})
+        return out
+
+    @staticmethod
+    def _components(u) -> list[dict]:
+        """The unit's parts as the page lists them: the tree (parent, level), existing or not, the sheet entities each is drawn with (a click shows
+        them), and what the drawing's own labels on its outline call it — with the doubt when they say something else (ai/labels.py)."""
+        from .ai import labels
+        from .assembly import part_entities
+
+        parts = u.prog.intent.get("parts") or {}
+        rows = {c.get("name"): c for c in (u.answer or {}).get("components", [])}
+        pointed = labels.pointed_labels(u.an)
+        out = []
+        for c in u.prog.components:
+            row = rows.get(c.name, {"name": c.name, "type": c.type})
+            ents = sorted(u.back[i] for i in part_entities(u.prog, parts, c.name)) if c.name in parts else []
+            said = labels.part_labels(u.prog, parts, c.name, pointed) if c.name in parts else []
+            leaf = c.level != "assembly" and not any(p.parent == c.name for p in parts.values())
+            doubt = labels.conflict(row, said) if leaf else None
+            out.append({"name": c.name, "type": c.type, "regions": c.regions, "parent": c.parent, "level": c.level, "existing": c.existing,
+                        "entities": ents[:4000], "drawing_says": [lab["text"] for lab in said[:3]],
+                        **({"label_doubt": labels.sentence(doubt)} if doubt else {}),
+                        **({"label_checked": row["label_checked"]} if row.get("label_checked") else {})})
         return out
 
     def param(self, name: str) -> dict:
@@ -853,6 +880,12 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
         if method == "POST" and path == "/api/sheet/ai/stop":
             body = json.loads(handler._body() or b"{}")
             return handler._json(sheet.stop_run(body)) or True
+        if method == "POST" and path == "/api/sheet/ai/note":  # like stop, outside the sheet lock: the person can always speak to a run that is busy
+            body = json.loads(handler._body() or b"{}")
+            try:
+                return handler._json(sheet.note_run(body)) or True
+            except SheetError as exc:
+                return handler._json({"ok": False, "error": str(exc)}, 409) or True
         if method == "POST" and path == "/api/sheet/open":  # the drawing is read before the sheet lock is taken (SheetSession.open)
             raw = handler._body()
             name = q.get("name", ["upload.dxf"])[0]

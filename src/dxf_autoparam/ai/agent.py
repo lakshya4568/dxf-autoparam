@@ -36,7 +36,7 @@ from ..program import ExprError, names_in
 from ..regen import regenerate_program
 from ..topology import DatumIndex, of
 from ..validator import apply
-from . import domain, library
+from . import domain, labels, library
 from .context import drawing_context, fixed_lines, held_part_names, occurrence_pairs, owner, unit_context
 from .loop import AgentLoop, Budget
 from .parametrize import image_labels, images_for, prepare
@@ -170,9 +170,11 @@ TOOL_SPECS = [
     ("knowledge", "The domain pack's concepts / families / formulas matching the words (several queries at once). Only when a pack is on for the run.",
      _schema({"queries": LIST}, ["queries"])),
     ("set_structure", "What the drawing is: what kind of structure, in your own words (`family`: a short word of your own, optional).", _schema({"structure_type": S, "family": S, "views": LIST, "summary": S}, ["structure_type"])),
-    ("define_parts", "Create or replace parts (component tree nodes) made of regions and / or entities — all of them in one call.",
+    ("define_parts", ("Create or replace parts (component tree nodes) made of regions and / or entities — all of them in one call. Each verdict "
+                      "says what the drawing's own labels on the part's outline call it (`drawing_says`); where they say something else the verdict "
+                      "has `label_doubt`: look closer, rename or redefine it, or keep it with `label_checked` (why the label does not name it)."),
      _batch({"name": S, "type": S, "level": _enum("assembly", "component", "subcomponent"), "parent": S, "regions": LIST, "entities": LIST,
-             "existing": B, "parametrize": B, "evidence": LIST, "description": S}, ["name", "type"])),
+             "existing": B, "parametrize": B, "evidence": LIST, "description": S, "label_checked": S}, ["name", "type"])),
     ("remove", "Remove things, as many as you like in one call: parts, parameters, constraints (by description), your formulas (by line), transforms.",
      _schema({"parts": LIST, "parameters": LIST, "constraints": LIST, "formulas": LIST, "transforms": LIST})),
     ("define_parameters", ("Create or replace design inputs, as many as you like in one call: each names WHERE the size is — a "
@@ -227,14 +229,26 @@ TOOL_SPECS = [
               "questions": {"type": "array", "items": _schema({"text": S, "options": LIST, "why": S}, ["text"])}},
              [])),
     ("account_instruction", ("How you read the person's instruction, clause by clause — all of them in one call. Each item: `quote` = their own "
-     "words, exactly as written; `kind` = what it asks (change_value, keep, scope, link_views, parametrize, annotate, process, context); "
-     "`meaning` = what you take it to mean on THIS drawing; `handled_by` = plan, parts, values, views, links, question or none (with `why` when none). "
+     "words, exactly as written; `kind` = what it asks (change_value, keep, scope, link_views, parametrize, annotate, question — something to answer or "
+     "explain —, check — something to verify or compare and report —, process, context); "
+     "`meaning` = what you take it to mean on THIS drawing; `handled_by` = plan, parts, values, views, links, answer (your closing summary), question "
+     "(a question to the person) or none (with `why` when none). "
      "The engine checks the quotes and that every sentence is accounted for before you can finish."),
-     _batch({"quote": S, "kind": _enum("change_value", "keep", "scope", "link_views", "parametrize", "annotate", "process", "context"),
-             "meaning": S, "handled_by": _enum("plan", "parts", "values", "views", "links", "question", "none"), "why": S}, ["quote", "kind", "meaning", "handled_by"])),
-    ("ask_person", ("A genuine ambiguity for the person to decide — with the options you see, when there are some. The run waits for "
-                    "their answer and continues with it."), _schema({"question": S, "options": LIST}, ["question"])),
-    ("finish", "Done: the engine runs every check. If problems remain they are listed; call finish again to stop anyway.",
+     _batch({"quote": S, "kind": _enum("change_value", "keep", "scope", "link_views", "parametrize", "annotate", "question", "check", "process", "context"),
+             "meaning": S, "handled_by": _enum("plan", "parts", "values", "views", "links", "answer", "question", "none"), "why": S},
+            ["quote", "kind", "meaning", "handled_by"])),
+    ("ask_person", ("Ask the person to decide what is theirs, as multiple-choice questions with the options you see. `questions`: up to four, each "
+                    "{question, header (a word or two naming it), options (two to five choices, each {label, description} — the page adds a way to answer in "
+                    "their own words), multi_select (true when several may apply), recommended (the label you would pick, when you have a reason)}. Ask only what "
+                    "the drawing and the person's words cannot settle, and ask it once: the run waits for the answers and continues with them. One question "
+                    "may also be given as `question` with `options` (labels)."),
+     _schema({"question": S, "options": LIST,
+              "questions": {"type": "array", "items": _schema({
+                  "question": S, "header": S, "multi_select": B, "recommended": S,
+                  "options": {"type": "array", "items": _schema({"label": S, "description": S}, ["label"])}}, ["question"])}})),
+    ("finish", ("Done: the engine runs every check. If problems remain they are listed; call finish again to stop anyway. `summary` is your answer to the "
+                "person, in plain words — the result first (for a question or a check it IS the answer, with where you read it), then what you did, what "
+                "you left alone and why, and anything they must decide."),
      _schema({"summary": S}, ["summary"])),
 ]
 WHY = {"type": "string", "description": "One short sentence for the person watching: what you are doing with this call and why."}
@@ -311,6 +325,7 @@ class Workbench:
         # ask_person questions the person answered: question → answer (what an earlier run asked is behind us: only THIS run's are open)
         self.answered: dict[str, str] = {q: "(asked in an earlier run)" for q in self.answer["questions"]}
         self.question_options: dict[str, list[str]] = {}
+        self.question_meta: dict[str, dict] = {}  # question → header, what each option means, whether several may be chosen, the model's recommendation
         self.confirm_plan = confirm_plan
         self.said_fn: Callable[[], str] | None = (
             None  # a sheet session shares ONE text of what the person said (and answered) across the units it opens
@@ -345,6 +360,7 @@ class Workbench:
 
     def inspect_regions(self, ids: list[str]) -> dict:
         topo = of(self.an)
+        pointed = labels.pointed_labels(self.an)
         regions = topo.by_id()
         dix = DatumIndex(self.an)
         texts = [it for it in self.an.drawing.items if it.dxftype in ("TEXT", "MTEXT") and (it.text or "").strip()]
@@ -375,6 +391,10 @@ class Workbench:
                                     for k, v in sorted(r.neighbours.items(), key=lambda kv: -kv[1])][:8],
                         "notes_inside": inside, "sizes_across": sorted(across, key=lambda a: -a["occurrences"])[:10],
                         "in_part": [c["name"] for c in self.answer["components"] if rid in c.get("regions", [])]}
+            border = [i for i, b in topo.item_border.items() if rid in b]
+            said = list(dict.fromkeys(f"{lab['id']}: {lab['text']}" for i in border for lab in pointed.get(i, [])))
+            if said:
+                out[rid]["labelled"] = said[:4]  # a note whose leader points at the region's outline: what the drawing calls what is there
         return out
 
     def inspect_lines(self, ids: list[str]) -> dict:
@@ -793,7 +813,8 @@ class Workbench:
             row = {"name": pname, "type": a.get("type", ""), "level": a.get("level", "component"), "parent": parent,
                    "regions": regions, "entities": a.get("entities", []), "existing": bool(a.get("existing")),
                    "parametrize": a.get("parametrize", True) is not False, "evidence": a.get("evidence", [])[:6],
-                   "description": a.get("description", ""), "confidence": 0.9}
+                   "description": a.get("description", ""), "confidence": 0.9,
+                   **({"label_checked": str(a["label_checked"])[:240]} if (a.get("label_checked") or "").strip() else {})}
             self._upsert("components", "name", pname, row)
             notes = ([f"named {pname}"] if pname != a["name"] else []) + ([f"took {', '.join(taken[:6])}"] if taken else [])
             return pname, "; ".join(notes)
@@ -903,12 +924,14 @@ class Workbench:
                 {**{k: a.get(k, "") for k in ("quote", "kind", "meaning", "handled_by", "why")}, "quote_norm": _norm(quote)}]
             return item, ""
         if name == "ask_person":
-            text = (a.get("question") or "").strip()
-            if text and text not in A["questions"]:
-                A["questions"].append(text)
-                self.question_options[text] = [str(o) for o in a.get("options") or []]
+            asked, note = mcq(a)
+            for q in asked:
+                if q["text"] not in A["questions"]:
+                    A["questions"].append(q["text"])
+                    self.question_options[q["text"]] = q["options"]
+                    self.question_meta[q["text"]] = {k: q[k] for k in ("header", "descriptions", "multi", "recommended")}
             self._pause = True
-            return "question", ""
+            return "question", note
         raise KeyError(name)
 
     def _define_angle(self, a: dict) -> tuple[str, str]:
@@ -1292,8 +1315,10 @@ class Workbench:
                     out.append({**q, "source": f"plan {p.get('id')}"})
         for k, text in enumerate(self.answer.get("questions", [])):
             if text not in self.answered:
-                out.append({"id": f"A{k + 1}", "about": f"say:{k + 1}", "text": text, "options": self.question_options.get(text, []), "recommended": None,
-                            "why": "", "source": "the model"})
+                meta = self.question_meta.get(text, {})
+                out.append({"id": f"A{k + 1}", "about": f"say:{k + 1}", "text": text, "options": self.question_options.get(text, []),
+                            "recommended": meta.get("recommended"), "why": "", "source": "the model",
+                            **{x: meta[x] for x in ("header", "descriptions", "multi") if meta.get(x)}})
         return out
 
     def wants_person(self) -> bool:
@@ -1314,7 +1339,7 @@ class Workbench:
                 self.answered[q["text"]] = val
             else:
                 self.decisions[q["about"]] = val
-            if val not in (q.get("options") or []):
+            if not chosen(q, val):
                 self.instructions += f"\n[the person, answering '{q['text'][:80]}': {val}]"
             lines.append(f"- {q['text'][:200]} → {val}")
         self._pause = False
@@ -1340,6 +1365,15 @@ class Workbench:
         return self.scope.uid if self.scope else None
 
     def decorate(self, name: str, item: str, v: dict) -> None:
+        if name == "define_parts" and v["ok"]:
+            parts = self.prog.intent.get("parts") or {}
+            labs = labels.part_labels(self.prog, parts, item) if item in parts else []
+            if labs:
+                v["drawing_says"] = [f"{lab['id']}: {lab['text']}" for lab in labs[:3]]
+                row = next((c for c in self.answer["components"] if c.get("name") == item), None)
+                doubt = labels.conflict(row or {"name": item}, labs) if row is None or row.get("level") != "assembly" else None
+                if doubt:
+                    v["label_doubt"] = labels.sentence(doubt)
         if name == "define_parameters" and v["ok"]:
             v["moves"] = self.prog.intent.get("impact", {}).get(item, {})
             v.update(self.checked.get(item, {}))
@@ -1379,20 +1413,68 @@ class Workbench:
             return {"done": False, **st, "waiting_for": [q["text"][:200] for q in qs[:6]],
                     "hint": "the person has to decide first: the run asks them and continues you with their answers"}, False
         gaps = self.uncovered()
+        doubts = [labels.sentence(c) for c in labels.conflicts(self.prog, self.answer["components"])]  # parts the drawing's own labels contradict
         problems = (st["open_problems"] or any("NOT " in x for x in st.get("shared_here", []))
-                    or (self.plan_required and not (self.answer.get("plans") or (self.plans_anywhere and self.plans_anywhere()))) or gaps)
+                    or (self.plan_required and not (self.answer.get("plans") or (self.plans_anywhere and self.plans_anywhere()))) or gaps or doubts)
         if problems and self.finish_calls < 2:
             hint = "fix these, or call finish again to stop with what is valid"
             if gaps:
                 hint = ("account for every sentence of the person's instruction (account_instruction, quoting their words; or propose_plan "
                         "with the clause they come from): " + " | ".join(g[:100] for g in gaps[:3]) + ". Then finish.")
-            return {"done": False, **st, "hint": hint}, False
-        return {"done": True, **st}, True
+            elif doubts:
+                hint = "the drawing labels some parts as something else: " + " | ".join(d[:220] for d in doubts[:3]) + ". Then finish."
+            return {"done": False, **st, "hint": hint, **({"label_doubts": doubts[:4]} if doubts else {})}, False
+        return {"done": True, **st, **({"label_doubts": doubts[:4]} if doubts else {})}, True
 
 
 def _norm(text: str) -> str:
     """Words only, lower case: how two spellings of the same quoted sentence compare equal."""
     return " ".join(re.findall(r"[a-z0-9]+(?:\.[0-9]+)?", (text or "").lower()))
+
+
+MAX_QUESTIONS, MAX_OPTIONS, JOIN = 4, 5, " | "
+
+
+def mcq(a: dict) -> tuple[list[dict], str]:
+    """The multiple-choice questions an `ask_person` call makes, and what the engine did to them (said to the model, never silently): each
+    {text, header, options (labels), descriptions {label: words}, multi, recommended}. A question given as `question` + `options` is the same thing;
+    fewer than two distinct options is no choice, so it is asked in words; the recommendation must be one of the options."""
+    raw = a.get("questions")
+    if not isinstance(raw, list) or not raw:
+        raw = [{"question": a.get("question"), "options": a.get("options")}]
+    out, said = [], []
+    for q in raw:
+        if not isinstance(q, dict) or not str(q.get("question") or "").strip():
+            continue
+        if len(out) >= MAX_QUESTIONS:
+            said.append(f"only the first {MAX_QUESTIONS} questions were asked: ask the rest after the answers")
+            break
+        labels: list[str] = []
+        descriptions: dict[str, str] = {}
+        for o in q.get("options") or []:
+            label, words = (str(o.get("label") or "").strip(), str(o.get("description") or "").strip()) if isinstance(o, dict) else (str(o).strip(), "")
+            if not label or label in labels:
+                continue
+            if len(labels) >= MAX_OPTIONS:
+                said.append(f"'{str(q['question'])[:40]}': only {MAX_OPTIONS} options were kept")
+                break
+            labels.append(label)
+            if words:
+                descriptions[label] = words[:200]
+        if len(labels) < 2:
+            labels, descriptions = [], {}
+        rec = str(q.get("recommended") or "").strip()
+        out.append({"text": str(q["question"]).strip(), "header": str(q.get("header") or "").strip()[:24], "options": labels, "descriptions": descriptions,
+                    "multi": bool(q.get("multi_select")) and len(labels) > 1, "recommended": rec if rec in labels else None})
+    return out, "; ".join(said)
+
+
+def chosen(q: dict, val: str) -> bool:
+    """Whether an answer only picks among the question's options (several joined by ' | ' where the question allows several): anything else is the
+    person's own words, which a quote may then come from."""
+    options = q.get("options") or []
+    parts = [p.strip() for p in str(val).split(JOIN)] if q.get("multi") else [str(val).strip()]
+    return bool(options) and all(p in options for p in parts)
 
 
 def sentences(text: str) -> list[tuple[int, int, str]]:
@@ -1574,9 +1656,9 @@ def unit_overview(path, region, bench, drawing=None, analysis=None, scope=None, 
     """The overview of one drawing (or sheet unit) with its CONTEXT — what every request starts from. Returns (overview, context,
     the analysis and baseline it was made from)."""
     an, base, region, _snap = prepare(path, None, region, drawing=drawing, analysis=analysis)
-    labels = image_labels(an, base)
-    context = (unit_context(scope.sm, scope.uid, bench.an, bench.prog, labels, bench.rep) if scope
-               else drawing_context(bench.an, bench.prog, labels, bench.answer, bench.rep))
+    pic_labels = image_labels(an, base)
+    context = (unit_context(scope.sm, scope.uid, bench.an, bench.prog, pic_labels, bench.rep) if scope
+               else drawing_context(bench.an, bench.prog, pic_labels, bench.answer, bench.rep))
     if bench.answer.get("plans"):
         context["plans"] = [{"id": p.get("id"), "status": p.get("status"), "driver": (p.get("driver") or {}).get("parameter"),
                              "anchor": (p.get("anchor") or {}).get("policy"), "questions": [q["text"][:160] for q in p.get("questions", [])][:4]}

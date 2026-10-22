@@ -325,9 +325,10 @@ class Pictures:
 
         under = None
         u0 = sm.unit(unit) if unit in sm.units else None  # built if it was not yet: a picture of a unit needs its analysis
-        if u0 is not None and ids == "lines":  # the set-out lines: which ones, and faint hairlines UNDER the drawing (never over a note)
+        if u0 is not None and ids == "lines":  # the set-out lines: which ones, and — when few — faint hairlines UNDER the drawing (never over a note)
             under = self._plan_lines(u0, fr, box, state, 44.0 if kind == "overview" else vp.MIN_LINE_PX)
-            self._hairlines(d, fr, under)
+            if len(under["x"]) + len(under["y"]) <= vp.HAIRLINES_MAX:
+                self._hairlines(d, fr, under)
         if baseline and ghost:  # what the drawing was, dotted, under what it is
             for p in ghost:
                 if p["k"] == "p" and len(p["pts"]) >= 2:
@@ -702,16 +703,20 @@ class Pictures:
 
     @staticmethod
     def _mark_tiles(d: ImageDraw.ImageDraw, fr: Frame, tiles) -> list[dict]:
-        """The boxes of the detail tiles, dashed and named on the overview — so a picture of a part says which part of the whole it is."""
+        """Where the detail tiles are, on the overview — so a picture of a part says which part of the whole it is: each tile's four corners as short
+        brackets and its name in a small chip, translucent. Full dashed frames across the drawing (as they were) cut through its lines and notes."""
         out = []
-        font = _font(15)
+        font = _font(13)
+        col = (225, 105, 0, 190)
         for k, b in enumerate(tiles, 1):
             a, c = fr.px(b[0], b[3]), fr.px(b[2], b[1])
-            _dashed(d, [a, (c[0], a[1]), c, (a[0], c[1]), a], (225, 105, 0, 255), 3, (12.0, 6.0))
+            arm = max(8.0, min(22.0, 0.08 * min(abs(c[0] - a[0]), abs(c[1] - a[1]))))
+            for (x, y), (sx, sy) in (((a[0], a[1]), (1, 1)), ((c[0], a[1]), (-1, 1)), ((c[0], c[1]), (-1, -1)), ((a[0], c[1]), (1, -1))):
+                d.line([(x + sx * arm, y), (x, y), (x, y + sy * arm)], fill=col, width=2)
             name = f"TILE_{k}"
-            w = d.textlength(name, font=font) + 12
-            d.rounded_rectangle([a[0] + 4, a[1] + 4, a[0] + 4 + w, a[1] + 26], radius=5, fill=(225, 105, 0, 235))
-            d.text((a[0] + 10, a[1] + 15), name, fill=(255, 255, 255), font=font, anchor="lm")
+            w = d.textlength(name, font=font) + 10
+            d.rounded_rectangle([a[0] + 3, a[1] + 3, a[0] + 3 + w, a[1] + 21], radius=4, fill=(225, 105, 0, 170))
+            d.text((a[0] + 8, a[1] + 12), name, fill=(255, 255, 255), font=font, anchor="lm")
             out.append({"name": name, "box": [round(v, 3) for v in b]})
         return out
 
