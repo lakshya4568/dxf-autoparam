@@ -1,0 +1,238 @@
+[
+ {
+  "name": "173A",
+  "dxf": "~/Downloads/173A.dxf",
+  "saved": "out/agent-logs/20261022-bench/173A-copy.autoparam.json",
+  "note": "the owner's sheet after paid run R1 (gemini-3.8-flash) and their own edits, revision 338",
+  "run": "R1, 2026-10-21, gemini-3.8-flash, 112 turns, partial",
+  "ledger": [
+   "2026-10-21 16:25:00",
+   "2026-10-21 17:37:30"
+  ],
+  "expect": [
+   {
+    "component": "top slab",
+    "words": [
+     "top",
+     "slab"
+    ]
+   },
+   {
+    "component": "bottom slab",
+    "words": [
+     "bottom",
+     "slab"
+    ]
+   },
+   {
+    "component": "side walls",
+    "words": [
+     "side",
+     "wall"
+    ]
+   },
+   {
+    "component": "haunches",
+    "words": [
+     "haunch"
+    ]
+   },
+   {
+    "component": "wearing course",
+    "words": [
+     "wearing"
+    ]
+   },
+   {
+    "component": "PCC base course",
+    "words": [
+     "pcc"
+    ]
+   },
+   {
+    "component": "granular filling",
+    "words": [
+     "granular"
+    ]
+   },
+   {
+    "component": "boulder backing",
+    "words": [
+     "boulder"
+    ]
+   },
+   {
+    "component": "return wall",
+    "words": [
+     "return",
+     "wall"
+    ]
+   },
+   {
+    "component": "return wall foundation",
+    "words": [
+     "foundation"
+    ]
+   },
+   {
+    "component": "toe wall",
+    "words": [
+     "toe",
+     "wall"
+    ]
+   },
+   {
+    "component": "shear key",
+    "words": [
+     "shear",
+     "key"
+    ]
+   },
+   {
+    "component": "earth retainer",
+    "words": [
+     "earth",
+     "retainer"
+    ]
+   },
+   {
+    "component": "height gauge",
+    "words": [
+     "gauge"
+    ]
+   },
+   {
+    "component": "sump",
+    "words": [
+     "sump"
+    ]
+   },
+   {
+    "component": "soak pit",
+    "words": [
+     "soak",
+     "pit"
+    ]
+   },
+   {
+    "component": "inspection chamber",
+    "words": [
+     "inspection",
+     "chamber"
+    ]
+   }
+  ],
+  "expect_source": "the components the drawing labels itself (its TEXT and MTEXT), not the agent's names"
+ },
+ {
+  "name": "20A",
+  "dxf": "~/Downloads/20A (7).dxf",
+  "saved": "out/agent-logs/20261022-bench/20A-copy.autoparam.json",
+  "note": "the owner's sheet after paid run R1 of 2026-10-20 and their own edits",
+  "run": "R1, 2026-10-20, gemini-3.8-flash, 90 turns, partial",
+  "ledger": [
+   "2026-10-20 20:29:00",
+   "2026-10-20 21:37:30"
+  ]
+ },
+ {
+  "name": "Bridge-7A",
+  "dxf": "~/Downloads/Bridge No.7A (3).dxf",
+  "note": "a GAD nobody has parametrized"
+ },
+ {
+  "name": "mib173",
+  "dxf": "~/Downloads/mib173_dxf_R2000.dxf",
+  "note": "a GAD nobody has parametrized"
+ },
+ {
+  "name": "BVP-minor",
+  "dxf": "~/Downloads/BVP-S&C-BRG-GAD-MINOR-BR No 1-SBI-SEJ-BG DOUBLING - Copy.dxf"
+ },
+ {
+  "name": "gad-1790232095",
+  "dxf": "~/Downloads/gad_1790232095.dxf"
+ },
+ {
+  "name": "L-section",
+  "dxf": "~/Downloads/longitudinal_section.dxf"
+ },
+ {
+  "name": "BRG80",
+  "dxf": "~/Downloads/BRG. NO.80 (Doubling) (1).dxf",
+  "note": "no DIMENSION entity: its sizes are written as text"
+ },
+ {
+  "name": "GAD-general",
+  "dxf": "~/Downloads/General_Arrangement_Drawing.dxf",
+  "note": "no DIMENSION entity"
+ },
+ {
+  "name": "box-1cell",
+  "generate": {
+   "cells": 1
+  },
+  "expert": true,
+  "note": "generated (plan_bench.Box); saved work = the generator's own parametrization (names on every occurrence, parts by member)"
+ },
+ {
+  "name": "box-2cell",
+  "generate": {
+   "cells": 2
+  },
+  "expert": true,
+  "note": "generated (plan_bench.Box); saved work = the generator's own parametrization (names on every occurrence, parts by member)"
+ },
+ {
+  "name": "box-3cell",
+  "generate": {
+   "cells": 3
+  },
+  "expert": true,
+  "note": "generated (plan_bench.Box); saved work = the generator's own parametrization (names on every occurrence, parts by member)"
+ },
+ {
+  "name": "box-4cell",
+  "generate": {
+   "cells": 4
+  },
+  "expert": true,
+  "note": "generated (plan_bench.Box); saved work = the generator's own parametrization (names on every occurrence, parts by member)"
+ },
+ {
+  "name": "ex-box-half",
+  "dxf": "examples/rcc_box_half_section_half_elevation.dxf"
+ },
+ {
+  "name": "ex-2cell",
+  "dxf": "examples/two_cell_box_section.dxf"
+ },
+ {
+  "name": "ex-3cell",
+  "dxf": "examples/three_cell_box_lines.dxf"
+ },
+ {
+  "name": "ex-deck",
+  "dxf": "examples/deck_slab_section.dxf"
+ },
+ {
+  "name": "ex-girder",
+  "dxf": "examples/girder_deck_section.dxf"
+ },
+ {
+  "name": "ex-pier",
+  "dxf": "examples/pier_elevation.dxf"
+ },
+ {
+  "name": "ex-retaining",
+  "dxf": "examples/retaining_wall_section.dxf"
+ },
+ {
+  "name": "ex-well",
+  "dxf": "examples/well_foundation_section.dxf"
+ },
+ {
+  "name": "ex-xx",
+  "dxf": "examples/sectional_elevation_xx.dxf"
+ }
+]
