@@ -2,7 +2,8 @@
 
 Found on a real sheet: a boulder backing drawn against the battered back face of a return wall was set out from its own corner, so a wider or
 deeper wall moved its face away from the backing — a corner came apart (connections.torn said so). A generated wall with a 1:10 batter and a
-backing against it; each named value stepped ±10 %: nothing comes apart, and without the rule it does."""
+backing against it; each named value stepped ±10 %: nothing comes apart. With both widths named the face turns: the corner is left, and the edit
+says when the backing comes off."""
 
 from __future__ import annotations
 
@@ -31,7 +32,9 @@ def battered_wall(path) -> str:
     return str(path)
 
 
-def sheet(tmp_path):
+def sheet(tmp_path, top_width: bool = False):
+    """The wall and its backing as parts. `top_width`: the wall's top width named too — with both widths inputs its batter is a result, and
+    the back face turns when either changes."""
     sm = SheetModel.open(battered_wall(tmp_path / "wall.dxf"))
     uid = next(iter(sm.units))
     u = sm.unit(uid)
@@ -50,13 +53,13 @@ def sheet(tmp_path):
     ans = copy.deepcopy(EMPTY_ANSWER)
     ans["components"] = [{"name": "Wall", "type": "wall", "regions": [region(100, 1500)]}, {"name": "Backing", "type": "fill", "regions": [region(750, 1500)]},
                          {"name": "Footing", "type": "footing", "regions": [region(700, -150)]}]
-    ans["parameters"] = [size("WallHeight", "y", 0, 3000), size("TopWidth", "x", 0, 300), size("BottomWidth", "x", 0, 600),
-                         size("BackingWidth", "x", 550, 1150), size("FootingDepth", "y", -300, 0)]
+    ans["parameters"] = [size("WallHeight", "y", 0, 3000), size("BottomWidth", "x", 0, 600), size("BackingWidth", "x", 550, 1150),
+                         size("FootingDepth", "y", -300, 0), *([size("TopWidth", "x", 0, 300)] if top_width else [])]
     sm.commit_answer(uid, ans)
     return sm, uid
 
 
-@pytest.mark.parametrize("name", ["WallHeight", "TopWidth", "BottomWidth", "BackingWidth", "FootingDepth"])
+@pytest.mark.parametrize("name", ["WallHeight", "BottomWidth", "BackingWidth", "FootingDepth"])
 def test_a_backing_on_a_battered_face_stays_on_it(tmp_path, name):
     sm, uid = sheet(tmp_path)
     prog = sm.unit(uid).prog
@@ -67,15 +70,14 @@ def test_a_backing_on_a_battered_face_stays_on_it(tmp_path, name):
         assert torn(prog, r.pts) == [], f"{name} × {f}: a corner came apart"
 
 
-def test_without_the_rule_the_backing_comes_off_the_face(tmp_path, monkeypatch):
-    import dxf_autoparam.validator as V
-
-    monkeypatch.setattr(V, "bind_on_slopes", lambda prog, rep: None)
-    sm, uid = sheet(tmp_path)
+def test_a_face_that_turns_is_left_and_the_edit_says_the_backing_came_off(tmp_path):
+    """With both widths named the batter is a result: the face turns when either changes. A corner bound to a turning edge is no chain the
+    design intent can stack through, so it is left — and the change says what came apart, for the person to settle."""
+    sm, uid = sheet(tmp_path, top_width=True)
     prog = sm.unit(uid).prog
-    apart = [n for n in ("WallHeight", "TopWidth", "BottomWidth") for f in (1.1, 0.9)
-             if torn(prog, regenerate_program(prog, {n: prog.params[n].value * f}).pts)]
-    assert apart, "the case the rule is for: some step pulls the backing off the wall"
+    assert not any("sloped edge" in str(w) for w in prog.origin_why.values()), "nothing bound to a turning face"
+    r = sm.regenerate({f"{uid}.TopWidth": prog.params["TopWidth"].value * 0.9})  # a narrower top: the face leans away from the backing
+    assert r.ok and any("pulled them apart" in w and "Backing" in w for w in r.warnings), r.warnings
 
 
 def test_a_corner_a_named_value_drives_is_left_to_it(tmp_path):

@@ -556,7 +556,7 @@ def apply(an: Analysis, answer: dict, base_decisions: Decisions | None = None, h
 
     # ── the engine's own rules, whatever was proposed ─────────────────────────────
     enforce_slopes(prog, rep)
-    bind_on_slopes(prog, rep)
+    bind_on_slopes(prog, rep, dims, parts)
     # ── accepted plans, second half: the anchor written into the assembly's set-out ──
     compiled = compile_plans(prog, answer, rep, pre_plans) if pre_plans else None
     _retire_undriven(prog, rep, dims, cannot, "the stated slope sets that line from the height")
@@ -1025,11 +1025,13 @@ def _lines_read(prog: Program, d: str) -> set[str]:
     return out
 
 
-def bind_on_slopes(prog: Program, rep: Report) -> None:
+def bind_on_slopes(prog: Program, rep: Report, dims: dict[str, list[tuple[str, str, str | None]]] | None = None, parts: dict | None = None) -> None:
     """A corner drawn ON another entity's sloped edge — strictly between the edge's ends — stays on it when values change: its x is set out
-    along the edge, x = x_end + (run per rise) · (y − y_end), at the edge's ratio as drawn (a backing against a battered wall face, the top of
-    a fill where it meets a bank). Set out on its own, the corner kept its place while the edge moved away from it, and a corner came apart
-    (connections.torn). A corner whose x somebody set (a name, a person, a plan, held or existing work, a level) is left as it is; one that
+    along the edge, x = x_end + (run per rise) · (y − y_end), at the edge's ratio as drawn, when the edge keeps its slope (a backing against a
+    battered wall face, the top of a fill where it meets a bank). Set out on its own, the corner kept its place while the edge moved away from it, and a corner came apart
+    (connections.torn). Only between two parts (a corner of one part on another part's edge, both defined), and only on a line that part has
+    to itself: a part's own entities, entities no part owns, and a line other parts or another view are drawn on keep their set-out (bound
+    too, they cost 20A eight editable dimensions in a unit of two linked views). A corner whose x somebody set (a name, a person, a plan, held or existing work, a level) is left as it is; one that
     already follows the edge is left too, and so is one a named value drives (binding it would leave that value worked out: every named value
     that moved its two lines before must still move them). Binding one that would close a loop sets the plain offset in the loop where it is
     drawn; when that does not settle it, or a value that moves the corner would then break the drawing, nothing changes."""
@@ -1053,20 +1055,38 @@ def bind_on_slopes(prog: Program, rep: Report) -> None:
             a, b = corner(it, i), corner(it, j)
             if abs(x2 - x1) > tol and abs(y2 - y1) > tol and a and b and a[0] != b[0] and a[1] != b[1]:
                 edges.append((it.index, (x1, y1), (x2, y2), a, b))
-    if not edges:
+    if not edges or not parts:
         return
+    from .assembly import part_entities
 
-    def driving() -> set[str]:
-        """The named values that move their own two lines by exactly their change: a binding that takes one away is not made."""
+    parents = {p.parent for p in parts.values() if p.parent}
+    owner: dict[int, set[str]] = {}
+    for name in parts:
+        if name not in parents:
+            for i in part_entities(prog, parts, name):
+                owner.setdefault(i, set()).add(name)
+    users = datum_users(an)
+
+    def own_line(d: str, mine: set[str]) -> bool:
+        """The line is the corner's part's alone: every structural entity drawn on it is that part's (a line other parts, or another view of a
+        unit of linked views, are drawn on would carry them along a slope that is not theirs)."""
+        return all(dr.items[i].role.value != "structural" or owner.get(i, set()) <= mine for i in users.get(d, ()))
+
+    # every occurrence of every named value (`dims`: each value's pairs of lines, a candidate's occurrences included), else each value's own two lines
+    named = dims if dims is not None else {n: [(*p.measures, None)] for n, p in prog.params.items() if p.source == "ai" and p.measures}
+
+    def driving() -> set[tuple[str, str, str]]:
+        """The occurrences named values move by exactly their change: a binding that takes one away is not made."""
         v0 = prog.datum_values()
         out = set()
-        for n, p in prog.params.items():
-            if p.source != "ai" or p.kind == "level" or not p.measures or not all(d in v0 for d in p.measures):
+        for n, pairs in named.items():
+            p = prog.params.get(n)
+            if p is None or p.kind == "level":
                 continue
             v1 = prog.datum_values({n: p.value + 1.0})
-            a, b = p.measures
-            if abs(abs((v1[b] - v1[a]) - (v0[b] - v0[a])) * u - 1.0) <= 1e-6:
-                out.add(n)
+            for a, b, _axis in pairs:
+                if a in v0 and b in v0 and abs(abs((v1[b] - v1[a]) - (v0[b] - v0[a])) * u - 1.0) <= 1e-6:
+                    out.add((n, a, b))
         return out
 
     bound, done = 0, set()
@@ -1078,6 +1098,8 @@ def bind_on_slopes(prog: Program, rep: Report) -> None:
             for idx, p1, p2, a, b in edges:
                 if idx == it.index or c[0] in (a[0], b[0]) or c[1] in (a[1], b[1]):
                     continue
+                if not owner.get(it.index) or not owner.get(idx) or owner[it.index] & owner[idx] or not own_line(c[0], owner[it.index]):
+                    continue  # not a corner of one part on another part's edge, on a line of its own
                 dx, dy = p2[0] - p1[0], p2[1] - p1[1]
                 t = ((x - p1[0]) * dx + (y - p1[1]) * dy) / (dx * dx + dy * dy)
                 if not 0.02 < t < 0.98 or abs((x - p1[0]) * dy - (y - p1[1]) * dx) / math.hypot(dx, dy) > tol:
@@ -1087,20 +1109,22 @@ def bind_on_slopes(prog: Program, rep: Report) -> None:
                 steps = [(n, w) for n in names for P in [prog.params[n].value] for d in [delta_of(prog, n)] for w in (P + d, P - min(d, 0.5 * abs(P)))]
                 if all(_on_line(prog, c, a, b, {n: w}) <= tol for n, w in steps):
                     break  # it follows the edge already
-                before = {(n, w): set(regenerate_program(prog, {n: w}).issues) for n, w in steps}
-                drives = driving()
-                saved = (dict(prog.formulas), dict(prog.origin))
-                ok = False
 
                 def ratio(values, a=a, b=b):
                     v = prog.datum_values(values)
                     return (v[b[0]] - v[a[0]]) / (v[b[1]] - v[a[1]])
 
-                # an edge that keeps its slope: along it at its drawn ratio, from either end (a plain chain the stacking can read); one whose ends
-                # are set out apart (it turns when a value moves one end): on the line through its two ends, whatever they do
-                keeps = all(abs(ratio({n: w}) - dx / dy) <= 1e-9 * max(1.0, abs(dx / dy)) for n, w in steps)
-                forms = ([f"{xe} + {dx / dy!r} * ({c[1]} - {ye})" for xe, ye in (a, b)] if keeps
-                         else [f"{a[0]} + ({b[0]} - {a[0]}) * ({c[1]} - {a[1]}) / ({b[1]} - {a[1]})"])
+                # only an edge that keeps its slope: along it at its drawn ratio, from either end — a plain chain the stacking reads. One whose ends
+                # are set out apart turns when a value moves one end; a corner bound to the line through its ends is no chain (the design intent
+                # cannot stack through it: on 20A it kept eight dimensions of a unit from being edited), so it is left, and an edit says when
+                # the two come apart
+                if not all(abs(ratio({n: w}) - dx / dy) <= 1e-9 * max(1.0, abs(dx / dy)) for n, w in steps):
+                    continue
+                before = {(n, w): set(regenerate_program(prog, {n: w}).issues) for n, w in steps}
+                drives = driving()
+                saved = (dict(prog.formulas), dict(prog.origin))
+                ok = False
+                forms = [f"{xe} + {dx / dy!r} * ({c[1]} - {ye})" for xe, ye in (a, b)]
                 for expr in forms:
                     try:
                         _set_exact(prog, c[0], expr, x * u)
