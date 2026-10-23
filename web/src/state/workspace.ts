@@ -398,8 +398,10 @@ export async function chooseGrowth(key: string, unit: string, mode: "start" | "e
   const res = await guard("Choosing which side stays…", () => api.anchor(key, unit, mode));
   if (!res) return;
   afterCommit(res);
-  // at the drawn value nothing moves; at another value (one already stepped) the drawing follows the side that was chosen
-  say(`${key}: ${SIDE_WORDS[mode]} — your choice, in place of the engine's default. ${(res.delta ?? []).length ? "The drawing follows it at the value it has now." : "The drawing is as it was."}`, "ok");
+  // at the drawn value nothing moves; at another value (one already stepped) the drawing follows the side that was chosen. A site level on the
+  // side that moves follows the structure now (it was an input): said, never refused for it
+  const follow = ((res.result?.levels_follow as { says: string }[] | undefined) ?? []).map((l) => l.says);
+  say(`${key}: ${SIDE_WORDS[mode]} — your choice, in place of the engine's default. ${(res.delta ?? []).length ? "The drawing follows it at the value it has now." : "The drawing is as it was."}${follow.length ? ` ${follow.join("; ")}.` : ""}`, follow.length ? "info" : "ok");
   void focusParam(key);
 }
 
@@ -525,6 +527,7 @@ async function commitLive(changes: Record<string, number>): Promise<LiveResult> 
       return { ok: false, error };
     }
     afterCommit(res);
+    if ((res.warnings ?? []).length) say(`Applied — to look at: ${(res.warnings ?? []).slice(0, 2).join("; ")}`, "info");
     return { ok: true };
   } catch (e) {
     console.error("Changing a value failed", e); // the banner says it to the person; the console keeps the stack
@@ -550,7 +553,8 @@ export async function applyChange(changes: Record<string, number>): Promise<bool
   if (p) void focusParam(p.key);
   const u = store.get().unit;
   if (u) void openUnit(u.id);
-  say("Applied — every check of the sheet holds.", "ok");
+  if ((res.warnings ?? []).length) say(`Applied — to look at: ${(res.warnings ?? []).slice(0, 3).join("; ")}`, "info");
+  else say("Applied — every check of the sheet holds.", "ok");
   return true;
 }
 

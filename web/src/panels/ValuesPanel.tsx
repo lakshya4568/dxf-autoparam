@@ -58,9 +58,10 @@ function ParamEditor({ row }: { row: { key: string; label: string; value: number
   };
   // a step still waiting when the editor closes is not lost
   useEffect(() => () => { if (timer.current !== null) { window.clearTimeout(timer.current); send(); } }, []);
+  // the range is what the engine found the drawing still holds within — information, never a fence: a value outside it is tried, and the
+  // engine says what happens (accepted, with what follows; or refused, with why)
   const go = (v: number, soon = true) => {
-    const clamped = Math.min(hi ?? Infinity, Math.max(lo ?? -Infinity, v));
-    const v2 = Math.round(clamped * 1e6) / 1e6;
+    const v2 = Math.round(v * 1e6) / 1e6;
     setText(plain(v2));
     latest.current = v2;
     if (timer.current !== null) window.clearTimeout(timer.current);
@@ -85,16 +86,20 @@ function ParamEditor({ row }: { row: { key: string; label: string; value: number
             }} />
           <div className="flex w-6 flex-col divide-y divide-slate-300 dark:divide-slate-600 overflow-hidden rounded-r border border-l-0 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 text-slate-500">
             <button className="flex flex-1 items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40" tabIndex={-1} aria-label={`Increase ${row.label || row.key}`} title="Bigger (Shift: ×10, Alt: ÷10)"
-              data-testid="param-inc" disabled={hi !== undefined && valid && value >= hi} onClick={(e) => stepBy(1, e)}><Chevron up /></button>
+              data-testid="param-inc" onClick={(e) => stepBy(1, e)}><Chevron up /></button>
             <button className="flex flex-1 items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40" tabIndex={-1} aria-label={`Decrease ${row.label || row.key}`} title="Smaller (Shift: ×10, Alt: ÷10)"
-              data-testid="param-dec" disabled={lo !== undefined && valid && value <= lo} onClick={(e) => stepBy(-1, e)}><Chevron up={false} /></button>
+              data-testid="param-dec" onClick={(e) => stepBy(-1, e)}><Chevron up={false} /></button>
           </div>
         </div>
         <span className="text-slate-500">{row.unit}</span>
       </div>
       <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-slate-500 num">
         <span>drawn {fmt(row.drawn, row.unit)}</span>
-        {lo !== undefined && hi !== undefined && <span title={`${range?.min_reason ?? ""}${range?.max_reason ? ` · ${range.max_reason}` : ""}`}>{fmt(lo, row.unit)} – {fmt(hi, row.unit)}</span>}
+        {lo !== undefined && hi !== undefined && (
+          <span data-testid="param-range" title={`Within this the drawing holds as it is set out now; outside it, the engine says what breaks. ${range?.min_reason ?? ""}${range?.max_reason ? ` · ${range.max_reason}` : ""}`}>
+            holds {fmt(lo, row.unit)} – {fmt(hi, row.unit)}{valid && (value > hi || value < lo) ? " · outside: tried" : ""}
+          </span>
+        )}
       </div>
       <GrowthChooser rowKey={row.key} />
       {error && <p className="mt-1 text-[12px] text-red-600" role="alert" data-testid="param-error">Refused, the drawing stays as it was: {error}</p>}
