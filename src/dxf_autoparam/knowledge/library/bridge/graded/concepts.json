@@ -1,0 +1,2223 @@
+{
+ "note": "One canonical concept per engineering meaning. `aliases` are the words drawings write (matched as whole phrases after normalisation: upper case, dots dropped or spaced, status prefixes PRO/PROP/PROPOSED/EXG/EXISTING/NEW removed). `spec_key` links the design spec's vocabulary (agent-design-spec.ts SPEC_KEYS), `component_kind` the component table (agent-design-kinds.ts). `distinct_from` names concepts that must never be merged with this one without project evidence. `ambiguous` lists phrases that name more than one concept: the evidence (the level chain) decides, never the first match.",
+ "concepts": [
+  {
+   "id": "rail_level",
+   "kind": "level",
+   "label": "Rail level",
+   "unit": "m",
+   "spec_key": "rail_level",
+   "definition": "Level of the top of the rail.",
+   "aliases": [
+    "RAIL LEVEL",
+    "RL OF RAIL",
+    "R.L. OF RAIL",
+    "RAIL"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "formation_level",
+   "kind": "level",
+   "label": "Formation level",
+   "unit": "m",
+   "spec_key": "formation_level",
+   "definition": "Top of the railway embankment on which the ballast rests; free board is measured to it (IRBM 313).",
+   "aliases": [
+    "FORMATION LEVEL",
+    "FORMATION",
+    "F.L.",
+    "F L",
+    "FRL",
+    "FORMATION RL"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "313(1)"
+    }
+   ]
+  },
+  {
+   "id": "top_slab_level",
+   "kind": "level",
+   "label": "Top of the structure (top slab / deck / pipe outside crown)",
+   "unit": "m",
+   "spec_key": "top_slab_level",
+   "definition": "Top face of the top slab of a box, of a deck, or the outside crown of a pipe.",
+   "aliases": [
+    "TOP OF SLAB",
+    "TOP OF TOP SLAB",
+    "T.O.S.",
+    "TOS",
+    "SLAB TOP",
+    "TOP OF DECK",
+    "DECK LEVEL"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "soffit_level",
+   "kind": "level",
+   "label": "Soffit level",
+   "unit": "m",
+   "spec_key": "soffit_level",
+   "definition": "Underside of the top slab / deck (the inside crown of a pipe). Vertical clearance is measured to it (IRBM 312).",
+   "aliases": [
+    "SOFFIT",
+    "SOFFIT LEVEL",
+    "B.O.S.",
+    "BOS",
+    "BOTTOM OF TOP SLAB",
+    "UNDERSIDE OF TOP SLAB",
+    "BOTTOM OF DECK",
+    "UNDERSIDE OF DECK",
+    "CROWN"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "312(1)"
+    }
+   ]
+  },
+  {
+   "id": "seat_level",
+   "kind": "level",
+   "label": "Bearing / seat level",
+   "unit": "m",
+   "spec_key": "seat_level",
+   "definition": "Top of the abutment, pier or bed block on which the superstructure bears.",
+   "aliases": [
+    "BEARING LEVEL",
+    "SEAT LEVEL",
+    "TOP OF BED BLOCK",
+    "TOP OF PIER",
+    "TOP OF ABUTMENT",
+    "ABUTMENT CAP",
+    "PIER CAP",
+    "BED BLOCK LEVEL",
+    "BED BLOCK TOP",
+    "TOP OF PEDESTAL"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "floor_level",
+   "kind": "level",
+   "label": "Floor (top of bottom slab) / pipe invert",
+   "unit": "m",
+   "spec_key": "floor_level",
+   "definition": "Top face of a box's bottom slab (under any wearing course), or a pipe's inside invert.",
+   "aliases": [
+    "TOP OF BOTTOM SLAB",
+    "FLOOR",
+    "FLOOR LEVEL",
+    "INVERT",
+    "INVERT LEVEL"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "slab_bottom_level",
+   "kind": "level",
+   "label": "Underside of the bottom slab",
+   "unit": "m",
+   "spec_key": "slab_bottom_level",
+   "definition": "Underside of a box's bottom slab (a pipe's outside invert).",
+   "aliases": [
+    "BOTTOM OF BOTTOM SLAB",
+    "UNDERSIDE OF BOTTOM SLAB",
+    "BOTTOM OF BASE SLAB",
+    "UNDERSIDE OF BASE SLAB"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "hfl",
+   "kind": "level",
+   "label": "High flood level (HFL)",
+   "unit": "m",
+   "spec_key": "hfl",
+   "definition": "Highest water level known to have occurred at the site — a survey fact.",
+   "aliases": [
+    "HFL",
+    "H.F.L.",
+    "HIGH FLOOD LEVEL",
+    "HIGHEST FLOOD LEVEL"
+   ],
+   "distinct_from": [
+    "design_water_level"
+   ],
+   "sources": [
+    {
+     "source": "SRC-CLAUDE-RESEARCH",
+     "note": "SSC cl. 2.9, secondary"
+    },
+    {
+     "source": "SRC-KB-PACKAGE",
+     "note": "conflict C-004"
+    }
+   ]
+  },
+  {
+   "id": "design_water_level",
+   "kind": "level",
+   "label": "Water level of the design discharge (Q), including afflux",
+   "unit": "m",
+   "spec_key": "design_water_level",
+   "definition": "The level vertical clearance (IRBM 312) and free board (IRBM 313) are measured from. Not the same as the HFL unless the project says so (KC-6).",
+   "aliases": [
+    "DESIGN FLOOD LEVEL",
+    "DFL",
+    "D.F.L.",
+    "DESIGN WATER LEVEL",
+    "DESIGN HFL",
+    "WATER LEVEL OF DESIGN DISCHARGE"
+   ],
+   "distinct_from": [
+    "hfl"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "312(1)"
+    },
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "313(1)"
+    }
+   ]
+  },
+  {
+   "id": "lwl",
+   "kind": "level",
+   "label": "Low water level (LWL)",
+   "unit": "m",
+   "spec_key": "lwl",
+   "definition": "Ordinary low / dry-weather water level.",
+   "aliases": [
+    "LWL",
+    "L.W.L.",
+    "LOW WATER LEVEL"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "207(3)"
+    }
+   ]
+  },
+  {
+   "id": "foundation_bottom",
+   "kind": "level",
+   "label": "Bottom of foundation (B.O.F.)",
+   "unit": "m",
+   "spec_key": "foundation_bottom",
+   "definition": "Underside of the foundation / footing — the founding level.",
+   "aliases": [
+    "B.O.F.",
+    "BOF",
+    "BOTTOM OF FOUNDATION",
+    "FOUNDATION LEVEL",
+    "FOUNDING LEVEL",
+    "BOTTOM OF FOOTING"
+   ],
+   "distinct_from": [
+    "depth_of_flow"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "403(2)"
+    }
+   ]
+  },
+  {
+   "id": "footing_top_level",
+   "kind": "level",
+   "label": "Top of footing",
+   "unit": "m",
+   "spec_key": "footing_top_level",
+   "definition": "Top face of a wing, abutment or pier footing.",
+   "aliases": [
+    "TOP OF FOOTING",
+    "FOOTING TOP",
+    "TOP OF FOUNDATION",
+    "TOP OF WING FOOTING"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "wing_top_level",
+   "kind": "level",
+   "label": "Top of the wing / return wall (its coping)",
+   "unit": "m",
+   "spec_key": "wing_top_level",
+   "definition": "The level top of a wing or return wall — the top of its coping where it has one.",
+   "aliases": [
+    "TOP OF WING WALL",
+    "WING TOP",
+    "WING WALL TOP",
+    "TOP OF RETURN WALL",
+    "RETURN WALL TOP",
+    "COPING LEVEL",
+    "TOP OF COPING",
+    "COPING TOP"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "bed_level",
+   "kind": "level",
+   "label": "Bed level",
+   "unit": "m",
+   "spec_key": "bed_level",
+   "definition": "Level of the stream bed at the bridge; in a box on the railway convention, the top of the wearing course in the cells.",
+   "aliases": [
+    "BED LEVEL",
+    "BED",
+    "B.L.",
+    "BL",
+    "BED.L",
+    "BED L",
+    "BEDLEVEL",
+    "BED LVL"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "ground_level",
+   "kind": "level",
+   "label": "Ground level (natural / existing)",
+   "unit": "m",
+   "spec_key": "ground_level",
+   "definition": "Natural or existing ground level at the site, before fill or excavation.",
+   "aliases": [
+    "GROUND LEVEL",
+    "GL",
+    "G.L.",
+    "NGL",
+    "N.G.L.",
+    "EGL",
+    "E.G.L.",
+    "NATURAL GROUND LEVEL",
+    "EXISTING GROUND LEVEL"
+   ],
+   "distinct_from": [
+    "finished_ground_level"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "finished_ground_level",
+   "kind": "level",
+   "label": "Finished ground level (FGL)",
+   "unit": "m",
+   "definition": "Ground level after the works (fill, paving). Not the natural ground level.",
+   "aliases": [
+    "FGL",
+    "F.G.L.",
+    "FINISHED GROUND LEVEL"
+   ],
+   "distinct_from": [
+    "ground_level"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "scour_level",
+   "kind": "level",
+   "label": "Lowest anticipated scoured bed level",
+   "unit": "m",
+   "definition": "The bed level after the design scour; open foundations of other bridges go at least 1.75 m below it in ordinary soil (IRBM 403(2)).",
+   "aliases": [
+    "SCOUR LEVEL",
+    "MAXIMUM SCOUR LEVEL",
+    "MAX SCOUR LEVEL",
+    "LOWEST SCOUR LEVEL"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "403(2)"
+    }
+   ]
+  },
+  {
+   "id": "danger_level",
+   "kind": "level",
+   "label": "Danger level",
+   "unit": "m",
+   "definition": "Level at which the safety of the bridge is likely to be affected; fixed per bridge (IRBM 703).",
+   "aliases": [
+    "DANGER LEVEL"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "703"
+    }
+   ]
+  },
+  {
+   "id": "fsl",
+   "kind": "level",
+   "label": "Full supply level (canals)",
+   "unit": "m",
+   "definition": "Full supply level of a canal; weep holes stay above it (IRBM 207(3)).",
+   "aliases": [
+    "FSL",
+    "F.S.L.",
+    "FULL SUPPLY LEVEL"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "207(3)"
+    }
+   ]
+  },
+  {
+   "id": "clear_span",
+   "kind": "quantity",
+   "label": "Clear span of a cell / span",
+   "unit": "mm",
+   "spec_key": "clear_span",
+   "definition": "Inside-to-inside opening of a cell or span.",
+   "aliases": [
+    "CLEAR SPAN",
+    "CLEAR OPENING",
+    "CLEAR WIDTH",
+    "CELL WIDTH",
+    "SPAN"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "311(3)"
+    }
+   ]
+  },
+  {
+   "id": "clear_height",
+   "kind": "quantity",
+   "label": "Clear height of a cell",
+   "unit": "mm",
+   "spec_key": "clear_height",
+   "definition": "Inside height of a cell. Its lower datum (the structural floor or the top of the wearing course) is a project convention the written levels decide (KC-4).",
+   "aliases": [
+    "CLEAR HEIGHT",
+    "CELL HEIGHT",
+    "INTERNAL HEIGHT",
+    "HEADROOM"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "cells",
+   "kind": "quantity",
+   "label": "Number of cells",
+   "unit": "-",
+   "spec_key": "cells",
+   "definition": "Count of the repeated openings of a box (topology input).",
+   "aliases": [
+    "CELLS",
+    "NUMBER OF CELLS",
+    "VENTS"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "spans",
+   "kind": "quantity",
+   "label": "Number of spans",
+   "unit": "-",
+   "spec_key": "spans",
+   "definition": "Count of spans (topology input).",
+   "aliases": [
+    "SPANS",
+    "NUMBER OF SPANS"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "deck_slab",
+   "kind": "quantity",
+   "label": "Deck slab thickness",
+   "unit": "mm",
+   "spec_key": "deck_slab",
+   "definition": "Depth of a slab deck.",
+   "aliases": [
+    "DECK SLAB",
+    "DECK THICKNESS",
+    "SLAB DEPTH"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "girder_depth",
+   "kind": "quantity",
+   "label": "Girder depth",
+   "unit": "mm",
+   "spec_key": "girder_depth",
+   "definition": "Depth of the superstructure girders.",
+   "aliases": [
+    "GIRDER DEPTH",
+    "DEPTH OF GIRDER",
+    "SUPERSTRUCTURE DEPTH"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "bearing_height",
+   "kind": "quantity",
+   "label": "Bearing + pedestal height",
+   "unit": "mm",
+   "spec_key": "bearing_height",
+   "definition": "Seat to soffit, through bearing and pedestal.",
+   "aliases": [
+    "BEARING HEIGHT",
+    "BEARING",
+    "PEDESTAL"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "abutment_front_batter",
+   "kind": "quantity",
+   "label": "Abutment front batter (H per V)",
+   "unit": "-",
+   "spec_key": "abutment_front_batter",
+   "definition": "Horizontal per vertical of the abutment's front face.",
+   "aliases": [
+    "ABUTMENT FRONT BATTER",
+    "FRONT BATTER"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "604(1)"
+    }
+   ]
+  },
+  {
+   "id": "abutment_back_batter",
+   "kind": "quantity",
+   "label": "Abutment back batter (H per V)",
+   "unit": "-",
+   "spec_key": "abutment_back_batter",
+   "definition": "Horizontal per vertical of the abutment's back face.",
+   "aliases": [
+    "ABUTMENT BACK BATTER",
+    "BACK BATTER",
+    "REAR BATTER"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "604(1)"
+    }
+   ]
+  },
+  {
+   "id": "abutment_top_width",
+   "kind": "quantity",
+   "label": "Abutment top width",
+   "unit": "mm",
+   "spec_key": "abutment_top_width",
+   "definition": "Width of the abutment at its top.",
+   "aliases": [
+    "ABUTMENT TOP WIDTH",
+    "ABUTMENT WIDTH",
+    "TOP WIDTH OF ABUTMENT"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "pier_batter",
+   "kind": "quantity",
+   "label": "Pier batter (H per V, each face)",
+   "unit": "-",
+   "spec_key": "pier_batter",
+   "definition": "Horizontal per vertical of each pier face.",
+   "aliases": [
+    "PIER BATTER"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "604(1)"
+    }
+   ]
+  },
+  {
+   "id": "pier_width",
+   "kind": "quantity",
+   "label": "Pier width (top)",
+   "unit": "mm",
+   "spec_key": "pier_width",
+   "definition": "Width of a pier at its top.",
+   "aliases": [
+    "PIER WIDTH",
+    "PIER TOP WIDTH",
+    "PIER THICKNESS"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "footing_projection",
+   "kind": "quantity",
+   "label": "Footing projection",
+   "unit": "mm",
+   "spec_key": "footing_projection",
+   "definition": "Projection of a footing beyond the wall or pier faces.",
+   "aliases": [
+    "FOOTING PROJECTION",
+    "FOUNDATION PROJECTION",
+    "OFFSET OF FOOTING"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "pipes",
+   "kind": "quantity",
+   "label": "Number of pipes (rows)",
+   "unit": "-",
+   "spec_key": "pipes",
+   "definition": "Count of pipe barrels (topology input).",
+   "aliases": [
+    "PIPES",
+    "NUMBER OF PIPES",
+    "ROWS"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "pipe_diameter",
+   "kind": "quantity",
+   "label": "Pipe internal diameter",
+   "unit": "mm",
+   "spec_key": "pipe_diameter",
+   "definition": "Inside diameter of a pipe barrel.",
+   "aliases": [
+    "PIPE DIAMETER",
+    "PIPE DIA",
+    "INTERNAL DIAMETER",
+    "INSIDE DIAMETER"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "pipe_thickness",
+   "kind": "quantity",
+   "label": "Pipe wall thickness",
+   "unit": "mm",
+   "spec_key": "pipe_thickness",
+   "definition": "Wall thickness of a pipe barrel.",
+   "aliases": [
+    "PIPE THICKNESS",
+    "PIPE WALL THICKNESS",
+    "BARREL THICKNESS"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "pipe_spacing",
+   "kind": "quantity",
+   "label": "Clear gap between pipes",
+   "unit": "mm",
+   "spec_key": "pipe_spacing",
+   "definition": "Clear distance between adjacent pipes.",
+   "aliases": [
+    "PIPE SPACING",
+    "GAP BETWEEN PIPES",
+    "SPACING OF PIPES"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "mid_wall",
+   "kind": "quantity",
+   "label": "Wall between cells",
+   "unit": "mm",
+   "spec_key": "mid_wall",
+   "definition": "Thickness of an internal (intermediate) wall of a box.",
+   "aliases": [
+    "MID WALL",
+    "INNER WALL",
+    "INTERMEDIATE WALL",
+    "INTERNAL WALL",
+    "PARTITION WALL"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "outer_wall",
+   "kind": "quantity",
+   "label": "Outer wall",
+   "unit": "mm",
+   "spec_key": "outer_wall",
+   "definition": "Thickness of a box's outer (side) wall.",
+   "aliases": [
+    "OUTER WALL",
+    "SIDE WALL",
+    "END WALL",
+    "EXTERNAL WALL"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "top_slab",
+   "kind": "quantity",
+   "label": "Top slab thickness",
+   "unit": "mm",
+   "spec_key": "top_slab",
+   "definition": "Thickness of a box's top slab.",
+   "aliases": [
+    "TOP SLAB",
+    "TOP SLAB THICKNESS"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "bottom_slab",
+   "kind": "quantity",
+   "label": "Bottom slab thickness",
+   "unit": "mm",
+   "spec_key": "bottom_slab",
+   "definition": "Thickness of a box's bottom (base) slab.",
+   "aliases": [
+    "BOTTOM SLAB",
+    "BASE SLAB",
+    "RAFT"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "haunch",
+   "kind": "quantity",
+   "label": "Haunch",
+   "unit": "mm",
+   "spec_key": "haunch",
+   "definition": "Chamfer in the corners of a cell. No minimum is established by a source in hand (KC-3).",
+   "aliases": [
+    "HAUNCH"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "bottom_haunch",
+   "kind": "quantity",
+   "label": "Bottom haunch",
+   "unit": "mm",
+   "spec_key": "bottom_haunch",
+   "definition": "Chamfer in the bottom corners of a cell, when it differs from the top.",
+   "aliases": [
+    "BOTTOM HAUNCH"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "wearing_course",
+   "kind": "quantity",
+   "label": "Wearing course",
+   "unit": "mm",
+   "spec_key": "wearing_course",
+   "definition": "Concrete course on the bottom slab inside the cells.",
+   "aliases": [
+    "WEARING COURSE",
+    "WEARING COAT"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "cushion",
+   "kind": "quantity",
+   "label": "Earth cushion",
+   "unit": "mm",
+   "spec_key": "cushion",
+   "definition": "Fill between the top of a buried structure and the formation (formation − top of structure). Its datum and minimum are not settled by a source in hand (KC-5).",
+   "aliases": [
+    "EARTH CUSHION",
+    "CUSHION",
+    "EARTH FILL",
+    "E.FILL",
+    "E FILL",
+    "EARTH FILLING",
+    "FILL OVER BOX"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "end_cushion",
+   "kind": "quantity",
+   "label": "Fill over the top slab at the box end (elevation)",
+   "unit": "mm",
+   "spec_key": "end_cushion",
+   "definition": "Height of the fill above the top slab where the elevation shows the structure's end.",
+   "aliases": [
+    "END CUSHION",
+    "ELEVATION CUSHION"
+   ],
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "backing_width",
+   "kind": "quantity",
+   "label": "Boulder backing width",
+   "unit": "mm",
+   "spec_key": "backing_width",
+   "definition": "Thickness of the hand-packed boulder filling behind a wall; not less than 600 mm behind abutments and wing walls (IRBM 605(3)).",
+   "aliases": [
+    "BOULDER BACKING",
+    "HAND PACKED BOULDERS",
+    "BACKING",
+    "BOULDER FILLING"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "605(3)"
+    }
+   ]
+  },
+  {
+   "id": "wing_slope",
+   "kind": "quantity",
+   "label": "Wing top slope (H per V)",
+   "unit": "-",
+   "spec_key": "wing_slope",
+   "definition": "Slope of the sloping top of a wing / return wall.",
+   "aliases": [
+    "WING SLOPE",
+    "WING TOP SLOPE",
+    "SLOPE OF WING"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "fill_slope",
+   "kind": "quantity",
+   "label": "Fill / embankment slope (H per V)",
+   "unit": "-",
+   "spec_key": "fill_slope",
+   "definition": "Side slope of the approach bank or fill.",
+   "aliases": [
+    "FILL SLOPE",
+    "EMBANKMENT SLOPE",
+    "SIDE SLOPE",
+    "SLOPE"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "wing_gap",
+   "kind": "quantity",
+   "label": "Gap between the structure and the wing wall",
+   "unit": "mm",
+   "spec_key": "wing_gap",
+   "definition": "Joint between the structure and the wing wall (IRBM 604(2) butt joints).",
+   "aliases": [
+    "GAP",
+    "EXPANSION JOINT",
+    "BUTT JOINT"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "604(2)"
+    }
+   ]
+  },
+  {
+   "id": "wing_knee",
+   "kind": "quantity",
+   "label": "Level stretch of the wing top at the structure",
+   "unit": "mm",
+   "spec_key": "wing_knee",
+   "definition": "Level portion of the wing top at the structure face.",
+   "aliases": [
+    "WING KNEE"
+   ],
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "wing_level_length",
+   "kind": "quantity",
+   "label": "Level portion at the far end of the wing",
+   "unit": "mm",
+   "spec_key": "wing_level_length",
+   "definition": "Level portion of the wing top at its far end.",
+   "aliases": [
+    "WING LEVEL LENGTH"
+   ],
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "wing_length",
+   "kind": "quantity",
+   "label": "Wing wall length",
+   "unit": "mm",
+   "spec_key": "wing_length",
+   "definition": "Length of a wing / return wall.",
+   "aliases": [
+    "WING LENGTH",
+    "WING WALL LENGTH",
+    "LENGTH OF WING",
+    "RETURN WALL LENGTH"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "wing_coping",
+   "kind": "quantity",
+   "label": "Wing coping depth",
+   "unit": "mm",
+   "spec_key": "wing_coping",
+   "definition": "Depth of the coping on a wing / return wall.",
+   "aliases": [
+    "COPING",
+    "COPING DEPTH",
+    "COPING THICKNESS"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "wing_coping_chamfer",
+   "kind": "quantity",
+   "label": "Coping chamfer",
+   "unit": "mm",
+   "spec_key": "wing_coping_chamfer",
+   "definition": "Chamfer of the coping edge.",
+   "aliases": [
+    "CHAMFER",
+    "COPING CHAMFER"
+   ],
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "wing_coping_near",
+   "kind": "quantity",
+   "label": "Coping overhang at the structure",
+   "unit": "mm",
+   "spec_key": "wing_coping_near",
+   "definition": "Overhang of the coping at the structure end.",
+   "aliases": [
+    "COPING OVERHANG AT BOX"
+   ],
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "wing_coping_far",
+   "kind": "quantity",
+   "label": "Coping overhang at the far end",
+   "unit": "mm",
+   "spec_key": "wing_coping_far",
+   "definition": "Overhang of the coping at the far end.",
+   "aliases": [
+    "COPING OVERHANG AT END"
+   ],
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "footing_course",
+   "kind": "quantity",
+   "label": "Course under the wing footing",
+   "unit": "mm",
+   "spec_key": "footing_course",
+   "definition": "Levelling / PCC course under a wing footing.",
+   "aliases": [
+    "FOOTING COURSE",
+    "COURSE UNDER FOOTING"
+   ],
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "footing_course_projection",
+   "kind": "quantity",
+   "label": "Projection of that course",
+   "unit": "mm",
+   "spec_key": "footing_course_projection",
+   "definition": "Projection of the course under a footing beyond the wall end.",
+   "aliases": [
+    "COURSE PROJECTION"
+   ],
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "footing_embedment",
+   "kind": "quantity",
+   "label": "Bed to the top of the footing",
+   "unit": "mm",
+   "spec_key": "footing_embedment",
+   "definition": "Depth from the bed (or ground) down to the top of a footing.",
+   "aliases": [
+    "FOOTING EMBEDMENT",
+    "FOUNDING DEPTH",
+    "DEPTH BELOW BED"
+   ],
+   "ambiguous": [
+    "footing_depth"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "footing_depth",
+   "kind": "quantity",
+   "label": "Footing thickness",
+   "unit": "mm",
+   "spec_key": "footing_depth",
+   "definition": "The footing's own thickness (top of footing to B.O.F.). 'Footing depth' alone may also mean the embedment — the levels decide.",
+   "aliases": [
+    "FOOTING THICKNESS",
+    "FOOTING DEPTH",
+    "FOUNDATION THICKNESS"
+   ],
+   "ambiguous": [
+    "footing_embedment"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "clearance",
+   "kind": "quantity",
+   "label": "Vertical clearance (soffit − design water level)",
+   "unit": "mm",
+   "spec_key": "clearance",
+   "definition": "Soffit minus the water level of the design discharge incl. afflux (IRBM 312). Written as CL- or V.C. on drawings.",
+   "aliases": [
+    "VERTICAL CLEARANCE",
+    "CLEARANCE",
+    "V.C."
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "312(1)"
+    }
+   ]
+  },
+  {
+   "id": "freeboard",
+   "kind": "quantity",
+   "label": "Free board (formation − design water level)",
+   "unit": "mm",
+   "spec_key": "freeboard",
+   "definition": "Formation level minus the water level of the design discharge incl. afflux; not less than 1 m (IRBM 313(1)). Drawings often write F.B. against the HFL.",
+   "aliases": [
+    "FREE BOARD",
+    "FREEBOARD",
+    "F.B.",
+    "FB"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "313(1)"
+    }
+   ]
+  },
+  {
+   "id": "depth_of_flow",
+   "kind": "quantity",
+   "label": "Depth of flow (HFL − bed)",
+   "unit": "mm",
+   "spec_key": "depth_of_flow",
+   "definition": "Water depth above the bed at the flood level a drawing writes (HFL − bed level). A check between levels, never a position.",
+   "aliases": [
+    "D.O.F.",
+    "DOF",
+    "DEPTH OF FLOW"
+   ],
+   "distinct_from": [
+    "foundation_bottom"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "formation_width",
+   "kind": "quantity",
+   "label": "Formation width",
+   "unit": "mm",
+   "spec_key": "formation_width",
+   "definition": "Top width of the formation. No standard value is established in hand (KC-13).",
+   "aliases": [
+    "FORMATION WIDTH"
+   ],
+   "sources": [
+    {
+     "source": "SRC-CLAUDE-RESEARCH",
+     "note": "B14 ASSUMPTION"
+    }
+   ]
+  },
+  {
+   "id": "barrel_length",
+   "kind": "quantity",
+   "label": "Barrel length",
+   "unit": "mm",
+   "definition": "Length of a box or pipe barrel through the embankment (decided from the fill and cross-section; the documented formula is disputed, KC-2).",
+   "aliases": [
+    "BARREL LENGTH"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "skew_angle",
+   "kind": "quantity",
+   "label": "Skew angle",
+   "unit": "deg",
+   "definition": "Angle between the structure axis and the normal to the track; advisably ≤ 30° (IRBM 301(3)).",
+   "aliases": [
+    "SKEW",
+    "SKEW ANGLE"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "301(3)"
+    }
+   ]
+  },
+  {
+   "id": "design_discharge",
+   "kind": "quantity",
+   "label": "Design discharge Q",
+   "unit": "m3/s",
+   "definition": "Design discharge for waterway, normally the 50-year flood (IRBM 309).",
+   "aliases": [
+    "DESIGN DISCHARGE",
+    "Q"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "309"
+    }
+   ]
+  },
+  {
+   "id": "catchment_area",
+   "kind": "quantity",
+   "label": "Catchment area",
+   "unit": "km2",
+   "definition": "Catchment area; sets the Qf increase band (IRBM 310).",
+   "aliases": [
+    "CATCHMENT AREA"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "310"
+    }
+   ]
+  },
+  {
+   "id": "level_left_x",
+   "kind": "drafting",
+   "label": "Left end of the level lines (drafting)",
+   "unit": "mm",
+   "spec_key": "level_left_x",
+   "definition": "Where the level lines end on the left — a drafting position, never a size.",
+   "aliases": [],
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "level_right_x",
+   "kind": "drafting",
+   "label": "Right end of the level lines (drafting)",
+   "unit": "mm",
+   "spec_key": "level_right_x",
+   "definition": "Where the right-hand level lines end — a drafting position.",
+   "aliases": [],
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "ground_left_x",
+   "kind": "drafting",
+   "label": "Left end of the ground line (drafting)",
+   "unit": "mm",
+   "spec_key": "ground_left_x",
+   "definition": "Drafting position.",
+   "aliases": [],
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "ground_right_x",
+   "kind": "drafting",
+   "label": "Right end of the ground line (drafting)",
+   "unit": "mm",
+   "spec_key": "ground_right_x",
+   "definition": "Drafting position.",
+   "aliases": [],
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "box",
+   "kind": "component",
+   "label": "RCC box (barrel)",
+   "component_kind": "box",
+   "definition": "Closed RCC frame of one or more cells: top slab, bottom slab, outer and inner walls, haunches.",
+   "aliases": [
+    "BOX",
+    "RCC BOX",
+    "BOX CULVERT",
+    "BARREL",
+    "CULVERT"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ],
+   "related": [
+    "clear_span",
+    "clear_height",
+    "cells",
+    "outer_wall",
+    "mid_wall",
+    "top_slab",
+    "bottom_slab",
+    "haunch",
+    "bottom_haunch",
+    "wearing_course",
+    "floor_level",
+    "soffit_level",
+    "top_slab_level",
+    "slab_bottom_level",
+    "bed_level",
+    "cushion",
+    "courses",
+    "hfl",
+    "formation_level"
+   ]
+  },
+  {
+   "id": "pipe",
+   "kind": "component",
+   "label": "Pipe barrel",
+   "component_kind": "pipe",
+   "definition": "Circular RCC / hume pipe barrel.",
+   "aliases": [
+    "PIPE",
+    "HUME PIPE",
+    "NP4 PIPE",
+    "RCC PIPE"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ],
+   "related": [
+    "pipe_diameter",
+    "pipe_thickness",
+    "pipe_spacing",
+    "pipes",
+    "floor_level",
+    "soffit_level",
+    "top_slab_level",
+    "slab_bottom_level",
+    "bed_level",
+    "cushion",
+    "courses",
+    "formation_level"
+   ]
+  },
+  {
+   "id": "deck",
+   "kind": "component",
+   "label": "Deck / superstructure",
+   "component_kind": "deck",
+   "definition": "Slab or deck carrying the track over a span.",
+   "aliases": [
+    "DECK",
+    "DECK SLAB",
+    "SUPERSTRUCTURE",
+    "TRACK SLAB"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ],
+   "related": [
+    "deck_slab",
+    "clear_span",
+    "spans",
+    "soffit_level",
+    "top_slab_level",
+    "seat_level",
+    "bearing",
+    "bearing_height",
+    "abutment",
+    "pier",
+    "hfl",
+    "design_water_level",
+    "clearance"
+   ]
+  },
+  {
+   "id": "slab",
+   "kind": "component",
+   "label": "Slab element",
+   "component_kind": "slab",
+   "definition": "A slab element (cut-off, approach slab, slab unit).",
+   "aliases": [
+    "SLAB",
+    "APPROACH SLAB",
+    "CUTOFF"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "girder",
+   "kind": "component",
+   "label": "Girder",
+   "component_kind": "girder",
+   "definition": "Primary girder / beam of a girder superstructure.",
+   "aliases": [
+    "GIRDER",
+    "BEAM",
+    "STRINGER",
+    "CROSS GIRDER",
+    "DIAPHRAGM"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ],
+   "related": [
+    "girder_depth",
+    "clear_span",
+    "spans",
+    "soffit_level",
+    "top_slab_level",
+    "seat_level",
+    "bearing",
+    "bearing_height",
+    "abutment",
+    "pier",
+    "design_water_level",
+    "clearance"
+   ]
+  },
+  {
+   "id": "abutment",
+   "kind": "component",
+   "label": "Abutment",
+   "component_kind": "abutment",
+   "definition": "End support retaining the approach fill (IRBM 604).",
+   "aliases": [
+    "ABUTMENT",
+    "ABUT"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "604"
+    }
+   ],
+   "related": [
+    "abutment_top_width",
+    "abutment_front_batter",
+    "abutment_back_batter",
+    "seat_level",
+    "footing",
+    "footing_depth",
+    "footing_projection",
+    "footing_embedment",
+    "foundation_bottom",
+    "footing_top_level",
+    "boulder_backing",
+    "weep_hole",
+    "wing_wall",
+    "return_wall",
+    "earth_fill",
+    "scour_level"
+   ]
+  },
+  {
+   "id": "pier",
+   "kind": "component",
+   "label": "Pier",
+   "component_kind": "pier",
+   "definition": "Intermediate support (IRBM 604).",
+   "aliases": [
+    "PIER",
+    "PIERS",
+    "TRESTLE",
+    "COLUMN"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "604"
+    }
+   ],
+   "related": [
+    "pier_width",
+    "pier_batter",
+    "seat_level",
+    "footing",
+    "footing_depth",
+    "footing_projection",
+    "foundation_bottom",
+    "footing_top_level",
+    "scour_level",
+    "pier_cap"
+   ]
+  },
+  {
+   "id": "pier_cap",
+   "kind": "component",
+   "label": "Pier cap / bed block",
+   "component_kind": "pier_cap",
+   "definition": "Cap or bed block on a pier or abutment on which bearings sit.",
+   "aliases": [
+    "PIER CAP",
+    "PIER HEAD",
+    "BED BLOCK"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "bearing",
+   "kind": "component",
+   "label": "Bearing",
+   "component_kind": "bearing",
+   "definition": "Interface transferring superstructure reactions; selection needs a controlled source (unknown).",
+   "aliases": [
+    "BEARING",
+    "ELASTOMERIC BEARING",
+    "POT PTFE BEARING",
+    "PEDESTAL"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "footing",
+   "kind": "component",
+   "label": "Footing / open foundation",
+   "component_kind": "footing",
+   "definition": "Widened open foundation (IRBM 403).",
+   "aliases": [
+    "FOOTING",
+    "FOUNDATION",
+    "RAFT",
+    "OPEN FOUNDATION"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "403"
+    }
+   ],
+   "related": [
+    "footing_depth",
+    "footing_embedment",
+    "footing_projection",
+    "footing_top_level",
+    "foundation_bottom",
+    "footing_course",
+    "scour_level",
+    "courses"
+   ]
+  },
+  {
+   "id": "well",
+   "kind": "component",
+   "label": "Well foundation",
+   "component_kind": "well",
+   "definition": "Circular or double-D well (IRBM 417–432).",
+   "aliases": [
+    "WELL",
+    "WELL CAP",
+    "CAISSON",
+    "STEINING"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "417"
+    }
+   ]
+  },
+  {
+   "id": "pile",
+   "kind": "component",
+   "label": "Pile",
+   "component_kind": "pile",
+   "definition": "Pile of a pile foundation (IRBM 405–416).",
+   "aliases": [
+    "PILE",
+    "PILES",
+    "BORED PILE"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "409"
+    }
+   ]
+  },
+  {
+   "id": "pile_cap",
+   "kind": "component",
+   "label": "Pile cap",
+   "component_kind": "pile_cap",
+   "definition": "Cap joining a pile group.",
+   "aliases": [
+    "PILE CAP"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "arch",
+   "kind": "component",
+   "label": "Arch barrel",
+   "component_kind": "arch",
+   "definition": "Arch ring / barrel (intrados, extrados, spandrel).",
+   "aliases": [
+    "ARCH",
+    "INTRADOS",
+    "EXTRADOS",
+    "SPANDREL"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "608"
+    }
+   ]
+  },
+  {
+   "id": "wing_wall",
+   "kind": "component",
+   "label": "Wing wall",
+   "component_kind": "wall",
+   "definition": "Wall retaining the approach-bank slope beside an abutment or box; splayed, straight, square or box type (IRBM 604(2)).",
+   "aliases": [
+    "WING WALL",
+    "WING"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "604(2)"
+    }
+   ],
+   "related": [
+    "return_wall",
+    "footing",
+    "boulder_backing",
+    "earth_fill",
+    "weep_hole",
+    "wing_top_level",
+    "footing_top_level",
+    "foundation_bottom",
+    "wing_slope",
+    "wing_length",
+    "wing_gap",
+    "wing_knee",
+    "wing_level_length",
+    "wing_coping",
+    "footing_depth",
+    "footing_embedment",
+    "footing_course",
+    "flooring",
+    "drop_wall",
+    "bed_level",
+    "ground_level"
+   ]
+  },
+  {
+   "id": "return_wall",
+   "kind": "component",
+   "label": "Return wall",
+   "component_kind": "wall",
+   "definition": "Wall parallel to the track retaining the bank (IRBM 604(2), 818).",
+   "aliases": [
+    "RETURN WALL",
+    "RETURN"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "604(2)"
+    }
+   ],
+   "related": [
+    "wing_wall",
+    "footing",
+    "boulder_backing",
+    "earth_fill",
+    "weep_hole",
+    "wing_top_level",
+    "footing_top_level",
+    "foundation_bottom",
+    "wing_slope",
+    "wing_length",
+    "footing_depth",
+    "footing_embedment",
+    "flooring"
+   ]
+  },
+  {
+   "id": "drop_wall",
+   "kind": "component",
+   "label": "Drop wall",
+   "component_kind": "wall",
+   "definition": "Downstream wall of a floor; depth 1.25 × D_Lacey for minor bridges (IRBM 818).",
+   "aliases": [
+    "DROP WALL"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "818"
+    }
+   ],
+   "related": [
+    "flooring",
+    "curtain_wall",
+    "bed_level",
+    "scour_level"
+   ]
+  },
+  {
+   "id": "curtain_wall",
+   "kind": "component",
+   "label": "Curtain wall",
+   "component_kind": "wall",
+   "definition": "Upstream cut-off wall of a floor (IRBM 818, Annexure 2/2).",
+   "aliases": [
+    "CURTAIN WALL"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "818"
+    }
+   ]
+  },
+  {
+   "id": "toe_wall",
+   "kind": "component",
+   "label": "Toe wall",
+   "component_kind": "wall",
+   "definition": "Wall at the toe of pitching (Annexure 2/3).",
+   "aliases": [
+    "TOE WALL"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "818"
+    }
+   ]
+  },
+  {
+   "id": "flooring",
+   "kind": "component",
+   "label": "Flooring / apron / pitching",
+   "component_kind": "apron",
+   "definition": "Floor covering the full width and length of abutments incl. wing walls, with its curtain and drop walls (IRBM 818).",
+   "aliases": [
+    "FLOORING",
+    "FLOOR",
+    "APRON",
+    "PITCHING",
+    "LAUNCHING APRON"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "818"
+    }
+   ],
+   "related": [
+    "drop_wall",
+    "curtain_wall",
+    "toe_wall",
+    "bed_level",
+    "scour_level"
+   ]
+  },
+  {
+   "id": "boulder_backing",
+   "kind": "component",
+   "label": "Boulder backing",
+   "component_kind": "backing",
+   "definition": "Hand-packed boulders ≥ 600 mm behind abutments and wing walls, full height (IRBM 605(3)).",
+   "aliases": [
+    "BOULDER BACKING",
+    "BOULDERS",
+    "HAND PACKED BOULDERS"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "605(3)"
+    }
+   ],
+   "related": [
+    "backing_width",
+    "earth_fill",
+    "weep_hole",
+    "wing_wall",
+    "abutment"
+   ]
+  },
+  {
+   "id": "courses",
+   "kind": "component",
+   "label": "Courses under the structure",
+   "component_kind": "layers",
+   "definition": "PCC, sand, GSB, levelling and wearing courses.",
+   "aliases": [
+    "PCC",
+    "GSB",
+    "SAND FILL",
+    "LEVELLING COURSE",
+    "BASE COURSE",
+    "BEDDING",
+    "WEARING COURSE"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "402"
+    }
+   ],
+   "related": [
+    "slab_bottom_level",
+    "foundation_bottom",
+    "footing_course"
+   ]
+  },
+  {
+   "id": "slope",
+   "kind": "component",
+   "label": "Slope / embankment",
+   "component_kind": "slope",
+   "definition": "Sloping face of fill or cutting.",
+   "aliases": [
+    "SLOPE",
+    "EMBANKMENT",
+    "BATTER",
+    "CUTTING"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "earth_fill",
+   "kind": "component",
+   "label": "Earth fill / backfill",
+   "component_kind": "earth",
+   "definition": "Fill, backfill and the earth cushion; backfill of GW / GP / SW granular material (IRBM 605(3)).",
+   "aliases": [
+    "EARTH FILL",
+    "BACK FILL",
+    "BACKFILL",
+    "FILL"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "605(3)"
+    }
+   ],
+   "related": [
+    "cushion",
+    "end_cushion",
+    "fill_slope",
+    "formation_level",
+    "top_slab_level",
+    "boulder_backing",
+    "slope"
+   ]
+  },
+  {
+   "id": "track",
+   "kind": "component",
+   "label": "Track",
+   "component_kind": "track",
+   "definition": "Rails and sleepers on the ballast bed.",
+   "aliases": [
+    "TRACK",
+    "RAIL",
+    "SLEEPER"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ],
+   "related": [
+    "rail_level",
+    "formation_level",
+    "ballast"
+   ]
+  },
+  {
+   "id": "ballast",
+   "kind": "component",
+   "label": "Ballast bed",
+   "component_kind": "ballast",
+   "definition": "Ballast under the sleepers on the formation.",
+   "aliases": [
+    "BALLAST"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ],
+   "related": [
+    "rail_level",
+    "formation_level",
+    "track"
+   ]
+  },
+  {
+   "id": "road",
+   "kind": "component",
+   "label": "Road",
+   "component_kind": "road",
+   "definition": "Road carriageway (RUB / ROB).",
+   "aliases": [
+    "ROAD",
+    "CARRIAGEWAY"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "weep_hole",
+   "kind": "component",
+   "label": "Weep hole",
+   "component_kind": "drainage",
+   "definition": "Drainage hole at 1 m × 1 m staggered in abutments and wing walls; lowest row above LWL in flowing streams, 250 mm above bed otherwise, above FSL in canals (IRBM 207(3), 605(3)).",
+   "aliases": [
+    "WEEP HOLE",
+    "WEEP HOLES",
+    "WEEPHOLE"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "605(3)"
+    },
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "207(3)"
+    }
+   ]
+  },
+  {
+   "id": "reinforcement",
+   "kind": "component",
+   "label": "Reinforcement / dowels",
+   "component_kind": "reinforcement",
+   "definition": "Bars, dowels, studs.",
+   "aliases": [
+    "DOWEL",
+    "DOWEL BARS",
+    "REINFORCEMENT"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "joint",
+   "kind": "component",
+   "label": "Joint",
+   "component_kind": "joint",
+   "definition": "Expansion / construction / butt joint (IRBM 604(2)).",
+   "aliases": [
+    "JOINT",
+    "EXPANSION JOINT",
+    "CONSTRUCTION JOINT"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "604(2)"
+    }
+   ]
+  },
+  {
+   "id": "datum",
+   "kind": "component",
+   "label": "Datum / axis",
+   "component_kind": "datum",
+   "definition": "Centre lines, level lines, axes.",
+   "aliases": [
+    "CENTRE LINE",
+    "AXIS",
+    "DATUM"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "401"
+    }
+   ]
+  },
+  {
+   "id": "temporary_works",
+   "kind": "component",
+   "label": "Temporary works",
+   "component_kind": "temporary",
+   "definition": "Shoring, sheet piles, falsework, cofferdams (IRBM 403(4), 404).",
+   "aliases": [
+    "RAIL SHORING",
+    "SHORING",
+    "SHEET PILE",
+    "COFFERDAM",
+    "FALSEWORK"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "403"
+    }
+   ]
+  },
+  {
+   "id": "battered_wall",
+   "kind": "component",
+   "label": "Battered wall",
+   "component_kind": "battered_wall",
+   "definition": "A wall with a leaning face and coping (a part).",
+   "aliases": [],
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "ctx_proposed",
+   "kind": "context",
+   "label": "Proposed work",
+   "definition": "New work shown in the proposed state.",
+   "aliases": [
+    "PRO",
+    "PROP",
+    "PROPOSED",
+    "NEW"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "ctx_existing",
+   "kind": "context",
+   "label": "Existing work",
+   "definition": "Work that exists and stays.",
+   "aliases": [
+    "EXG",
+    "EXIST",
+    "EXISTING",
+    "EXT"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "ctx_dismantled",
+   "kind": "context",
+   "label": "To be dismantled",
+   "definition": "Existing work removed by the proposal.",
+   "aliases": [
+    "TO BE DISMANTLED",
+    "DISMANTLED"
+   ],
+   "sources": [
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "ctx_extension",
+   "kind": "context",
+   "label": "Extension of an existing structure",
+   "definition": "A proposal that extends an existing bridge (doubling, extension); existing and proposed work and their junction are shown together.",
+   "aliases": [
+    "TO BE EXTENDED",
+    "EXTENSION",
+    "EXTENDED"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "313(3)"
+    }
+   ]
+  }
+ ],
+ "ambiguous": [
+  {
+   "phrase": "BOTTOM OF SLAB",
+   "concepts": [
+    "soffit_level",
+    "slab_bottom_level"
+   ],
+   "note": "On a deck it is the soffit; on a box it may be the underside of either slab. Tied by the level chain, never by the first match."
+  },
+  {
+   "phrase": "FOOTING DEPTH",
+   "concepts": [
+    "footing_depth",
+    "footing_embedment"
+   ],
+   "note": "The footing's thickness or its depth below the bed — the levels decide (dimension ownership)."
+  },
+  {
+   "phrase": "RL",
+   "concepts": [],
+   "note": "RL is a reduced level of anything — never the rail level by its letters. A bare RL is tied to the level it equals on the chain, or stays unassigned and is reported."
+  }
+ ]
+}

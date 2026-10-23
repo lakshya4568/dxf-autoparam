@@ -1,0 +1,106 @@
+{
+  "format": "identify/1",
+  "title": "What a bridge GAD's own words say it is",
+  "note": "Read by dxf_autoparam.identify, line by line over the sheet's printed text (upper case, spaces collapsed). Every pattern is a case-insensitive regular expression; `lookalike` patterns on the same line set a hit aside (a cable pipe is not a pipe culvert) and say so. Nothing here is a value of a drawing: what is read is the drawing's own words, with where they are printed. The kinds point at the graded families (graded/families.json) for what the library holds about them.",
+  "kinds": [
+    {"id": "rcc_box", "graded": "rcc_box", "label": "RCC box", "taxonomy": "closed conduit",
+     "words": ["(?<![A-Z0-9])R\\.?\\s?C\\.?\\s?C\\.?[\\s_]*BOX(?:ES)?\\b", "\\bBOX\\s*(?:CULVERTS?|BRIDGES?|UNITS?|PUSHING)\\b", "\\b\\d{1,2}\\s*[X×]\\s*\\d+(?:\\.\\d+)?\\s*(?:M\\s*)?[X×]\\s*\\d+(?:\\.\\d+)?\\s*M?\\s*(?:R\\.?C\\.?C\\.?\\s*)?BOX\\b"]},
+    {"id": "psc_slab", "graded": "slab", "label": "PSC slab", "taxonomy": "slab",
+     "words": ["\\bP\\.?\\s?S\\.?\\s?C\\.?\\s*SLABS?\\b", "PRE-?\\s*STRESSED\\s+(?:CONCRETE\\s+)?SLABS?"],
+     "lookalike": ["\\b(?:TOP|BOTTOM|BASE|APPROACH|RELIEVING)\\s+SLAB", "SLEEPERS?"]},
+    {"id": "rcc_slab", "graded": "slab", "label": "RCC slab", "taxonomy": "slab",
+     "words": ["\\bR\\.?\\s?C\\.?\\s?(?:C\\.?)?\\s*SLAB\\s+(?:BRIDGES?|CULVERTS?|\\d)", "\\bSLAB\\s+(?:BRIDGES?|CULVERTS?)\\b", "\\bDECK\\s+SLAB\\b"],
+     "lookalike": ["\\b(?:TOP|BOTTOM|BASE|APPROACH|RELIEVING)\\s+SLAB"]},
+    {"id": "psc_girder", "graded": "girder", "label": "PSC girder", "taxonomy": "girder",
+     "words": ["\\bP\\.?\\s?S\\.?\\s?C\\.?\\s*(?:I\\s*-?\\s*|BOX\\s*)?GIRDERS?\\b"]},
+    {"id": "steel_girder", "graded": "girder", "label": "steel girder (plate / open web / composite)", "taxonomy": "girder",
+     "words": ["\\bPLATE\\s*GIRDERS?\\b", "\\bP\\.\\s*G\\.\\s*GIRDERS?\\b", "\\bO\\.?\\s?W\\.?\\s?G\\.?\\b", "OPEN\\s*WEB\\s*GIRDERS?", "STEEL\\s*GIRDERS?", "COMPOSITE\\s*GIRDERS?"],
+     "lookalike": ["\\bR\\.?\\s?H\\.?\\s*-?\\s*GIRDER", "RELIEVING\\s*GIRDER", "TEMPORARY"]},
+    {"id": "rcc_girder", "graded": "girder", "label": "RCC beam and slab (T-beam)", "taxonomy": "girder",
+     "words": ["\\bR\\.?\\s?C\\.?\\s?C\\.?\\s*(?:T\\s*-?\\s*)?(?:BEAMS?|GIRDERS?)\\b", "\\bT\\s*-\\s*BEAMS?\\b"]},
+    {"id": "pipe", "graded": "pipe", "label": "pipe culvert", "taxonomy": "closed conduit",
+     "words": ["HUME\\s*PIPES?", "\\bNP\\s*[234]\\b", "PIPE\\s*CULVERTS?", "\\bR\\.?\\s?C\\.?\\s?C\\.?\\s*PIPES?\\b", "\\bDIA\\.?\\s*(?:R\\.?C\\.?C\\.?\\s*)?PIPES?\\b"],
+     "lookalike": ["WEEP", "\\bPVC\\b", "\\bS\\s*&\\s*T\\b", "CABLES?", "CHAMBER", "\\bDRAIN", "INSPECTION", "SLEEVE"]},
+    {"id": "arch", "graded": "arch", "label": "arch", "taxonomy": "arch", "words": ["\\bARCH(?:ES|ED)?\\b"]}
+  ],
+  "crossings": [
+    {"id": "road_under", "graded": "rub", "label": "a road under the railway (RUB / subway)",
+     "words": ["\\bR\\.?U\\.?B\\.?\\b", "RAILWAY[\\s_]*RUB", "\\bSUBWAY\\b", "LIMITED\\s*HEIGHT\\s*SUBWAY", "ROAD\\s*UNDER\\s*BRIDGE", "HEIGHT\\s*GAUGE"]},
+    {"id": "road_over", "graded": "rob", "label": "a road over the railway (ROB)", "words": ["\\bR\\.?O\\.?B\\.?\\b", "ROAD\\s*OVER\\s*BRIDGE"]},
+    {"id": "foot_over", "label": "a foot over bridge (FOB)", "words": ["\\bF\\.?O\\.?B\\.?\\b", "FOOT\\s*OVER\\s*BRIDGE"]},
+    {"id": "waterway", "label": "a waterway (flood level, bed, scour, flow)",
+     "words": ["\\bH\\.?\\s?F\\.?\\s?L\\.?\\b", "LINEAR\\s*WATER\\s*WAY", "\\bSCOUR\\b", "FLOW\\s*DIRECTION", "DIRECTION\\s*OF\\s*FLOW", "DESIGN\\s*DISCHARGE",
+               "\\bNALL?AH?\\b", "\\bRIVER\\b", "\\bCANAL\\b", "\\bSTREAM\\b"]}
+  ],
+  "foundations": [
+    {"id": "open", "label": "open foundation", "words": ["OPEN\\s*FOUNDATION", "\\bRAFT\\b"]},
+    {"id": "well", "label": "well foundation", "words": ["WELL\\s*FOUNDATION", "\\bWELL\\s*CAP\\b", "\\bSTEINING\\b", "\\bCAISSONS?\\b"]},
+    {"id": "pile", "label": "pile foundation", "words": ["PILE\\s*FOUNDATION", "\\bPILE\\s*CAPS?\\b", "BORED\\s*CAST[-\\s]*IN[-\\s]*SITU\\s*PILES?", "\\bPILES?\\b"]}
+  ],
+  "status": [
+    {"id": "existing", "label": "existing", "words": ["\\bEXIST(?:ING)?\\b", "\\bEXI?ST\\.", "\\bEXG\\b", "\\bEXTG\\b", "\\bEX\\.\\s*(?=[A-Z])", "\\bOLD\\b"]},
+    {"id": "proposed", "label": "proposed", "words": ["\\bPROPOSED\\b", "\\bPROP\\b", "\\bNEW\\b"]},
+    {"id": "extension", "label": "to be extended", "words": ["\\bEXTEN(?:DED|SION)\\b", "TO\\s+BE\\s+EXTENDED"]},
+    {"id": "dismantled", "label": "to be dismantled", "words": ["DISMANTL", "DEMOLISH"]}
+  ],
+  "carried": {
+    "label": "tracks",
+    "one": "track",
+    "line": "(?:\\bC\\s*/\\s*L\\b|\\bC\\s*\\.\\s*L\\b\\.?|℄|\\bC\\s+LINE\\b|CENTRE\\s*LINE|CENTER\\s*LINE|\\bCL\\b)\\s*(?:OF\\s+)?(?P<name>.+)",
+    "name_has": "^(?:\\S+\\s+){0,5}?(?:TRACKS?|LINES?)(?:\\s*(?:NO\\.?\\s*)?\\d+)?\\s*[)\\].]*$",
+    "name_not": ["\\bBRIDGE\\b", "\\bBOX\\b", "\\bROAD\\b", "\\bSUBWAY\\b", "\\bPIER\\b", "\\bSPAN\\b", "\\bCULVERT\\b", "\\bWALL\\b", "\\bDRAIN\\b"],
+    "aliases": [["\\bDOWN\\b", "DN"], ["\\bTRACKS?\\b", "LINE"], ["\\bLINES\\b", "LINE"], ["\\b(?:B\\.?G|M\\.?G|N\\.?G)\\b\\.?", ""], ["\\bMAIN\\b", ""], ["\\bNO\\.?\\s*", ""]],
+    "configurations": [
+      {"id": "single", "count": 1, "label": "single line", "words": ["SINGLE\\s+LINE"]},
+      {"id": "double", "count": 2, "label": "double line (doubling)", "words": ["\\bDOUBL(?:ING|E\\s+LINE)\\b", "\\b2ND\\s+LINE\\b", "SECOND\\s+LINE"]},
+      {"id": "triple", "count": 3, "label": "third line", "words": ["\\b3RD\\s+LINE\\b", "THIRD\\s+LINE", "TRIPL(?:ING|E\\s+LINE)"]},
+      {"id": "quadruple", "count": 4, "label": "fourth line", "words": ["\\b4TH\\s+LINE\\b", "FOURTH\\s+LINE", "QUADRUPL(?:ING|E)"]}
+    ],
+    "kinds": [
+      {"id": "BG", "label": "broad gauge", "words": ["\\bB\\.?\\s?G\\.?\\b", "BROAD\\s*GAUGE"]},
+      {"id": "MG", "label": "metre gauge", "words": ["METRE\\s*GAUGE", "METER\\s*GAUGE"]},
+      {"id": "NG", "label": "narrow gauge", "words": ["NARROW\\s*GAUGE"]}
+    ],
+    "spacing": "(?:TRACK\\s*CENTRES?|C\\s*/\\s*C\\s*(?:OF\\s*)?TRACKS?|TRACK\\s*C\\s*/\\s*C|CENTRE\\s*TO\\s*CENTRE\\s*(?:OF\\s*)?TRACKS?)\\s*[=:\\-]?\\s*(?P<v>\\d+(?:\\.\\d+)?)\\s*(?P<u>MM|M)?"
+  },
+  "spans": {
+    "repeat": "(?P<n>\\d{1,2})\\s*[X×]\\s*(?P<a>\\d+(?:\\.\\d+)?)\\s*(?P<ua>MM|M)?\\s*(?:[X×]\\s*(?P<b>\\d+(?:\\.\\d+)?)\\s*(?P<ub>MM|M)?)?",
+    "single": "\\bSPANS?\\s*[:=\\-]\\s*(?P<a>\\d+(?:\\.\\d+)?)\\s*(?P<ua>MM|M)\\b",
+    "max_count": 30,
+    "max_metres": 200
+  },
+  "loading": [
+    {"id": "25t-2008", "label": "25 t loading-2008", "words": ["25\\s*T(?:ONNES?)?\\s*(?:LOADING)?\\s*(?:-|–|OF)?\\s*2008"]},
+    {"id": "25t", "label": "25 t loading", "words": ["\\b25\\s*T\\b"], "context": "LOAD", "refined_by": ["25t-2008"]},
+    {"id": "dfc", "label": "DFC loading (32.5 t)", "words": ["\\bDFC\\b", "32\\.5\\s*T\\b"], "context": "LOAD"},
+    {"id": "mbg-1987", "label": "MBG loading-1987", "words": ["M\\.?\\s?B\\.?\\s?G\\.?\\s*(?:LOADING)?\\s*(?:-|–)?\\s*1987", "\\bMBG\\b"]},
+    {"id": "rbg-1975", "label": "RBG loading-1975", "words": ["R\\.?\\s?B\\.?\\s?G\\.?\\s*(?:LOADING)?\\s*(?:-|–)?\\s*1975", "\\bRBG\\b"]},
+    {"id": "hm", "label": "HM loading", "words": ["\\bH\\.?\\s?M\\.?\\s*LOADING", "HEAVY\\s*MINERAL"]},
+    {"id": "irc", "label": "IRC road loading", "words": ["\\b70\\s*R\\b", "CLASS\\s*[A]{1,2}\\s*LOADING", "\\bIRC\\s*CLASS"]}
+  ],
+  "facts": [
+    {"id": "number", "label": "bridge number", "pattern": "\\bBR(?:IDGE)?\\s*\\.?\\s*NO\\s*\\.?\\s*[:\\-]*\\s*(?P<v>[0-9]+[A-Z]?(?:\\s*/\\s*[0-9A-Z]+)?)\\b"},
+    {"id": "chainage", "label": "chainage", "pattern": "\\b(?:CHAINAGE|CH)\\b\\s*\\.?\\s*(?:\\(M\\))?\\s*[:\\-=]*\\s*(?P<v>\\d{3,}(?:\\.\\d+)?)"},
+    {"id": "km", "label": "kilometre", "pattern": "\\bKM\\b\\s*\\.?\\s*[:\\-]*\\s*(?P<v>\\d+\\s*/\\s*\\d+(?:\\s*-\\s*\\d+)?)"},
+    {"id": "skew", "label": "skew", "pattern": "SKEW(?:\\s*ANGLE)?\\s*[=:\\-]?\\s*(?P<v>\\d+(?:\\.\\d+)?)\\s*(?:°|DEG)"},
+    {"id": "standard_drawing", "label": "standard drawing cited", "pattern": "\\b(?P<v>RDSO\\s*/\\s*[A-Z]{1,3}\\s*-\\s*\\d{3,6}(?:\\s*/\\s*[0-9A-Z]+)*)"},
+    {"id": "code", "label": "code or manual cited", "pattern": "(?P<v>I\\.?\\s?R\\.?\\s?S?\\.?\\s+(?:CONCRETE\\s+)?BRIDGE\\s+(?:CODE|RULES|MANUAL|SUB\\s*-?\\s*STRUCTURE[^,.]*)|BRIDGE\\s+MANUAL\\s*-?\\s*\\d{4})"},
+    {"id": "alignment", "label": "alignment", "pattern": "(?P<v>STRAIGHT|CURVED?)\\s*ALIGNMENT"},
+    {"id": "method", "label": "construction method", "pattern": "(?P<v>BOX\\s*PUSHING|AIR\\s*PUSHING|PUSHING\\s*METHOD|THRUST\\s*BED|CAST[-\\s]*IN[-\\s]*SITU|PRE[-\\s]*CAST)"},
+    {"id": "authority", "label": "railway", "pattern": "(?P<v>\\b(?:NORTH|SOUTH|EAST|WEST|CENTRAL|EASTERN|WESTERN|NORTHERN|SOUTHERN|NORTH\\s*EASTERN|SOUTH\\s*EASTERN|NORTH\\s*WESTERN|SOUTH\\s*WESTERN|NORTH\\s*CENTRAL|SOUTH\\s*CENTRAL|EAST\\s*CENTRAL|WEST\\s*CENTRAL|EAST\\s*COAST|NORTH\\s*EAST\\s*FRONTIER|KONKAN)\\s*RAILWAYS?\\b)"}
+  ],
+  "configuration_relations": [
+    {"id": "R-FORMATION-WIDTH-N", "status": "DERIVED", "count_name": "tracks", "expression": "formation_width = (tracks - 1) * track_centre + 2 * edge_distance",
+     "condition": "parallel tracks at one track centre, the formation edge the same distance from the outer track's centre line on both sides",
+     "read": ["track_centre", "edge_distance"],
+     "note": "No standard formation width is assumed (graded conflict KC-13 is OPEN): the track centre and the edge distance are read from this drawing."},
+    {"id": "R-STRUCTURE-LENGTH", "status": "DERIVED", "expression": "barrel_length = formation_width + 2 * bank_slope * end_height", "conflict": "KC-2",
+     "condition": "a straight bank of slope bank_slope (horizontal per vertical) from the formation edge down to the structure's end; end_height = formation level − the top of the structure at its end",
+     "read": ["formation_width", "bank_slope", "end_height"],
+     "note": "The documented 'FW + 4 × cushion' contradicts itself (KC-2, DISPUTED) and is never applied; this identity is the geometry of a straight bank."},
+    {"id": "R-EXTENSION-FOR-A-TRACK", "status": "DERIVED", "expression": "barrel_length_proposed = barrel_length_existing + track_centre",
+     "condition": "a new track beside the existing ones at track_centre, the bank slope and the edge distance kept",
+     "applies_when": "a structure carrying existing tracks is extended for a new one",
+     "read": ["barrel_length_existing", "track_centre"]}
+  ]
+}

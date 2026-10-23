@@ -1,0 +1,316 @@
+{
+ "note": "Provisional values the construction uses when a reading is silent — never design facts. Each is shown on the plan as assumed, and listed in the knowledge trace and the ENGINEERING report whenever it is used. The values are the ones the parts and recipes have always used; this file gives each a status and a source.",
+ "defaults": [
+  {
+   "id": "DEF-TRACK-GAUGE",
+   "key": "gauge",
+   "plan": "TrackGauge",
+   "value": 1676,
+   "unit": "mm",
+   "status": "COMMON_PRACTICE",
+   "where": "part track, ballast",
+   "note": "Broad gauge; no controlled source in hand states it.",
+   "sources": [
+    {
+     "source": "SRC-BRIDGE-FORMULAS"
+    }
+   ]
+  },
+  {
+   "id": "DEF-SLEEPER-LENGTH",
+   "key": "sleeper_length",
+   "plan": "SleeperLength",
+   "value": 2750,
+   "unit": "mm",
+   "status": "ASSUMPTION",
+   "where": "part track, ballast",
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "DEF-SLEEPER-DEPTH",
+   "key": "sleeper_depth",
+   "plan": "SleeperDepth",
+   "value": 210,
+   "unit": "mm",
+   "status": "ASSUMPTION",
+   "where": "part track, ballast",
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "DEF-RAIL-HEIGHT",
+   "key": "rail_height",
+   "plan": "RailHeight",
+   "value": 172,
+   "unit": "mm",
+   "status": "ASSUMPTION",
+   "where": "part track, ballast",
+   "note": "60 kg rail.",
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "DEF-BALLAST-DEPTH",
+   "key": "depth",
+   "plan": "BallastDepth",
+   "value": 350,
+   "unit": "mm",
+   "status": "ASSUMPTION",
+   "where": "part ballast",
+   "note": "Ballast cushion ≥ 300 mm is quoted by a secondary source only.",
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    },
+    {
+     "source": "SRC-CLAUDE-RESEARCH",
+     "note": "components.yaml TRACK"
+    }
+   ]
+  },
+  {
+   "id": "DEF-BALLAST-SHOULDER",
+   "key": "shoulder",
+   "plan": "BallastShoulder",
+   "value": 350,
+   "unit": "mm",
+   "status": "ASSUMPTION",
+   "where": "part ballast",
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "DEF-BALLAST-SLOPE",
+   "key": "slope",
+   "plan": "BallastSlope",
+   "value": 1.5,
+   "unit": "-",
+   "status": "ASSUMPTION",
+   "where": "part ballast",
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "DEF-COPING-DEPTH",
+   "key": "depth",
+   "plan": "CopingDepth",
+   "value": 150,
+   "unit": "mm",
+   "status": "ASSUMPTION",
+   "where": "part battered_wall",
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "DEF-COPING-CHAMFER",
+   "key": "chamfer",
+   "plan": "CopingChamfer",
+   "value": 50,
+   "unit": "mm",
+   "status": "ASSUMPTION",
+   "where": "part battered_wall",
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "DEF-CELL-COUNT",
+   "key": "cells",
+   "plan": "CellCount",
+   "value": 1,
+   "unit": "-",
+   "status": "ASSUMPTION",
+   "where": "part box (a call with no count)",
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "DEF-HAUNCH",
+   "key": "haunch",
+   "plan": "Haunch",
+   "value": 150,
+   "unit": "mm",
+   "status": "ASSUMPTION",
+   "where": "part box (a hand call with no haunch; the recipe never uses it — it holds the haunch OPEN)",
+   "conflict": "KC-3",
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "DEF-WING-KNEE",
+   "key": "knee",
+   "plan": "WingKnee",
+   "value": 0,
+   "unit": "mm",
+   "status": "ASSUMPTION",
+   "where": "part return_wall; recipe buildWingWalls",
+   "note": "No level stretch read at the face: none drawn.",
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "DEF-COPING-NEAR",
+   "key": "overhang_near",
+   "plan": "WingCopingNear",
+   "value": 0,
+   "unit": "mm",
+   "status": "ASSUMPTION",
+   "where": "part return_wall",
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "DEF-COPING-FAR",
+   "key": "overhang_far",
+   "plan": "WingCopingFar",
+   "value": 0,
+   "unit": "mm",
+   "status": "ASSUMPTION",
+   "where": "part return_wall",
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "DEF-SPAN-COUNT",
+   "key": "spans",
+   "plan": "SpanCount",
+   "value": 1,
+   "unit": "-",
+   "status": "ASSUMPTION",
+   "where": "recipe buildSpans",
+   "note": "No span count read: one span.",
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "DEF-NO-BEARING",
+   "key": "bearing_height",
+   "plan": "BearingHeight",
+   "value": 0,
+   "unit": "mm",
+   "status": "ASSUMPTION",
+   "where": "recipe buildSpans; chains slab / girder",
+   "note": "No bearing read: the deck sits on the seat.",
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "DEF-VERTICAL-FACES",
+   "key": "batter",
+   "plan": "AbutFrontBatter / AbutBackBatter / PierBatter",
+   "value": 0,
+   "unit": "-",
+   "status": "ASSUMPTION",
+   "where": "recipe buildSpans",
+   "note": "No batter read: a vertical face.",
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "DEF-NO-FOOTING-PROJECTION",
+   "key": "footing_projection",
+   "plan": "FootingProjection",
+   "value": 0,
+   "unit": "mm",
+   "status": "ASSUMPTION",
+   "where": "recipe buildSpans",
+   "note": "No projection read: the footing is as wide as the wall base.",
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "DEF-PIPE-COUNT",
+   "key": "pipes",
+   "plan": "PipeCount",
+   "value": 1,
+   "unit": "-",
+   "status": "ASSUMPTION",
+   "where": "recipe buildPipes",
+   "note": "No count read: one pipe.",
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "DEF-TRACK-ON-CL",
+   "key": "track_cl",
+   "plan": "TrackCL",
+   "value": 0,
+   "unit": "mm",
+   "status": "ASSUMPTION",
+   "where": "recipe buildTrackAssembly",
+   "note": "No track offset read: on the structure's centre line.",
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  },
+  {
+   "id": "DEF-CLEAR-FROM-FLOOR",
+   "key": "clear_from",
+   "plan": "layout.clear_from",
+   "value": 0,
+   "unit": "-",
+   "status": "ASSUMPTION",
+   "where": "chain rcc_box; recipe buildBox",
+   "conflict": "KC-4",
+   "note": "Without written levels that decide it, a box's clear height runs from the structural floor.",
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  }
+ ]
+}

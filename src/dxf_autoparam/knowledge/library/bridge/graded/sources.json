@@ -1,0 +1,142 @@
+{
+ "sources": [
+  {
+   "id": "SRC-IRBM-2024",
+   "authority": "Ministry of Railways / Railway Board (published by IRICEN, Pune)",
+   "title": "Indian Railways Bridge Manual",
+   "edition": "2024, incorporating advance correction slips up to ACS-45",
+   "kind": "manual",
+   "trust": "VERIFIED_LOCAL",
+   "path": "../Bridges Knowldege Base/IRBM 24.pdf",
+   "sha256": "61cb5d43e4d2ed88a3443aa8b1dd2ed9e01c96162a4f471ae63f33933054c22f",
+   "index": "knowledge/extracted/irbm-2024.json",
+   "kernel_source_prefix": "irbm-",
+   "scope": "Investigation, hydraulics, foundations, substructure, protection and maintenance practice. The manual itself states that the IRS codes override it for design and construction where they conflict.",
+   "notes": "The only Tier-1 document in hand whose text was read with page numbers. Every rule promoted to NORMATIVE cites a paragraph indexed in knowledge/extracted/irbm-2024.json."
+  },
+  {
+   "id": "SRC-RDSO-BS118",
+   "authority": "RDSO, Bridges & Structures Directorate",
+   "title": "RDSO Guidelines on Seismic Design of Railway Bridges",
+   "document_number": "BS-118",
+   "edition": "Version 1.0",
+   "date": "2015-11",
+   "kind": "guideline",
+   "trust": "VERIFIED_LOCAL",
+   "path": "../Bridges Knowldege Base/BS-118.pdf",
+   "sha256": "3918201c9595f1f5a86f99d52776761042319e89b5779a94c1625bfea6f1d446",
+   "supersession": "claimed_secondary",
+   "superseded_by": ["SRC-IRS-SEISMIC-2020"],
+   "scope": "Seismic analysis, seating widths, bearings and restrainers of railway bridges.",
+   "notes": "Read in hand (cl. 4.4 box and pipe culverts need no seismic analysis; cl. 14.3 seating width). A secondary source says the IRS Seismic Code 2020 supersedes it; that code is not in hand, so edition-dependent values stay DISPUTED (KC-8, KC-9, KC-17)."
+  },
+  {
+   "id": "SRC-IRS-SEISMIC-2020",
+   "authority": "RDSO / Ministry of Railways",
+   "title": "IRS Seismic Code — Criteria for Earthquake Resistant Design of Railway Bridges",
+   "edition": "2020 with ACS 01 (2022-06-03)",
+   "kind": "code",
+   "trust": "SECONDARY",
+   "notes": "Not in hand. Values quoted by SRC-CLAUDE-RESEARCH only."
+  },
+  {
+   "id": "SRC-IRS-SSC",
+   "authority": "RDSO / Ministry of Railways",
+   "title": "IRS Code of Practice for the Design of Sub-structures and Foundations of Bridges",
+   "edition": "2nd revision 2013 (correction slips up to 29); the secondary source read the 2003 text",
+   "kind": "code",
+   "trust": "SECONDARY",
+   "notes": "Not in hand. Clauses quoted by SRC-CLAUDE-RESEARCH only."
+  },
+  {
+   "id": "SRC-IRCM-2023",
+   "authority": "Ministry of Railways",
+   "title": "Indian Railways Construction Manual",
+   "edition": "December 2023",
+   "kind": "manual",
+   "trust": "SECONDARY",
+   "url": "https://www.iricen.gov.in/iricen/Works_Manuals/Indian%20Railways%20Construction%20Manual.pdf",
+   "notes": "Not in hand. Box-culvert policy quoted from search snippets by SRC-CLAUDE-RESEARCH."
+  },
+  {
+   "id": "SRC-RDSO-BS112",
+   "authority": "RDSO",
+   "title": "Guidelines for Planning of Road Over Bridges",
+   "document_number": "BS-112",
+   "date": "2014-05",
+   "kind": "guideline",
+   "trust": "SECONDARY",
+   "notes": "Not in hand."
+  },
+  {
+   "id": "SRC-RDSO-STD-DRAWINGS",
+   "authority": "RDSO",
+   "title": "RDSO standard drawings for RCC box culverts, slabs and girders (B-10152/10155, B-10158/10154, M-00004/5, BA-10063 …)",
+   "kind": "standard_drawing",
+   "trust": "DISCOVERY_ONLY",
+   "url": "https://rdso.indianrailways.gov.in/uploads/BS%2028.pdf",
+   "notes": "Drawing numbers known from lists only; no sheet in hand. No dimension from them is executable (KC-18)."
+  },
+  {
+   "id": "SRC-KB-PACKAGE",
+   "authority": "Project research (bridge-engineering-knowledge package, 2026-09-26)",
+   "title": "Indian Railway Bridge Engineering Knowledge Base — source-grounded seed package",
+   "kind": "research",
+   "trust": "SECONDARY",
+   "path": "../Bridges Knowldege Base/bridge-engineering-knowledge",
+   "notes": "Schema, status vocabulary, family topology and conflict/gap reports. Rules it quotes from IRBM are re-verified against SRC-IRBM-2024 before use."
+  },
+  {
+   "id": "SRC-CLAUDE-RESEARCH",
+   "authority": "Project research (secondary reading of IRS codes and IRBM snippets)",
+   "title": "Claude Reserach.md — verification audit of the formula baseline",
+   "kind": "research",
+   "trust": "SECONDARY",
+   "path": "../Bridges Knowldege Base/Claude Reserach.md",
+   "notes": "Its corrections are hypotheses until the cited document is in hand; some are contradicted by IRBM-2024 (KC-7)."
+  },
+  {
+   "id": "SRC-GEMINI-KB",
+   "authority": "Project research (Gemini deep-research export)",
+   "title": "Railway Bridge GAD Knowledge Base.md",
+   "kind": "research",
+   "trust": "LOW",
+   "path": "../Bridges Knowldege Base/Railway Bridge GAD Knowledge Base.md",
+   "notes": "Cites this project's own architecture brief and audit as the source of most of its NORMATIVE claims; image-encoded equations are lost. Used only for conflicts it names; nothing of it is enforced."
+  },
+  {
+   "id": "SRC-BRIDGE-FORMULAS",
+   "authority": "Aagento (legacy rule engines, documented)",
+   "title": "docs/bridge-formulas — formula documentation of the legacy bridge rule engines",
+   "kind": "implementation",
+   "trust": "IMPLEMENTATION",
+   "path": "docs/bridge-formulas",
+   "notes": "Compiled into the kernel corpus (corpus.generated.ts). Geometric identities are DERIVED; its constants and minimums carry the status given in formulas.json."
+  },
+  {
+   "id": "SRC-AAGENTO-CONVENTION",
+   "authority": "Aagento (drafting conventions of the recipes)",
+   "title": "Construction conventions the recipes use when a reading is silent",
+   "kind": "implementation",
+   "trust": "IMPLEMENTATION",
+   "notes": "Each is an ASSUMPTION or a COMMON_PRACTICE default in defaults.json, reported whenever it is used."
+  },
+  {
+   "id": "SRC-GEOMETRY",
+   "authority": "Geometry",
+   "title": "Geometric identity (holds by construction)",
+   "kind": "identity",
+   "trust": "IDENTITY",
+   "notes": "A DERIVED formula that follows from the definitions of its quantities; it needs no standard."
+  },
+  {
+   "id": "SRC-DEEP-RESEARCH-REPORT",
+   "authority": "—",
+   "title": "deep-research-report.md",
+   "kind": "research",
+   "trust": "EXCLUDED",
+   "path": "../Bridges Knowldege Base/deep-research-report.md",
+   "notes": "Not about bridges (generic research-topic planning). Excluded."
+  }
+ ]
+}

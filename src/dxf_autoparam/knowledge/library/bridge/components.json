@@ -11,6 +11,7 @@
   "components": [
     {
       "id": "box_barrel",
+      "connects": [{"names": ["wall"], "how": "on", "to": "box_barrel", "says": "a wall stands on the bottom slab and carries the top slab", "source": "rcc-box-rule-engine.ts compute (total_h = cH + tST + tSB)"}, {"names": ["top slab"], "how": "on", "to": "box_barrel", "says": "the top slab is on the walls", "source": "rcc-box-rule-engine.ts compute (soffit = z_top − tST)"}, {"names": ["bottom slab"], "how": "on", "to": "deck_layers", "says": "the bottom slab is on the base course", "source": "rcc-box-rule-engine.ts compute (pccBot = z_bot − pccB)"}],
       "title": "RCC box barrel (cells, walls, slabs, haunches)",
       "names": ["rcc box", "box barrel", "barrel", "box culvert", "box", "cell", "top slab", "bottom slab", "side wall", "outer wall", "inner wall", "haunch"],
       "what": "The monolithic box: N cells of clear span × box height, outer and inner walls, top and bottom slabs, a haunch at each inside corner.",
@@ -48,6 +49,7 @@
     },
     {
       "id": "deck_layers",
+      "connects": [{"names": ["wearing course"], "how": "on", "to": "box_barrel", "says": "the wearing course lies on the bottom slab, in the cell", "source": "rcc-box-rule-engine.ts compute (z_bot = bed − wearC − tSB)"}, {"names": ["base course"], "how": "under", "to": "box_barrel", "says": "the base course lies under the box", "source": "rcc-box-rule-engine.ts compute (pccBot)"}, {"names": ["granular filling"], "how": "under", "to": "deck_layers", "says": "the granular filling lies under the base course", "source": "rcc-box-rule-engine.ts compute (granBot = pccBot − sandFill)"}],
       "title": "Wearing course, PCC base course, granular (sand) filling",
       "names": ["wearing course", "cc wearing course", "pcc", "base course", "pcc base course", "levelling course", "leveling course", "granular filling", "sand filling", "filter media"],
       "what": "Layers above and under the bottom slab: the wearing course on it (the road or bed surface), the PCC base course under it, the granular filling under that.",
@@ -66,6 +68,7 @@
     },
     {
       "id": "earth_retainer",
+      "connects": [{"how": "on", "to": "box_barrel", "says": "it stands on the top of the slab; its outer face is the barrel end", "source": "rcc-box-longitudinal-view.ts:1232-1246"}],
       "title": "Earth retainer (trapezium on the top slab at a barrel end)",
       "names": ["earth retainer", "ballast retainer", "retainer"],
       "what": "A small trapezoidal wall standing on the top slab at each end of the barrel, holding the ballast / earth.",
@@ -83,6 +86,7 @@
     },
     {
       "id": "return_wall",
+      "connects": [{"how": "beside", "to": "box_barrel", "says": "its outer face stays on the barrel end and its stem rises with the top of the box it retains (where one view shows both)", "source": "rcc-box-longitudinal-view.ts:1497-1700"}],
       "title": "Return wall (RCC cantilever: stem, footing, lean concrete, coping)",
       "names": ["return wall", "r/w", "retaining wall", "wing wall", "rcc return wall"],
       "what": "A cantilever wall at each end of the barrel retaining the embankment: a stem whose outer face is vertical and whose inner face is battered, on a footing with a toe and a heel whose top slopes down to its edges, on lean concrete.",
@@ -138,6 +142,7 @@
     },
     {
       "id": "shear_key",
+      "connects": [{"how": "under", "to": "box_barrel", "says": "it hangs under the bottom slab at the barrel end", "source": "rcc-box-shear-key-view.ts:174"}],
       "title": "Shear key (a key under the bottom slab at a barrel end)",
       "names": ["shear key"],
       "what": "A downward key of concrete under the bottom slab at a barrel end, with PCC under it.",

@@ -151,7 +151,7 @@ def test_the_domain_pack_only_names_and_pins():
 
 
 ENGINE = ["ir.py", "dxf_read.py", "dxf_repair.py", "analyse.py", "build.py", "regen.py", "dxf_write.py", "views.py", "pipeline.py",
-          "program.py", "validator.py", "facts.py", "display.py", "render.py", "sheet.py"]
+          "program.py", "validator.py", "facts.py", "display.py", "render.py", "sheet.py", "identify.py", "connections.py"]
 STRUCTURE_WORDS = ["culvert", "girder", "slab", "pier", "abutment", "haunch", "rcc", "psc", "bridge", "wing", "deck",
                    "kerb", "ballast", "rail", "formation", "hfl", "cushion", "footing", "pile", "well", "box", "barrel"]
 

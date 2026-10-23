@@ -24,6 +24,7 @@ STAGE_OF = {
     "review_parameters": "inspecting", "update_checklist": "planning", "record_learned": "planning", "accept_semantics": "understanding the views",
     "rename_values": "binding values", "define_transforms": "binding values",
     "list_skills": "consulting the library", "load_skill": "consulting the library", "search_library": "consulting the library", "record_finding": "consulting the library",
+    "identify_structure": "consulting the library",
     "search_drawing": "inspecting", "compare_views": "inspecting", "calculate": "measuring",
 }
 STAGES = ("inspecting", "looking", "interpreting", "understanding the views", "naming the parts", "binding values", "stating intent", "planning",
@@ -49,6 +50,7 @@ WORDS = {
     "review_parameters": "reviewed the value names", "update_checklist": "updated the checklist", "record_learned": "recorded what it learned",
     "accept_semantics": "recorded a decision", "rename_values": "renamed values", "define_transforms": "defined transforms",
     "list_skills": "listed library skills", "load_skill": "read a library skill", "search_library": "searched the library", "record_finding": "recorded library findings",
+    "identify_structure": "read what the drawing's words say it is",
     "search_drawing": "searched the whole sheet", "compare_views": "compared what the views state", "calculate": "did the arithmetic",
 }
 
@@ -69,6 +71,7 @@ DOING = {
     "update_checklist": "Updating its checklist", "record_learned": "Recording what it learned", "accept_semantics": "Recording an existing/proposed decision",
     "rename_values": "Renaming values", "define_transforms": "Defining rotations, translations and scales",
     "list_skills": "Listing matching library skills", "load_skill": "Reading a library skill", "search_library": "Searching the library", "record_finding": "Recording what the library gave",
+    "identify_structure": "Reading what the drawing's words say it is",
     "search_drawing": "Searching the whole sheet for words and numbers", "compare_views": "Comparing what the views state", "calculate": "Working out an expression",
 }
 

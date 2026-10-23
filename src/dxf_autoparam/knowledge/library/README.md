@@ -18,6 +18,8 @@ Three kinds of material are kept apart:
 | Source knowledge (what the engineering material says) | `../agent_context/` (migrated, hash-verified, never edited) | nobody here: re-run `tools/migrate_agent_context.py` |
 | Skills and recipes (how the agent uses it) | `<domain>/skills/*.md`, `domain.json` | a person |
 | Indexes, caches, traces | in memory; `.cache/library/` if cached; run events | generated, never committed |
+| Graded knowledge (another project's, with statuses) | `<domain>/graded/` + `PROVENANCE.json` | nobody here: `tools/import_graded_knowledge.py` |
+| What a drawing's words say it is | `<domain>/identify.json` (read by `identify.py`) | a person |
 
 To add a recipe: a new `skills/<id>.md`. To add reference material: a new source folder with the same layout as `agent_context` and a
 line in `domain.json`. To add another kind of structure's guidance: its skill file under the source's `skills/families/`, or an authored

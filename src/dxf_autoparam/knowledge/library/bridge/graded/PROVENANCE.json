@@ -1,0 +1,49 @@
+{
+  "format": "graded-knowledge/1",
+  "repository": "aagento-bridge",
+  "ref": "feature/upce-cad-migration",
+  "commit": "f1ef527fba489bebce1182695cf88dcfd87a0a47",
+  "note": "Copied byte for byte by tools/import_graded_knowledge.py; never edited here.",
+  "files": {
+    "sources.json": {
+      "source_path": "knowledge/sources.json",
+      "sha256": "257b5c0620a141b5dff2cb3d4db72b007d45b8f7844c98cf508ee13f848d910d",
+      "bytes": 6457
+    },
+    "concepts.json": {
+      "source_path": "knowledge/concepts.json",
+      "sha256": "d18c8430a960b75919f0e0835187ed4cb2d9b4c4fb150aee4a285fa7b368814d",
+      "bytes": 45790
+    },
+    "families.json": {
+      "source_path": "knowledge/families.json",
+      "sha256": "f32a97450765f0bfe9eb967c9f22c608068ddd5e80b0a083c335da690331d0c3",
+      "bytes": 16603
+    },
+    "formulas.json": {
+      "source_path": "knowledge/formulas.json",
+      "sha256": "b32a794d59ab16af9d6be6a8b912a67b3925fe7e92296e2c4e234b9cedb3052d",
+      "bytes": 24493
+    },
+    "rules.json": {
+      "source_path": "knowledge/rules.json",
+      "sha256": "c1e5de0eeb12740fcb88d078a4d6903214dd205cff0e5f98246a237a0179e20d",
+      "bytes": 18761
+    },
+    "defaults.json": {
+      "source_path": "knowledge/defaults.json",
+      "sha256": "5832787d51f731de5ca084240cc078bc873eb48fb5a112802c29956fc89160a1",
+      "bytes": 6648
+    },
+    "conflicts.json": {
+      "source_path": "knowledge/conflicts.json",
+      "sha256": "ed045b70711de4acafba2f1522494175bda59c099d52ee77b9a738821e5ec49b",
+      "bytes": 15346
+    },
+    "irbm-2024.json": {
+      "source_path": "knowledge/extracted/irbm-2024.json",
+      "sha256": "d7beaffc6712abc13e0e1fcd0e6ee67a3cf5d7176339362e01c141a664dd5d9a",
+      "bytes": 6628
+    }
+  }
+}

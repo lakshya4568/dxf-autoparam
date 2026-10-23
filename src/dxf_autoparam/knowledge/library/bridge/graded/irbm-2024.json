@@ -1,0 +1,249 @@
+{
+ "source": "SRC-IRBM-2024",
+ "file": "IRBM 24.pdf",
+ "file_sha256": "61cb5d43e4d2ed88a3443aa8b1dd2ed9e01c96162a4f471ae63f33933054c22f",
+ "pages": 302,
+ "extractor": "pdftotext -layout; headings = a paragraph number at the start of a line not ending in a page number",
+ "clauses": [
+  {
+   "id": "IRBM-2024:207",
+   "para": "207",
+   "heading": "Abutments, Piers, Wing Walls and Return Walls",
+   "pdf_page": 33,
+   "printed_page": "11",
+   "text_sha256": "2bc3c2c7800a4c45d2e0fb9a32f8e29fdd75dfce39feb1a2931ce12978d0c106",
+   "chars": 3848,
+   "found": true
+  },
+  {
+   "id": "IRBM-2024:301",
+   "para": "301",
+   "heading": "Investigation for Minor Bridges",
+   "pdf_page": 59,
+   "printed_page": "37",
+   "text_sha256": "87cd93a7f599129fd6cbe1fa14caad277af535df9d636572f14e12736f2460d4",
+   "chars": 486,
+   "found": true
+  },
+  {
+   "id": "IRBM-2024:401",
+   "para": "401",
+   "heading": "Setting the layout of Bridges",
+   "pdf_page": 67,
+   "printed_page": "45",
+   "text_sha256": "d552014f66fede1ad73de31b92dd19ff94c782cbeaac2e67594329a056e90637",
+   "chars": 2700,
+   "found": true
+  },
+  {
+   "id": "IRBM-2024:309",
+   "para": "309",
+   "heading": "Design Discharge (Q)",
+   "pdf_page": 62,
+   "printed_page": "40",
+   "text_sha256": "d0f0debf69f83fc3d0775724ba603373d0c7cb15e6a693df134559d01e8d3a28",
+   "chars": 599,
+   "found": true
+  },
+  {
+   "id": "IRBM-2024:310",
+   "para": "310",
+   "heading": "Design Discharge for Foundations (Qf )",
+   "pdf_page": 63,
+   "printed_page": "41",
+   "text_sha256": "fe6a329c01fb752396df47c3cafa7f272aff8ec0da8592fa8cd197c3d7339f61",
+   "chars": 738,
+   "found": true
+  },
+  {
+   "id": "IRBM-2024:311",
+   "para": "311",
+   "heading": "Design of Waterways",
+   "pdf_page": 63,
+   "printed_page": "41",
+   "text_sha256": "65952035531a08ecb78cc43f535685dae52f16146a5cf12479c18c2abb2be543",
+   "chars": 1747,
+   "found": true
+  },
+  {
+   "id": "IRBM-2024:312",
+   "para": "312",
+   "heading": "Vertical Clearance",
+   "pdf_page": 64,
+   "printed_page": "42",
+   "text_sha256": "3940649f368bf0bb409fc5ba4f5b721d13164447fe56f662d36a2200fa18a97a",
+   "chars": 1610,
+   "found": true
+  },
+  {
+   "id": "IRBM-2024:313",
+   "para": "313",
+   "heading": "Free Board (F)",
+   "pdf_page": 64,
+   "printed_page": "42",
+   "text_sha256": "babe593d5f6cf68180721bff88596607431a61d88ec14a280a801c19ce788023",
+   "chars": 1803,
+   "found": true
+  },
+  {
+   "id": "IRBM-2024:316",
+   "para": "316",
+   "heading": "Choice of Foundations for Bridges",
+   "pdf_page": 65,
+   "printed_page": "43",
+   "text_sha256": "91ea126a4b816a957e97e9f57e73496aac7b09047084f4f9674ca3a09f30b42f",
+   "chars": 1454,
+   "found": true
+  },
+  {
+   "id": "IRBM-2024:317",
+   "para": "317",
+   "heading": "Approval of bridge drawings for doublings, gauge conversions, new lines and other bridge",
+   "pdf_page": 66,
+   "printed_page": "44",
+   "text_sha256": "5862a043d1864d3c9cf8ce2d96dc1a880703d25a6432cce54309f21dbf977c5a",
+   "chars": 1666,
+   "found": true
+  },
+  {
+   "id": "IRBM-2024:402",
+   "para": "402",
+   "heading": "Pipe and Box Culverts with open foundation",
+   "pdf_page": 68,
+   "printed_page": "46",
+   "text_sha256": "fd4d16e6a83f900b89e5100eec4e044cbf65b81d1e9751a91d0fdbf89ba33c6b",
+   "chars": 420,
+   "found": true
+  },
+  {
+   "id": "IRBM-2024:403",
+   "para": "403",
+   "heading": "Other Bridges with Open Foundation",
+   "pdf_page": 68,
+   "printed_page": "46",
+   "text_sha256": "6ebcbe451115490c8e0aa7b72461fb228482132a7571c7e0160eb1cbb45402da",
+   "chars": 1562,
+   "found": true
+  },
+  {
+   "id": "IRBM-2024:409",
+   "para": "409",
+   "heading": "Spacing of Piles",
+   "pdf_page": 70,
+   "printed_page": "48",
+   "text_sha256": "820fee437113b72f6aad0c6e5cace31cc63a7c9d35113b927a956f035a83f614",
+   "chars": 1435,
+   "found": true
+  },
+  {
+   "id": "IRBM-2024:417",
+   "para": "417",
+   "heading": "Types of Well",
+   "pdf_page": 74,
+   "printed_page": "52",
+   "text_sha256": "f2f8b7828990ef6027b83eb232d66891caa8fb88f40d70143bcc69e02294ff1b",
+   "chars": 769,
+   "found": true
+  },
+  {
+   "id": "IRBM-2024:418",
+   "para": "418",
+   "heading": "Components of Wells",
+   "pdf_page": 75,
+   "printed_page": "53",
+   "text_sha256": "6df783ea61d5b7760e87d029e4ad3663cedde2b4b8fdbb3c28a0c8846d92fc45",
+   "chars": 2972,
+   "found": true
+  },
+  {
+   "id": "IRBM-2024:424",
+   "para": "424",
+   "heading": "Tilt and Shift of the Well",
+   "pdf_page": 79,
+   "printed_page": "57",
+   "text_sha256": "037bb7799c0e4820e12bb2aeba8d5cddbcab263ee4ab85237b72c56a8c40482d",
+   "chars": 3175,
+   "found": true
+  },
+  {
+   "id": "IRBM-2024:603",
+   "para": "603",
+   "heading": "Material of Construction",
+   "pdf_page": 90,
+   "printed_page": "68",
+   "text_sha256": "63ea30eb87ceca945d4e8eaad253a3d654a6f721aa20492bddd1973cdf4b8957",
+   "chars": 798,
+   "found": true
+  },
+  {
+   "id": "IRBM-2024:604",
+   "para": "604",
+   "heading": "Piers, Abutments and Wing Walls",
+   "pdf_page": 91,
+   "printed_page": "69",
+   "text_sha256": "602e71cb3f6c9b10b84639f19d60c11447a6809a96a02b3221ce21a54d9f9f14",
+   "chars": 1343,
+   "found": true
+  },
+  {
+   "id": "IRBM-2024:605",
+   "para": "605",
+   "heading": "Construction Aspects - General",
+   "pdf_page": 91,
+   "printed_page": "69",
+   "text_sha256": "34cad56f59f34b0cbc3fd21db40404fa1eac4d4c789bc2f2e95616d42386890b",
+   "chars": 843,
+   "found": true
+  },
+  {
+   "id": "IRBM-2024:607",
+   "para": "607",
+   "heading": "Slab Bridges",
+   "pdf_page": 93,
+   "printed_page": "71",
+   "text_sha256": "fed931083701c1d35e89ceb791bcb0b086e1a895876fb9ab311711ed756d0b7f",
+   "chars": 817,
+   "found": true
+  },
+  {
+   "id": "IRBM-2024:608",
+   "para": "608",
+   "heading": "Arch Bridges",
+   "pdf_page": 93,
+   "printed_page": "71",
+   "text_sha256": "e6d1d7b503621acdca8f31c4e19e986873ca8cf6ab621c006bf26070c92394a6",
+   "chars": 2811,
+   "found": true
+  },
+  {
+   "id": "IRBM-2024:703",
+   "para": "703",
+   "heading": "Danger Level at Bridges",
+   "pdf_page": 107,
+   "printed_page": "85",
+   "text_sha256": "8714dd59f5b1374ea330150afbf33c1d25fbe374472f6538a822025a54a88c6a",
+   "chars": 5028,
+   "found": true
+  },
+  {
+   "id": "IRBM-2024:818",
+   "para": "818",
+   "heading": "Design for Protection Works",
+   "pdf_page": 128,
+   "printed_page": "106",
+   "text_sha256": "d76157192391e9779613f35f8c53ac528c7d3a01b009b67947883b81f4f40822",
+   "chars": 1570,
+   "found": true
+  },
+  {
+   "id": "IRBM-2024:1103",
+   "para": "1103",
+   "heading": "Inspection By Assistant Engineers",
+   "pdf_page": 143,
+   "printed_page": "121",
+   "text_sha256": "cdf7d049d7952311de2871167b1aa2c279f24c98050c3b5d34c3099699fb5966",
+   "chars": 1532,
+   "found": true
+  }
+ ]
+}

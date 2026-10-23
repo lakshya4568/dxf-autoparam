@@ -1,0 +1,852 @@
+{
+ "note": "A bridge family is DATA: how it is recognised, what it is made of, what must be known before it can be built (required), the sizes the working state lists, its level chain, its construction strategy (a primary construction mechanism and the ordered construction operations) and its capability. Geometry mechanisms stay code (agent-assembly.ts): `construction.primary` names one. A family with no primary is KNOWLEDGE_ONLY or UNSUPPORTED: it is never built and reported as validated.",
+ "operations": [
+  {
+   "id": "buildFoundationCourses",
+   "component": "FOUNDATION",
+   "part": "layers",
+   "description": "the courses under the structure, top down"
+  },
+  {
+   "id": "buildBacking",
+   "component": "BACKING",
+   "part": "backing",
+   "description": "a strip of written width against a face"
+  },
+  {
+   "id": "buildEarthFill",
+   "component": "FILL",
+   "part": "slope",
+   "description": "fill slope, formation (cushion), fill at the end"
+  },
+  {
+   "id": "buildWingWalls",
+   "component": "WING",
+   "part": "return_wall",
+   "description": "face at the gap, sloping top, footing, coping"
+  },
+  {
+   "id": "buildTrackAssembly",
+   "component": "TRACK",
+   "part": "track",
+   "description": "track on its ballast bed, when the reading names ballast or sleepers"
+  },
+  {
+   "id": "buildDatumSystem",
+   "component": "DATUM",
+   "part": "centre_line",
+   "description": "ground, centre line, every written level"
+  }
+ ],
+ "defaults_for_words": [
+  {
+   "words": "culvert",
+   "family": "rcc_box",
+   "status": "ASSUMPTION",
+   "why": "a bare 'culvert' with no pipe, slab or box word is read as a box culvert (the recipes' convention)",
+   "sources": [
+    {
+     "source": "SRC-AAGENTO-CONVENTION"
+    }
+   ]
+  }
+ ],
+ "families": [
+  {
+   "id": "rcc_box",
+   "label": "RCC box",
+   "taxonomy": "closed_conduit",
+   "capability": "SUPPORTED",
+   "capability_note": "N haunched cells in section, elevation or half view (either side cut), with courses, backing, fill, wing walls, track and datums; tested against a real reference. One view at a time; plan view, junction with an existing structure and protection works (floor, curtain / drop wall) are not constructed.",
+   "recognize": {
+    "order": 2,
+    "words": "\\bbox\\b|box\\s*culvert|\\bcells?\\b"
+   },
+   "construction": {
+    "primary": "buildBox",
+    "components": [
+     "BOX"
+    ],
+    "operations": [
+     "buildFoundationCourses",
+     "buildBacking",
+     "buildEarthFill",
+     "buildWingWalls",
+     "buildTrackAssembly",
+     "buildDatumSystem"
+    ]
+   },
+   "components": [
+    {
+     "id": "BOX",
+     "concept": "box",
+     "role": "primary"
+    },
+    {
+     "id": "FOUNDATION",
+     "concept": "courses",
+     "role": "operation"
+    },
+    {
+     "id": "BACKING",
+     "concept": "boulder_backing",
+     "role": "operation"
+    },
+    {
+     "id": "FILL",
+     "concept": "earth_fill",
+     "role": "operation"
+    },
+    {
+     "id": "WING",
+     "concept": "wing_wall",
+     "role": "operation"
+    },
+    {
+     "id": "TRACK",
+     "concept": "track",
+     "role": "operation"
+    },
+    {
+     "id": "DATUM",
+     "concept": "datum",
+     "role": "operation"
+    }
+   ],
+   "required": [
+    {
+     "any_of": [
+      [
+       "cells"
+      ]
+     ]
+    },
+    {
+     "any_of": [
+      [
+       "clear_span"
+      ]
+     ]
+    },
+    {
+     "any_of": [
+      [
+       "clear_height"
+      ]
+     ]
+    },
+    {
+     "any_of": [
+      [
+       "outer_wall"
+      ]
+     ]
+    },
+    {
+     "any_of": [
+      [
+       "top_slab"
+      ]
+     ]
+    },
+    {
+     "any_of": [
+      [
+       "bottom_slab"
+      ]
+     ]
+    },
+    {
+     "any_of": [
+      [
+       "mid_wall"
+      ]
+     ],
+     "when": {
+      "count_gt": [
+       "cells",
+       1
+      ]
+     }
+    },
+    {
+     "any_of": [
+      [
+       "haunch"
+      ]
+     ],
+     "label": "haunch (its size as written or scaled; 0 when the cells have none)"
+    },
+    {
+     "any_of": [
+      [
+       "bed_level"
+      ],
+      [
+       "floor_level"
+      ],
+      [
+       "soffit_level"
+      ]
+     ],
+     "label": "bed_level (or floor_level / soffit_level)"
+    }
+   ],
+   "sizes": [
+    "clear_span",
+    "clear_height",
+    "outer_wall",
+    "mid_wall",
+    "top_slab",
+    "bottom_slab",
+    "haunch",
+    "bottom_haunch",
+    "wearing_course"
+   ],
+   "chain": "chain.rcc_box",
+   "views": [
+    "section",
+    "elevation",
+    "half"
+   ],
+   "rules": [
+    "IRBM-311-3-CLEAR-SPAN",
+    "IRBM-311-3-HEADROOM",
+    "IRBM-312-3-CULVERT-EXEMPT",
+    "IRBM-313-FREE-BOARD",
+    "IRBM-402-CULVERT-SCOUR",
+    "IRBM-605-3-BOULDER-BACKING",
+    "IRBM-207-3-WEEP-HOLES",
+    "BS118-4-4-CULVERT-SEISMIC",
+    "IRCM-BOX-SPAN",
+    "IRCM-BOX-MULTI-CELL",
+    "KNOW-HAUNCH-MINIMUM",
+    "KNOW-CUSHION-MINIMUM",
+    "TRACK-RAIL-OVER-FORMATION"
+   ],
+   "unknowns": [
+    "member sizes (walls, slabs, haunch): design inputs — no RDSO sheet in hand (KC-18)",
+    "reinforcement and haunch schedules",
+    "skew detailing limits"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "402"
+    },
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "slab",
+   "label": "slab span",
+   "taxonomy": "slab",
+   "capability": "PARTIAL",
+   "capability_note": "A slab deck on abutments, piers and footings in elevation; tested on synthetic cases only. Bearings and bed blocks are not constructed as members.",
+   "recognize": {
+    "order": 4,
+    "words": "slab"
+   },
+   "span_words": {
+    "order": 2,
+    "words": "SLAB|\\bRCC\\b|\\bPSC\\b|\\bSPANS?\\b"
+   },
+   "construction": {
+    "primary": "buildSpans",
+    "components": [
+     "DECK",
+     "ABUTMENT",
+     "PIER"
+    ],
+    "operations": [
+     "buildFoundationCourses",
+     "buildBacking",
+     "buildEarthFill",
+     "buildWingWalls",
+     "buildTrackAssembly",
+     "buildDatumSystem"
+    ]
+   },
+   "components": [
+    {
+     "id": "DECK",
+     "concept": "deck",
+     "role": "primary"
+    },
+    {
+     "id": "ABUTMENT",
+     "concept": "abutment",
+     "role": "primary"
+    },
+    {
+     "id": "PIER",
+     "concept": "pier",
+     "role": "primary",
+     "when": {
+      "count_gt": [
+       "spans",
+       1
+      ]
+     }
+    },
+    {
+     "id": "FOUNDATION",
+     "concept": "courses",
+     "role": "operation"
+    },
+    {
+     "id": "DATUM",
+     "concept": "datum",
+     "role": "operation"
+    }
+   ],
+   "required": [
+    {
+     "any_of": [
+      [
+       "clear_span"
+      ]
+     ]
+    },
+    {
+     "any_of": [
+      [
+       "abutment_top_width"
+      ]
+     ]
+    },
+    {
+     "any_of": [
+      [
+       "deck_slab"
+      ]
+     ],
+     "label": "deck_slab (deck slab thickness)"
+    },
+    {
+     "any_of": [
+      [
+       "pier_width"
+      ]
+     ],
+     "when": {
+      "count_gt": [
+       "spans",
+       1
+      ]
+     }
+    },
+    {
+     "any_of": [
+      [
+       "soffit_level"
+      ],
+      [
+       "top_slab_level"
+      ],
+      [
+       "seat_level"
+      ]
+     ],
+     "label": "soffit_level (or top of deck / bearing level)"
+    },
+    {
+     "any_of": [
+      [
+       "foundation_bottom"
+      ],
+      [
+       "bed_level",
+       "footing_embedment",
+       "footing_depth"
+      ]
+     ],
+     "label": "foundation_bottom (B.O.F.) — or bed_level with footing_embedment and footing_depth"
+    }
+   ],
+   "sizes": [
+    "clear_span",
+    "deck_slab",
+    "bearing_height",
+    "abutment_top_width",
+    "abutment_front_batter",
+    "abutment_back_batter",
+    "pier_width",
+    "pier_batter"
+   ],
+   "chain": "chain.slab",
+   "views": [
+    "elevation"
+   ],
+   "rules": [
+    "IRBM-311-3-CLEAR-SPAN",
+    "IRBM-311-3-HEADROOM",
+    "IRBM-312-1-VERTICAL-CLEARANCE",
+    "IRBM-313-FREE-BOARD",
+    "IRBM-403-2-OPEN-FOUNDATION-DEPTH",
+    "IRBM-604-1-PIER-BATTER",
+    "IRBM-604-1-ABUTMENT-BATTER",
+    "IRBM-605-3-BOULDER-BACKING",
+    "BS118-14-3-SEATING-WIDTH",
+    "TRACK-RAIL-OVER-FORMATION"
+   ],
+   "unknowns": [
+    "span / depth design rules (IRS CBC not in hand)",
+    "bearing / no-bearing variants",
+    "standard slab units (BA-10063 sheets not in hand)"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "607"
+    },
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "girder",
+   "label": "girder span",
+   "taxonomy": "girder",
+   "capability": "PARTIAL",
+   "capability_note": "A deck of given depth on abutments, piers and footings in elevation; tested on synthetic cases only. Girders, bearings, bed blocks and cross-frames are not constructed as members.",
+   "recognize": {
+    "order": 3,
+    "words": "girder|beam|\\bowg\\b|plate|steel|composite"
+   },
+   "span_words": {
+    "order": 1,
+    "words": "GIRDER|\\bO\\.?\\s*W\\.?\\s*G\\b|\\bP\\.?\\s*G\\b|PLATE|STEEL|COMPOSITE|\\bBEAM\\b"
+   },
+   "construction": {
+    "primary": "buildSpans",
+    "components": [
+     "DECK",
+     "ABUTMENT",
+     "PIER"
+    ],
+    "operations": [
+     "buildFoundationCourses",
+     "buildBacking",
+     "buildEarthFill",
+     "buildWingWalls",
+     "buildTrackAssembly",
+     "buildDatumSystem"
+    ]
+   },
+   "components": [
+    {
+     "id": "DECK",
+     "concept": "girder",
+     "role": "primary"
+    },
+    {
+     "id": "ABUTMENT",
+     "concept": "abutment",
+     "role": "primary"
+    },
+    {
+     "id": "PIER",
+     "concept": "pier",
+     "role": "primary",
+     "when": {
+      "count_gt": [
+       "spans",
+       1
+      ]
+     }
+    },
+    {
+     "id": "FOUNDATION",
+     "concept": "courses",
+     "role": "operation"
+    },
+    {
+     "id": "DATUM",
+     "concept": "datum",
+     "role": "operation"
+    }
+   ],
+   "required": [
+    {
+     "any_of": [
+      [
+       "clear_span"
+      ]
+     ]
+    },
+    {
+     "any_of": [
+      [
+       "abutment_top_width"
+      ]
+     ]
+    },
+    {
+     "any_of": [
+      [
+       "girder_depth"
+      ]
+     ]
+    },
+    {
+     "any_of": [
+      [
+       "pier_width"
+      ]
+     ],
+     "when": {
+      "count_gt": [
+       "spans",
+       1
+      ]
+     }
+    },
+    {
+     "any_of": [
+      [
+       "soffit_level"
+      ],
+      [
+       "top_slab_level"
+      ],
+      [
+       "seat_level"
+      ]
+     ],
+     "label": "soffit_level (or top of deck / bearing level)"
+    },
+    {
+     "any_of": [
+      [
+       "foundation_bottom"
+      ],
+      [
+       "bed_level",
+       "footing_embedment",
+       "footing_depth"
+      ]
+     ],
+     "label": "foundation_bottom (B.O.F.) — or bed_level with footing_embedment and footing_depth"
+    }
+   ],
+   "sizes": [
+    "clear_span",
+    "girder_depth",
+    "bearing_height",
+    "abutment_top_width",
+    "abutment_front_batter",
+    "abutment_back_batter",
+    "pier_width",
+    "pier_batter"
+   ],
+   "chain": "chain.girder",
+   "views": [
+    "elevation"
+   ],
+   "rules": [
+    "IRBM-311-3-CLEAR-SPAN",
+    "IRBM-311-3-HEADROOM",
+    "IRBM-312-1-VERTICAL-CLEARANCE",
+    "IRBM-313-FREE-BOARD",
+    "IRBM-403-2-OPEN-FOUNDATION-DEPTH",
+    "IRBM-604-1-PIER-BATTER",
+    "IRBM-604-1-ABUTMENT-BATTER",
+    "IRBM-605-3-BOULDER-BACKING",
+    "BS118-14-3-SEATING-WIDTH",
+    "KNOW-GIRDER-DEPTH-RATIO",
+    "TRACK-RAIL-OVER-FORMATION"
+   ],
+   "unknowns": [
+    "span systems and standard drawings",
+    "bearing selection",
+    "camber, prestress and erection geometry",
+    "girder depth / spacing ratios (KC-16)"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "604"
+    },
+    {
+     "source": "SRC-KB-PACKAGE"
+    }
+   ]
+  },
+  {
+   "id": "pipe",
+   "label": "pipe",
+   "taxonomy": "closed_conduit",
+   "capability": "PARTIAL",
+   "capability_note": "One or more pipes in section; tested on synthetic cases only. Headwalls, collars and splayed wings are not constructed.",
+   "recognize": {
+    "order": 1,
+    "words": "pipe|hume|\\bnp\\s*[234]\\b"
+   },
+   "construction": {
+    "primary": "buildPipes",
+    "components": [
+     "PIPE"
+    ],
+    "operations": [
+     "buildFoundationCourses",
+     "buildBacking",
+     "buildEarthFill",
+     "buildWingWalls",
+     "buildTrackAssembly",
+     "buildDatumSystem"
+    ]
+   },
+   "components": [
+    {
+     "id": "PIPE",
+     "concept": "pipe",
+     "role": "primary"
+    },
+    {
+     "id": "FOUNDATION",
+     "concept": "courses",
+     "role": "operation"
+    },
+    {
+     "id": "FILL",
+     "concept": "earth_fill",
+     "role": "operation"
+    },
+    {
+     "id": "WING",
+     "concept": "wing_wall",
+     "role": "operation"
+    },
+    {
+     "id": "DATUM",
+     "concept": "datum",
+     "role": "operation"
+    }
+   ],
+   "required": [
+    {
+     "any_of": [
+      [
+       "pipe_diameter"
+      ]
+     ]
+    },
+    {
+     "any_of": [
+      [
+       "pipe_thickness"
+      ]
+     ]
+    },
+    {
+     "any_of": [
+      [
+       "pipe_spacing"
+      ]
+     ],
+     "when": {
+      "count_gt": [
+       "pipes",
+       1
+      ]
+     },
+     "label": "pipe_spacing (clear gap between the pipes)"
+    },
+    {
+     "any_of": [
+      [
+       "floor_level"
+      ],
+      [
+       "bed_level"
+      ]
+     ],
+     "label": "bed_level or the invert (floor_level)"
+    }
+   ],
+   "sizes": [
+    "pipe_diameter",
+    "pipe_thickness",
+    "pipe_spacing"
+   ],
+   "chain": "chain.pipe",
+   "views": [
+    "section"
+   ],
+   "rules": [
+    "IRBM-312-3-CULVERT-EXEMPT",
+    "IRBM-402-CULVERT-SCOUR",
+    "BS118-4-4-CULVERT-SEISMIC",
+    "IRBM-311-3-CLEAR-SPAN",
+    "IRBM-313-FREE-BOARD"
+   ],
+   "unknowns": [
+    "pipe class and joint schedule",
+    "headwall and bedding dimensions (IRBM Annexure 4/3 sketch not extracted)",
+    "minimum cushion below sleeper (IRBM 301(2) gives no value)"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "301(2)"
+    },
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "402"
+    }
+   ]
+  },
+  {
+   "id": "arch",
+   "label": "arch",
+   "taxonomy": "arch",
+   "capability": "KNOWLEDGE_ONLY",
+   "capability_note": "Knowledge of clearance (IRBM 312(2)) and construction sequence (IRBM 608) only; no construction mechanism for an arch barrel. Never reported as validated.",
+   "recognize": {
+    "order": 5,
+    "words": "arch"
+   },
+   "construction": {
+    "primary": null,
+    "components": [],
+    "operations": []
+   },
+   "components": [
+    {
+     "id": "ARCH",
+     "concept": "arch",
+     "role": "primary"
+    },
+    {
+     "id": "ABUTMENT",
+     "concept": "abutment",
+     "role": "primary"
+    },
+    {
+     "id": "DATUM",
+     "concept": "datum",
+     "role": "operation"
+    }
+   ],
+   "required": [
+    {
+     "any_of": [
+      [
+       "clear_span"
+      ]
+     ]
+    },
+    {
+     "any_of": [
+      [
+       "rise"
+      ]
+     ],
+     "label": "rise (of the arch — no construction reads it yet)"
+    },
+    {
+     "any_of": [
+      [
+       "springing_level"
+      ]
+     ],
+     "label": "springing_level"
+    }
+   ],
+   "sizes": [
+    "clear_span"
+   ],
+   "chain": null,
+   "views": [
+    "elevation"
+   ],
+   "rules": [
+    "IRBM-312-2-ARCH-CLEARANCE",
+    "IRBM-313-FREE-BOARD",
+    "BS118-4-3-ARCH-SEISMIC"
+   ],
+   "unknowns": [
+    "permitted curve construction",
+    "barrel sizing",
+    "skew arch geometry"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "312(2)"
+    },
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "608"
+    }
+   ]
+  },
+  {
+   "id": "rub",
+   "label": "RUB / LHS (box pushing)",
+   "taxonomy": "closed_conduit",
+   "capability": "UNSUPPORTED",
+   "capability_note": "Only secondary procedural knowledge (RDSO BS-137 foreword, a tender GAD); no construction.",
+   "recognize": {
+    "order": 6,
+    "words": "\\brub\\b|\\blhs\\b|limited\\s*height\\s*subway"
+   },
+   "construction": {
+    "primary": null,
+    "components": [],
+    "operations": []
+   },
+   "components": [],
+   "required": [],
+   "sizes": [],
+   "chain": null,
+   "views": [],
+   "rules": [],
+   "unknowns": [
+    "thrust bed, shield and jacking geometry",
+    "temporary track protection"
+   ],
+   "sources": [
+    {
+     "source": "SRC-CLAUDE-RESEARCH",
+     "note": "BS-137 foreword, secondary"
+    }
+   ]
+  },
+  {
+   "id": "rob",
+   "label": "ROB",
+   "taxonomy": "girder",
+   "capability": "UNSUPPORTED",
+   "capability_note": "Only planning guidance (BS-112, secondary); no construction.",
+   "recognize": {
+    "order": 7,
+    "words": "\\brob\\b|road\\s*over\\s*bridge"
+   },
+   "construction": {
+    "primary": null,
+    "components": [],
+    "operations": []
+   },
+   "components": [],
+   "required": [],
+   "sizes": [],
+   "chain": null,
+   "views": [],
+   "rules": [],
+   "unknowns": [
+    "girder standards (B-11756..11759 not in hand)",
+    "SOD clearances"
+   ],
+   "sources": [
+    {
+     "source": "SRC-RDSO-BS112"
+    }
+   ]
+  }
+ ]
+}

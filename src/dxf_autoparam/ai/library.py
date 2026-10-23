@@ -68,7 +68,7 @@ DEFAULT_SECTIONS = ["purpose", "applicability", "inputs", "recognition", "prereq
                     "conventions", "rules", "dependencies", "outputs", "validation"]
 ALL_SECTIONS = DEFAULT_SECTIONS + ["hazards", "scope", "scope_note", "permitted", "blocked", "evidence_requests", "sources"]
 
-LIBRARY_ID_PREFIXES = ("kb:", "kb.", "skill:", "family:", "chunk:", "ontology:", "issue:", "rdso-doc:", "rdso-extract:", "rdso:", "proposal:", "teach:",
+LIBRARY_ID_PREFIXES = ("kb:", "kb.", "graded:", "skill:", "family:", "chunk:", "ontology:", "issue:", "rdso-doc:", "rdso-extract:", "rdso:", "proposal:", "teach:",
                        "component:")
 SHEET_ID = re.compile(r"^(v-)?[0-9a-f]{12}-p\d+(#[A-Za-z0-9_.-]+)?$")
 
@@ -329,6 +329,119 @@ class Library:
         ident = (ident or "").strip().removeprefix("component:")
         return next((c for c in self.components if c.get("id") == ident), None)
 
+    # ── what a drawing's own words say it is (identify.json), and the graded knowledge behind each kind (graded/, imported as it is) ───
+
+    @property
+    def identify_vocab(self) -> dict:
+        def build():
+            p = self.dir / self.meta.get("identify", "identify.json")
+            return json.loads(p.read_text(encoding="utf-8")) if p.is_file() else {}
+
+        return self._once("identify", build)
+
+    @property
+    def graded(self) -> dict:
+        """The graded knowledge by kind and id — families, formulas and level chains, rules, conflicts, concepts, defaults, sources — and where
+        it came from. Each item keeps its own status; nothing here is a value of a drawing."""
+        def build():
+            d = self.dir / self.meta.get("graded", "graded")
+
+            def load(name: str) -> dict:
+                p = d / name
+                return json.loads(p.read_text(encoding="utf-8")) if p.is_file() else {}
+
+            fam, form, rules, conf, conc = (load(n) for n in ("families.json", "formulas.json", "rules.json", "conflicts.json", "concepts.json"))
+            prov = load("PROVENANCE.json")
+            return {"families": {f["id"]: f for f in fam.get("families", [])}, "formulas": {f["id"]: f for f in form.get("formulas", [])},
+                    "chains": {c["id"]: c for c in form.get("chains", [])}, "rules": {r["id"]: r for r in rules.get("rules", [])},
+                    "conflicts": {c["id"]: c for c in conf.get("conflicts", [])}, "concepts": {c["id"]: c for c in conc.get("concepts", [])},
+                    "defaults": load("defaults.json").get("defaults", []), "sources": {s["id"]: s for s in load("sources.json").get("sources", [])},
+                    "provenance": {k: prov.get(k) for k in ("repository", "ref", "commit")}}
+
+        return self._once("graded", build)
+
+    def graded_record(self, ident: str, count: int | None = None) -> dict | None:
+        """A graded formula or a configuration relation as a record check_rule evaluates (`graded:<id>`): its statement, expression and
+        status. A configuration relation reads with the count the drawing's words gave (none: not evaluable)."""
+        from ..identify import relations_for
+
+        ident = (ident or "").strip().removeprefix("graded:")
+        f = self.graded.get("formulas", {}).get(ident)
+        if f is not None:
+            text, status, cond = f["expression"], f.get("status"), f.get("condition")
+            stmt = f"{f['output']} = {text}"
+        else:
+            rel = next((r for r in self.identify_vocab.get("configuration_relations", []) if r["id"] == ident), None)
+            if rel is None:
+                return None
+            if rel.get("count_name") and count is None:
+                return {"id": f"graded:{ident}", "statement": rel["expression"], "trust": {"evidence_status": rel.get("status")},
+                        "count_missing": rel["count_name"]}
+            stmt = relations_for([rel], count or 0)[0]["for_this_drawing"] if rel.get("count_name") else rel["expression"]
+            text, status, cond = stmt.split("=", 1)[1].strip(), rel.get("status"), rel.get("condition")
+        return {"id": f"graded:{ident}", "statement": stmt + (f" (when {cond})" if cond else ""), "expression": {"text": text},
+                "trust": {"evidence_status": status, "review_state": "graded"}}
+
+    def family_card(self, family: str, count: int | None = None) -> dict | None:
+        """What the graded knowledge holds for one kind: capability, components, what must be known, its level chain, formulas and rules with
+        their status, open questions (conflicts) that touch it, and the relations that follow from a count the drawing's words gave."""
+        from ..identify import relations_for
+
+        g = self.graded
+        fam = g.get("families", {}).get(family)
+        if fam is None:
+            return None
+        concepts = g["concepts"]
+
+        def concept(cid: str) -> dict:
+            c = concepts.get(cid) or next((x for x in concepts.values() if x.get("spec_key") == cid), None) or {}
+            return {"id": cid, "label": c.get("label", cid), **({"means": clip(c["definition"], 160)} if c.get("definition") else {})}
+
+        def formula(fid: str, extra: dict | None = None) -> dict | None:
+            f = g["formulas"].get(fid)
+            return {"id": f"graded:{fid}", "is": f"{f['output']} = {f['expression']}", "status": f.get("status"), **(extra or {}),
+                    **({"when": clip(f["condition"], 160)} if f.get("condition") else {})} if f else None
+
+        chain = []
+        for e in (g["chains"].get(fam.get("chain") or "") or {}).get("entries", []):
+            if "out" in e:
+                ways = [w for a in e.get("alts", []) for w in [formula(a["formula"], {k: a[k] for k in ("given", "requires") if a.get(k)}) if a.get("formula")
+                                                              else {"is": f"{a['identity']} (as the drawing states it)", "status": "READ"} if a.get("identity") else None] if w]
+                chain.append({"level": e["out"], "ways": ways[:4]})
+            elif e.get("stack"):
+                chain.append({"under": e["stack"], "ways": [w for w in [formula(e.get("formula", ""))] if w]})
+        own = [formula(f["id"]) for f in g["formulas"].values() if family in (f.get("families") or ())]
+        rules = []
+        for rid in fam.get("rules", []):
+            r = g["rules"].get(rid)
+            if r:
+                rules.append({"id": rid, "title": r.get("title"), "status": r.get("status"), "kind": r.get("kind"),
+                              **({"check": r["check"]} if r.get("check") else {}), "says": clip(r.get("statement"), 200),
+                              "cites": [f"{s.get('source')}{' ' + s['clause'] if s.get('clause') else ''}" for s in r.get("sources", [])][:3]})
+        touch = set(fam.get("rules", [])) | {f["id"] for f in g["formulas"].values() if family in (f.get("families") or ())} | set(fam.get("sizes", [])) \
+            | {c.get("concept") for c in fam.get("components", [])}
+        open_q = []
+        for c in g["conflicts"].values():
+            hit = {x for v in (c.get("affects") or {}).values() if isinstance(v, list) for x in v if isinstance(x, str)} & touch
+            if hit:
+                res = c.get("resolution") or {}
+                open_q.append({"id": c["id"], "topic": c.get("topic"), "status": res.get("status"), "rule_status": res.get("rule_status"),
+                               "decision": clip(res.get("decision"), 220)})
+        cited = {s.get("source") for r in fam.get("rules", []) for s in (g["rules"].get(r) or {}).get("sources", [])} | {s.get("source") for s in fam.get("sources", [])}
+        rel = self.identify_vocab.get("configuration_relations", [])
+        return {"family": family, "label": fam.get("label"), "capability": fam.get("capability"), "capability_note": clip(fam.get("capability_note"), 300),
+                "components": [{**concept(c.get("concept", "")), "role": c.get("role")} for c in fam.get("components", [])],
+                "must_be_known": [" or ".join("+".join(a) for a in r.get("any_of", [])) + (f" (when {r['when']})" if r.get("when") else "")
+                                  for r in fam.get("required", [])],
+                "sizes": [concept(s) for s in fam.get("sizes", [])], "level_chain": chain, "formulas": [f for f in own if f][:16], "rules": rules[:14],
+                "unknowns": fam.get("unknowns", []), "open_questions": open_q[:10],
+                **({"configuration": relations_for(rel, count)} if count else {"configuration_relations": rel}),
+                "sources": {s: {"title": (g["sources"].get(s) or {}).get("title"), "trust": (g["sources"].get(s) or {}).get("trust")}
+                            for s in sorted(x for x in cited if x)},
+                "graded_from": g.get("provenance"),
+                "trust": ("graded knowledge: DERIVED is geometry (holds by definition); NORMATIVE cites a verified clause; COMMON_PRACTICE, ASSUMPTION, "
+                          "DISPUTED and UNKNOWN are never values — read the drawing; where the drawing disagrees, the drawing wins and you say so")}
+
     def component_cards(self, words: set[str]) -> list[dict]:
         """The cards whose names share the most content words with a part's own (its name, type and the labels on it) — best first. Words
         are compared as words (labels.words); a card needs every word of one of its names to match: 'return wall' is not 'wall'."""
@@ -578,6 +691,11 @@ class Library:
             return self.skill(ident) is not None
         if ident.startswith("component:"):
             return self.component(ident) is not None
+        if ident.startswith("graded:"):
+            local = ident.removeprefix("graded:")
+            g = self.graded
+            return any(local in g.get(k, {}) for k in ("families", "formulas", "rules", "conflicts", "concepts", "sources")) or \
+                self.graded_record(ident, 1) is not None
         if self.record(ident) is not None:
             return True
         for src in self.sources:
@@ -796,6 +914,14 @@ LIBRARY_TOOL_SPECS = [
                     "datum you bound, never a reason to move a line."),
      {"type": "object", "properties": {"rule": _S, "bind": {"type": "object", "additionalProperties": _S}, "tolerance_mm": _N, "unit": _S},
       "required": ["rule", "bind"]}),
+    ("identify_structure", ("What the drawing's own printed words say the structure is: its kind (and look-alikes set aside), what is existing and "
+                            "what is proposed, what it crosses, how many of what it carries the words name and the configuration that makes, its "
+                            "openings and spans, loading, skew, the numbers it is known by and the standard drawings and codes it cites — each with "
+                            "the words and where they are printed (unit, entity id). With it, what the library holds for that kind: components, "
+                            "what must be known, its level chain, formulas and rules with their status, open questions, and the relations that "
+                            "follow from the counts read. A lead to confirm on the drawing, never a value. `unit`: only that unit's words and the "
+                            "sheet's notes."),
+     {"type": "object", "properties": {"unit": _S}, "required": []}),
     ("record_finding", ("Say what you did with library knowledge, for the person and the run's record: `applied` (a skill or rule you used), "
                         "`assumption`, `conflict` (the library and the drawing disagree), `gap` (the drawing or the library lacks it), `proposal` "
                         "(a rule or correction you think is missing: a note for a person, never merged). `evidence`: library ids (checked: "
@@ -816,10 +942,14 @@ class KnowledgeSession:
     character budget, and the trace of everything retrieved, checked and recorded."""
 
     def __init__(self, lib: Library, texts: Callable[[], list[str]] | None = None,
-                 values: Callable[[str, str | None], tuple[float, str] | None] | None = None, budget_chars: int = RUN_BUDGET_CHARS):
+                 values: Callable[[str, str | None], tuple[float, str] | None] | None = None, budget_chars: int = RUN_BUDGET_CHARS,
+                 placed: Callable[[], list[dict]] | None = None):
         self.lib = lib
         self._texts = texts
         self._values = values
+        self._placed = placed  # the printed texts with where they are (identify.placed_texts): what identify_structure reads
+        self._reading: dict | None = None
+        self.count: int | None = None  # what the drawing's words count (identify): a configuration relation reads with it
         self.budget = budget_chars
         self.used = 0
         self.trace: list[dict] = []
@@ -842,16 +972,32 @@ class KnowledgeSession:
 
     def hint(self) -> dict:
         """What the model's first look at the sheet says about the library: it is on, which skills the drawing's words match (and which
-        words), and how to use it. Nothing is loaded."""
+        words), what the words say the structure is, and how to use it. Nothing is loaded."""
         m = self.matches()
+        reading = self.reading()
         return {"on": self.lib.name, "skills": len(self.lib.skills),
                 "match_this_drawing": [{"skill": x["skill"], "strong": x["strong"], "printed_words": list(dict.fromkeys(b["printed"] for b in x["because"]))[:6]}
                                        for x in m[:3]] or "none: the drawing prints none of the library's vocabulary",
-                "use": "list_skills, then load_skill for the one whose cues you confirm on the drawing; a match is a lead, not a classification"}
+                **({"the_words_say": reading["reading"]} if reading else {}),
+                "use": "list_skills, then load_skill for the one whose cues you confirm on the drawing; a match is a lead, not a classification"
+                       + ("; identify_structure gives the reading with its evidence and what the library holds for that kind" if reading else "")}
+
+    def reading(self) -> dict | None:
+        """What the drawing's printed words say it is (identify.read), once per run until the words change; None without a vocabulary or texts."""
+        if self._reading is None and self._placed is not None and self.lib.identify_vocab:
+            from .. import identify
+
+            try:
+                self._reading = identify.read(self._placed(), self.lib.identify_vocab)
+            except Exception as exc:  # noqa: BLE001 — a drawing whose words cannot be read is read as saying nothing; it never stops a run
+                self._reading = {"reading": f"the printed words could not be read ({type(exc).__name__})", "kinds": [], "carried": {}}
+            self.count = (self._reading.get("carried") or {}).get("count") or None
+        return self._reading
 
     def refresh(self) -> None:
-        """The words may have changed (another unit opened): matches are computed again at the next list_skills."""
+        """The words may have changed (another unit opened): matches and the reading are computed again when next asked."""
         self._matches = None
+        self._reading = None
 
     def call(self, name: str, args: dict) -> dict:
         if name not in LIBRARY_TOOLS:
@@ -860,7 +1006,7 @@ class KnowledgeSession:
         if extra:
             return {"error": f"unknown argument(s) for {name}: {sorted(extra)}; it takes {sorted(_ARGS[name] - {'why'})}"}
         args = {k: v for k, v in args.items() if k != "why"}
-        heavy = name in ("load_skill", "get_reference", "search_library")
+        heavy = name in ("load_skill", "get_reference", "search_library", "identify_structure")
         if heavy and self.used >= self.budget:
             res = {"refused": f"this run has read {self.used:,} characters of library text (its budget is {self.budget:,}): work from what you "
                               "already loaded, or ask_person; list_skills and check_rule are still open"}
@@ -945,6 +1091,39 @@ class KnowledgeSession:
             res["related"] = sk.related
         return res
 
+    def _identify_structure(self, unit: str = "") -> dict:
+        from .. import identify
+
+        vocab = self.lib.identify_vocab
+        if not vocab:
+            return {"error": "this library has no vocabulary to read a drawing's words with"}
+        if self._placed is None:
+            return {"error": "no printed text of this drawing is available here"}
+        if unit:
+            got = identify.read([t for t in self._placed() if t.get("unit") in (unit, None)], vocab)
+        else:
+            got = self.reading() or {}
+        main = identify.main_kind(got)
+        count = (got.get("carried") or {}).get("count") or None
+        out = {k: got.get(k) for k in ("reading", "kinds", "set_aside", "crossings", "carried", "spans", "loading", "foundations", "facts") if got.get(k)}
+        card = self.lib.family_card(main["graded"], count) if main and main.get("graded") else None
+        if card is not None:
+            out["library"] = card
+        elif main is not None:
+            out["library"] = {"note": f"the library holds nothing graded for {main['label']}: name everything from what the drawing shows"}
+        crossing = next((c for c in got.get("crossings") or [] if c.get("graded")), None)
+        if crossing is not None:
+            fam = self.lib.graded.get("families", {}).get(crossing["graded"])
+            if fam is not None:
+                out["crossing_library"] = {"family": crossing["graded"], "label": fam.get("label"), "capability": fam.get("capability"),
+                                           "capability_note": clip(fam.get("capability_note"), 240), "unknowns": fam.get("unknowns", [])}
+        out["trust"] = ("the drawing's own printed words, matched against the library's vocabulary: a lead to confirm on the drawing (zoom_view), never a "
+                        "value of it. The library's part is context with its own status; a standard value the library does not hold is read from the "
+                        "drawing, never assumed")
+        out["use"] = ("confirm the kind and the counts on the drawing; name the parts and values from the drawing; test a formula or a relation on "
+                      "your own values with check_rule(rule='graded:<id>', bind={role: your value's name}); say what you applied with record_finding")
+        return out
+
     def _search_library(self, queries: list[str] | str, categories: list[str] | None = None, topics: list[str] | None = None,
                         families: list[str] | None = None, limit: float = SEARCH_LIMIT, scope: str = "records") -> dict:
         qs = [q for q in _as_list(queries) if q.strip()]
@@ -976,9 +1155,18 @@ class KnowledgeSession:
         return res
 
     def _check_rule(self, rule: str, bind: dict, tolerance_mm: float | None = None, unit: str | None = None) -> dict:
-        r = self.lib.record(str(rule))
+        if str(rule).startswith("graded:"):
+            if self.count is None:
+                self.reading()
+            r = self.lib.graded_record(str(rule), self.count)
+            if r is not None and r.get("count_missing"):
+                return {"rule": r["id"], "ok": False, "result": "not_evaluable", "statement": r["statement"],
+                        "why": f"this relation reads with the {r['count_missing']} the drawing's words count, and they count none: identify_structure says what was read"}
+        else:
+            r = self.lib.record(str(rule))
         if r is None:
-            return {"ok": False, "error": f"no record {rule!r}: search_library(topics=['formula']) lists documented definitions"}
+            return {"ok": False, "error": f"no record {rule!r}: search_library(topics=['formula']) lists documented definitions; identify_structure lists "
+                                          "the graded ones (graded:…)"}
         expr = (r.get("expression") or {}).get("text")
         lhs = _lhs(r)
         base = {"rule": r["id"], "statement": clip(r.get("statement"), 200), "review": (r.get("trust") or {}).get("review_state"),

@@ -1,0 +1,124 @@
+{
+ "note": "Where sources disagree. Both positions are kept with their sources; `resolution.status` is RESOLVED only when a document in hand settles it (and says which), VARIANT when the evidence of each drawing decides, EDITION_DEPENDENT when the governing edition is not established, OPEN otherwise. `affects` names what the resolution governs: documented formulas and constants (their status in formulas.json), rules, concepts, and errata appended to the vendored drafting skills when they are served.",
+ "conflicts": [
+  {"id": "KC-1", "topic": "Rail level − formation level", "positions": [
+    {"claim": "0.762 m, 'IRS (BG standard)', bound as a constant", "sources": [{"source": "SRC-BRIDGE-FORMULAS", "clause": "RCR-LVL-006, HPC-LVL-008, INDEX constants"}]},
+    {"claim": "742 / 762 mm, NORMATIVE", "sources": [{"source": "SRC-GEMINI-KB", "note": "FORM-TRK-001"}]},
+    {"claim": "depends on rail, sleeper and ballast; an ASSUMPTION", "sources": [{"source": "SRC-CLAUDE-RESEARCH", "note": "B12"}, {"source": "SRC-KB-PACKAGE", "note": "formulas/track.md"}]}],
+   "evidence": "A drawing in hand shows 0.688 on an existing line and 0.762 on the proposed one; the legacy slab engine used 0.738.",
+   "resolution": {"status": "RESOLVED", "rule_status": "ASSUMPTION", "decision": "Each track's own rail and formation levels; 0.762 is never bound as a constant or enforced as a check."},
+   "affects": {"documented": ["RCR-LVL-006", "HPC-LVL-008"], "constants": ["RAIL_FORMATION_OFFSET"], "rules": ["TRACK-RAIL-OVER-FORMATION"],
+    "skills": [{"skill": "*", "match": "0\\.762", "erratum": "rail = formation + 0.762 is an ASSUMPTION (knowledge KC-1), never a check: each track's rail and formation levels are read, and their difference is reported, not enforced."}]}},
+  {"id": "KC-2", "topic": "Barrel length", "positions": [
+    {"claim": "FW + 4·cushion, 'for the 1:1 embankment slope'", "sources": [{"source": "SRC-BRIDGE-FORMULAS", "clause": "RCR-LVL-007, HPC-GEO-007"}]},
+    {"claim": "FW + 2·s·H (a 1:1 slope gives FW + 2H; 4·cushion implies 2H:1V)", "sources": [{"source": "SRC-CLAUDE-RESEARCH", "note": "B5, B13"}]},
+    {"claim": "W_form + 2·S·(Z_form − Z_box_top), 'NORMATIVE RDSO/B-10155 Cl 14'", "sources": [{"source": "SRC-GEMINI-KB", "note": "FORM-GEO-004; the drawing is not in hand"}]}],
+   "resolution": {"status": "RESOLVED", "rule_status": "DISPUTED", "decision": "The documented formula contradicts itself and is never applied. The geometric identity FW + 2·s·H (end height, bank slope s) holds for a straight bank; barrel length stays a design input."},
+   "affects": {"documented": ["RCR-LVL-007", "HPC-GEO-007"], "concepts": ["barrel_length"]}},
+  {"id": "KC-3", "topic": "Minimum haunch", "positions": [
+    {"claim": "≥ 0.3 m 'RDSO recommendation'", "sources": [{"source": "SRC-BRIDGE-FORMULAS", "clause": "RCR-VAL-008"}]},
+    {"claim": "bounds 150–300 mm, default 200", "sources": [{"source": "SRC-GEMINI-KB"}]},
+    {"claim": "unverified", "sources": [{"source": "SRC-CLAUDE-RESEARCH", "note": "B6"}]}],
+   "evidence": "Drawings in hand use a 200 × 200 haunch.",
+   "resolution": {"status": "OPEN", "rule_status": "UNKNOWN", "decision": "No minimum is checked; the haunch is a design input or a reading."},
+   "affects": {"documented": ["RCR-VAL-008"], "rules": ["KNOW-HAUNCH-MINIMUM"], "defaults": ["DEF-HAUNCH"]}},
+  {"id": "KC-4", "topic": "Clear height datum (box)", "positions": [
+    {"claim": "box height = cH + tST + tSB: the clear height runs from the structural floor", "sources": [{"source": "SRC-BRIDGE-FORMULAS", "clause": "RCR-GEO-002"}]},
+    {"claim": "box height = cH + tST + tSB + t_wear: the clear height runs from the wearing-course top", "sources": [{"source": "SRC-GEMINI-KB", "note": "FORM-GEO-002"}]}],
+   "evidence": "A drawing in hand writes bed level and bottom-of-slab levels whose difference equals the written clear height, with a wearing course in the cell.",
+   "resolution": {"status": "VARIANT", "rule_status": "DERIVED", "decision": "Both are geometry; which one a drawing uses is decided by its written levels (layout clear_from, derived when the levels decide it). Without that evidence the recipes' established convention (from the floor) is used and reported as assumed."},
+   "affects": {"concepts": ["clear_height"]}},
+  {"id": "KC-5", "topic": "Earth cushion minimum and datum", "positions": [
+    {"claim": "cushion ≥ 75 mm 'IRS'", "sources": [{"source": "SRC-BRIDGE-FORMULAS", "clause": "RCR-VAL-007"}]},
+    {"claim": "datum of 'fill height' (formation, sleeper or rail) unverified; ≥ 300 mm (tier 3)", "sources": [{"source": "SRC-CLAUDE-RESEARCH", "note": "B4"}]}],
+   "resolution": {"status": "OPEN", "rule_status": "UNKNOWN", "decision": "The drawing's cushion is formation − top of structure (a definition); no minimum is checked."},
+   "affects": {"documented": ["RCR-VAL-007"], "constants": ["MIN_EARTH_CUSHION"], "rules": ["KNOW-CUSHION-MINIMUM"]}},
+  {"id": "KC-6", "topic": "HFL vs the design-discharge water level", "positions": [
+    {"claim": "HFL aliases DFL / DESIGN FLOOD LEVEL", "sources": [{"source": "SRC-BRIDGE-FORMULAS", "note": "kernel lib/bridge/glossary.ts"}]},
+    {"claim": "distinct: clearance and free board are measured from the water level of Q incl. afflux; HFL is a survey fact", "sources": [{"source": "SRC-IRBM-2024", "clause": "312(1), 313(1)"}, {"source": "SRC-KB-PACKAGE", "note": "C-004"}]}],
+   "resolution": {"status": "RESOLVED", "rule_status": "NORMATIVE", "decision": "Distinct concepts (hfl, design_water_level). A drawing's F.B. / CL- written against the HFL is read as written; the IRBM 313 check against the HFL is an indication only (REQUIRES REVIEW)."},
+   "affects": {"concepts": ["hfl", "design_water_level"], "rules": ["IRBM-313-FREE-BOARD", "IRBM-312-1-VERTICAL-CLEARANCE"]}},
+  {"id": "KC-7", "topic": "Batter clause number", "positions": [
+    {"claim": "IRBM 604", "sources": [{"source": "SRC-BRIDGE-FORMULAS", "clause": "SUB-BAT-001"}, {"source": "SRC-KB-PACKAGE"}]},
+    {"claim": "IRBM 603 (1998 + correction slip 5)", "sources": [{"source": "SRC-CLAUDE-RESEARCH", "note": "X8, B20"}]}],
+   "resolution": {"status": "RESOLVED", "rule_status": "NORMATIVE", "decision": "IRBM-2024 604(1)(b)(c), page 69 (the document in hand). The 603 citation belongs to the 1998 edition."},
+   "affects": {"rules": ["IRBM-604-1-PIER-BATTER", "IRBM-604-1-ABUTMENT-BATTER"]}},
+  {"id": "KC-8", "topic": "Seismic seating width", "positions": [
+    {"claim": "300 + 1.5L + 6Hp (II/III); 500 + 2.5L + 10Hp (IV/V)", "sources": [{"source": "SRC-RDSO-BS118", "clause": "14.3"}, {"source": "SRC-BRIDGE-FORMULAS", "clause": "SEI-SEAT-001"}]},
+    {"claim": "203 + 1.67L + 6.66H (II/III); 305 + 2.50L + 10.0H (IV/V)", "sources": [{"source": "SRC-IRS-SEISMIC-2020", "clause": "14"}]}],
+   "resolution": {"status": "EDITION_DEPENDENT", "rule_status": "DISPUTED", "decision": "The documented values are BS-118 as written; whether the 2020 code governs the project is not established. Not enforced."},
+   "affects": {"rules": ["BS118-14-3-SEATING-WIDTH"], "constants": ["MIN_BEARING_SEAT_W"]}},
+  {"id": "KC-9", "topic": "Seismic coefficient A_h", "positions": [
+    {"claim": "A_h = (Z/2)·I·(Sa/g)", "sources": [{"source": "SRC-BRIDGE-FORMULAS", "clause": "SEI-COE-001"}]},
+    {"claim": "A_h = (Z/2)(I/R)(Sa/g), ≥ Z/2 for T < 0.1 s", "sources": [{"source": "SRC-IRS-SEISMIC-2020", "clause": "9.4.1"}]}],
+   "resolution": {"status": "EDITION_DEPENDENT", "rule_status": "DISPUTED", "decision": "Not applied; box and pipe culverts are exempt from seismic analysis anyway (BS-118 4.4)."},
+   "affects": {"documented": ["SEI-COE-001"]}},
+  {"id": "KC-10", "topic": "Open foundation depth 1.75 m", "positions": [
+    {"claim": "IRBM 403", "sources": [{"source": "SRC-BRIDGE-FORMULAS", "clause": "FDN-OPN-001"}]},
+    {"claim": "IRBM 316(2)", "sources": [{"source": "SRC-BRIDGE-FORMULAS", "note": "drafter skill foundations-well-pile-open"}]},
+    {"claim": "unverified", "sources": [{"source": "SRC-CLAUDE-RESEARCH", "note": "B10, B28"}]}],
+   "resolution": {"status": "RESOLVED", "rule_status": "NORMATIVE", "decision": "IRBM-2024 403(2), page 46: other bridges on open foundations, ordinary soil; pipe and box culverts are 402."},
+   "affects": {"rules": ["IRBM-403-2-OPEN-FOUNDATION-DEPTH"],
+    "skills": [{"skill": "*", "match": "316\\(2\\)", "erratum": "the 1.75 m open-foundation rule is IRBM-2024 para 403(2) (page 46), for bridges other than pipe and box culverts — not 316(2)."}]}},
+  {"id": "KC-11", "topic": "Minimum clear span and headroom", "positions": [
+    {"claim": "minimum clear span 1 m, headroom 1.2 m", "sources": [{"source": "SRC-KB-PACKAGE"}]},
+    {"claim": "unverified", "sources": [{"source": "SRC-CLAUDE-RESEARCH", "note": "B58"}]}],
+   "resolution": {"status": "RESOLVED", "rule_status": "NORMATIVE", "decision": "IRBM-2024 311(3), page 41: clear span ≥ 1 m (new and rebuilt); headroom ≥ 1.2 m in new bridges, relaxable by PCE/CBE."},
+   "affects": {"rules": ["IRBM-311-3-CLEAR-SPAN", "IRBM-311-3-HEADROOM"]}},
+  {"id": "KC-12", "topic": "Weep holes", "positions": [
+    {"claim": "1 m × 1 m, 'staggered' unverified; IPWE 1.5 m horizontal", "sources": [{"source": "SRC-CLAUDE-RESEARCH", "note": "B24, X3"}]}],
+   "resolution": {"status": "RESOLVED", "rule_status": "NORMATIVE", "decision": "IRBM-2024 605(3) (1 m vertical and horizontal, staggered) and 207(3) (lowest row above LWL in streams, 250 mm above bed otherwise, above FSL in canals)."},
+   "affects": {"rules": ["IRBM-207-3-WEEP-HOLES"]}},
+  {"id": "KC-13", "topic": "Formation width", "positions": [
+    {"claim": "7.85 m single / 13.15 m double", "sources": [{"source": "SRC-GEMINI-KB"}]},
+    {"claim": "deck width ≥ 8.534 m 'BG formation width'", "sources": [{"source": "SRC-BRIDGE-FORMULAS", "clause": "PSC-VAL-013"}]},
+    {"claim": "unverified — an assumption", "sources": [{"source": "SRC-CLAUDE-RESEARCH", "note": "B14"}]}],
+   "resolution": {"status": "OPEN", "rule_status": "ASSUMPTION", "decision": "No formation width is assumed; it is read or it is absent."},
+   "affects": {"concepts": ["formation_width"]}},
+  {"id": "KC-14", "topic": "Foundation design discharge Qf (IRBM 310)", "positions": [
+    {"claim": "linear interpolation within the bands; 5% above 25,000 km², NORMATIVE", "sources": [{"source": "SRC-GEMINI-KB", "note": "FORM-HYD-002"}]},
+    {"claim": "bands only; interpolation not stated; above 25,000 km² 'less than 10% at CBE discretion'", "sources": [{"source": "SRC-IRBM-2024", "clause": "310"}]}],
+   "resolution": {"status": "RESOLVED", "rule_status": "NORMATIVE", "decision": "The IRBM bands; the interpolation is UNKNOWN and is not assumed."},
+   "affects": {}},
+  {"id": "KC-15", "topic": "Vertical clearance vs free board", "positions": [
+    {"claim": "clearance ≥ 1.0 m", "sources": [{"source": "SRC-BRIDGE-FORMULAS", "clause": "CG-VAL-006"}]},
+    {"claim": "HFL clearance ≥ 0.600 m", "sources": [{"source": "SRC-BRIDGE-FORMULAS", "clause": "PSC-VAL-004"}]},
+    {"claim": "clearance by discharge table (600–1800 mm) from the design water level; 1.0 m is the free board", "sources": [{"source": "SRC-IRBM-2024", "clause": "312(1), 313(1)"}]}],
+   "resolution": {"status": "RESOLVED", "rule_status": "NORMATIVE", "decision": "IRBM 312(1) table for clearance (not for box / pipe culverts, 312(3)); IRBM 313 for free board."},
+   "affects": {"documented": ["CG-VAL-006", "PSC-VAL-004"], "constants": ["MIN_HFL_CLEARANCE"], "rules": ["IRBM-312-1-VERTICAL-CLEARANCE", "IRBM-313-FREE-BOARD"]}},
+  {"id": "KC-16", "topic": "Girder depth ratio", "positions": [
+    {"claim": "depth ≥ L/20", "sources": [{"source": "SRC-BRIDGE-FORMULAS", "clause": "CG-VAL-002"}]},
+    {"claim": "depth ≥ L/12 plate girder, L/10 truss; L/20, L/16 are spacing ratios", "sources": [{"source": "SRC-CLAUDE-RESEARCH", "note": "B16"}]}],
+   "resolution": {"status": "OPEN", "rule_status": "DISPUTED", "decision": "Not checked."},
+   "affects": {"documented": ["CG-VAL-002"], "rules": ["KNOW-GIRDER-DEPTH-RATIO"]}},
+  {"id": "KC-17", "topic": "Seismic exemption and arch limits wording", "positions": [
+    {"claim": "4.5(a): zones II & III, overall length < 60 m OR spans < 15 m; 4.3: masonry / PCC arches > 12 m not in zones IV and V", "sources": [{"source": "SRC-RDSO-BS118", "clause": "4.3, 4.5"}]},
+    {"claim": "L ≤ 60 AND span ≤ 15 outside IV/V; arch limits by zone differ", "sources": [{"source": "SRC-IRS-SEISMIC-2020", "clause": "4.1"}]}],
+   "resolution": {"status": "EDITION_DEPENDENT", "rule_status": "DISPUTED", "decision": "BS-118 is quoted as written; the governing edition is for the engineer to state."},
+   "affects": {"rules": ["BS118-4-3-ARCH-SEISMIC"]}},
+  {"id": "KC-18", "topic": "Standard drawing identifiers and contents", "positions": [
+    {"claim": "double box B-10158 (25 t)", "sources": [{"source": "SRC-CLAUDE-RESEARCH", "note": "X4 (IREPS)"}]},
+    {"claim": "double box B-10154 (DFC)", "sources": [{"source": "SRC-CLAUDE-RESEARCH", "note": "X4 (secondary)"}]},
+    {"claim": "B-10155 / B-10158 sheet counts and spans", "sources": [{"source": "SRC-GEMINI-KB"}]}],
+   "resolution": {"status": "OPEN", "rule_status": "UNKNOWN", "decision": "No sheet is in hand; no dimension from any standard drawing is executable."},
+   "affects": {}},
+  {"id": "KC-19", "topic": "Well tilt and shift", "positions": [
+    {"claim": "1 in 100 and D/40 ≤ 150 mm (railway) vs 1 in 80, 150 mm (IRC / IS)", "sources": [{"source": "SRC-CLAUDE-RESEARCH", "note": "B32 DISPUTED"}]}],
+   "resolution": {"status": "RESOLVED", "rule_status": "NORMATIVE", "decision": "IRBM-2024 424(1)(a), page 57: tilt up to 1 in 100 and shift D/40 subject to 150 mm, for railway wells. The road values belong to another authority."},
+   "affects": {}},
+  {"id": "KC-20", "topic": "Drop wall depth", "positions": [
+    {"claim": "1.25 × D_Lacey", "sources": [{"source": "SRC-BRIDGE-FORMULAS", "clause": "FDN-SHL-001, RTW-FLR-001"}]},
+    {"claim": "unverified; tier-3 curtain ≥ 2.0 m, drop ≥ 2.5 m", "sources": [{"source": "SRC-CLAUDE-RESEARCH", "note": "B36"}]}],
+   "resolution": {"status": "RESOLVED", "rule_status": "NORMATIVE", "decision": "IRBM-2024 818, page 106: minor bridges — drop wall depth 1.25 × D_Lacey; the floor covers abutments and wing walls."},
+   "affects": {"documented": ["FDN-SHL-001", "RTW-FLR-001"]}},
+  {"id": "KC-21", "topic": "Pile spacing", "positions": [
+    {"claim": "2.5d end bearing, 3d friction (secondary)", "sources": [{"source": "SRC-CLAUDE-RESEARCH", "note": "B34"}]}],
+   "resolution": {"status": "RESOLVED", "rule_status": "NORMATIVE", "decision": "IRBM-2024 409(2)–(4), page 48: ≥ 2.5d end bearing, ≥ 3d friction, 2d possible in loose sand."},
+   "affects": {}},
+  {"id": "KC-22", "topic": "Minimum clear height of a box", "positions": [
+    {"claim": "clear height ≥ 1.0 m 'IRS minimum headroom'", "sources": [{"source": "SRC-BRIDGE-FORMULAS", "clause": "RCR-VAL-003"}]},
+    {"claim": "headroom ≥ 1.2 m in new bridges, relaxable", "sources": [{"source": "SRC-IRBM-2024", "clause": "311(3)"}]}],
+   "resolution": {"status": "RESOLVED", "rule_status": "NORMATIVE", "decision": "IRBM-2024 311(3) (rule IRBM-311-3-HEADROOM); RCR-VAL-003 is not applied."},
+   "affects": {"documented": ["RCR-VAL-003"], "rules": ["IRBM-311-3-HEADROOM"]}}
+ ]
+}

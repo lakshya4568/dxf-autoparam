@@ -1,0 +1,175 @@
+{
+ "note": "Formulas are written ONCE, in the kernel's expression language (lib/parametric/expression via lib/components/expr — the one evaluator), over spec keys in canonical millimetres: a level key stands for its RL × 1000. The level chain evaluates them in that scope and converts a level back to metres; a recipe renders the same formula over its plan names (FloorY, ClearHeight …). A DERIVED formula calculates; a `definition` names what a quantity between two levels IS (dimension ownership); a rule (rules.json) checks. Status and sources say why each is believed.",
+ "formulas": [
+  {"id": "F-FLOOR-FROM-BED-WEARING", "kind": "derived", "output": "floor_level", "expression": "bed_level - wearing_course", "status": "DERIVED", "families": ["rcc_box"], "condition": "the bed level marks the top of the wearing course in the cells (layout bed_is = wearing_top)", "equivalents": ["RCR-GEO-004"], "sources": [{"source": "SRC-GEOMETRY"}, {"source": "SRC-BRIDGE-FORMULAS", "clause": "RCR-GEO-004"}], "tests": [{"inputs": {"bed_level": 100000, "wearing_course": 100}, "expect": 99900}]},
+  {"id": "F-FLOOR-AT-BED", "kind": "derived", "output": "floor_level", "expression": "bed_level", "status": "DERIVED", "families": ["rcc_box", "pipe"], "condition": "the bed level marks the floor of the cells, or a pipe's invert", "sources": [{"source": "SRC-GEOMETRY"}], "tests": [{"inputs": {"bed_level": 50000}, "expect": 50000}]},
+  {"id": "F-FLOOR-FROM-SOFFIT", "kind": "derived", "output": "floor_level", "expression": "soffit_level - clear_height", "status": "DERIVED", "families": ["rcc_box"], "sources": [{"source": "SRC-GEOMETRY"}], "tests": [{"inputs": {"soffit_level": 101900, "clear_height": 2000}, "expect": 99900}]},
+  {"id": "F-BOX-SOFFIT", "kind": "derived", "output": "soffit_level", "expression": "floor_level + clear_height", "status": "DERIVED", "families": ["rcc_box"], "variant": "clear height measured from the structural floor (KC-4, the default)", "equivalents": ["RCR-GEO-007", "RCR-GEO-002"], "sources": [{"source": "SRC-GEOMETRY"}, {"source": "SRC-BRIDGE-FORMULAS", "clause": "RCR-GEO-002"}], "tests": [{"inputs": {"floor_level": 99900, "clear_height": 2000}, "expect": 101900}]},
+  {"id": "F-BOX-SOFFIT-FROM-BED", "kind": "derived", "output": "soffit_level", "expression": "bed_level + clear_height", "status": "DERIVED", "families": ["rcc_box"], "variant": "clear height measured from the top of the wearing course, i.e. the bed (KC-4)", "conflict": "KC-4", "sources": [{"source": "SRC-GEOMETRY"}, {"source": "SRC-GEMINI-KB", "note": "FORM-GEO-002 counts the wearing course in the box height"}], "tests": [{"inputs": {"bed_level": 83270, "clear_height": 1200}, "expect": 84470}]},
+  {"id": "F-CELL-HEIGHT-FROM-BED", "kind": "derived", "output": "cell_height", "expression": "clear_height + wearing_course", "status": "DERIVED", "families": ["rcc_box"], "variant": "clear height measured from the bed (KC-4): the cell, floor to soffit, is the clear height and the wearing course", "conflict": "KC-4", "sources": [{"source": "SRC-GEOMETRY"}], "tests": [{"inputs": {"clear_height": 1200, "wearing_course": 150}, "expect": 1350}]},
+  {"id": "F-BOX-TOP", "kind": "derived", "output": "top_slab_level", "expression": "soffit_level + top_slab", "status": "DERIVED", "families": ["rcc_box"], "equivalents": ["RCR-LVL-001", "RCR-GEO-006"], "sources": [{"source": "SRC-GEOMETRY"}], "tests": [{"inputs": {"soffit_level": 101900, "top_slab": 300}, "expect": 102200}]},
+  {"id": "F-BOX-SLAB-BOTTOM", "kind": "derived", "output": "slab_bottom_level", "expression": "floor_level - bottom_slab", "status": "DERIVED", "families": ["rcc_box"], "equivalents": ["RCR-GEO-005"], "sources": [{"source": "SRC-GEOMETRY"}], "tests": [{"inputs": {"floor_level": 99900, "bottom_slab": 350}, "expect": 99550}]},
+  {"id": "F-BOX-OUTSIDE-WIDTH", "kind": "derived", "output": "outside_width", "expression": "cells * clear_span + (cells - 1) * mid_wall + 2 * outer_wall", "status": "DERIVED", "families": ["rcc_box"], "condition": "orthogonal box, equal cells, equal inner walls (not skew-projected)", "equivalents": ["RCR-GEO-001", "HWB-GEO-001", "F-G1", "FORM-GEO-001", "RCC_BOX_TOTAL_OUTSIDE_WIDTH_UNIFORM", "DRF-BOX-004"], "sources": [{"source": "SRC-GEOMETRY"}, {"source": "SRC-KB-PACKAGE", "note": "formulas/geometry.md"}], "tests": [{"inputs": {"cells": 3, "clear_span": 2000, "mid_wall": 350, "outer_wall": 350}, "expect": 7400}]},
+  {"id": "F-BOX-OUTSIDE-WIDTH-1", "kind": "derived", "output": "outside_width", "expression": "cells * clear_span + 2 * outer_wall", "status": "DERIVED", "families": ["rcc_box"], "condition": "one cell: there is no inner wall", "equivalents": ["RCR-GEO-001"], "sources": [{"source": "SRC-GEOMETRY"}], "tests": [{"inputs": {"cells": 1, "clear_span": 2500, "outer_wall": 300}, "expect": 3100}]},
+  {"id": "F-FOOTING-TOP-FROM-BOF", "kind": "derived", "output": "footing_top_level", "expression": "foundation_bottom + footing_depth", "status": "DERIVED", "sources": [{"source": "SRC-GEOMETRY"}], "tests": [{"inputs": {"foundation_bottom": 98600, "footing_depth": 600}, "expect": 99200}]},
+  {"id": "F-FOOTING-TOP-FROM-BED", "kind": "derived", "output": "footing_top_level", "expression": "bed_level - footing_embedment", "status": "DERIVED", "sources": [{"source": "SRC-GEOMETRY"}], "tests": [{"inputs": {"bed_level": 56538, "footing_embedment": 1500}, "expect": 55038}]},
+  {"id": "F-BOF-FROM-FOOTING-TOP", "kind": "derived", "output": "foundation_bottom", "expression": "footing_top_level - footing_depth", "status": "DERIVED", "sources": [{"source": "SRC-GEOMETRY"}], "tests": [{"inputs": {"footing_top_level": 55038, "footing_depth": 500}, "expect": 54538}]},
+  {"id": "F-BOF-FROM-BED", "kind": "derived", "output": "foundation_bottom", "expression": "bed_level - (footing_embedment + footing_depth)", "status": "DERIVED", "families": ["slab", "girder"], "sources": [{"source": "SRC-GEOMETRY"}], "tests": [{"inputs": {"bed_level": 99000, "footing_embedment": 1000, "footing_depth": 800}, "expect": 97200}]},
+  {"id": "F-SPAN-SOFFIT-FROM-TOP-SLAB", "kind": "derived", "output": "soffit_level", "expression": "top_slab_level - deck_slab", "status": "DERIVED", "families": ["slab"], "sources": [{"source": "SRC-GEOMETRY"}], "tests": [{"inputs": {"top_slab_level": 104950, "deck_slab": 450}, "expect": 104500}]},
+  {"id": "F-SPAN-SOFFIT-FROM-TOP-GIRDER", "kind": "derived", "output": "soffit_level", "expression": "top_slab_level - girder_depth", "status": "DERIVED", "families": ["girder"], "equivalents": ["CG-LVL-002"], "sources": [{"source": "SRC-GEOMETRY"}], "tests": [{"inputs": {"top_slab_level": 107450, "girder_depth": 1100}, "expect": 106350}]},
+  {"id": "F-SPAN-SOFFIT-FROM-SEAT", "kind": "derived", "output": "soffit_level", "expression": "seat_level + bearing_height", "status": "DERIVED", "families": ["slab", "girder"], "equivalents": ["PSC-LVL-004", "CG-LVL-003"], "sources": [{"source": "SRC-GEOMETRY"}], "tests": [{"inputs": {"seat_level": 106000, "bearing_height": 350}, "expect": 106350}]},
+  {"id": "F-SPAN-SOFFIT-AT-SEAT", "kind": "derived", "output": "soffit_level", "expression": "seat_level", "status": "ASSUMPTION", "families": ["slab", "girder"], "condition": "no bearing read: the deck sits on the seat (defaults.json DEF-NO-BEARING)", "sources": [{"source": "SRC-AAGENTO-CONVENTION"}], "tests": [{"inputs": {"seat_level": 106000}, "expect": 106000}]},
+  {"id": "F-SPAN-TOP-SLAB", "kind": "derived", "output": "top_slab_level", "expression": "soffit_level + deck_slab", "status": "DERIVED", "families": ["slab"], "sources": [{"source": "SRC-GEOMETRY"}], "tests": [{"inputs": {"soffit_level": 104500, "deck_slab": 450}, "expect": 104950}]},
+  {"id": "F-SPAN-TOP-GIRDER", "kind": "derived", "output": "top_slab_level", "expression": "soffit_level + girder_depth", "status": "DERIVED", "families": ["girder"], "equivalents": ["CG-LVL-002"], "sources": [{"source": "SRC-GEOMETRY"}], "tests": [{"inputs": {"soffit_level": 106350, "girder_depth": 1100}, "expect": 107450}]},
+  {"id": "F-SPAN-SEAT", "kind": "derived", "output": "seat_level", "expression": "soffit_level - bearing_height", "status": "DERIVED", "families": ["slab", "girder"], "equivalents": ["PSC-LVL-004", "CG-LVL-003"], "sources": [{"source": "SRC-GEOMETRY"}], "tests": [{"inputs": {"soffit_level": 106350, "bearing_height": 350}, "expect": 106000}]},
+  {"id": "F-SPAN-SEAT-NO-BEARING", "kind": "derived", "output": "seat_level", "expression": "soffit_level", "status": "ASSUMPTION", "families": ["slab", "girder"], "condition": "no bearing read (DEF-NO-BEARING)", "sources": [{"source": "SRC-AAGENTO-CONVENTION"}], "tests": [{"inputs": {"soffit_level": 104500}, "expect": 104500}]},
+  {"id": "F-SPAN-WATERWAY-WIDTH", "kind": "derived", "output": "waterway_width", "expression": "spans * clear_span + (spans - 1) * pier_width", "status": "DERIVED", "families": ["slab", "girder"], "sources": [{"source": "SRC-GEOMETRY"}], "tests": [{"inputs": {"spans": 3, "clear_span": 6000, "pier_width": 900}, "expect": 19800}]},
+  {"id": "F-SPAN-WATERWAY-WIDTH-1", "kind": "derived", "output": "waterway_width", "expression": "spans * clear_span", "status": "DERIVED", "families": ["slab", "girder"], "condition": "one span: there is no pier", "sources": [{"source": "SRC-GEOMETRY"}], "tests": [{"inputs": {"spans": 1, "clear_span": 12200}, "expect": 12200}]},
+  {"id": "F-PIPE-SOFFIT", "kind": "derived", "output": "soffit_level", "expression": "floor_level + pipe_diameter", "status": "DERIVED", "families": ["pipe"], "sources": [{"source": "SRC-GEOMETRY"}], "tests": [{"inputs": {"floor_level": 50000, "pipe_diameter": 1200}, "expect": 51200}]},
+  {"id": "F-PIPE-TOP", "kind": "derived", "output": "top_slab_level", "expression": "soffit_level + pipe_thickness", "status": "DERIVED", "families": ["pipe"], "equivalents": ["HPC-GEO-005"], "sources": [{"source": "SRC-GEOMETRY"}], "tests": [{"inputs": {"soffit_level": 51200, "pipe_thickness": 120}, "expect": 51320}]},
+  {"id": "F-PIPE-OUTSIDE-INVERT", "kind": "derived", "output": "slab_bottom_level", "expression": "floor_level - pipe_thickness", "status": "DERIVED", "families": ["pipe"], "sources": [{"source": "SRC-GEOMETRY"}], "tests": [{"inputs": {"floor_level": 50000, "pipe_thickness": 120}, "expect": 49880}]},
+  {"id": "F-COURSE-UNDERSIDE", "kind": "derived", "output": "course_bottom", "expression": "course_top - course_thickness", "status": "DERIVED", "condition": "each course under a structure hangs from the one above it, top down", "equivalents": ["RCR-LVL-004", "RCR-LVL-005", "HPC-LVL-004", "HPC-LVL-005", "HPC-LVL-006"], "sources": [{"source": "SRC-GEOMETRY"}], "tests": [{"inputs": {"course_top": 99550, "course_thickness": 150}, "expect": 99400}]},
+
+  {"id": "D-FOOTING-EMBEDMENT", "kind": "definition", "output": "footing_embedment", "expression": "bed_level - footing_top_level", "status": "DERIVED", "sources": [{"source": "SRC-GEOMETRY"}]},
+  {"id": "D-FOOTING-DEPTH", "kind": "definition", "output": "footing_depth", "expression": "footing_top_level - foundation_bottom", "status": "DERIVED", "sources": [{"source": "SRC-GEOMETRY"}]},
+  {"id": "D-CLEARANCE", "kind": "definition", "output": "clearance", "expression": "soffit_level - hfl", "status": "COMMON_PRACTICE", "condition": "drawings write CL-/V.C. against the HFL; IRBM 312 measures clearance from the design-discharge water level incl. afflux (KC-6)", "conflict": "KC-6", "sources": [{"source": "SRC-KB-PACKAGE"}, {"source": "SRC-IRBM-2024", "clause": "312(1)"}]},
+  {"id": "D-FREEBOARD", "kind": "definition", "output": "freeboard", "expression": "formation_level - hfl", "status": "COMMON_PRACTICE", "condition": "drawings write F.B. against the HFL; IRBM 313 measures free board from the design-discharge water level incl. afflux (KC-6)", "conflict": "KC-6", "sources": [{"source": "SRC-KB-PACKAGE"}, {"source": "SRC-IRBM-2024", "clause": "313(1)"}]},
+  {"id": "D-CUSHION", "kind": "definition", "output": "cushion", "expression": "formation_level - top_slab_level", "status": "DERIVED", "conflict": "KC-5", "condition": "the datum of a standard drawing's 'fill height' (formation, sleeper or rail) is not settled (KC-5); the drawing's own cushion is formation − top of structure", "equivalents": ["RCR-LVL-002", "F-G3"], "sources": [{"source": "SRC-GEOMETRY"}]},
+  {"id": "D-CLEAR-HEIGHT", "kind": "definition", "output": "clear_height", "expression": "soffit_level - floor_level", "status": "DERIVED", "variant": "from the structural floor (KC-4, the default)", "sources": [{"source": "SRC-GEOMETRY"}]},
+  {"id": "D-CLEAR-HEIGHT-FROM-BED", "kind": "definition", "output": "clear_height", "expression": "soffit_level - bed_level", "status": "DERIVED", "families": ["rcc_box"], "variant": "from the top of the wearing course / bed (KC-4)", "variant_of": "D-CLEAR-HEIGHT", "conflict": "KC-4", "sources": [{"source": "SRC-GEOMETRY"}]},
+  {"id": "D-TOP-SLAB", "kind": "definition", "output": "top_slab", "expression": "top_slab_level - soffit_level", "status": "DERIVED", "sources": [{"source": "SRC-GEOMETRY"}]},
+  {"id": "D-BOTTOM-SLAB", "kind": "definition", "output": "bottom_slab", "expression": "floor_level - slab_bottom_level", "status": "DERIVED", "sources": [{"source": "SRC-GEOMETRY"}]},
+  {"id": "D-DEPTH-OF-FLOW", "kind": "definition", "output": "depth_of_flow", "expression": "hfl - bed_level", "status": "DERIVED", "sources": [{"source": "SRC-GEOMETRY"}]}
+ ],
+ "chains": [
+  {
+   "id": "chain.rcc_box", "family": "rcc_box", "gate": "floor_level",
+   "note": "The level chain of a box: what each level IS in terms of the sizes, so a written level is checked and a bare RL tied to the line it marks.",
+   "entries": [
+    {"out": "floor_level", "alts": [
+     {"formula": "F-FLOOR-FROM-BED-WEARING", "when": {"bed_is": "wearing_top"}},
+     {"formula": "F-FLOOR-AT-BED"},
+     {"identity": "floor_level"},
+     {"formula": "F-FLOOR-FROM-SOFFIT", "given": ["soffit_level"]}
+    ]},
+    {"out": "soffit_level", "alts": [
+     {"formula": "F-BOX-SOFFIT-FROM-BED", "when": {"clear_from": "bed", "bed_is": "wearing_top"}, "requires": ["wearing_course"]},
+     {"formula": "F-BOX-SOFFIT"}
+    ]},
+    {"out": "top_slab_level", "alts": [{"formula": "F-BOX-TOP"}]},
+    {"out": "slab_bottom_level", "alts": [{"formula": "F-BOX-SLAB-BOTTOM"}]},
+    {"stack": "slab_bottom_level", "formula": "F-COURSE-UNDERSIDE"},
+    {"out": "footing_top_level", "alts": [
+     {"formula": "F-FOOTING-TOP-FROM-BOF", "given": ["foundation_bottom"]},
+     {"formula": "F-FOOTING-TOP-FROM-BED"}
+    ]},
+    {"out": "foundation_bottom", "emit": "derived", "alts": [
+     {"identity": "foundation_bottom"},
+     {"formula": "F-BOF-FROM-FOOTING-TOP"}
+    ]}
+   ]
+  },
+  {
+   "id": "chain.slab", "family": "slab",
+   "note": "A slab deck on abutments and piers: the deck from its soffit (written, or from its top and depth, or from the bearing seat), the seat under it, the footings from the B.O.F. (or the bed and the embedment) and the courses under them. A bearing not read is none.",
+   "entries": [
+    {"out": "soffit_level", "alts": [
+     {"identity": "soffit_level"},
+     {"formula": "F-SPAN-SOFFIT-FROM-TOP-SLAB", "given": ["top_slab_level"]},
+     {"formula": "F-SPAN-SOFFIT-FROM-SEAT", "given": ["seat_level"]},
+     {"formula": "F-SPAN-SOFFIT-AT-SEAT", "given": ["seat_level"]}
+    ]},
+    {"out": "top_slab_level", "alts": [{"formula": "F-SPAN-TOP-SLAB"}]},
+    {"out": "seat_level", "alts": [{"formula": "F-SPAN-SEAT"}, {"formula": "F-SPAN-SEAT-NO-BEARING"}]},
+    {"out": "foundation_bottom", "emit": "derived", "alts": [
+     {"identity": "foundation_bottom"},
+     {"formula": "F-BOF-FROM-BED"}
+    ]},
+    {"out": "footing_top_level", "alts": [{"formula": "F-FOOTING-TOP-FROM-BOF"}]},
+    {"stack": "foundation_bottom", "formula": "F-COURSE-UNDERSIDE"}
+   ]
+  },
+  {
+   "id": "chain.girder", "family": "girder",
+   "note": "As the slab chain, with the girder depth for the deck.",
+   "entries": [
+    {"out": "soffit_level", "alts": [
+     {"identity": "soffit_level"},
+     {"formula": "F-SPAN-SOFFIT-FROM-TOP-GIRDER", "given": ["top_slab_level"]},
+     {"formula": "F-SPAN-SOFFIT-FROM-SEAT", "given": ["seat_level"]},
+     {"formula": "F-SPAN-SOFFIT-AT-SEAT", "given": ["seat_level"]}
+    ]},
+    {"out": "top_slab_level", "alts": [{"formula": "F-SPAN-TOP-GIRDER"}]},
+    {"out": "seat_level", "alts": [{"formula": "F-SPAN-SEAT"}, {"formula": "F-SPAN-SEAT-NO-BEARING"}]},
+    {"out": "foundation_bottom", "emit": "derived", "alts": [
+     {"identity": "foundation_bottom"},
+     {"formula": "F-BOF-FROM-BED"}
+    ]},
+    {"out": "footing_top_level", "alts": [{"formula": "F-FOOTING-TOP-FROM-BOF"}]},
+    {"stack": "foundation_bottom", "formula": "F-COURSE-UNDERSIDE"}
+   ]
+  },
+  {
+   "id": "chain.pipe", "family": "pipe", "gate": "floor_level",
+   "note": "A pipe crossing: the invert (written, or at the bed), the inside crown, the outside crown (what the cushion is measured from), the outside invert and the bedding courses under it.",
+   "entries": [
+    {"out": "floor_level", "alts": [{"identity": "floor_level"}, {"formula": "F-FLOOR-AT-BED"}]},
+    {"out": "soffit_level", "alts": [{"formula": "F-PIPE-SOFFIT"}]},
+    {"out": "top_slab_level", "alts": [{"formula": "F-PIPE-TOP"}]},
+    {"out": "slab_bottom_level", "alts": [{"formula": "F-PIPE-OUTSIDE-INVERT"}]},
+    {"stack": "slab_bottom_level", "formula": "F-COURSE-UNDERSIDE"}
+   ]
+  }
+ ],
+ "documented": [
+  {"id": "RCR-LVL-006", "status": "ASSUMPTION", "conflict": "KC-1", "note": "rail = formation + 0.762: the offset is an assumption per track, never a check"},
+  {"id": "HPC-LVL-008", "status": "ASSUMPTION", "conflict": "KC-1", "note": "rail = formation + 0.762 written as a literal"},
+  {"id": "RCR-LVL-007", "status": "DISPUTED", "conflict": "KC-2", "note": "FW + 4·cushion with a '1:1 slope' contradicts itself (a 1:1 slope gives FW + 2H)"},
+  {"id": "HPC-GEO-007", "status": "DISPUTED", "conflict": "KC-2", "note": "the same barrel-length formula for pipes"},
+  {"id": "HPC-LVL-003", "status": "ASSUMPTION", "note": "foundation thickness 1.219 m (4 ft) is traced to no source in hand"},
+  {"id": "HPC-STR-002", "status": "ASSUMPTION", "note": "uses the 1.219 m foundation thickness"},
+  {"id": "HPC-STR-003", "status": "UNKNOWN", "note": "face wall 150 mm above the crown — no source in hand"},
+  {"id": "HPC-GEO-003", "status": "UNKNOWN", "note": "the + 2.0 m in the culvert width is unexplained"},
+  {"id": "SEI-COE-001", "status": "DISPUTED", "conflict": "KC-9", "note": "A_h — BS-118 (in hand) vs IRS Seismic Code 2020 (not in hand) edition question"},
+  {"id": "PSC-SLAB-005", "status": "UNKNOWN", "note": "slab depth ≥ L/25 attributed to IRS T-39, not in hand"},
+  {"id": "PSC-SLAB-006", "status": "UNKNOWN", "note": "L/12 'RDSO guideline', not in hand"},
+  {"id": "PSC-GEO-004", "status": "UNKNOWN", "note": "pier cap width with a 0.608 m inspection path, not in hand"},
+  {"id": "RTW-CRT-001", "status": "UNKNOWN", "note": "V = 4.893 √d, no source in hand (secondary B44)"},
+  {"id": "RTW-APR-001", "status": "ENGINEERING_INFERENCE", "note": "apron width 1.5 d_max is a road analogue (IRC:89)"},
+  {"id": "FDN-SHL-001", "status": "NORMATIVE", "conflict": "KC-20", "note": "drop wall depth 1.25 D_Lacey — IRBM-2024 818 (minor bridges), verified"},
+  {"id": "RTW-FLR-001", "status": "NORMATIVE", "conflict": "KC-20", "note": "as FDN-SHL-001"},
+  {"id": "RCR-VAL-001", "status": "UNKNOWN", "note": "outer wall ≥ 0.3 m 'IRS minimum' — not in any source in hand"},
+  {"id": "RCR-VAL-002", "status": "UNKNOWN", "note": "top slab ≥ 0.3 m 'IRS minimum' — not in any source in hand"},
+  {"id": "RCR-VAL-003", "status": "DISPUTED", "conflict": "KC-22", "note": "clear height ≥ 1.0 m — IRBM-2024 311(3) gives 1.2 m headroom for new bridges"},
+  {"id": "RCR-VAL-007", "status": "UNKNOWN", "conflict": "KC-5", "note": "cushion ≥ 75 mm — unverified"},
+  {"id": "RCR-VAL-008", "status": "UNKNOWN", "conflict": "KC-3", "note": "haunch ≥ 0.3 m — unverified; drawings in hand use 200"},
+  {"id": "HWB-VAL-007", "status": "UNKNOWN", "note": "highway haunch ≥ 0.15 m — unverified"},
+  {"id": "CG-VAL-002", "status": "DISPUTED", "conflict": "KC-16", "note": "girder depth ≥ L/20 (L/20 is a spacing ratio per the secondary source)"},
+  {"id": "CG-VAL-006", "status": "DISPUTED", "conflict": "KC-15", "note": "clearance ≥ 1.0 m confuses clearance (IRBM 312 table) with free board (313)"},
+  {"id": "PSC-VAL-004", "status": "DISPUTED", "conflict": "KC-15", "note": "HFL clearance ≥ 0.600 m is only the lowest band of IRBM 312(1), measured from the design water level"}
+ ],
+ "constants": [
+  {"symbol": "RAIL_FORMATION_OFFSET", "value": 0.762, "unit": "m", "status": "ASSUMPTION", "bindable": false, "conflict": "KC-1", "sources": [{"source": "SRC-BRIDGE-FORMULAS"}, {"source": "SRC-CLAUDE-RESEARCH", "note": "B12"}]},
+  {"symbol": "foundationThickness", "value": 1.219, "unit": "m", "status": "ASSUMPTION", "bindable": false, "sources": [{"source": "SRC-CLAUDE-RESEARCH", "note": "B11 — equals 4 ft; do not hard-code"}]},
+  {"symbol": "MIN_EARTH_CUSHION", "value": 0.075, "unit": "m", "status": "UNKNOWN", "bindable": false, "conflict": "KC-5", "sources": [{"source": "SRC-BRIDGE-FORMULAS"}]},
+  {"symbol": "BG_TRACK_GAUGE", "value": 1.676, "unit": "m", "status": "COMMON_PRACTICE", "bindable": false, "sources": [{"source": "SRC-BRIDGE-FORMULAS"}], "note": "Broad gauge; no controlled source in hand states it."},
+  {"symbol": "trackGauge", "value": 1.676, "unit": "m", "status": "COMMON_PRACTICE", "bindable": false, "sources": [{"source": "SRC-BRIDGE-FORMULAS"}]},
+  {"symbol": "FREE_BOARD_MINIMUM", "value": 1.0, "unit": "m", "status": "NORMATIVE", "bindable": false, "note": "A limit (rule IRBM-313-FREE-BOARD), never a value to bind.", "sources": [{"source": "SRC-IRBM-2024", "clause": "313(1)"}]},
+  {"symbol": "FOUNDING_DEPTH_OPEN", "value": 1.75, "unit": "m", "status": "NORMATIVE", "bindable": false, "note": "A limit (rule IRBM-403-2-OPEN-FOUNDATION-DEPTH).", "sources": [{"source": "SRC-IRBM-2024", "clause": "403(2)"}]},
+  {"symbol": "BOULDER_BACKING_WIDTH", "value": 0.6, "unit": "m", "status": "NORMATIVE", "bindable": false, "note": "A minimum (rule IRBM-605-3-BOULDER-BACKING).", "sources": [{"source": "SRC-IRBM-2024", "clause": "605(3)"}]},
+  {"symbol": "WEEP_HOLE_SPACING", "value": 1.0, "unit": "m", "status": "NORMATIVE", "bindable": false, "sources": [{"source": "SRC-IRBM-2024", "clause": "605(3)"}]},
+  {"symbol": "MIN_HFL_CLEARANCE", "value": 0.6, "unit": "m", "status": "DISPUTED", "bindable": false, "conflict": "KC-15", "sources": [{"source": "SRC-BRIDGE-FORMULAS"}]},
+  {"symbol": "FREE_BOARD_PREFERRED", "value": 1.5, "unit": "m", "status": "UNKNOWN", "bindable": false, "sources": [{"source": "SRC-BRIDGE-FORMULAS"}]},
+  {"symbol": "MIN_BALLAST_DEPTH", "value": 0.3, "unit": "m", "status": "UNKNOWN", "bindable": false, "sources": [{"source": "SRC-BRIDGE-FORMULAS"}]},
+  {"symbol": "MIN_PIER_SHAFT_WIDTH", "value": 1.2, "unit": "m", "status": "UNKNOWN", "bindable": false, "sources": [{"source": "SRC-BRIDGE-FORMULAS"}]},
+  {"symbol": "MIN_BEARING_SEAT_W", "value": 0.3, "unit": "m", "status": "DISPUTED", "bindable": false, "conflict": "KC-8", "sources": [{"source": "SRC-RDSO-BS118", "clause": "14.3"}]},
+  {"symbol": "INSPECTION_PATH_WIDTH", "value": 0.608, "unit": "m", "status": "UNKNOWN", "bindable": false, "sources": [{"source": "SRC-BRIDGE-FORMULAS"}]},
+  {"symbol": "inspection_w", "value": 0.608, "unit": "m", "status": "UNKNOWN", "bindable": false, "sources": [{"source": "SRC-BRIDGE-FORMULAS"}]},
+  {"symbol": "OHE_WIRE_HEIGHT", "value": 5.5, "unit": "m", "status": "UNKNOWN", "bindable": false, "sources": [{"source": "SRC-BRIDGE-FORMULAS"}]},
+  {"symbol": "OWG_BEARING_GAP", "value": 1.06, "unit": "m", "status": "UNKNOWN", "bindable": false, "sources": [{"source": "SRC-BRIDGE-FORMULAS"}]},
+  {"symbol": "gap", "value": 1.06, "unit": "m", "status": "UNKNOWN", "bindable": false, "sources": [{"source": "SRC-BRIDGE-FORMULAS"}]},
+  {"symbol": "PCC_SUB_BASE_THICKNESS", "value": 0.15, "unit": "m", "status": "COMMON_PRACTICE", "bindable": false, "sources": [{"source": "SRC-BRIDGE-FORMULAS"}]},
+  {"symbol": "PARAPET_GAP", "value": 0.225, "unit": "m", "status": "UNKNOWN", "bindable": false, "sources": [{"source": "SRC-BRIDGE-FORMULAS"}]},
+  {"symbol": "abutFaceOffset", "value": 0.1725, "unit": "m", "status": "UNKNOWN", "bindable": false, "sources": [{"source": "SRC-BRIDGE-FORMULAS"}]}
+ ]
+}

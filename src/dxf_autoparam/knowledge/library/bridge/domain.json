@@ -25,5 +25,7 @@
     "validation": "The engine validates every edit and the finish gate. For the definitions in `rules`, check_rule on the model's own values (advisory). A fact in `representation` the drawing does not state is reported as a gap, never filled."
   },
   "production_knowledge": "../../production",
-  "components": "components.json"
+  "components": "components.json",
+  "identify": "identify.json",
+  "graded": "graded"
 }

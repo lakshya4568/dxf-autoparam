@@ -1,0 +1,741 @@
+{
+ "note": "A rule CHECKS a value; it never supplies one. `check` is an expression of the kernel's language over spec keys in canonical millimetres (levels = RL × 1000) returning 1 (holds) or 0; ge/le/gt/lt are the kernel's comparison functions. `applies` says to what (families, components that must exist, the work's status); `requires` are the inputs without which the rule is NOT EVALUATED (with the gap reason). What a violation means follows from the rule's status and its best source's trust (knowledge-registry.ts `ruleSeverity`): NORMATIVE + VERIFIED_LOCAL → FAIL (REQUIRES REVIEW when `relaxable`); SECONDARY sources → REQUIRES REVIEW at most; DERIVED consistency → FAIL; ASSUMPTION / COMMON_PRACTICE → INFO; UNKNOWN / DISPUTED → never evaluated, listed. A validator reports; nothing here moves geometry.",
+ "rules": [
+  {
+   "id": "IRBM-311-3-CLEAR-SPAN",
+   "title": "Minimum clear span 1 m",
+   "kind": "check",
+   "status": "NORMATIVE",
+   "statement": "New bridges and rebuilt bridges on existing lines have a clear span of at least 1 m.",
+   "applies": {
+    "families": [
+     "rcc_box",
+     "slab",
+     "girder",
+     "arch"
+    ],
+    "status": [
+     "proposed"
+    ]
+   },
+   "interpretation": {
+    "pipe": "IRBM 311(3) does not say how a pipe's clear span is measured — REQUIRES_ENGINEER_INPUT to apply it to a pipe"
+   },
+   "requires": [
+    "clear_span"
+   ],
+   "missing": "REQUIRES_ENGINEER_INPUT",
+   "check": "ge(clear_span, 1000)",
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "311(3)",
+     "page": "41"
+    }
+   ]
+  },
+  {
+   "id": "IRBM-311-3-HEADROOM",
+   "title": "Minimum headroom 1.2 m (relaxable)",
+   "kind": "check",
+   "status": "NORMATIVE",
+   "relaxable": "Principal Chief Engineer / Chief Bridge Engineer may relax it (heavy expenditure, regrading, construction difficulty)",
+   "statement": "New bridges have a headroom of at least 1.2 m for inspection and maintenance.",
+   "applies": {
+    "families": [
+     "rcc_box",
+     "slab",
+     "girder",
+     "arch"
+    ],
+    "status": [
+     "proposed"
+    ]
+   },
+   "requires": [
+    "soffit_level",
+    "bed_level"
+   ],
+   "missing": "INSUFFICIENT_EVIDENCE",
+   "check": "ge(soffit_level - bed_level, 1200)",
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "311(3)",
+     "page": "41"
+    }
+   ]
+  },
+  {
+   "id": "IRBM-312-1-VERTICAL-CLEARANCE",
+   "title": "Vertical clearance above the design water level (by discharge)",
+   "kind": "check",
+   "status": "NORMATIVE",
+   "relaxable": "PCE / CBE under 312(4), within the reduced table",
+   "statement": "Soffit minus the water level of the design discharge incl. afflux: 600 mm for 0–30 m³/s, 600–1200 pro rata for 31–300, 1500 for 301–3000, 1800 above.",
+   "applies": {
+    "families": [
+     "slab",
+     "girder"
+    ]
+   },
+   "requires": [
+    "soffit_level",
+    "design_water_level",
+    "design_discharge"
+   ],
+   "missing": "REQUIRES_ENGINEER_INPUT",
+   "check": "ge(soffit_level - design_water_level, if(gt(design_discharge, 3000), 1800, if(gt(design_discharge, 300), 1500, if(gt(design_discharge, 30), 600 + (design_discharge - 30) * 600 / 270, 600))))",
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "312(1)",
+     "page": "42"
+    }
+   ]
+  },
+  {
+   "id": "IRBM-312-2-ARCH-CLEARANCE",
+   "title": "Arch clearance to the crown of the intrados",
+   "kind": "check",
+   "status": "NORMATIVE",
+   "statement": "Clearance to the crown of the intrados: span < 4 m rise or 1200 mm; 4–7 m 2/3 rise or 1500; 7.1–20 m 2/3 rise or 1800 (whichever more); > 20 m 2/3 rise.",
+   "applies": {
+    "families": [
+     "arch"
+    ]
+   },
+   "requires": [
+    "clear_span",
+    "rise",
+    "crown_level",
+    "design_water_level"
+   ],
+   "missing": "REQUIRES_ENGINEER_INPUT",
+   "check": "ge(crown_level - design_water_level, if(lt(clear_span, 4000), max(rise, 1200), if(le(clear_span, 7000), max(2 * rise / 3, 1500), if(le(clear_span, 20000), max(2 * rise / 3, 1800), 2 * rise / 3))))",
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "312(2)",
+     "page": "42"
+    }
+   ]
+  },
+  {
+   "id": "IRBM-312-3-CULVERT-EXEMPT",
+   "title": "Pipe and box culverts: no vertical clearance (pressure conduits)",
+   "kind": "exemption",
+   "status": "NORMATIVE",
+   "statement": "Syphons, pipe and box culverts are designed as pressure conduits; no clearance is required for them.",
+   "applies": {
+    "families": [
+     "rcc_box",
+     "pipe"
+    ]
+   },
+   "exempts": [
+    "IRBM-312-1-VERTICAL-CLEARANCE"
+   ],
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "312(3)",
+     "page": "42"
+    }
+   ]
+  },
+  {
+   "id": "IRBM-313-FREE-BOARD",
+   "title": "Free board ≥ 1 m from the design water level (relaxable)",
+   "kind": "check",
+   "status": "NORMATIVE",
+   "relaxable": "PCE / CBE under 313(2): 600 mm below 3 m³/s, 750 mm for 3–30 m³/s, no relaxation above 30; existing free board may be retained for extensions (313(3))",
+   "statement": "Free board from the water level of the design discharge incl. afflux to the formation is not less than 1 m.",
+   "applies": {
+    "families": [
+     "rcc_box",
+     "pipe",
+     "slab",
+     "girder",
+     "arch"
+    ]
+   },
+   "requires": [
+    "formation_level",
+    "design_water_level"
+   ],
+   "missing": "INSUFFICIENT_EVIDENCE",
+   "proxy": {
+    "design_water_level": "hfl",
+    "note": "the drawing gives the HFL, not the design-discharge water level incl. afflux (KC-6): evaluated against the HFL as an indication only — REQUIRES REVIEW, never a pass"
+   },
+   "check": "ge(formation_level - design_water_level, 1000)",
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "313(1)",
+     "page": "42"
+    }
+   ]
+  },
+  {
+   "id": "IRBM-402-CULVERT-SCOUR",
+   "title": "Pipe / box culverts not where the bed is likely to scour",
+   "kind": "check",
+   "status": "NORMATIVE",
+   "statement": "Pipe and box culverts on open foundations are built on a levelled, consolidated bed with lean concrete, and should not normally be provided where the bed is likely to be scoured.",
+   "applies": {
+    "families": [
+     "rcc_box",
+     "pipe"
+    ]
+   },
+   "requires": [
+    "scour_assessment"
+   ],
+   "missing": "REQUIRES_ENGINEER_INPUT",
+   "check": "le(scour_assessment, 0)",
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "402",
+     "page": "46"
+    }
+   ]
+  },
+  {
+   "id": "IRBM-403-2-OPEN-FOUNDATION-DEPTH",
+   "title": "Open foundation ≥ 1.75 m below the scoured bed (ordinary soil)",
+   "kind": "check",
+   "status": "NORMATIVE",
+   "statement": "Other bridges on open foundations go at least 1.75 m below the lowest anticipated scoured bed level in ordinary soil; in rock, keyed 0.3 m (hard) or 1.5 m (soft).",
+   "applies": {
+    "families": [
+     "slab",
+     "girder",
+     "arch"
+    ]
+   },
+   "requires": [
+    "foundation_bottom",
+    "scour_level"
+   ],
+   "missing": "REQUIRES_ENGINEER_INPUT",
+   "check": "le(foundation_bottom, scour_level - 1750)",
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "403(2)",
+     "page": "46"
+    }
+   ]
+  },
+  {
+   "id": "IRBM-604-1-PIER-BATTER",
+   "title": "Masonry pier batter 1 in 24 to 1 in 12",
+   "kind": "check",
+   "status": "NORMATIVE",
+   "statement": "Masonry piers have a batter from 1 in 24 to 1 in 12.",
+   "applies": {
+    "families": [
+     "slab",
+     "girder"
+    ],
+    "material": "masonry"
+   },
+   "requires": [
+    "pier_batter"
+   ],
+   "missing": "INSUFFICIENT_EVIDENCE",
+   "check": "ge(pier_batter, 1 / 24 - 0.0005) * le(pier_batter, 1 / 12 + 0.0005)",
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "604(1)(b)",
+     "page": "69"
+    }
+   ]
+  },
+  {
+   "id": "IRBM-604-1-ABUTMENT-BATTER",
+   "title": "Masonry abutment front batter 1 in 16 to 1 in 10",
+   "kind": "check",
+   "status": "NORMATIVE",
+   "statement": "Masonry abutments have a front batter of 1 in 16 to 1 in 10; flatter slopes or steps at the rear as designed.",
+   "applies": {
+    "families": [
+     "slab",
+     "girder"
+    ],
+    "material": "masonry"
+   },
+   "requires": [
+    "abutment_front_batter"
+   ],
+   "missing": "INSUFFICIENT_EVIDENCE",
+   "check": "ge(abutment_front_batter, 1 / 16 - 0.0005) * le(abutment_front_batter, 1 / 10 + 0.0005)",
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "604(1)(c)",
+     "page": "69"
+    }
+   ]
+  },
+  {
+   "id": "IRBM-605-3-BOULDER-BACKING",
+   "title": "Boulder filling behind abutments and wing walls ≥ 600 mm",
+   "kind": "check",
+   "status": "NORMATIVE",
+   "statement": "Behind abutments and wing walls, boulder filling of not less than 600 mm and granular backfill (GW, GP, SW per IS 1498) for the full height.",
+   "applies": {
+    "families": [
+     "slab",
+     "girder",
+     "rcc_box",
+     "pipe"
+    ],
+    "components": [
+     "BACKING"
+    ]
+   },
+   "interpretation": {
+    "rcc_box": "605(3) is written for abutments and wing walls; applying it to the backing of a box's outer wall is for the engineer to confirm",
+    "pipe": "605(3) is written for abutments and wing walls"
+   },
+   "requires": [
+    "backing_width"
+   ],
+   "missing": "INSUFFICIENT_EVIDENCE",
+   "check": "ge(backing_width, 600)",
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "605(3)",
+     "page": "69"
+    }
+   ]
+  },
+  {
+   "id": "IRBM-207-3-WEEP-HOLES",
+   "title": "Weep holes 1 m × 1 m staggered; lowest row placement",
+   "kind": "check",
+   "status": "NORMATIVE",
+   "statement": "Weep holes at 1 m vertical and 1 m horizontal, staggered, in abutments, wing and return walls; the bottom row above LWL in flowing streams, 250 mm above bed otherwise, above FSL in canals.",
+   "applies": {
+    "families": [
+     "rcc_box",
+     "pipe",
+     "slab",
+     "girder"
+    ],
+    "components": [
+     "WING"
+    ]
+   },
+   "requires": [
+    "weep_hole_spacing"
+   ],
+   "missing": "INSUFFICIENT_EVIDENCE",
+   "check": "le(weep_hole_spacing, 1000)",
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "605(3)",
+     "page": "69"
+    },
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "207(3)",
+     "page": "11"
+    }
+   ]
+  },
+  {
+   "id": "IRBM-301-3-SKEW",
+   "title": "Skew advisably ≤ 30°",
+   "kind": "check",
+   "status": "NORMATIVE",
+   "relaxable": "advisory ('it is advisable')",
+   "statement": "Where a skew crossing is unavoidable, it is advisable to restrict the skew to 30°.",
+   "applies": {
+    "families": [
+     "rcc_box",
+     "pipe",
+     "slab",
+     "girder",
+     "arch"
+    ]
+   },
+   "requires": [
+    "skew_angle"
+   ],
+   "missing": "not_needed",
+   "check": "le(skew_angle, 30)",
+   "sources": [
+    {
+     "source": "SRC-IRBM-2024",
+     "clause": "301(3)",
+     "page": "37"
+    }
+   ]
+  },
+  {
+   "id": "BS118-4-4-CULVERT-SEISMIC",
+   "title": "Box and pipe culverts need not be analysed for seismic forces",
+   "kind": "exemption",
+   "status": "NORMATIVE",
+   "statement": "Box and pipe culverts need not be analysed for seismic forces.",
+   "applies": {
+    "families": [
+     "rcc_box",
+     "pipe"
+    ]
+   },
+   "exempts": [
+    "BS118-14-3-SEATING-WIDTH"
+   ],
+   "sources": [
+    {
+     "source": "SRC-RDSO-BS118",
+     "clause": "4.4"
+    }
+   ]
+  },
+  {
+   "id": "BS118-4-3-ARCH-SEISMIC",
+   "title": "Masonry / plain concrete arches > 12 m not in zones IV and V",
+   "kind": "check",
+   "status": "DISPUTED",
+   "conflict": "KC-17",
+   "statement": "BS-118 4.3: masonry and plain concrete arches over 12 m span are not built in zones IV and V (the 2020 code, not in hand, is said to differ).",
+   "applies": {
+    "families": [
+     "arch"
+    ]
+   },
+   "requires": [
+    "seismic_zone",
+    "clear_span"
+   ],
+   "missing": "REQUIRES_ENGINEER_INPUT",
+   "sources": [
+    {
+     "source": "SRC-RDSO-BS118",
+     "clause": "4.3"
+    },
+    {
+     "source": "SRC-CLAUDE-RESEARCH"
+    }
+   ]
+  },
+  {
+   "id": "BS118-14-3-SEATING-WIDTH",
+   "title": "Minimum seating width at supports",
+   "kind": "check",
+   "status": "DISPUTED",
+   "conflict": "KC-8",
+   "statement": "Seating width: BS-118 14.3 (300 + 1.5L + 6Hp zones II/III; 500 + 2.5L + 10Hp IV/V) against the IRS Seismic Code 2020 values (not in hand) — which edition governs is not established.",
+   "applies": {
+    "families": [
+     "slab",
+     "girder"
+    ]
+   },
+   "requires": [
+    "seating_width",
+    "seismic_zone"
+   ],
+   "missing": "REQUIRES_ENGINEER_INPUT",
+   "sources": [
+    {
+     "source": "SRC-RDSO-BS118",
+     "clause": "14.3"
+    },
+    {
+     "source": "SRC-IRS-SEISMIC-2020",
+     "clause": "14"
+    }
+   ]
+  },
+  {
+   "id": "IRCM-BOX-SPAN",
+   "title": "RCC box span > 3 m needs CAO(C) / CBE approval",
+   "kind": "check",
+   "status": "NORMATIVE",
+   "statement": "RCC boxes for minor bridges up to 3 m span with adequate cushion; larger spans need CAO(C)/CBE approval (IRCM, quoted by a secondary source).",
+   "applies": {
+    "families": [
+     "rcc_box"
+    ]
+   },
+   "requires": [
+    "clear_span"
+   ],
+   "missing": "INSUFFICIENT_EVIDENCE",
+   "check": "le(clear_span, 3000)",
+   "sources": [
+    {
+     "source": "SRC-IRCM-2023"
+    },
+    {
+     "source": "SRC-CLAUDE-RESEARCH",
+     "note": "key finding 3, from a snippet"
+    }
+   ]
+  },
+  {
+   "id": "IRCM-BOX-MULTI-CELL",
+   "title": "Multi-cell box: RDSO standard or specially designed, with approval",
+   "kind": "check",
+   "status": "NORMATIVE",
+   "statement": "Side-by-side boxes are not permitted except RDSO standard or specially designed multi-cell boxes with approval (IRCM, quoted by a secondary source).",
+   "applies": {
+    "families": [
+     "rcc_box"
+    ]
+   },
+   "requires": [
+    "cells"
+   ],
+   "missing": "INSUFFICIENT_EVIDENCE",
+   "check": "le(cells, 1)",
+   "sources": [
+    {
+     "source": "SRC-IRCM-2023"
+    },
+    {
+     "source": "SRC-CLAUDE-RESEARCH",
+     "note": "key finding 3, from a snippet"
+    }
+   ]
+  },
+  {
+   "id": "TRACK-RAIL-OVER-FORMATION",
+   "title": "Rail over formation (0.762 m is an assumption)",
+   "kind": "check",
+   "status": "ASSUMPTION",
+   "conflict": "KC-1",
+   "statement": "Rail level minus formation level depends on the rail, sleeper and ballast of each track; 0.762 m is a common assumption, not a rule.",
+   "applies": {
+    "families": [
+     "rcc_box",
+     "pipe",
+     "slab",
+     "girder",
+     "arch"
+    ]
+   },
+   "requires": [
+    "rail_level",
+    "formation_level"
+   ],
+   "missing": "not_needed",
+   "observe": "rail_level - formation_level",
+   "sources": [
+    {
+     "source": "SRC-BRIDGE-FORMULAS",
+     "clause": "RCR-LVL-006"
+    },
+    {
+     "source": "SRC-CLAUDE-RESEARCH",
+     "note": "B12"
+    }
+   ]
+  },
+  {
+   "id": "KNOW-HAUNCH-MINIMUM",
+   "title": "Minimum haunch",
+   "kind": "check",
+   "status": "UNKNOWN",
+   "conflict": "KC-3",
+   "statement": "No source in hand sets a minimum haunch; the documented 300 mm (RCR-VAL-008) is unverified.",
+   "applies": {
+    "families": [
+     "rcc_box"
+    ]
+   },
+   "requires": [
+    "haunch"
+   ],
+   "missing": "not_needed",
+   "sources": [
+    {
+     "source": "SRC-BRIDGE-FORMULAS",
+     "clause": "RCR-VAL-008"
+    }
+   ]
+  },
+  {
+   "id": "KNOW-CUSHION-MINIMUM",
+   "title": "Minimum earth cushion",
+   "kind": "check",
+   "status": "UNKNOWN",
+   "conflict": "KC-5",
+   "statement": "No source in hand sets a minimum cushion or its datum; the documented 75 mm (RCR-VAL-007) is unverified.",
+   "applies": {
+    "families": [
+     "rcc_box",
+     "pipe"
+    ]
+   },
+   "requires": [
+    "cushion"
+   ],
+   "missing": "not_needed",
+   "sources": [
+    {
+     "source": "SRC-BRIDGE-FORMULAS",
+     "clause": "RCR-VAL-007"
+    }
+   ]
+  },
+  {
+   "id": "KNOW-GIRDER-DEPTH-RATIO",
+   "title": "Girder depth / span",
+   "kind": "check",
+   "status": "DISPUTED",
+   "conflict": "KC-16",
+   "statement": "Depth ≥ L/20 (documented) against depth ≥ L/12 plate girder, L/20 being a spacing ratio (secondary).",
+   "applies": {
+    "families": [
+     "girder"
+    ]
+   },
+   "requires": [
+    "girder_depth",
+    "clear_span"
+   ],
+   "missing": "not_needed",
+   "sources": [
+    {
+     "source": "SRC-BRIDGE-FORMULAS",
+     "clause": "CG-VAL-002"
+    },
+    {
+     "source": "SRC-CLAUDE-RESEARCH",
+     "note": "B16"
+    }
+   ]
+  },
+  {
+   "id": "LEVEL-ORDER-RAIL-FORMATION",
+   "title": "Rail above formation",
+   "kind": "check",
+   "status": "DERIVED",
+   "statement": "The rail sits on the formation: rail level above formation level.",
+   "applies": {
+    "families": [
+     "*"
+    ]
+   },
+   "requires": [
+    "rail_level",
+    "formation_level"
+   ],
+   "missing": "not_needed",
+   "check": "gt(rail_level, formation_level)",
+   "sources": [
+    {
+     "source": "SRC-GEOMETRY"
+    }
+   ]
+  },
+  {
+   "id": "LEVEL-ORDER-COVER",
+   "title": "Formation not below the top of a buried structure",
+   "kind": "check",
+   "status": "DERIVED",
+   "statement": "A box or pipe is under the formation: formation level ≥ top of the structure (cushion ≥ 0).",
+   "applies": {
+    "families": [
+     "rcc_box",
+     "pipe"
+    ]
+   },
+   "requires": [
+    "formation_level",
+    "top_slab_level"
+   ],
+   "missing": "not_needed",
+   "check": "ge(formation_level, top_slab_level)",
+   "sources": [
+    {
+     "source": "SRC-GEOMETRY"
+    }
+   ]
+  },
+  {
+   "id": "LEVEL-ORDER-SLABS",
+   "title": "Top of structure above soffit above floor above underside",
+   "kind": "check",
+   "status": "DERIVED",
+   "statement": "top of the top slab > soffit > floor > underside of the bottom slab.",
+   "applies": {
+    "families": [
+     "rcc_box",
+     "pipe"
+    ]
+   },
+   "requires": [
+    "top_slab_level",
+    "soffit_level",
+    "floor_level",
+    "slab_bottom_level"
+   ],
+   "missing": "not_needed",
+   "check": "gt(top_slab_level, soffit_level) * gt(soffit_level, floor_level) * gt(floor_level, slab_bottom_level)",
+   "sources": [
+    {
+     "source": "SRC-GEOMETRY"
+    }
+   ]
+  },
+  {
+   "id": "LEVEL-ORDER-WATER",
+   "title": "HFL not below the bed",
+   "kind": "check",
+   "status": "DERIVED",
+   "statement": "A flood level is at or above the bed.",
+   "applies": {
+    "families": [
+     "*"
+    ]
+   },
+   "requires": [
+    "hfl",
+    "bed_level"
+   ],
+   "missing": "not_needed",
+   "check": "ge(hfl, bed_level)",
+   "sources": [
+    {
+     "source": "SRC-GEOMETRY"
+    }
+   ]
+  },
+  {
+   "id": "LEVEL-ORDER-FOUNDATION",
+   "title": "Foundation below the bed",
+   "kind": "check",
+   "status": "DERIVED",
+   "statement": "The bottom of the foundation is below the bed.",
+   "applies": {
+    "families": [
+     "*"
+    ]
+   },
+   "requires": [
+    "foundation_bottom",
+    "bed_level"
+   ],
+   "missing": "not_needed",
+   "check": "lt(foundation_bottom, bed_level)",
+   "sources": [
+    {
+     "source": "SRC-GEOMETRY"
+    }
+   ]
+  }
+ ]
+}

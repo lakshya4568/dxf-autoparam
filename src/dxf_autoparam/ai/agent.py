@@ -26,6 +26,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from .. import connections, identify
 from .. import viewplan as vp
 from ..cadjson import entity_id, entity_index
 from ..graph import affects
@@ -334,7 +335,8 @@ class Workbench:
         self.pack = pack  # the domain pack on for this run (None: none: the model names things itself)
         lib = library.for_pack(pack)
         # the engineering library's session (retrieval, rule checks, findings, trace); a sheet run replaces it with ITS one so a run has one trace
-        self.lib_session = library.KnowledgeSession(lib, texts=lambda: library.drawing_texts(self.an.drawing.items), values=self.value_of) if lib else None
+        self.lib_session = library.KnowledgeSession(lib, texts=lambda: library.drawing_texts(self.an.drawing.items), values=self.value_of,
+                                                    placed=lambda: identify.placed_texts(self.an.drawing.items)) if lib else None
         self.analysis, self.scope = analysis, scope
         self.original = (instructions or "").strip()  # the person's instruction: every sentence of it must be accounted for
         self.instructions = self.original  # and with their later answers: what a quote may come from
@@ -764,6 +766,9 @@ class Workbench:
 
     def check_rule(self, **kw):
         return self._library("check_rule", **kw)
+
+    def identify_structure(self, **kw):
+        return self._library("identify_structure", **kw)
 
     def record_finding(self, **kw):
         return self._library("record_finding", **kw)
@@ -1500,22 +1505,32 @@ class Workbench:
                     same = [f"{u} {d}" for u, d, mm in elsewhere.get(round(r.get("mm") or -1), []) if u != self.scope.uid][:3]
                     if same:
                         r["also_stated_in"] = same
+        # where each part meets the others: the joints a change keeps (a line they share) and what only touches
+        joints = connections.contacts(self.prog, self.prog.intent.get("parts") or {})
+        for name, entry in cov["parts"].items():
+            met = connections.meets_of(joints, name)
+            if met:
+                entry["meets"] = met[:8]
+        if joints:
+            cov["joints"] = [f"{r['a']} {r['how']} {r['b']}" + (f" (line {r['line']})" if r.get("line") else "") for r in joints if r.get("a")][:40]
         if self.lib_session is not None:  # what a part of its kind normally has, as a generator builds it — hypotheses to check on this drawing
-            self._attach_components(cov)
+            self._attach_components(cov, joints)
         cov["kept"] = dict(self.answer.get("kept_dimensions") or {})
         cov["how"] = ("fixed or unnamed → define_parameters {dimension, name, part} (in a sheet, rename_values also names the unnamed value in "
                       "moved_by); not a design input → keep_dimensions {dimension, why}. A dimension that sets one part out from another (sets_out) is a "
                       "size of the assembly")
         return cov
 
-    def _attach_components(self, cov: dict) -> None:
+    def _attach_components(self, cov: dict, joints: list[dict] | None = None) -> None:
         """Each leaf part whose own words (its name, type and the labels on its outline) name a component of the library gets that component's
-        parameters and relations, briefly — and the parts no dimension states are listed with theirs: what to look for on the drawing."""
+        parameters and relations, briefly, and how such a part is known to meet others against what it meets here — and the parts no
+        dimension states are listed with theirs: what to look for on the drawing."""
         lib = self.lib_session.lib
         parts = self.prog.intent.get("parts") or {}
         parents = {q.parent for q in parts.values() if q.parent}
         pointed = labels.pointed_labels(self.an)
         quiet = []
+        matched: dict[str, dict] = {}
         for c in self.answer["components"]:
             name = c.get("name")
             if not name or name in parents or name not in parts:
@@ -1524,14 +1539,18 @@ class Workbench:
             for lab in labels.part_labels(self.prog, parts, name, pointed):
                 words |= labels.words(lab["text"])
             cards = lib.component_cards(words)
-            if not cards:
-                continue
-            card = cards[0]
+            if cards:
+                matched[name] = {"card": cards[0], "words": words}
+        card_of = {n: m["card"]["id"] for n, m in matched.items()}
+        for name, m in matched.items():
+            card = m["card"]
+            wants = [w for w in card.get("connects", []) if not w.get("names") or any(labels.words(x) <= m["words"] for x in w["names"])]
             brief = {"component": f"component:{card['id']}", "title": card.get("title"),
                      "parameters": [f"{q['name']}: {q['meaning'][:90]}" + (f" (generator default {q['default']})" if q.get("default") else "")
                                     for q in card.get("parameters", [])][:10],
                      "relations": [r["expr"][:140] for r in card.get("relations", []) if r.get("kind") in ("geometry", "level")][:5],
-                     **({"cross_view": card["cross_view"][:260]} if card.get("cross_view") else {})}
+                     **({"cross_view": card["cross_view"][:260]} if card.get("cross_view") else {}),
+                     **({"meets_as_known": connections.expected(connections.meets_of(joints or [], name), wants, card_of)} if wants else {})}
             if f"component:{card['id']}" not in self.lib_session.references:
                 self.lib_session.references.append(f"component:{card['id']}")
             if name in cov["parts"]:

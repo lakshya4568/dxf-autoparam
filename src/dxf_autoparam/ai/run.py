@@ -29,7 +29,7 @@ import traceback
 from pathlib import Path
 from typing import Any
 
-from .. import design_intent
+from .. import design_intent, identify
 from .. import viewplan as vp
 from ..cadjson import entity_id, entity_index
 from ..crossview import SheetError
@@ -292,7 +292,10 @@ class SheetBench:
         lib = library.for_pack(run.pack)
         # the engineering library for the whole run (the domain pack on has one): one trace, the sheet's own words, the values of any open unit
         self.lib_session = (library.KnowledgeSession(lib, texts=lambda: library.drawing_texts(self.sm.dr.items), values=self.value_of,
-                                                     budget_chars=int(run.options.get("library_budget_chars") or library.RUN_BUDGET_CHARS)) if lib else None)
+                                                     budget_chars=int(run.options.get("library_budget_chars") or library.RUN_BUDGET_CHARS),
+                                                     placed=lambda: identify.placed_texts(self.sm.dr.items, self.sm.layout,
+                                                                                          {v: uid for uid, u in self.sm.units.items() for v in u.views}))
+                            if lib else None)
         # the production rule engines (the pack's library declares their knowledge): retrieval, checks on the drawing's values, bindings kept on
         # the sheet with their guards — one session for the whole run
         pk = production.production_for(run.pack)
