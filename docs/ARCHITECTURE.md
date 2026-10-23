@@ -346,3 +346,67 @@ with the whole sheet valid; plus edits accepted and refused by kind, shared valu
 components the drawing labels found by name, and a recorded run's calls and tokens per parametrized dimension. Results and the method:
 `docs/PARAM_BENCH.md`.
 
+
+## Part 8 — A person's free hand, what the sheet says it is, and its joints (2026-10-23)
+
+The owner, after looking at 173A in the page: a side choice (*Bottom stays · Centred · Top stays*) was refused for a site level in its way, the range
+a value could take was a millimetre wide, nothing on the sheet said what kind of bridge it is or how many tracks it carries, and nothing showed
+which part meets which or made a part go away and come back as its size changes. Each answer below is generic; the drawing's words and numbers
+decide.
+
+**1. The side a person chooses stays; the site levels on the side that moves follow (`crossview.anchor`).** A site level beyond the size on the
+moving side (the formation above a box whose bottom stays, the road under a box whose top stays) becomes *derived*: its line moves with the
+structure, its RL note says the new level, and the choice says so ("FormationLevel was a site input; it now follows the structure: +1 mm per mm of
+ClearHeight (RL 613.679 m now)"). What lies between keeps its size: nothing is shrunk to keep a level still. The earlier rule let the nearest free
+gap give instead, which capped a change at that gap's size (a 50 mm gap under a formation capped a clear height at +50 mm: the "1 mm range").
+A level only CHECKED against (a water level) still holds, a free gap gives for it, and nothing is ever set out from it — not by the build, not by a
+plan (`Program.reference_only`). A level on a line only a part kept as drawn uses stays an input (setting it free would move nothing). A part kept
+as drawn, existing work and members running into each other still refuse, naming the side that would work ("its start … staying (its site levels
+follow)"). The page no longer clamps a value to its range: the range is information, and a value outside it is tried.
+
+**2. A sum of named sizes is worked out (`build.deferred`).** Freeing the road level in a box exposed an old ordering: with no input level splitting
+it, an overall height nobody named was taken before a course somebody named inside it (a wearing course stated by a note) and the course came out
+worked out. A gap nobody named that the stated sizes inside it make up whole — named or dimensioned — is now taken after them; one with a piece
+nobody stated (a footing's depth below a ground line past its named thickness) stays the drafter's own size. Measured: 20A's reachable share went
+from 71 % to 78 %; 173A and Bridge No.7A unchanged.
+
+**3. What the sheet's own words say it is (`identify.py`, `knowledge/library/bridge/identify.json`).** Read line by line from a vocabulary that
+is library data: the kind (RCC box, PSC / RCC slab, PSC / steel / RCC girder, pipe, arch) with what is existing and what is proposed, the look-alikes
+set aside (a cable pipe, an inspection chamber's pipe, a relieving girder), what it crosses (a road under — RUB / subway —, over — ROB —, a
+waterway), every carried line named on the sheet (each centre line labelled, per status: "C/L OF EXIST. DN MAIN LINE", a label broken over two
+lines is one) and the configuration that makes (single, double — doubling —, third, fourth line; or what the words state), spans ("1 X 4.00 X
+2.56 m RCC BOX"), loading, bridge number, chainage, the standard drawings and codes cited. A title block or a table says more than a label in a
+view. On the eight real sheets in hand it reads seven right (the eighth prints no kind). The agent gets it from `identify_structure` (with the
+library on) and its first look at the sheet carries the one-line reading.
+
+**4. The graded knowledge behind each kind (`knowledge/library/bridge/graded/`).** aagento-bridge's knowledge layer, imported as it is (with
+PROVENANCE hashes, `tools/import_graded_knowledge.py`): families (what must be known, components, level chains), formulas with their status
+(DERIVED geometry, ASSUMPTION, DISPUTED …), rules (NORMATIVE only on a verified IRBM clause), conflicts (KC-n, open or resolved) and sources with
+their trust. `identify_structure` hands the card of the kind it read, and `check_rule(rule='graded:<id>')` tests a formula on the agent's own named
+values. Configuration formulas are geometric identities over values READ from the drawing (formation width = (tracks − 1) × track centre + 2 ×
+edge distance, barrel length = formation width + 2 × bank slope × end height): the library holds no RDSO value per track configuration (KC-13 is
+open), and the RDSO standard drawings are to be added by the owner as a source (`docs/KNOWLEDGE_LIBRARY.md`, "The RDSO slot").
+
+**5. Where the parts meet (`connections.py`).** The engine's own contacts between parts (`assembly.interfaces`), said from each outline's side: a
+part ON another across a horizontal line it shares, BESIDE it across a vertical one, at a corner, or touching with no line in common. The agent's
+`coverage` lists every joint, and with the library on a part named like a component card compares what such a part is known to meet (`connects` in
+the card, cited to production) with what it meets here. Parts met along a line they share cannot come apart (the joint is the line); entities that
+touched as drawn without one can, and every change now says when it pulls two apart (`connections.torn`, a warning: "L9 (ReturnWall) no longer
+touches PL21 (BoulderBacking): the change pulled them apart — look at the corner").
+
+**6. A corner of one part on another part's sloped edge follows it (`validator.bind_on_slopes`).** A backing drawn against a battered wall face
+was set out from its own corner, so a wider wall moved its face away from the backing. A corner of one part lying strictly inside another part's
+sloped edge — on a line that part has to itself, whose x nobody set — is now set out along that edge at its drawn ratio, when the edge keeps its
+slope; kept only if every value that moves it still regenerates and every occurrence of every named value still moves by exactly that value (a
+corner a named size sets out stays with the size: rebinding one once left a backing's thickness worked out and every change on the sheet
+refused); a loop it would close is settled by setting the plain offset in it where it is drawn. A face that turns (both widths named, the batter
+a result) is left: a corner bound to the line through its ends is no chain the design intent can stack through (on 20A it kept eight dimensions
+of a unit from being edited), and the edit says when the two come apart. On 173A the backing now stays on the return wall's battered face; what
+still comes apart is said — the wall's top lines across the backing's top corner (whether the backing rises with the wall is a design relation
+the drawing does not state) and, in the half section, the backing against two lines no part owns.
+
+**7. A size at 0 takes its part away (`regen.zero_allowed`, `check_invariants`).** A value may be 0 when the drawing can still be drawn: what
+collapses to nothing — an outline, its hatch, its dimension — is not drawn (the page gets a `gone` marker, the DXF is written without it), the
+change says what went ("at PccBaseThickness = 0, PccBaseCourse is not drawn; not drawn either: 1 hatch; a value above 0 draws them again"), and a
+value above 0 draws it again. A hole in an outline, a spacing of repeats, a circle's size, an overall size and a level are never 0, and anything
+that would turn inside out is still refused. A count (cells) does not change the drawing's topology: that is out of reach.

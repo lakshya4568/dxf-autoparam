@@ -38,6 +38,8 @@ flowchart LR
 | **Skills and recipes** — how this agent uses it | `knowledge/library/<domain>/skills/*.md`, `domain.json`, `protocol.md` | a person |
 | **Indexes** — the token index, label index, ontology maps | in memory, built on first use (about 0.5 s) | generated, never stored |
 | **Runtime state** — what a run retrieved, checked and recorded | the run's events and `verdict.knowledge` | the run |
+| **Graded knowledge** — aagento-bridge's families, formulas and level chains, rules, conflicts, defaults and sources, each with its status | `knowledge/library/bridge/graded/` (`PROVENANCE.json`: repository, ref, commit, sha256 of every file) | nobody here. Corrected in aagento-bridge, imported again: `uv run python tools/import_graded_knowledge.py` (`--check` compares) |
+| **The identification vocabulary** — the words a GAD uses for what it is (kinds, crossings, status, carried lines and counts, spans, loading, facts) and the configuration relations | `knowledge/library/bridge/identify.json`, read by `dxf_autoparam/identify.py` | a person (tune it on real sheets: `tests/test_identify.py`) |
 
 The source folder is **only read** — by the migration tool, once. The runtime reads the migrated copy and never needs the original again
 (`tests/test_migration.py` runs with the source folder absent and fails if any project code points at it).
@@ -132,6 +134,31 @@ The brief's illustrative tool names map to: `inspect_gad` = `inspect_sheet` + `z
   and a domain pack `knowledge/<name>.json`. `AUTOPARAM_LIBRARY_DIR` points the process at libraries kept elsewhere.
 - Re-run the migration when the source changes: `uv run python tools/migrate_agent_context.py` (the tool checks the result against the
   source and `--verify-only` checks it against its manifest).
+
+## What a sheet says it is, and the graded knowledge behind it
+
+`identify_structure` (a library tool) reads the sheet's printed words with `identify.json`: the kind and what is existing / proposed, the
+look-alikes set aside, what it crosses, each carried line named on the sheet and the configuration that makes, spans, loading, number,
+chainage, standard drawings and codes cited — each with the words and where they are printed. With it comes the graded card of that kind
+(`Library.family_card`): capability, components, what must be known, its level chain, formulas and rules with their status, open questions
+(conflicts KC-n) and the configuration relations written with the count read. `check_rule(rule='graded:<id>', bind={…})` evaluates a graded
+formula or relation on the agent's own named values. The first look at the sheet carries the one-line reading (`the_words_say`).
+
+Statuses are the source's and are never promoted: DERIVED is geometry; NORMATIVE cites a verified clause (the IRBM 2024 copy in hand);
+COMMON_PRACTICE, ASSUMPTION, DISPUTED and UNKNOWN are never values. Configuration formulas are identities over values read from the drawing.
+
+### The RDSO slot (the owner adds the standard drawings later)
+
+The library holds no RDSO number: no formation width or track centre per configuration (KC-13 open), no standard box, slab or pipe sizes. GADs
+cite the sheets they follow (`RDSO/B-10152/1R`, `RDSO/B-10155/10`, `RDSO/BA-10236` — `identify` lists them as `standard_drawing` facts). When
+the owner adds those PDFs:
+
+1. Keep them outside the repository's code (they are large and licensed): a folder the library points at, like the IRBM 2024 copy.
+2. Record each as a source in `graded/sources.json`'s shape (id, title, edition, `trust: VERIFIED_LOCAL`, sha256, path) — in aagento-bridge,
+   then import again, so both projects read one register.
+3. Index each sheet with page numbers (the clause index of `irbm-2024.json` is the pattern) and link the drawing ids GADs cite to their sheet.
+4. Promote a value only with its sheet and clause: a rule NORMATIVE on a verified sheet; a size table as a relation to check on the drawing's
+   own values (`check_rule`), never a value written into a drawing.
 
 ## Limits, said plainly
 

@@ -79,6 +79,22 @@ Case times are left out: the machine slept during the run.
 | ex-well | no | 5 | 0 = 0 % (0) | 5 = 100 % (5) | 0/0 → 5/5 | 0/0 | 5/5 |
 | ex-xx | no | 0 | 0 = — (0) | 0 = — (0) | 0/0 → 0/0 | 0/0 | — |
 
+### Re-measured on 2026-10-23 (round 2: side choices, named sums, joints, parts at 0)
+
+No model call (raw rows `out/agent-logs/20261023-bench-20A/`, `-7A/`, `-final/`). The table above is the code of 2026-10-22; these rows are the
+code of 2026-10-23 (commits `2f19cd1` … `2c0b44a`). The other cases were not re-run.
+
+| case | dimensions | baseline: parametrized (driven) | ceiling: parametrized (driven) | editable values (baseline → ceiling) | annotation correct |
+|---|---|---|---|---|---|
+| 173A | 95 | 58 = 61 % (58) | 83 = 87 % (84) | 46/46 → 64/65 | 32/32 |
+| 20A | 136 | 68 = 50 % (87) | 106 = 78 % (118) | 53/60 → 80/85 | 12/12 |
+| Bridge-7A | 122 | 0 = 0 % (0) | 106 = 87 % (106) | 0/0 → 88/88 | 10/10 |
+| box-1cell … box-4cell | 7 … 10 | 86 … 90 % | 100 % | 5/5 → 6/6 | all |
+
+20A's gain is the build's named-sum rule (an overall dimension nobody named, made up whole of named or dimensioned sizes, is taken after them; before,
+it could leave a named size inside it worked out). The slope rule as first written cost 20A eight dimensions (72 %): it bound corners along a face
+that turns, a set-out the design intent cannot stack through; it now binds only along edges that keep their slope.
+
 Refused ±10 % steps, failed checks by kind (the ceiling where measured, else the baseline):
 
 - 173A: incomplete_model 2

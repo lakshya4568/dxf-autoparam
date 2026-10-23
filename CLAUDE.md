@@ -42,7 +42,10 @@ engine that checks every claim. Read this first; the details are in `README.md` 
 | The drawing's own DIMENSIONS as the yardstick: each driven / unnamed / fixed / kept / unread, on the parts it measures (the agent's `coverage`, the finish gate, the bench) | `coverage.py` |
 | Why a change or commit was refused: the failed check, its entities, its KIND (edit cannot be drawn / model does not carry it / a plan / a rule / the solver) and whether the sheet already failed it | `refusal.py`, `SheetModel.explain`, `SheetError.failures` |
 | A relation checked on the drawing before it is bound (`check_relation`); views in their own coordinates (the page's view tabs, `inspect_view`); a view redrawn at another scale | `relations.py`, `frames.py`, `rescale.py` |
-| Production knowledge per component (parameters, defaults, relations, source file:line) | `knowledge/library/bridge/components.json`; the audit `docs/PRODUCTION_AUDIT.md` |
+| Production knowledge per component (parameters, defaults, relations, how it meets other parts — `connects` — source file:line) | `knowledge/library/bridge/components.json`; the audit `docs/PRODUCTION_AUDIT.md` |
+| What the sheet's words say it is (kind, existing / proposed, crossing, tracks and configuration, spans, loading, number, standard drawings cited) | `identify.py` + `knowledge/library/bridge/identify.json`; library tool `identify_structure` |
+| aagento-bridge's graded knowledge (families, formulas with status, level chains, rules, conflicts KC-n, sources with trust) | `knowledge/library/bridge/graded/` + `PROVENANCE.json` (`tools/import_graded_knowledge.py`, `--check`); `Library.family_card`, `check_rule(rule='graded:…')`. No RDSO value: the owner adds the standard drawings later (`docs/KNOWLEDGE_LIBRARY.md`) |
+| Where parts meet (on / beside / corner / touches) and what a change pulls apart (a warning on every edit); a corner of one part on another part's sloped edge follows it | `connections.py`; `validator.bind_on_slopes` |
 | Server, page API, autosave (one owner per drawing), status | `server.py` `workspace.py` `autosave.py` `status.py` |
 | The page (React + Tailwind + TypeScript; the built bundle is tracked in `src/dxf_autoparam/static/app/`) | `web/src` `web/test` `web/e2e` |
 | Tools | `tools/monitor_run.py` (watch a run), `tools/preflight_run.py` (before a paid run), `tools/audit_run.py` (after), `tools/replay_trace.py` (replay a recorded run free), `tools/serve_scripted.py` / `serve_replay.py` (the app with a scripted / replayed model), `tools/tokenharbor_check.py` (list Token Harbor's models; `--test`: one tiny call to a free one), `tools/sweep_sides.py` (every value stepped and every side choice tried on a copy: what a person meets in the Values panel), `tools/param_bench.py` + `tools/bench_cases.json` (the benchmark: PARAMETRIZED dimensions, edits by refusal kind, views, annotation, components found, cost — `docs/PARAM_BENCH.md`), `tools/component_inventory.py` (per part: parametrized / partial / unparametrized), `tools/ui_check.mjs` |
@@ -74,7 +77,11 @@ folder is a bug (`vertex.CACHE`, `DXF_AUTOPARAM_STATE`): point it at `tmp_path`.
 
 - The agent decides WHAT; the engine computes HOW and takes back what breaks the drawing. Every edit is validated at once; a refusal comes back with the reason.
 - A size is two lines; when it changes one side stays. That is design intent: decided from evidence, measured, shown under each value (*Left stays · Centred · Right stays*),
-  and a person's choice always outranks the default. Levels: `site_input` and `check_only` both HOLD the line; `derived` follows the structure.
+  and a person's choice always outranks the default. Levels: `site_input` and `check_only` both HOLD the line; `derived` follows the structure. A person's side is never
+  refused for a SITE level in its way: the level on the moving side becomes derived and follows, and the choice says so (the owner, 2026-10-23); a check level holds and
+  is never set out from (`Program.reference_only`); nothing between is shrunk to keep a level still. The range shown under a value is information, not a clamp.
+- A size of material may go to 0: what collapses to nothing (outline, hatch, its dimension) is not drawn, not written, said, and back above 0. A hole in an outline, a
+  spacing, a circle's size, an overall size and a level are never 0; an inversion still refuses. Every edit says which touching entities it pulls apart.
 - A parameter's `value` is the engine's measurement (the model never types a number). Units drawn at another scale read their own scale.
 - Finish is a gate (the verdict is derived from the engine, never from the model's words). Notes in the verdict are things to read, not failures.
 - The model never sees what the engine derived (`design_intent.strip`); the benchmark fixtures' values never appear in prompts or tool text.
