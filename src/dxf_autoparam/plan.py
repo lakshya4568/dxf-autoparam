@@ -1046,8 +1046,14 @@ def _decide_anchor(prog, plan, request, reading, decisions, dirs, parts, name, p
                 alt, centre = mid, MID
         if alt is None or not alt["available"]:
             about = " about its own middle" if centre == MID else f" about {centre}" if centre else ""
-            # what a person can do instead: the sides the stacking allows (tried above, nothing kept) — checked on the whole sheet once chosen
-            other = [w for p, w in SIDE_WORDS.items() if p != pol and any(a["policy"] == p and a["available"] for a in alts)]
+            # what a person can do instead: the sides the stacking allows (tried above, nothing kept) — checked on the whole sheet once chosen. A
+            # side only a site level stands in the way of is taken for a person too: the level follows the structure (crossview.anchor)
+            def follows(a: dict) -> bool:
+                return src == "person" and bool(a.get("blocked")) and all(b.get("kind") == "level" and b.get("line") not in prog.reference_only
+                                                                         for b in a["blocked"])
+
+            other = [w + ("" if any(a["policy"] == p and a["available"] for a in alts) else " (its site levels follow)")
+                     for p, w in SIDE_WORDS.items() if p != pol and any(a["policy"] == p and (a["available"] or follows(a)) for a in alts)]
             instead = (f" — {' or '.join(other)} keeps what may not move (choose it to have it checked on the sheet)" if other
                        else " — no side keeps what may not move: leave it to the set-out as it stands, or release what holds it (a held part or level, "
                             "a named size on the way)")
@@ -1421,6 +1427,17 @@ def verify_plan(prog: Program, plan: dict, parts: dict[str, Part], compiled: dic
         if not ok and c["status"] == "pass":
             c.update(status="fail", measured=measured_txt, cause=cause, action=action, failed_at=at)
 
+    def warn(kind: str, target: str, ok: bool, expected_txt: str, measured_txt: str, cause: str = "", action: str = "", at: float | None = None):
+        """A check that says, never refuses: what the engine cannot tell is wrong (an entity no part owns) is for the person to look at."""
+        key = (kind, target)
+        c = checks.get(key)
+        if c is None:
+            c = checks[key] = {"check": kind, "target": target, "status": "pass", "expected": expected_txt, "measured": measured_txt, "at": []}
+        if at is not None:
+            c["at"].append(round(at, 3))
+        if not ok and c["status"] == "pass":
+            c.update(status="warn", measured=measured_txt, cause=cause, action=action, failed_at=at)
+
     base = regenerate_program(prog, check=False)
     dev = max((_max_move(base.pts.get(it.index, it.pts), it.pts) for it in items if it.index in base.pts), default=0.0) * u
     check("baseline", "drawing", dev <= 1e-6 * max(1.0, u), "the formulas reproduce the drawing exactly", f"largest deviation {dev:.2e} mm",
@@ -1563,9 +1580,17 @@ def verify_plan(prog: Program, plan: dict, parts: dict[str, Part], compiled: dic
             (f"{len(torn)} contact(s) with fixed parts released, as the plan says" if torn else "all contacts kept"),
             "an end that should follow its neighbour is set out from something else", "set the end out from the face it meets", at=w)
         cl = clashes(prog, r.pts, moved_ents)
-        check("clash", "members", not cl, "no member runs into another",
-              "; ".join(f"{_eid(items[i])} ({part_of.get(i, '-')}) crosses {_eid(items[j])} ({part_of.get(j, '-')})" for i, j in cl[:3]) or "none",
+        # two members of the structure running into each other cannot be drawn; a crossing with an entity no part owns may be a detail that
+        # should follow (or something the member must not reach): the engine cannot tell — said, for the person, never a refusal of the plan
+        owned = [(i, j) for i, j in cl if part_of.get(i) and part_of.get(j)]
+        loose = [(i, j) for i, j in cl if not (part_of.get(i) and part_of.get(j))]
+        check("clash", "members", not owned, "no member runs into another",
+              "; ".join(f"{_eid(items[i])} ({part_of.get(i, '-')}) crosses {_eid(items[j])} ({part_of.get(j, '-')})" for i, j in owned[:3]) or "none",
               "the value takes the assembly past where its members fit together", "a value inside the valid range", at=w)
+        warn("clash", "unowned", not loose, "nothing runs into an entity no part owns",
+             "; ".join(f"{_eid(items[i])} ({part_of.get(i, '-')}) crosses {_eid(items[j])} ({part_of.get(j, '-')})" for i, j in loose[:3]) or "none",
+             "an entity no part owns is in the way: it may be a detail that should follow, or something the member must not reach",
+             "say which part it is (define_parts) to have it checked", at=w)
         # dimensions and notes
         dims_out = []
         for it in items:
@@ -1599,9 +1624,9 @@ def verify_plan(prog: Program, plan: dict, parts: dict[str, Part], compiled: dic
         check("binding", n, not lost, "still drives its lines", f"no longer drives {', '.join(f'{a}–{b}' for a, b in lost[:3])}" if lost else "drives",
               f"the plan's set-out took {n}'s lines", "re-anchor so both can hold, or make one a result")
     res["checks"] = list(checks.values())
-    res["ok"] = all(c["status"] == "pass" for c in res["checks"])
+    res["ok"] = all(c["status"] in ("pass", "warn") for c in res["checks"])
     res["summary"] = {"passed": sum(c["status"] == "pass" for c in res["checks"]), "failed": sum(c["status"] == "fail" for c in res["checks"]),
-                      "values_tested": [round(t, 3) for t in tests]}
+                      "warned": sum(c["status"] == "warn" for c in res["checks"]), "values_tested": [round(t, 3) for t in tests]}
     return res
 
 

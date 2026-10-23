@@ -29,6 +29,9 @@ class Regenerated:
     texts: dict[int, str]
     issues: list[str] = field(default_factory=list)
     turns: dict[int, float] = field(default_factory=dict)  # degrees an entity was turned by a component transform (texts, arcs)
+    # entities not drawn at these values: what a size of 0 takes away with it (an outline, its hatch, the dimension of it) — drawn again when the
+    # size is above 0 (check_invariants)
+    absent: set[int] = field(default_factory=set)
 
     @property
     def ok(self) -> bool:
@@ -121,15 +124,39 @@ def _self_crossings(poly) -> int:
     return c
 
 
-def check_invariants(model: Model, r: Regenerated, items=None) -> list[str]:
-    """`items`: only these entities (the rest are known not to have moved)."""
+def _vanishes(it: Item, pts, tol: float) -> bool:
+    """Whether an entity drawn with extent is drawn with none at these points: a closed outline of no area, a hatch whose boundary has none, a
+    dimension measuring nothing, a line of no length."""
+    if pts is None or not it.pts:
+        return False
+    if it.dxftype == "HATCH":
+        rings = [ring for ring in it.extra.get("rings", []) if len(ring) >= 3 and all(k < len(pts) for k in ring)]
+        return bool(rings) and all(abs(_area([pts[k] for k in ring])) <= tol * tol < abs(_area([it.pts[k] for k in ring])) for ring in rings)
+    if it.dxftype == "DIMENSION":
+        return len(pts) > 2 and math.dist(pts[1], pts[2]) <= tol < math.dist(it.pts[1], it.pts[2])
+    if it.closed and len(it.vertex_pts) >= 3:
+        return abs(_area([pts[k] for k in it.vertex_pts])) <= tol * tol < abs(_area([it.pts[k] for k in it.vertex_pts]))
+    if it.segments:
+        return all(math.dist(pts[i], pts[j]) <= tol for i, j in it.segments) and any(math.dist(it.pts[i], it.pts[j]) > tol for i, j in it.segments)
+    return False
+
+
+def check_invariants(model: Model, r: Regenerated, items=None, zero_ok: set[str] | None = None) -> list[str]:
+    """`items`: only these entities (the rest are known not to have moved). `zero_ok`: the values that may be 0 — a size of material whose part is
+    then not drawn (`r.absent`), and is drawn again when the value is above 0; an opening, a spacing or a level never is."""
     an = model.analysis
     tol = an.drawing.tol
     issues: list[str] = []
+    zero = False
     for name, v in r.values.items():
-        if v <= 0:
+        if v < 0 or (v == 0 and name not in (zero_ok or ())):
             issues.append(f"{name} must stay positive (is {v:g})")
+        elif v == 0:
+            zero = True
     for it in an.drawing.items if items is None else items:
+        if zero and _vanishes(it, r.pts.get(it.index), tol):
+            r.absent.add(it.index)  # what the size of 0 takes away: not drawn, and nothing to check
+            continue
         if it.role != Role.STRUCTURAL:
             continue
         old = [it.pts[k] for k in it.vertex_pts]
@@ -139,6 +166,8 @@ def check_invariants(model: Model, r: Regenerated, items=None) -> list[str]:
             L0 = math.dist(a0, b0)
             L1 = math.dist(a1, b1)
             if L0 > tol and L1 <= tol:
+                if zero:
+                    continue  # two corners that meet at a size of 0 (a course gone from under a wall's outline): the outline is still drawn
                 issues.append(f"{_name(it)}: an edge collapses")
                 break
             if L0 > tol and ((b0[0] - a0[0]) * (b1[0] - a1[0]) + (b0[1] - a0[1]) * (b1[1] - a1[1])) < 0:
@@ -303,9 +332,32 @@ def check_change(prog, values: dict[str, float], base_datum: dict[str, float], u
     return [i for i in issues if not any(i.startswith(f"{p.name} must") for p in prog.params.values() if p.kind == "level")]
 
 
+# the kinds of gap that are not a size of material: at 0 an opening closes, repeated members coincide, a circle is gone, an overall size is nothing
+NO_ZERO = {"void", "pitch", "diameter", "dim"}
+
+
+def zero_allowed(prog) -> set[str]:
+    """The values that may be 0 — whatever the person asks, as long as the drawing can still be drawn (nothing turns inside out or crosses): what
+    collapses to nothing is not drawn (a course, a haunch, a projection with its hatch), and is drawn again above 0. Not a level, and not a gap
+    that is no size at 0 (its candidate's kind, else the kind of the gap between its two lines): a hole in an outline, a spacing of repeats, a
+    circle's size, an overall size."""
+    an = prog.analysis
+    by_lines: dict[frozenset, set[str]] = {}
+    for g in an.gaps.values():
+        by_lines.setdefault(frozenset((g.a, g.b)), set()).add(g.kind.value)
+    out = set()
+    for n, p in prog.params.items():
+        if p.kind == "level":
+            continue
+        kinds = {p.kind} if p.kind not in ("length", "") else by_lines.get(frozenset(p.measures or ()), set())
+        if not kinds & NO_ZERO:
+            out.add(n)
+    return out
+
+
 def _check_program(prog, r: Regenerated) -> list[str]:
     class _M:  # check_invariants reads .analysis only, plus positivity of values
         analysis = prog.analysis
 
-    issues = check_invariants(_M, r)  # type: ignore[arg-type]
+    issues = check_invariants(_M, r, zero_ok=zero_allowed(prog) if any(v == 0 for v in r.values.values()) else None)  # type: ignore[arg-type]
     return [i for i in issues if not any(i.startswith(f"{p.name} must") for p in prog.params.values() if p.kind == "level")]

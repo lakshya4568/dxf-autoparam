@@ -376,7 +376,19 @@ def test_corrupted_bindings_are_caught_and_never_accepted(tmp_path):
 def test_an_inverted_dependency_is_reported_and_the_proposed_relation_makes_the_drawing_follow(tmp_path):
     b = Box(cells=1, span=2500.0)
     sm, us, _up, _g = _sheet(b, tmp_path, "s")
-    sm.commit_answer(us, strip(sm.unit(us).answer), intent=False)  # the drawing as it is set out from its left face: the overall width is an input of its own
+    sm.commit_answer(us, strip(sm.unit(us).answer), intent=False)
+    # the overall width made an input of its own: the far face set out from the near one by it, as a person's formula (the engine no longer
+    # makes a sum of named sizes an input by itself — it is worked out — so the inversion is written here)
+    u = sm.unit(us)
+    um = u.sub.units_mm
+    lo, hi = sorted(u.prog.params["ClearSpan"].measures, key=lambda d: u.an.datums[d].value)
+    xs = [d for d in u.an.datums.values() if d.axis == "x"]
+    near0, far0 = next((a.id, c.id) for a in xs for c in xs if abs((c.value - a.value) * um - b.width) < 1e-6
+                       and a.value < u.an.datums[lo].value and c.value > u.an.datums[hi].value)
+    ans = copy.deepcopy(u.answer)
+    ans["parameters"].append({"name": "OverallWidth", "label": "OverallWidth", "kind": "length", "from_datum": near0, "to_datum": far0, "value": b.width})
+    ans["datum_formulas"] = [*ans.get("datum_formulas", []), {"datum": far0, "expr": f"{near0} + OverallWidth"}]
+    sm.commit_answer(us, ans, intent=False)
     u = sm.unit(us)
     overall = next(n for n, p in u.prog.params.items() if abs(p.value - b.width) < 1e-6)
     bind = {"family": "railway_rcc_box", "unit": us, "inputs": {"geometry.clear_w": "ClearSpan", "geometry.t_wall_o": "OuterWall"},

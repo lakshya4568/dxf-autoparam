@@ -304,10 +304,18 @@ def apply(an: Analysis, answer: dict, base_decisions: Decisions | None = None, h
             rep.ok("parameter")
         else:
             loose.append(p)
+    # a size named by its two lines (or by some occurrences of a candidate) is as named for the set-out as a candidate is
+    for p in loose:
+        a, b = p.get("from_datum"), p.get("to_datum")
+        if a in datums and b in datums and datums[a].axis == datums[b].axis:
+            dec.named_pairs.add((a, b))
+    for prs in subset_pairs.values():
+        dec.named_pairs |= {(a, b) for a, b, _s in prs}
 
     # ── the baseline, rebuilt with those decisions ─────────────────────────────────
     model = build(an, dec)
     prog = from_model(model)
+    prog.reference_only = set(dec.reference_only)
     labels = {p["name"]: p for p in answer.get("parameters", [])}
     for name, prm in prog.params.items():
         if name in labels:
@@ -548,6 +556,7 @@ def apply(an: Analysis, answer: dict, base_decisions: Decisions | None = None, h
 
     # ── the engine's own rules, whatever was proposed ─────────────────────────────
     enforce_slopes(prog, rep)
+    bind_on_slopes(prog, rep)
     # ── accepted plans, second half: the anchor written into the assembly's set-out ──
     compiled = compile_plans(prog, answer, rep, pre_plans) if pre_plans else None
     _retire_undriven(prog, rep, dims, cannot, "the stated slope sets that line from the height")
@@ -612,10 +621,13 @@ def apply(an: Analysis, answer: dict, base_decisions: Decisions | None = None, h
             res["compiled"] = {k: row.get(k) for k in ("ok", "problems", "stack")}
             rows.append(res)
             for c in res["checks"]:
-                if c["status"] == "fail":
-                    rep.bad("plan", "V16", f"{plan.get('id')}:{c['check']}:{c['target']}",
-                            f"plan {plan.get('id')}: {c['check']} {c['target']} — expected {c['expected']}, measured {c['measured']}"
+                if c["status"] in ("fail", "warn"):
+                    text = (f"plan {plan.get('id')}: {c['check']} {c['target']} — expected {c['expected']}, measured {c['measured']}"
                             + (f" at {c.get('failed_at'):g}" if c.get("failed_at") is not None else "") + f". Cause: {c.get('cause')}. {c.get('action')}")
+                    if c["status"] == "fail":
+                        rep.bad("plan", "V16", f"{plan.get('id')}:{c['check']}:{c['target']}", text)
+                    else:  # said, not refused: what the engine cannot tell about (an entity no part owns)
+                        rep.warn("V16", f"{plan.get('id')}:{c['check']}:{c['target']}", text)
         prog.intent["plans"] = rows
     prog.intent["plans_pending"] = [{"id": p.get("id"), "status": p.get("status"), "questions": [q["text"] for q in p.get("questions", [])][:4]}
                                     for p in answer.get("plans", []) if p.get("status") != "accepted"]
@@ -956,6 +968,172 @@ def _set_slope(prog: Program, near, far, done: set[str], u: float, over_dimensio
     return True
 
 
+ON_SLOPE_KEEP = ("ai", "dimension", "held", "existing", "constraint", "plan")  # a corner whose x somebody set is not bound onto an edge
+
+
+def _reads(prog: Program, d: str) -> set[str]:
+    """The values a set-out line depends on, through every formula it reads."""
+    out: set[str] = set()
+    seen, todo = {d}, [d]
+    while todo:
+        for n in names_in(prog.formulas.get(todo.pop(), "")):
+            if n in prog.params:
+                out.add(n)
+            elif n in prog.formulas and n not in seen:
+                seen.add(n)
+                todo.append(n)
+    return out
+
+
+def _on_line(prog: Program, corner: tuple[str, str], a: tuple[str, str], b: tuple[str, str], values: dict[str, float] | None) -> float:
+    """How far the corner is from the straight line through a and b (drawing units), at these values."""
+    v = prog.datum_values(values)
+    (xc, yc), (xa, ya), (xb, yb) = corner, a, b
+    dx, dy = v[xb] - v[xa], v[yb] - v[ya]
+    L = math.hypot(dx, dy)
+    return abs((v[xc] - v[xa]) * dy - (v[yc] - v[ya]) * dx) / L if L else float("inf")
+
+
+def _unloop(prog: Program, xc: str) -> bool:
+    """A loop closed through xc: the plain offset in it (a line hung from another by its drawn distance, nobody's choice) is set where it is drawn."""
+    from .assembly import linear
+
+    deps = {d for d in prog.formulas if d != xc and xc in _lines_read(prog, d)}
+    loop = [d for d in deps if d in _lines_read(prog, xc)]
+    for d in sorted(loop):
+        lf = linear(prog.formulas[d])
+        parents = [n for n in (lf[0] if lf else {}) if n in prog.formulas]
+        if prog.origin.get(d, "geometry") == "geometry" and lf is not None and len(parents) == 1 and abs(lf[0][parents[0]] - 1.0) <= 1e-12 \
+                and len(lf[0]) == 1:
+            prog.formulas[d] = f"{prog.datum_values()[d] * prog.analysis.drawing.units_mm:.6f}"
+            prog.invalidate()
+            try:
+                prog.order()
+                return True
+            except ExprError:
+                continue
+    return False
+
+
+def _lines_read(prog: Program, d: str) -> set[str]:
+    out, todo = set(), [d]
+    while todo:
+        for n in names_in(prog.formulas.get(todo.pop(), "")):
+            if n in prog.formulas and n not in out:
+                out.add(n)
+                todo.append(n)
+    return out
+
+
+def bind_on_slopes(prog: Program, rep: Report) -> None:
+    """A corner drawn ON another entity's sloped edge — strictly between the edge's ends — stays on it when values change: its x is set out
+    along the edge, x = x_end + (run per rise) · (y − y_end), at the edge's ratio as drawn (a backing against a battered wall face, the top of
+    a fill where it meets a bank). Set out on its own, the corner kept its place while the edge moved away from it, and a corner came apart
+    (connections.torn). A corner whose x somebody set (a name, a person, a plan, held or existing work, a level) is left as it is; one that
+    already follows the edge is left too, and so is one a named value drives (binding it would leave that value worked out: every named value
+    that moved its two lines before must still move them). Binding one that would close a loop sets the plain offset in the loop where it is
+    drawn; when that does not settle it, or a value that moves the corner would then break the drawing, nothing changes."""
+    from .intent import _set_exact, delta_of
+
+    an = prog.analysis
+    dr = an.drawing
+    tol = dr.tol
+    u = dr.units_mm
+    levels = {n for n, p in prog.params.items() if p.kind == "level"}
+    struct = [it for it in dr.items if it.role.value == "structural" and len(it.pts) > 1]
+
+    def corner(it, k):
+        bx, by = an.slot_datum.get((it.index, k, "x")), an.slot_datum.get((it.index, k, "y"))
+        return (bx[0], by[0]) if bx and by and abs(bx[1]) <= tol and abs(by[1]) <= tol and bx[0] in prog.formulas and by[0] in prog.formulas else None
+
+    edges = []
+    for it in struct:
+        for i, j in it.segments:
+            (x1, y1), (x2, y2) = it.pts[i], it.pts[j]
+            a, b = corner(it, i), corner(it, j)
+            if abs(x2 - x1) > tol and abs(y2 - y1) > tol and a and b and a[0] != b[0] and a[1] != b[1]:
+                edges.append((it.index, (x1, y1), (x2, y2), a, b))
+    if not edges:
+        return
+
+    def driving() -> set[str]:
+        """The named values that move their own two lines by exactly their change: a binding that takes one away is not made."""
+        v0 = prog.datum_values()
+        out = set()
+        for n, p in prog.params.items():
+            if p.source != "ai" or p.kind == "level" or not p.measures or not all(d in v0 for d in p.measures):
+                continue
+            v1 = prog.datum_values({n: p.value + 1.0})
+            a, b = p.measures
+            if abs(abs((v1[b] - v1[a]) - (v0[b] - v0[a])) * u - 1.0) <= 1e-6:
+                out.add(n)
+        return out
+
+    bound, done = 0, set()
+    for it in struct:
+        for k, (x, y) in enumerate(it.pts):
+            c = corner(it, k)
+            if c is None or c[0] in done or prog.origin.get(c[0]) in ON_SLOPE_KEEP or names_in(prog.formulas[c[0]]) & levels:
+                continue
+            for idx, p1, p2, a, b in edges:
+                if idx == it.index or c[0] in (a[0], b[0]) or c[1] in (a[1], b[1]):
+                    continue
+                dx, dy = p2[0] - p1[0], p2[1] - p1[1]
+                t = ((x - p1[0]) * dx + (y - p1[1]) * dy) / (dx * dx + dy * dy)
+                if not 0.02 < t < 0.98 or abs((x - p1[0]) * dy - (y - p1[1]) * dx) / math.hypot(dx, dy) > tol:
+                    continue
+                names = sorted((_reads(prog, a[0]) | _reads(prog, a[1]) | _reads(prog, b[0]) | _reads(prog, b[1]) | _reads(prog, c[0])
+                                | _reads(prog, c[1])) - levels)[:12]
+                steps = [(n, w) for n in names for P in [prog.params[n].value] for d in [delta_of(prog, n)] for w in (P + d, P - min(d, 0.5 * abs(P)))]
+                if all(_on_line(prog, c, a, b, {n: w}) <= tol for n, w in steps):
+                    break  # it follows the edge already
+                before = {(n, w): set(regenerate_program(prog, {n: w}).issues) for n, w in steps}
+                drives = driving()
+                saved = (dict(prog.formulas), dict(prog.origin))
+                ok = False
+
+                def ratio(values, a=a, b=b):
+                    v = prog.datum_values(values)
+                    return (v[b[0]] - v[a[0]]) / (v[b[1]] - v[a[1]])
+
+                # an edge that keeps its slope: along it at its drawn ratio, from either end (a plain chain the stacking can read); one whose ends
+                # are set out apart (it turns when a value moves one end): on the line through its two ends, whatever they do
+                keeps = all(abs(ratio({n: w}) - dx / dy) <= 1e-9 * max(1.0, abs(dx / dy)) for n, w in steps)
+                forms = ([f"{xe} + {dx / dy!r} * ({c[1]} - {ye})" for xe, ye in (a, b)] if keeps
+                         else [f"{a[0]} + ({b[0]} - {a[0]}) * ({c[1]} - {a[1]}) / ({b[1]} - {a[1]})"])
+                for expr in forms:
+                    try:
+                        _set_exact(prog, c[0], expr, x * u)
+                        try:
+                            prog.order()
+                        except ExprError:
+                            if not _unloop(prog, c[0]):
+                                raise
+                        if abs(prog.datum_values()[c[0]] - x) * u > 1e-6:
+                            raise ExprError("not as drawn")
+                        if drives - driving():
+                            raise ExprError("a named value would no longer drive its lines")
+                        if all(set(regenerate_program(prog, {n: w}).issues) <= before[(n, w)] for n, w in steps):
+                            ok = True
+                            break
+                    except (ExprError, KeyError, ZeroDivisionError):
+                        pass  # this end of the edge does not settle it: the other is tried, else nothing changes
+                    prog.formulas.clear()
+                    prog.formulas.update(saved[0])
+                    prog.origin.clear()
+                    prog.origin.update(saved[1])
+                    prog.invalidate()
+                if ok:
+                    prog.origin[c[0]] = "slope"
+                    prog.origin_why[c[0]] = f"on the sloped edge of {entity_id(dr.items[idx])}"
+                    done.add(c[0])
+                    bound += 1
+                    break
+    if bound:
+        prog.invalidate()
+        rep.findings.append(Finding("S2", "info", "slopes", f"{bound} corner(s) drawn on another entity's sloped edge follow it when it moves"))
+
+
 def relink_texts(prog: Program) -> None:
     """Notes that state a value follow it: sizes (mm or m), worked-out relations, and levels (by their line).
 
@@ -1173,6 +1351,7 @@ def baseline(an: Analysis, decisions: Decisions | None = None, rep: Report | Non
             hold_parts(prog, parts, hold, rep)
         freeze_params(prog, set(selection.get("exclude", [])) & set(prog.params), rep)
     enforce_slopes(prog, rep)
+    bind_on_slopes(prog, rep)
     relink_texts(prog)
     prog.intent = {"parts": parts, "selection": {"hold": sorted((selection or {}).get("hold", [])), "exclude": sorted((selection or {}).get("exclude", []))}}
     return prog

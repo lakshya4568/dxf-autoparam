@@ -225,7 +225,8 @@ def protected_lines(prog: Program, fixed: set[str] | None = None) -> dict[str, s
     out: dict[str, str] = {}
     for d, kind in protection_kinds(prog, fixed).items():
         name = level_of(prog, d) if kind == "level" else None
-        out[d] = PROTECTION_WORDS[kind] + (f" ({name})" if name else "")
+        words = "a level only checked against" if kind == "level" and d in prog.reference_only else PROTECTION_WORDS[kind]
+        out[d] = words + (f" ({name})" if name else "")
     return out
 
 
@@ -282,11 +283,17 @@ def assembly_lines(prog: Program, parts: dict[str, Part] | None, core: set[str] 
                     if b and abs(b[1]) <= an.drawing.tol:
                         out.add(b[0])
         out |= {d for d in seed if d in an.datums and an.datums[d].axis == axis}
+    # views linked by projection share one axis only: on the other, a size's assembly is drawn in the views its own lines are in. A part seen in
+    # both views (a wall in the elevation and in the plan) brings both views' lines; the plan's are no part of a height in the elevation
+    mine = {w for d in (seed or ()) for w in an.datum_views.get(d, ())}
+    if mine:
+        out = {d for d in out if not an.datum_views.get(d) or mine & set(an.datum_views[d])}
     if out:
         v = line_values_mm(prog)
         lo, hi = min(v[d] for d in out if d in v), max(v[d] for d in out if d in v)
         out |= {d.id for d in an.datums.values() if d.axis == axis and d.id in prog.formulas
-                and (d.source in AXIS_SOURCES or d.virtual) and lo < v[d.id] < hi}
+                and (d.source in AXIS_SOURCES or d.virtual) and lo < v[d.id] < hi
+                and (not mine or not an.datum_views.get(d.id) or mine & set(an.datum_views[d.id]))}
     return {d for d in out if d in prog.formulas}
 
 
@@ -574,9 +581,10 @@ def stack(prog: Program, axis: str, drivers: list[Driver], members: set[str], st
 
     # the anchor: the line that stays
     virtual = policy == "centered" and all(d.centre in (None, MID) for d in drivers)
+    checked = prog.reference_only  # a level only checked against holds, but nothing is set out from it: never what the assembly rests on
     if virtual:  # about each occurrence's own middle: what stays is a line the change does not move — between occurrences, else outside it
         dep = _set_out_from(prog)
-        resting = [d for d in members if not (dep.get(d, set()) & rer - {d}) and all(abs(pred[n].get(d, 0.0)) <= 1e-9 for n in pred)]
+        resting = [d for d in members if d not in checked and not (dep.get(d, set()) & rer - {d}) and all(abs(pred[n].get(d, 0.0)) <= 1e-9 for n in pred)]
         mids = [(v[a] + v[b]) / 2 for drv in drivers for a, b in drv.pairs]
         root = min(resting, key=lambda d: (min(abs(v[d] - m) for m in mids), d)) if resting else None
     elif policy == "centered":
@@ -590,7 +598,7 @@ def stack(prog: Program, axis: str, drivers: list[Driver], members: set[str], st
         for drv in drivers:
             pred[drv.name][root] = 0.0
     else:
-        pool = sorted(members, key=lambda d: (v[d], d))
+        pool = sorted((d for d in members if d not in checked), key=lambda d: (v[d], d)) or sorted(members, key=lambda d: (v[d], d))
         # a held line the policy leaves where it is (a site level under the size, a part kept fixed) is what the assembly is set out from: anchored
         # there, the lines that hang from it keep their own sizes. Anchored at the assembly's extreme line instead, that line was re-hung from the
         # held one by its drawn distance — a base course under a road-level box then stayed put while the slab and the wearing course above it moved
@@ -657,9 +665,20 @@ def stack(prog: Program, axis: str, drivers: list[Driver], members: set[str], st
         if stays:
             parent[root] = (None, {}, 0.0, "kept")
         else:
-            anchor = min((d for d in placed if all(abs(placed[d][n]) <= 1e-9 for n in cur)), key=lambda d: abs(v[d] - v[root]), default=None)
+            anchor = min((d for d in placed if d not in checked and all(abs(placed[d][n]) <= 1e-9 for n in cur)), key=lambda d: abs(v[d] - v[root]),
+                         default=None)
             parent[root] = (anchor, {}, v[root] - (v[anchor] if anchor else 0.0), "anchor")
         placed[root] = {n: 0.0 for n in cur}
+    if root is None and virtual and drivers and drivers[0].pairs:
+        # centred about its own middle, and every line of the axis moves (no level holds one any more): the middle of the size is what stays —
+        # its lower line is set out from that place by half the size, and everything else from it
+        a, b = drivers[0].pairs[0]
+        lo = a if v[a] <= v[b] else b
+        if lo in rer:
+            coefs = {n: c for n in pred if abs(c := pred[n].get(lo, 0.0)) > 1e-12}
+            parent[lo] = (None, coefs, 0.0, "anchor")
+            placed[lo] = {n: pred[n].get(lo, 0.0) for n in pred}
+            root = lo  # set out from, but not the line that stays (none does): the plan checks every line moves as centred says
 
     extra: dict[str, list[tuple[str, dict[str, float], float, str]]] = {}
     for drv in drivers:
@@ -683,12 +702,35 @@ def stack(prog: Program, axis: str, drivers: list[Driver], members: set[str], st
     heap: list = []
     seq = 0
 
+    def hangs_on(s: str, p: str) -> bool:
+        lf = linear(prog.formulas[s])
+        return lf is not None and abs(lf[0].get(p, 0.0) - 1.0) <= 1e-12 and sum(1 for n in lf[0] if n in prog.formulas) == 1
+
     def push(p: str) -> None:
         nonlocal seq
         for s, coefs, const, kind in adj.get(p, []) + extra.get(p, []):
             if s in rer and s not in placed:
                 seq += 1
                 heapq.heappush(heap, (rank[kind], abs(v[s] - v[p]), seq, p, s, coefs, const, kind))
+            elif s not in rer and s not in placed and s in tainted and kind in ("formula", "relation") and hangs_on(s, p):
+                # a line nobody may rewrite that hangs on this one follows its own set-out: it is placed with it, and what lies beyond it is
+                # set out from it — not by its drawn distance from a farther line, which froze every named size in between (a clear span
+                # set out from the far face of a wall kept the wall at its drawn 400 mm, and came out 130 mm short at 530)
+                placed[s] = {n: placed[p][n] + coefs.get(n, 0.0) for n in pred}
+                push(s)
+            elif s not in rer and s not in placed and s in tainted:
+                # it cannot be rewritten and hangs on a line still to place: that line is placed THROUGH it, so it lands where this edge puts it
+                # and its own sizes stay live (the inner face of a wall a size ends on, set out from the outer face by the wall's thickness:
+                # the outer face goes to the size plus the wall, not to the size plus the wall's drawn 400 mm)
+                lf = linear(prog.formulas[s])
+                hs = [n for n in (lf[0] if lf else {}) if n in prog.formulas]
+                if lf is None or len(hs) != 1 or abs(lf[0][hs[0]] - 1.0) > 1e-12 or hs[0] not in rer or hs[0] in placed:
+                    continue
+                h = hs[0]
+                rest = {k: c for k, c in lf[0].items() if k != h}
+                comp = {n: coefs.get(n, 0.0) - rest.get(n, 0.0) for n in set(coefs) | set(rest)}
+                seq += 1
+                heapq.heappush(heap, (rank[kind], abs(v[h] - v[p]), seq, p, h, {n: c for n, c in comp.items() if abs(c) > 1e-12}, const - lf[1], kind))
 
     for p in list(placed):
         push(p)
@@ -714,7 +756,8 @@ def stack(prog: Program, axis: str, drivers: list[Driver], members: set[str], st
         if not placed:  # nothing on this axis stays put to set the assembly out from
             st.why = "nothing on this axis stays where it is to set the size out from"
             return st
-        s, p = min(((s, p) for s in left for p in placed), key=fit)
+        sources = [p for p in placed if p not in checked] or list(placed)
+        s, p = min(((s, p) for s in left for p in sources), key=fit)
         coefs = {n: pred[n].get(s, 0.0) - placed[p][n] for n in pred}
         coefs = {n: c for n, c in coefs.items() if abs(c) > 1e-12}
         const = v[s] - v[p] - sum(c * prog.params[n].value for n, c in coefs.items())

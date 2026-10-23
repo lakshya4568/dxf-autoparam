@@ -225,6 +225,9 @@ class SheetSession:
             pts = sr.reg.pts.get(i, it.pts) if sr else it.pts
             if pts is None:
                 continue
+            if sr and i in sr.reg.absent:  # not drawn at these values: the page drops what it drew for it (no points, nothing to draw)
+                out.append({"i": i, "k": "p", "r": it.role.value, "l": it.layer, "v": sm.layout.item_group.get(i, ""), "gone": 1})
+                continue
             radius = sr.reg.radius.get(i) if sr else None
             text = sr.reg.texts.get(i) if sr else None
             turn = sr.reg.turns.get(i, 0.0) if sr else 0.0
@@ -316,7 +319,7 @@ class SheetSession:
         sr = sm.apply({k: float(v) for k, v in changes.items()}, live=live)
         if not sr.ok:
             return {"ok": False, "errors": sr.errors[:20], "failures": sr.failures[:20]}
-        return {"ok": True, **self._commit_delta(), "summary": self.summary(), "by_view": sr.by_view}
+        return {"ok": True, **self._commit_delta(), "summary": self.summary(), "by_view": sr.by_view, "warnings": sr.warnings[:8]}
 
     def original(self) -> dict:
         """The entities that now differ from the drawing as it was read, as that drawing has them (the dotted original a person can show)."""

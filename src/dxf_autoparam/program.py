@@ -409,6 +409,9 @@ class Program:
     # entities, pivot [x expr, y expr] (mm), angle (deg) | dx, dy (mm) | sx, sy (ratio), carried {annotation item: anchor}}.
     # Each moves its entities by (its value now − its value as drawn), so the drawing is reproduced exactly at the defaults.
     transforms: list[dict] = field(default_factory=list)
+    # The lines of levels only checked against (a water level): held where they are drawn and never set out from — by a plan no more than by
+    # the build, so a check value changed never moves the structure.
+    reference_only: set[str] = field(default_factory=set)
     _order: list[str] | None = None
 
     # ── evaluation ───────────────────────────────────────────────────────────────

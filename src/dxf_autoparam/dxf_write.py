@@ -185,6 +185,9 @@ def write_dxf(model, reg: Regenerated, out_path: str) -> dict:
             report["kept"] += len(items)
             continue
         if e.dxftype() != "INSERT":
+            if any(it.index in reg.absent for it in items):
+                _drop(e, report)  # a size of material at 0 took it away: not written (a value above 0 writes it again)
+                continue
             for it in items:
                 if (it.index in reg.pts or it.index in reg.texts or it.index in reg.radius) and it.role != Role.FIXED:
                     _apply(e, it, reg.pts.get(it.index, it.pts), reg, report)
@@ -241,8 +244,21 @@ def _explode(ins, prefix: str, by_src: dict[str, Item], reg: Regenerated, report
             _explode(e, sub, by_src, reg, report)
             continue
         it = by_src.get(sub)
+        if it is not None and it.index in reg.absent:
+            _drop(e, report)
+            continue
         if it is not None and (it.index in reg.pts or it.index in reg.texts or it.index in reg.radius) and it.role != Role.FIXED:
             _apply(e, it, reg.pts.get(it.index, it.pts), reg, report)
+
+
+def _drop(e, report: dict) -> None:
+    """Take an entity out of the drawing that is written (its layout keeps no reference to it)."""
+    layout = e.doc.layouts.get_layout_for_entity(e) if e.doc is not None else None
+    if layout is not None:
+        layout.delete_entity(e)
+    else:
+        e.destroy()
+    report["absent_dropped"] = report.get("absent_dropped", 0) + 1
 
 
 def audit(path: str) -> dict:

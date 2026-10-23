@@ -199,6 +199,9 @@ class Analysis:
     # The drawing's level datum: RL (mm) = y (mm) + level_offset_mm. 0 when drawn at RL×1000;
     # found from the level notes themselves, so a sheet drawn at any origin still reads its levels.
     level_offset_mm: float = 0.0
+    # In a unit of views linked by projection: the views each line is drawn in, on an axis the views do NOT share (views one over the other share
+    # their vertical lines; their horizontal lines are each its own view's). Such a line is set out within its own view only (build.py).
+    datum_views: dict[str, list[str]] = field(default_factory=dict)
     # Derived structures computed once on demand (the planar topology, …); not part of the analysis proper.
     cache: dict = field(default_factory=dict, repr=False)
 

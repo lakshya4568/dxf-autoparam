@@ -60,6 +60,9 @@ class Decisions:
     pin: dict[str, str] = field(default_factory=dict)
     # Pinned datums nothing is set out FROM (a flood level is checked against, not built on).
     reference_only: set[str] = field(default_factory=set)
+    # The two lines of each size named by its lines rather than by a candidate: named like an accepted candidate, so the set-out takes
+    # it before a sum nobody named that runs across it.
+    named_pairs: set[tuple[str, str]] = field(default_factory=set)
 
 
 def _tier(g) -> int:
@@ -120,6 +123,7 @@ def build(an: Analysis, dec: Decisions | None = None) -> Model:
     tree: list[TreeEdge] = []
     non_tree: list[str] = []
     roots: dict[str, str] = {}
+    own_roots: dict[str, list[str]] = defaultdict(list)  # a linked view's own root on an axis the views do not share (below)
     adjacency: dict[str, list[tuple[str, TreeEdge]]] = defaultdict(list)
 
     for axis in ("y", "x"):  # heights first: a slope's run reads its rise
@@ -164,16 +168,54 @@ def build(an: Analysis, dec: Decisions | None = None) -> Model:
         roots_in = sorted(datums[d].value for d in pinned_ids - dec.reference_only if d in datums and datums[d].axis == axis)
         named = set(dec.rename) | set(dec.rename.values())
 
-        def deferred(g, roots_in=roots_in, named=named) -> int:
-            """0: an ordinary size. 2: a sum across a level the structure is set out from (see above). 1: with such a level on this axis, an
-            empty space between two faces that nobody named and no dimension states — the engine's own guess at a size. What lies between a
-            structure and its levels is worked out from them ("sized from inside, then hung on the level"): a guessed open gap taken first
-            would hang a line from the far side of the structure (a kink of the road profile set out from the top of the slab, 2950 mm away),
-            where its own neighbours — 300 mm away, on the level — say where it belongs."""
-            if not roots_in:
-                return 0
+        def is_named(g, named=named) -> bool:
+            c = clusters.get(g.cluster) if g.cluster else None
+            return bool(c and c.accepted and ({c.id, c.name} & named)) or (g.a, g.b) in dec.named_pairs or (g.b, g.a) in dec.named_pairs
+
+        # The same rule for a sum of NAMED sizes: an overall height nobody named, from the bottom of a box to its top, taken before a course
+        # named inside it (a wearing course stated by a note, no dimension) hung the bottom slab from the top slab through the sum and left the
+        # course worked out — on any drawing whose road level is not an input (a side choice that lets it follow made it so). Only a sum the
+        # stated sizes inside it make up whole, named or dimensioned: one with a piece nobody stated (a footing's depth below a ground line, past
+        # the footing's named thickness) stays the drafter's own size, and the piece is what follows. Within a view.
+        ends = {e for g in ax_gaps if is_named(g) for e in (g.a, g.b)} | {e for p in dec.named_pairs for e in p if e in datums and datums[e].axis == axis}
+        named_at = sorted(datums[e].value for e in ends)
+        stated: dict[str, list[str]] = defaultdict(list)  # datum → the datums a named or dimensioned size joins it to
+        for g in ax_gaps:
+            if is_named(g) or g.dims:
+                stated[g.a].append(g.b)
+                stated[g.b].append(g.a)
+
+        def summed(g, stated=stated) -> bool:
+            """g's two ends joined by named or dimensioned sizes that lie within it (in its own view)."""
             lo, hi = sorted((datums[g.a].value, datums[g.b].value))
             t = an.drawing.tol
+            vs = set(an.datum_views.get(g.a, ())) | set(an.datum_views.get(g.b, ()))
+            seen, todo = {g.a}, [g.a]
+            while todo:
+                d = todo.pop()
+                for e in stated.get(d, ()):
+                    if e in seen or not (lo - t <= datums[e].value <= hi + t) or {d, e} == {g.a, g.b}:
+                        continue
+                    if vs and an.datum_views.get(e) and not vs & set(an.datum_views[e]):
+                        continue
+                    if e == g.b:
+                        return True
+                    seen.add(e)
+                    todo.append(e)
+            return False
+
+        def deferred(g, roots_in=roots_in, named=named, named_at=named_at, summed=summed) -> int:
+            """0: an ordinary size. 2: a sum across a level the structure is set out from, or a sum of named sizes (see above). 1: with such a
+            level on this axis, an empty space between two faces that nobody named and no dimension states — the engine's own guess at a size.
+            What lies between a structure and its levels is worked out from them ("sized from inside, then hung on the level"): a guessed open
+            gap taken first would hang a line from the far side of the structure (a kink of the road profile set out from the top of the slab,
+            2950 mm away), where its own neighbours — 300 mm away, on the level — say where it belongs."""
+            lo, hi = sorted((datums[g.a].value, datums[g.b].value))
+            t = an.drawing.tol
+            if bisect_left(named_at, hi - t) > bisect_right(named_at, lo + t) and not is_named(g) and summed(g):
+                return 2
+            if not roots_in:
+                return 0
             if bisect_left(roots_in, hi - t) > bisect_right(roots_in, lo + t):
                 return 2
             c = clusters.get(g.cluster) if g.cluster else None
@@ -189,12 +231,16 @@ def build(an: Analysis, dec: Decisions | None = None) -> Model:
         # lowest / left-most line. Which point stays put is an anchor choice, never
         # the design; a person can change it.
         pinned = [d for d in ax_datums if d.id in dec.pin]
+        # a level only checked against is held where it is drawn but is never the origin, nor a line anything hangs from: with no input level
+        # on the axis, the structure stands where it would with none (a box hung from a flood level, 4950 mm above its base, by drawn distance)
+        inputs = [d for d in pinned if d.id not in dec.reference_only]
         centred = sorted((a for a in an.axes if datums[a].axis == axis and an.sym_counts.get(a)), key=lambda a: -an.sym_counts[a])
         drawn = [a for a in centred if datums[a].source == "drawn-axis"]
         anchor = dec.anchor.get(axis) or ("axis" if an.global_axis.get(axis) or drawn else "min")
-        real = [d for d in ax_datums if not d.virtual] or ax_datums
-        if pinned:
-            root = pinned[0].id
+        real = ([d for d in ax_datums if not d.virtual and d.id not in dec.reference_only] or [d for d in ax_datums if d.id not in dec.reference_only]
+                or ax_datums)
+        if inputs:
+            root = inputs[0].id
         elif anchor == "axis" and (an.global_axis.get(axis) or drawn):
             root = an.global_axis.get(axis) or drawn[0]
         elif anchor == "max":
@@ -232,15 +278,33 @@ def build(an: Analysis, dec: Decisions | None = None) -> Model:
                 non_tree.append(g.id)
 
         # What no gap reached hangs from a datum of the SAME entity if one is set out
-        # (an isolated sloped line keeps its run), else from the nearest set-out datum.
-        settled = sorted((d for d in ax_datums if uf.find(d.id) == uf.find(ROOT)), key=lambda d: d.value)
+        # (an isolated sloped line keeps its run), else from the nearest set-out datum — of its own view, in a unit of linked views on an axis
+        # they do not share: where one view's lines sit on the sheet is layout, never a size of the other's structure (a plan's width hung on the
+        # elevation's road level, 23 m away, made the width "pinned by a site level"). A view nothing of which reaches the root stands on its own,
+        # from its own drawn centre line (else its first line), where it is drawn.
+        settled = sorted((d for d in ax_datums if uf.find(d.id) == uf.find(ROOT) and d.id not in dec.reference_only), key=lambda d: d.value)
         vals = [d.value for d in settled]
+        views = an.datum_views
         for d in ax_datums:
             if uf.find(d.id) == uf.find(ROOT):
                 continue
             same = [s for s in settled if s.items & d.items and uf.find(s.id) == uf.find(ROOT)]
             if same:
                 p = min(same, key=lambda s: abs(s.value - d.value))
+            elif views.get(d.id):
+                mine = set(views[d.id])
+                pool = [s for s in settled if mine & set(views.get(s.id, ()))]
+                if not pool:
+                    comp = [x for x in ax_datums if uf.find(x.id) == uf.find(d.id)]
+                    r = next((x for x in comp if x.source == "drawn-axis"), min(comp, key=lambda x: x.value))
+                    uf.union(r.id, ROOT)
+                    own_roots[axis].append(r.id)
+                    for x in comp:
+                        i = bisect_left(vals, x.value)
+                        vals.insert(i, x.value)
+                        settled.insert(i, x)
+                    continue
+                p = min(pool, key=lambda s: abs(s.value - d.value))
             else:
                 i = bisect_left(vals, d.value)
                 cands = [settled[j] for j in (i - 1, i) if 0 <= j < len(settled)]
@@ -324,7 +388,9 @@ def build(an: Analysis, dec: Decisions | None = None) -> Model:
     for axis, root in roots.items():
         if root not in forms:
             forms[root] = LinearForm(datums[root].value)
-        starts = [root] + [d for d in dec.pin if d in datums and datums[d].axis == axis and d != root]
+        for r in own_roots[axis]:
+            forms.setdefault(r, LinearForm(datums[r].value))
+        starts = [root] + [d for d in dec.pin if d in datums and datums[d].axis == axis and d != root] + own_roots[axis]
         q = deque(starts)
         while q:
             p = q.popleft()

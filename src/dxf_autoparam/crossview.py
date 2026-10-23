@@ -34,6 +34,7 @@ from typing import Any, cast
 from . import design_intent, generic
 from .analyse import analyse
 from .cadjson import entity_id
+from .connections import torn
 from .display import primitives
 from .dxf_read import read_dxf
 from .dxf_write import audit, write_dxf
@@ -199,6 +200,7 @@ class SheetRegen:
     measured: dict[str, dict[str, float]]  # shared name → unit → the size its lines measure
     # each error tagged with the check it comes from (and what it is about); SheetModel.explain adds the kind of refusal and its evidence
     failures: list[dict] = field(default_factory=list)
+    absent: list[int] = field(default_factory=list)  # sheet entities not drawn at these values (a size of material at 0 took them away)
 
     @property
     def ok(self) -> bool:
@@ -382,6 +384,7 @@ class SheetModel:
         an = u.an
         view_of = {k: self.layout.item_group.get(s) for k, s in enumerate(u.back)}
         views_of = {d.id: {view_of.get(i) for i in d.items} - {None} for d in an.datums.values()}
+        an.datum_views = {d: sorted(v) for d, v in views_of.items() if v and an.datums[d].axis in cross}
         drop = [gid for gid, g in an.gaps.items()
                 if g.axis in cross and views_of.get(g.a) and views_of.get(g.b) and not (views_of[g.a] & views_of[g.b])]
         for gid in drop:
@@ -457,6 +460,7 @@ class SheetModel:
         by_view: dict[str, int] = {}
         measured: dict[str, dict[str, float]] = {}
         regenerated: dict[str, tuple] = {}
+        absent: set[int] = set()
         for uid in sorted(todo):
             u = self.unit(uid)
             assert u.prog is not None
@@ -469,6 +473,25 @@ class SheetModel:
             for i in r.issues:
                 fail("SOLVER" if i.startswith("transform ") else "POSITIVE" if " must stay positive " in i else "GEOMETRY", uid, f"{uid}: {i}", issue=i)
             regenerated[uid] = (u, vals, r.datum)
+            zeros = sorted(n for n, v in vals.items() if v == 0 and n in u.prog.params and u.prog.params[n].kind != "level") if not r.issues else []
+            if zeros:  # a size at 0: what collapses to nothing is not drawn — said, and drawn again when the size is above 0
+                from .coverage import _entity_parts
+
+                absent |= {u.back[k] for k in r.absent}
+                owner = _entity_parts(u.prog)
+                gone = sorted({q for k in r.absent for q in owner.get(k, ())})
+                at = ", ".join(f"{n} = 0" for n in zeros)
+                struct = [k for k in r.absent if u.sub.items[k].role == Role.STRUCTURAL]
+                kinds: dict[str, int] = {}
+                for k in r.absent:
+                    if k not in struct:
+                        t = u.sub.items[k].dxftype.lower()
+                        kinds[t] = kinds.get(t, 0) + 1
+                rest = ", ".join(f"{v} {t}{'s' if v > 1 else ''}" for t, v in sorted(kinds.items()))
+                said = (f"{', '.join(gone[:4])} {'is' if len(gone) == 1 else 'are'} not drawn" if gone else
+                        f"{len(struct)} outlines no part owns are not drawn" if struct else "nothing of the structure is taken away: the faces it separated now meet")
+                warnings.append(f"{uid}: at {at}, {said}" + (f"; not drawn either: {rest}" if rest else "")
+                                + ("; a value above 0 draws them again" if r.absent else ""))
             plans = [p for p in (u.answer or {}).get("plans", []) if p.get("status") == "accepted"]
             if plans:  # what a person accepted for this unit holds at the values asked for, not only at the ones tested
                 for e in plan_errors_at(u.prog, plans, vals):
@@ -478,9 +501,24 @@ class SheetModel:
                     # must not make the unit stricter than it was — a size that crosses members was said, when the intent was derived, and is still allowed
                     moved_k = {k for k, p in r.pts.items() if any(abs(a[0] - b[0]) > 1e-9 or abs(a[1] - b[1]) > 1e-9
                                                                   for a, b in zip(p, u.sub.items[k].pts, strict=False))}
-                    for i, j in clashes(u.prog, r.pts, moved_k)[:5]:
-                        fail("CLASH", uid, f"{uid}: {entity_id(u.sub.items[i])} now crosses {entity_id(u.sub.items[j])} — members run into each other",
-                             pair=[i, j])
+                    found = clashes(u.prog, r.pts, moved_k)[:5]
+                    if found:
+                        from .coverage import _entity_parts
+
+                        owner = _entity_parts(u.prog)
+                    for i, j in found:
+                        text = f"{uid}: {entity_id(u.sub.items[i])} now crosses {entity_id(u.sub.items[j])}"
+                        if owner.get(i) and owner.get(j):
+                            fail("CLASH", uid, text + " — members run into each other", pair=[i, j])
+                        else:  # an entity no part owns: a detail that should follow, or something not to reach — the engine cannot tell; said
+                            warnings.append(text + f" — {entity_id(u.sub.items[j] if not owner.get(j) else u.sub.items[i])} belongs to no part: if it "
+                                            "should follow, say which part it is")
+            if (u.prog.intent.get("parts") or {}) and any(abs(vals.get(n, p.value) - p.value) > 1e-12 for n, p in u.prog.params.items()):
+                # parts met along a line they share stay met as it moves; entities that touched as drawn without one can come apart: said
+                for t in torn(u.prog, r.pts, limit=4):
+                    i, j = t["entities"]
+                    who = [f"{entity_id(u.sub.items[k])} ({', '.join(ps) if ps else 'no part'})" for k, ps in zip((i, j), t["parts"], strict=True)]
+                    warnings.append(f"{uid}: {who[0]} no longer touches {who[1]}: the change pulled them apart — look at the corner")
             for k, p in r.pts.items():
                 s = u.back[k]
                 pts[s] = p
@@ -529,8 +567,9 @@ class SheetModel:
         for e in self._domain_errors(regenerated):
             fail("RULE", e.split(": ", 1)[0], e)
         warnings += self._overlaps(changed, pts)
-        reg = Regenerated(values=dict(changes), datum={}, pts=pts, radius=radius, texts=texts, issues=list(errors), turns=turns)
-        return SheetRegen(reg=reg, changed=sorted(changed), by_view=by_view, errors=errors, warnings=warnings, measured=measured, failures=failures)
+        reg = Regenerated(values=dict(changes), datum={}, pts=pts, radius=radius, texts=texts, issues=list(errors), turns=turns, absent=absent)
+        return SheetRegen(reg=reg, changed=sorted(changed), by_view=by_view, errors=errors, warnings=warnings, measured=measured, failures=failures,
+                          absent=sorted(absent))
 
     def _overlaps(self, changed: list[int], pts: dict[int, list]) -> list[str]:
         """Words a change pushed onto other words of the same view (they did not overlap as drawn): said, for a person
@@ -964,17 +1003,28 @@ class SheetModel:
                 self.commit_answer(uid, ans)
                 u = self.unit(uid)
                 assert u.prog is not None
-            prog0, ans0 = self._plain(uid)
-            plan = build_plan(prog0, ans0, {"id": f"A_{local}", "driver": {"parameter": local, "pairs": pairs},
-                                            "anchor": {"policy": policy, "source": "person"}}, sheet=self._plan_sheet(uid))
-            # this is a choice about one value: questions about attached parts are answered by what the set-out does now
-            if plan["status"] == "needs_decision" and all(q["about"].startswith("attached:") for q in plan["questions"]):
-                decisions = {q["about"]: "follow" for q in plan["questions"]}
-                plan = build_plan(prog0, ans0, {"id": f"A_{local}", "driver": {"parameter": local, "pairs": pairs},
-                                                "anchor": {"policy": policy, "source": "person"}, "decisions": decisions}, sheet=self._plan_sheet(uid))
+            # A person's side outranks a site level in its way: the level FOLLOWS the structure (its line moves with the side that moves, its RL
+            # note says the new level) and the result says so — the person's choice is not refused for it. What still refuses is what cannot
+            # give: members that would run into each other, a part kept as drawn, existing work, a level only checked against.
+            freed: list[str] = self._free_levels_on_side(uid, pairs, policy)
+            for _round in range(4):
+                prog0, ans0 = self._plain(uid)
+                plan = self._person_plan(prog0, ans0, uid, local, pairs, policy)
+                if plan["status"] == "ready":
+                    break
+                levels = [n for n in self._levels_in_way(prog0, plan, policy) if n not in freed]
+                ans_l = design_intent.strip(copy.deepcopy(self.unit(uid).answer or EMPTY_ANSWER))
+                kept = self._held_only_lines(self.unit(uid))
+                hit = [lv for lv in ans_l.get("levels", []) if lv.get("name") in levels and lv.get("role") == "site_input" and lv.get("datum") not in kept]
+                if not hit:
+                    break
+                for lv in hit:
+                    lv["role"] = "derived"
+                freed += [lv["name"] for lv in hit]
+                self.commit_answer(uid, ans_l, discard_values=True, intent=False)  # a step on the way: the choice derives the intent at the end
             if plan["status"] != "ready":
                 raise SheetError(f"{name} cannot grow from its {mode} in {uid}: " + "; ".join(plan["conflicts"][:2] + [q["text"] for q in plan["questions"]][:1]))
-            self.commit_answer(uid, with_plan(ans0, accept(plan)))
+            self.commit_answer(uid, with_plan(ans0, accept(plan)), discard_values=bool(freed))
         except SheetError:
             self._restore(before)
             del self.history[depth:]
@@ -983,7 +1033,93 @@ class SheetModel:
             raise
         del self.history[depth + 1:]  # the steps on the way are one step: one undo goes back to before the choice
         g = next(x for x in self.growth(name) if x["unit"] == uid)
-        return {**g, "plan": plan["id"], "anchor_line": (plan.get("anchor") or {}).get("line")}
+        return {**g, "plan": plan["id"], "anchor_line": (plan.get("anchor") or {}).get("line"),
+                **({"levels_follow": self._followers(uid, local, freed, before)} if freed else {})}
+
+    def _free_levels_on_side(self, uid: str, pairs, policy: str) -> list[str]:
+        """The site levels on the side a person's choice moves — beyond the size, on its axis, in the views its lines are drawn in — made to
+        follow the structure (written, one step of the choice). The chosen side moves everything on it, the levels it carries included; what lies
+        between them is never shrunk to keep a level still (it used to: a +500 mm clear height then inverted a 50 mm gap under the formation)."""
+        u = self.unit(uid)
+        assert u.prog is not None and u.an is not None
+        an, prog = u.an, u.prog
+        lines = [x for pr in pairs for x in pr if x in an.datums]
+        if not lines:
+            return []
+        axis = an.datums[lines[0]].axis
+        v = prog.datum_values({**prog.defaults(), **self._values_for(u, {})})
+        lo, hi = min(v[x] for x in lines), max(v[x] for x in lines)
+        mine = {w for x in lines for w in an.datum_views.get(x, ())}
+        ans = design_intent.strip(copy.deepcopy(u.answer or EMPTY_ANSWER))  # the engine's own plans were derived for the levels as they were
+        kept = self._held_only_lines(u)
+        hit = []
+        for lv in ans.get("levels", []):
+            d = lv.get("datum")
+            if lv.get("role") != "site_input" or d not in an.datums or an.datums[d].axis != axis or d not in v or d in kept:
+                continue
+            if mine and an.datum_views.get(d) and not (mine & set(an.datum_views[d])):
+                continue  # a level of another view on this axis: its own drawing
+            beyond = (v[d] > hi if policy == "start_fixed" else v[d] < lo if policy == "end_fixed" else v[d] > hi or v[d] < lo)
+            if beyond:
+                lv["role"] = "derived"
+                hit.append(lv["name"])
+        if hit:
+            self.commit_answer(uid, ans, discard_values=True, intent=False)  # a step on the way: the choice derives the intent at the end
+        return hit
+
+    @staticmethod
+    def _held_only_lines(u: Unit) -> set[str]:
+        """The lines only parts kept as drawn are set out on: a level there is held by its part whatever its role — setting it free would move
+        nothing and lose the input (a formation on top of a cushion kept as drawn)."""
+        comps = u.prog.components if u.prog is not None else []
+        held = {d for c in comps if c.held for d in c.datums}
+        return held - {d for c in comps if not c.held for d in c.datums}
+
+    def _person_plan(self, prog0, ans0, uid: str, local: str, pairs, policy: str) -> dict:
+        """The plan for a person's side: questions about attached parts are answered by what the set-out does now (a choice about one value)."""
+        req = {"id": f"A_{local}", "driver": {"parameter": local, "pairs": pairs}, "anchor": {"policy": policy, "source": "person"}}
+        plan = build_plan(prog0, ans0, req, sheet=self._plan_sheet(uid))
+        if plan["status"] == "needs_decision" and all(q["about"].startswith("attached:") for q in plan["questions"]):
+            plan = build_plan(prog0, ans0, {**req, "decisions": {q["about"]: "follow" for q in plan["questions"]}}, sheet=self._plan_sheet(uid))
+        return plan
+
+    @staticmethod
+    def _levels_in_way(prog, plan: dict, policy: str) -> list[str]:
+        """The site levels whose lines this side would have to move — the plan's own record of what blocked it."""
+        from .assembly import level_of
+
+        out: list[str] = []
+        for alt in (plan.get("anchor") or {}).get("alternatives", []):
+            if alt.get("policy") != policy:
+                continue
+            for b in alt.get("blocked") or []:
+                lv = level_of(prog, b["line"]) if b.get("kind") == "level" and b.get("line") in prog.formulas else None
+                if lv and lv not in out:
+                    out.append(lv)
+        return out
+
+    def _followers(self, uid: str, local: str, freed: list[str], before: dict) -> list[dict]:
+        """For each level a side choice set free: its line, how far it moves per mm of the value, and the level it stood at — said to the person."""
+        u = self.unit(uid)
+        assert u.prog is not None
+        um = u.sub.units_mm
+        lines = {lv.get("name"): lv.get("datum") for lv in (u.answer or {}).get("levels", [])}
+        was = {lv.get("name"): lv.get("role") for lv in (before["answers"].get(uid) or {}).get("levels", [])}
+        vals = {**u.prog.defaults(), **self._values_for(u, {})}
+        v0 = u.prog.datum_values(vals)
+        v1 = u.prog.datum_values({**vals, local: vals[local] + 1.0}) if local in vals else v0
+        out = []
+        for name in freed:
+            d = lines.get(name)
+            if d not in v0:
+                continue
+            rate = (v1[d] - v0[d]) * um
+            rl = (v0[d] * um + u.an.level_offset_mm) / 1000.0 if u.an is not None else None
+            out.append({"level": name, "line": d, "was": was.get(name, "site_input"), "now": "follows the structure", "mm_per_mm": round(rate, 4),
+                        **({"rl_m": round(rl, 3)} if rl is not None else {}),
+                        "says": f"{name} was a site input; it now follows the structure: {rate:+g} mm per mm of {local} (RL {rl:.3f} m now)"
+                        if rl is not None else f"{name} now follows the structure: {rate:+g} mm per mm of {local}"})
+        return out
 
     # ── an axis the design intent could not decide (design_intent.py): the ways to settle it, each tried for real ────────────────────
 
