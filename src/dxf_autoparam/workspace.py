@@ -44,7 +44,7 @@ The agent — ONE instruction, one session (ai/run.py):
     GET  /api/sheet/ai/usage?period=today|all              tokens and cost per model, from the usage ledger
     GET  /api/sheet/ai/library                             the engineering libraries, and the one this sheet's printed words match
     GET  /api/sheet/ai/models                              the models the picker offers (and the default)
-    POST /api/sheet/ai/run {instruction, scope, options}   start a run (options.model: one of those models)
+    POST /api/sheet/ai/run {instruction, scope, options, parent}   start a run (options.model: one of those models; scope {kind: follow}: the parent run's)
     GET  /api/sheet/ai/progress?run=R1&since=n             its events, state, budget, questions, verdict
     POST /api/sheet/ai/continue {run, answers, note}       after it asked, or after a budget pause
     POST /api/sheet/ai/note {run, note}                    something said while it works: read at its next turn (no stop)
@@ -484,7 +484,11 @@ class SheetSession:
             if r.status in RESUMABLE:
                 r.close("superseded by a newer run")
         self.get_pictures()
-        run = Run(self, f"R{self.run_n + 1}", body.get("instruction", ""), body.get("scope"), body.get("options"), parent=body.get("parent"))
+        scope = body.get("scope")
+        if (scope or {}).get("kind") == "follow":  # a follow-up keeps where the conversation applies ("please continue" after a whole-drawing run is the drawing)
+            parent = self.runs.get(body.get("parent") or "")
+            scope = parent.requested_scope if parent is not None else {"kind": "drawing"}
+        run = Run(self, f"R{self.run_n + 1}", body.get("instruction", ""), scope, body.get("options"), parent=body.get("parent"))
         self.run_n += 1  # an id is used up only by a run that exists
         self.runs[run.id] = run
         self.current_run = run.id

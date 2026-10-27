@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 
 STAGE_OF = {
-    "inspect_sheet": "inspecting", "open_unit": "inspecting", "inspect_regions": "inspecting", "inspect_lines": "inspecting",
+    "inspect_sheet": "inspecting", "more_tools": "inspecting", "open_unit": "inspecting", "inspect_regions": "inspecting", "inspect_lines": "inspecting",
     "inspect_candidates": "inspecting", "inspect_dimensions": "inspecting", "resolve_labels": "inspecting", "find_values": "inspecting",
     "coverage": "measuring", "keep_dimensions": "binding values", "check_relation": "measuring",
     "knowledge": "inspecting", "what_moves": "measuring", "inspect_assembly": "measuring", "zoom_view": "looking",
@@ -36,7 +36,7 @@ PHASE_OF = {"interpreting": "planning", "planning": "planning", "stating the pla
             "linking the views": "applying", "committing": "applying", "validating": "validating", "asking": "asking"}
 
 WORDS = {
-    "inspect_sheet": "looked at the sheet", "open_unit": "opened a view", "inspect_regions": "inspected regions", "inspect_lines": "inspected lines",
+    "inspect_sheet": "looked at the sheet", "more_tools": "opened more tools", "open_unit": "opened a view", "inspect_regions": "inspected regions", "inspect_lines": "inspected lines",
     "inspect_candidates": "inspected candidate sizes", "inspect_dimensions": "inspected dimensions", "resolve_labels": "resolved labels",
     "coverage": "measured which dimensions a named value drives", "keep_dimensions": "kept dimensions as drawn", "check_relation": "checked a relation on the drawing",
     "find_values": "searched for sizes", "knowledge": "consulted the knowledge pack", "what_moves": "measured what a value moves",
@@ -56,7 +56,7 @@ WORDS = {
 
 # What each tool is doing while it runs, in the present tense (WORDS above is the past tense, for a finished call).
 DOING = {
-    "inspect_sheet": "Reading the sheet's views and units", "open_unit": "Opening a view's unit", "inspect_regions": "Inspecting regions",
+    "inspect_sheet": "Reading the sheet's views and units", "more_tools": "Opening more tools", "open_unit": "Opening a view's unit", "inspect_regions": "Inspecting regions",
     "inspect_lines": "Inspecting set-out lines", "inspect_candidates": "Inspecting candidate sizes", "inspect_dimensions": "Reading the dimensions",
     "coverage": "Checking which dimensions a named value drives", "keep_dimensions": "Keeping dimensions as drawn", "check_relation": "Checking a relation on the drawing",
     "resolve_labels": "Resolving labels to geometry", "find_values": "Searching for sizes", "knowledge": "Consulting the knowledge pack",

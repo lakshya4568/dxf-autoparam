@@ -42,6 +42,7 @@ from . import domain, library, production
 from . import understanding_tools as UT
 from .context import SheetScope
 from .coverage import sentence, table_md, unit_rows
+from .geometry import Frame
 from .loop import AgentLoop, Budget
 from .narrate import STAGE_OF, phase_of
 from .sheet_ai import apply_shared, apply_views, commit_unit
@@ -79,6 +80,18 @@ N = {"type": "number"}
 LIST = {"type": "array", "items": {"type": "string"}}
 WHY = A.WHY
 
+# Tools no run of the seven recorded ever called (2026-10-16 … 10-26): not declared until the agent opens their group with more_tools — every call
+# re-sends every declaration, and a choice the model never makes is one it still has to read past.
+TOOL_GROUPS: dict[str, tuple[frozenset[str], str]] = {
+    "sheet_checks": (frozenset({"compare_views", "calculate", "find_duplicates", "inspect_layers"}),
+                     "compare what several views state, arithmetic over the named values, repeated details, the layers"),
+    "records": (frozenset({"record_learned", "accept_semantics"}), "facts on record, existing / proposed status by layer or colour"),
+    "plan_checks": (frozenset({"impact_plan"}), "what a planned change would reach, before it is made"),
+    "transforms": (frozenset({"define_transforms"}), "a part rotated, moved or scaled about a pivot by a formula"),
+    "knowledge": (frozenset({"knowledge"}), "the domain pack's concepts, families and formulas"),
+}
+
+
 SHEET_TOOL_SPECS = [
     ("inspect_sheet", ("The sheet: its views (id, kind, type, name, the unit each belongs to), units (views drawn in projection are one unit), what is "
                        "parametrized and in which state, projection links, shared values, the values a person has changed, and how far the work is. "
@@ -92,15 +105,19 @@ SHEET_TOOL_SPECS = [
      {"type": "object", "properties": {"unit": S, "view": S, "why": WHY}, "required": []}),
     ("zoom_view", ("Look at the drawing: a picture of the open unit, a view, any other group of the sheet (a table, notes — give its id as `view`), "
                    "the whole sheet, or a crop. `around`: entity / region / line / part / "
-                   "candidate ids to frame; or `box_mm`: [x0, y0, x1, y1] in the same mm as the overview's lines. `labels`: entities (every entity tagged "
+                   "candidate ids to frame; or `box_local`: [x0, y0, x1, y1] in the overview's frame (mm across, mm up); or `box_mm`: the sheet's mm, "
+                   "as the tiles and zoom_next give them. `labels`: entities (every entity tagged "
                    "with the id the tools use — default for a crop), lines (set-out lines x… y…), regions (R…) or none. `state`: drawn (what ids and "
                    "numbers describe — default) or current (with the person's values applied; `baseline`: the imported geometry dotted where it moved). "
                    "The picture is drawn at the size its own text needs: the result says text_px, and text under about 9 px is a blur — go closer. "
                    "Coordinates read off a picture are approximate; the result lists the exact position of each tagged entity."),
-     {"type": "object", "properties": {"view": S, "unit": S, "sheet": B, "around": LIST, "box_mm": {"type": "array", "items": N},
+     {"type": "object", "properties": {"view": S, "unit": S, "sheet": B, "around": LIST, "box_mm": {"type": "array", "items": N}, "box_local": {"type": "array", "items": N},
                                        "margin": N, "labels": {"type": "string", "enum": ["entities", "lines", "regions", "none"]},
                                        "state": {"type": "string", "enum": ["drawn", "current"]}, "baseline": B, "highlight": LIST, "width": N, "why": WHY},
       "required": []}),
+    ("more_tools", ("Open groups of tools offered only on request (they are declared from your next turn on): "
+                    + "; ".join(f"{g} — {w}" for g, (_n, w) in TOOL_GROUPS.items()) + "."),
+     {"type": "object", "properties": {"groups": {"type": "array", "items": {"type": "string", "enum": list(TOOL_GROUPS)}}, "why": WHY}, "required": ["groups"]}),
     ("describe_views", ("Name, type and relate the sheet's views — what the views are, which show the same structure, which are details of another — "
                         "from what you see. The engine accepts what the geometry allows (a projection only where views really share set-out lines) "
                         "and says what it refused. Each change is undoable."),
@@ -135,7 +152,8 @@ SHEET_TOOL_SPECS = [
          "assumptions": {"type": "array", "items": {"type": "object", "properties": {"text": S, "about": S, "why": S}, "required": ["text"]}},
          "why": WHY}, "required": []}),
 ]
-SHEET_READ = {"inspect_sheet", "open_unit", "zoom_view"}
+SHEET_READ = {"inspect_sheet", "open_unit", "zoom_view", "more_tools"}
+
 SHEET_WRITE = {"describe_views", "share_sizes", "state_plan"}
 
 # Which tools say how hard the NEXT turn has to think (loop.adaptive_thinking): a turn that follows reading and bookkeeping is mechanical; one that follows
@@ -167,7 +185,8 @@ plainly, with where you read it (view, note, number) — and parametrize nothing
   • UNDERSTAND THE VIEWS (describe_views) when they are unnamed, mistyped or unrelated and the task needs it. Not otherwise.
   • LOOK ACROSS THE VIEWS before you say that two views show the same thing: search_drawing finds where words and numbers are stated on the
     whole sheet; compare_views lists what several views state alike (a size, a level, the same words), what they state differently, and which
-    stated sizes are the difference of two stated levels; calculate does arithmetic over the drawing's named values and levels. Equal numbers
+    stated sizes are the difference of two stated levels; calculate does arithmetic over the drawing's named values and levels (these two, and
+    a few more, come with more_tools: a group of tools is declared once you open it). Equal numbers
     alone are not one size — read the pictures — and two views that state different numbers for the same words are a finding to report, not
     something to link.
   • PARAMETRIZE: open_unit(unit or view) opens the unit the edit tools work on (define_parts, define_parameters, set_levels, set_formulas,
@@ -210,11 +229,12 @@ UNIFIED_SYSTEM = SESSION + A.AGENT_SYSTEM.replace("Aim to finish in about 10 tur
                                                  "Every status tells you how many turns are left; a long task is not cut short.")
 
 
-def unified_tools(pack: dict | None = None):
+def unified_tools(pack: dict | None = None, groups: set[str] | frozenset[str] = frozenset()):
     """The session's tools: the unit tools, the sheet tools, the understanding tools (the whole drawing, views, components, annotations,
-    layers, duplicates, impact and behaviour checks, the agent's checklist and facts on record); the production rule engines' tools only
-    when the pack on declares production knowledge."""
-    return A.tools(extra=SHEET_TOOL_SPECS + UT.UNDERSTANDING_TOOL_SPECS + production.tool_specs(pack), pack=pack)
+    behaviour checks, the agent's checklist); the production rule engines' tools only when the pack on declares production knowledge. A group
+    of TOOL_GROUPS is declared once the agent opens it (`groups`)."""
+    hide = frozenset().union(*(names for g, (names, _w) in TOOL_GROUPS.items() if g not in groups))
+    return A.tools(extra=SHEET_TOOL_SPECS + UT.UNDERSTANDING_TOOL_SPECS + production.tool_specs(pack), pack=pack, hide=hide)
 
 
 def unified_system(pack: dict | None = None) -> str:
@@ -757,11 +777,25 @@ class SheetBench:
                 **({"engineering_library": self.lib_session.hint()} if self.lib_session is not None else {}),
             }
 
+    def more_tools(self, groups: list | None = None) -> dict:
+        """Declare the tools of the groups asked for (TOOL_GROUPS) from the next turn on; said with what each opened tool does."""
+        asked = [g for g in (groups or []) if g in TOOL_GROUPS]
+        unknown = [g for g in (groups or []) if g not in TOOL_GROUPS]
+        self.run.tool_groups |= set(asked)
+        if self.run.loop is not None:
+            self.run.loop.tools = unified_tools(self.run.pack, self.run.tool_groups)
+        specs = {n: d for n, d, _p in [*A.TOOL_SPECS, *SHEET_TOOL_SPECS, *UT.UNDERSTANDING_TOOL_SPECS]}
+        opened = {n: specs.get(n, "")[:160] for g in asked for n in sorted(TOOL_GROUPS[g][0])}
+        return {"opened": asked, "tools": opened, **({"unknown": unknown, "groups": list(TOOL_GROUPS)} if unknown else {}),
+                "note": "declared from your next turn on"}
+
     def open_unit(self, unit: str | None = None, view: str | None = None) -> dict:
         sm = self.sm
-        uid = unit or (sm.unit_of_view.get(view) if view else None)
-        if uid is None or uid not in sm.units:
-            raise KeyError(f"no such unit or view: {unit or view!r} (inspect_sheet lists them)")
+        try:
+            uid = sm.resolve_unit(unit or view or "")  # an id from before views were joined names the unit that holds them now
+        except SheetError as exc:
+            raise KeyError(f"no such unit or view: {unit or view!r} (inspect_sheet lists them)") from exc
+        self._reconcile_units()
         prev = None
         if self.active is not None and self.active != uid:
             prev = self.commit(self.active)
@@ -847,12 +881,12 @@ class SheetBench:
 
     def zoom_view(self, view: str | None = None, unit: str | None = None, sheet: bool = False, around: list | None = None, box_mm: list | None = None,
                   margin: float = 0.18, labels: str | None = None, state: str = "drawn", baseline: bool = False, highlight: list | None = None,
-                  width: float | None = None) -> dict:
+                  width: float | None = None, box_local: list | None = None) -> dict:
         sm = self.sm
         around = list(around or [])
         if view and view not in sm.unit_of_view and not unit and any(g.id == view for g in sm.layout.groups):
             return self._zoom_group(view, margin, int(width or 1400))  # a table, a note, a label — any group of the sheet, as it is drawn
-        uid = unit or (sm.unit_of_view.get(view) if view else None) or (self.active if not sheet else None)
+        uid = sm.resolve_unit(unit) if unit else (sm.unit_of_view.get(view) if view else None) or (self.active if not sheet else None)
         with self._lock():
             if sheet or uid is None:
                 box = box_around([sm.layout.frame or sm.dr.extent])
@@ -866,7 +900,13 @@ class SheetBench:
             wb = self.units.get(uid)
             um = u.sub.units_mm
             view_box = box_around([sm.layout.group(v).bbox for v in u.views], 0.0)
-            if box_mm:
+            if box_local:  # the overview's own numbers: mm across from the view's centre line (or left face), mm up from its lowest line
+                if len(box_local) != 4:
+                    raise ValueError("box_local is [x0, y0, x1, y1] in the overview's frame (mm across, mm up)")
+                fr = Frame(u.an)
+                (x0, y0), (x1, y1) = fr.to_sheet(float(box_local[0]), float(box_local[1])), fr.to_sheet(float(box_local[2]), float(box_local[3]))
+                box = (min(x0, x1), min(y0, y1), max(x0, x1), max(y0, y1))
+            elif box_mm:
                 if len(box_mm) != 4:
                     raise ValueError("box_mm is [x0, y0, x1, y1]")
                 x0, y0, x1, y1 = (float(v) / um for v in box_mm)
@@ -875,7 +915,7 @@ class SheetBench:
                 box = self._frame(u, wb, around, margin, view_box)
             else:
                 box = box_around([view_box], 0.04)
-            focus = bool(around or box_mm)
+            focus = bool(around or box_mm or box_local)
             labels = labels or ("entities" if focus else "lines")
             hl = self._highlight_items(u, highlight or [])
             pic = self.pictures.picture(box=box, unit=uid, state="current" if state == "current" else "drawn", ids="none" if labels == "none" else labels,
@@ -974,19 +1014,43 @@ class SheetBench:
         if answer["merges"] and any(self.dirty(u) for u in self.units):
             self.sheet_results[item] = {"ok": False, "rejected": ["merging views changes the units the open edits belong to: apply or finish them first (open_unit another unit commits)"]}
             return item, ""
+        # views said to be drawn in projection join their units: what was open on one of them belongs to a unit that is gone (a joined unit is
+        # parametrized again, as the sheet says) — the join goes ahead, and what was lost is said, so it is redone on the joined unit
+        pending = {u: [k for k in ("structure_type", "components", "parameters", "levels") if self.units[u].answer.get(k)] for u in self.units if self.dirty(u)}
         with self._lock():
             res = apply_views(self.sm, answer)
             self.sync_revision()
             self.run.emit({"kind": "applied", "unit": None, "revision": self.sm.revision, "views": len(res["applied"])})
-            if answer["merges"] and res["applied"]:
-                self.units.clear()
-                self.committed.clear()
-                self.active = None
+            joined = self._reconcile_units()
         self.described += len(res["applied"])
         self.looked |= {v.get("id") for v in answer["views"] if v.get("id")}
         self._record_sheet("describe_views", res)
-        self.sheet_results[item] = self._sheet_verdict(res, {"note_merged": "views were merged: open a unit again (open_unit)"} if answer["merges"] and res["applied"] else None)
+        note = {"units_joined": [f"{old} is now part of {new}" + (f" — what you had open on {old} ({', '.join(pending[old]) or 'nothing'}) is not on {new}: redo it there"
+                                                                  if pending.get(old) is not None else "") for old, new in joined],
+                "next": "the joined unit is the open one now: open_unit it for its overview and pictures"} if joined else None
+        self.sheet_results[item] = self._sheet_verdict(res, note)
         return item, f"{len(res['applied'])} applied, {len(res['refused'])} refused"
+
+    def _reconcile_units(self) -> list[tuple[str, str]]:
+        """After the sheet re-groups its units (views joined), the bench keeps no workbench of a unit that is gone, and each gone id is said with
+        the unit that holds its views now — never a later "no unit U01" on an id the agent was given. The unit that was open is the joined one now:
+        it is opened, so the agent's next read is of what it was working on."""
+        joined, reopen = [], None
+        for uid in [u for u in self.units if u not in self.sm.units]:
+            del self.units[uid]
+            self.committed.pop(uid, None)
+            try:
+                joined.append((uid, self.sm.resolve_unit(uid)))
+            except SheetError:
+                joined.append((uid, "no unit (its views were taken apart)"))
+            if self.active == uid:
+                self.active = None
+                reopen = joined[-1][1] if joined[-1][1] in self.sm.units else None
+        if self.active is not None and self.active not in self.sm.units:
+            self.active = None
+        if reopen is not None:
+            self.open(reopen)
+        return joined
 
     def _share_sizes(self, a: dict) -> tuple[str, str]:
         item = "share"
@@ -1180,7 +1244,7 @@ class SheetBench:
         """Which units of the run's scope the sheet really holds work for (coverage.py), and whether that is asked of this run: a run over the whole
         drawing that asks for it to be made parametric and is not carrying out a change. A change asked of one value is not a promise to parametrize
         every unit, and neither is a question about the drawing."""
-        scope_units = list(self.run.scope.get("units") or [])
+        scope_units = self.run.scope_units()
         rows = unit_rows(self.sm, scope_units, {uid: w.answer for uid, w in self.units.items()}, UT.notes_of(self.sm)["checklist"], self.open_refusals())
         change_asked = any(i.get("kind") in ("change_value", "keep") and i.get("handled_by") == "plan" for i in self.ledger)
         return rows, self.run.scope.get("kind") == "drawing" and len(scope_units) > 1 and not change_asked and self.parametrizing()
@@ -1205,6 +1269,9 @@ class SheetBench:
         out += self.label_doubts()
         if self.parametrizing():
             out += self.dimension_gaps()
+            # one name for two sizes (an existing box's 600 mm slab and the proposed one's 500 mm, both "TopSlabThickness"): the person reading the values
+            # cannot tell them apart, and a later link would join two structures — asked once before finish, the way a gap in the coverage is
+            out += [f"{n} — rename one of them (rename_values), e.g. after the structure it belongs to" for n in self.repeat_notes() if n.startswith("one name")]
         rows, asked = self.coverage()  # last: what the model can still repair comes first, and the units nobody covered are said in full after it
         if asked and any(not r["covered"] for r in rows):
             todo = [r for r in rows if not r["covered"]]
@@ -1456,6 +1523,8 @@ class Run:
             raise RunError("write an instruction first")
         self.options = dict(options or {})
         self.pack = domain.active(self.options.get("domain"))  # None unless a person switched a domain pack on: the model names things itself
+        self.requested_scope = dict(scope or {})  # as the person asked for it: a follow-up run that keeps the conversation's scope starts from this
+        self.tool_groups: set[str] = set()  # the groups of TOOL_GROUPS the agent opened (more_tools): declared from then on
         self.scope = normalize_scope(host.sm, scope)
         self.parent = parent
         self.status = "queued"
@@ -1487,6 +1556,22 @@ class Run:
         self._inbox: list[str] = []  # what the person said while the agent worked: read at the start of its next turn
 
     # ── events and states ───────────────────────────────────────────────────────
+
+    def scope_units(self) -> list[str]:
+        """The units the run's scope covers on the sheet as it is NOW: views joined during the run make one unit of two, and the ids the scope was
+        given at the start are read through that (the whole drawing is every unit there is)."""
+        sm = self.host.sm
+        if self.scope.get("kind") == "drawing":
+            return list(sm.units)
+        out: list[str] = []
+        for ref in [*(self.scope.get("units") or []), *(self.scope.get("views") or [])]:
+            try:
+                uid = sm.resolve_unit(ref)
+            except SheetError:
+                continue
+            if uid not in out:
+                out.append(uid)
+        return out
 
     def emit(self, e: dict) -> None:
         with self._ev:
@@ -1669,7 +1754,7 @@ class Run:
         task = self._first_message(bench)
         history = [types.Content(role="user", parts=[types.Part.from_text(text=task)])]
         compactor = None if self.options.get("full_history") else self._working_state
-        self.loop = AgentLoop(model, unified_system(self.pack), unified_tools(self.pack), parts, key, history, bench, self.budget, self._on_event, self._stop.is_set,
+        self.loop = AgentLoop(model, unified_system(self.pack), unified_tools(self.pack, self.tool_groups), parts, key, history, bench, self.budget, self._on_event, self._stop.is_set,
                               label_prefix="turn", compactor=compactor, keep_turns=int(self.options.get("keep_turns") or 6),
                               compact_every=int(self.options.get("compact_every") or 6), inbox=self.take_notes)
 
@@ -1720,6 +1805,9 @@ class Run:
             st.pop("instruction", None)
             pending = b.person_questions()
             text = UT.working_state(self.host.sm, st, self.instruction, self.scope, self.loop.compacted if self.loop else 0)
+            rows, _asked = b.coverage()
+        if rows:  # where the whole task stands, unit by unit — what the folded turns' coverage calls said, so it is not asked again and again
+            text += "\nTHE SHEET, UNIT BY UNIT: " + sentence(rows)
         if self.answers_text:
             text += "\nTHE PERSON'S ANSWERS SO FAR: " + " | ".join(a[:200] for a in self.answers_text[-6:])
         if pending:
@@ -1908,9 +1996,15 @@ class Run:
         others = [c for c in failed if c["id"] != "all_units_covered"]
         lead = sentence(coverage) if coverage_asked and any(not r["covered"] for r in coverage) else ""
         word = "Partly done" if state == "partial" else "Failed"
-        headline = ("Complete: " + "every criterion holds." if not failed else
+        where = {"selection": "the selection", "view": "the view", "param": "the value"}.get(self.scope.get("kind"), "")
+        headline = (f"Complete{' for ' + where if where else ''}: every criterion holds." if not failed else
                     f"{word}: {lead}" + (f" · {len(others)} more thing(s) remain — {others[0]['detail'][:120]}" if others else "") if lead else
                     f"{word}: {len(failed)} thing(s) remain — {remaining[0][:140]}")
+        if where:  # a run on part of the sheet answers for that part only: what the rest of the sheet still lacks is said beside it, never implied done
+            with b._lock():
+                rest = [r["unit"] for r in unit_rows(self.host.sm, [u for u in self.host.sm.units if u not in self.scope_units()], {}, [], []) if not r["covered"]]
+            if rest:
+                notes = [*notes, f"outside this run's scope ({where}): {len(rest)} unit(s) of the sheet have no work yet — {', '.join(rest[:12])}"]
         if notes:
             headline += f" ({len(notes)} note{'s' if len(notes) != 1 else ''} to read)"
         return {"state": state, "ended_by": ended_by, "criteria": crit, "remaining": remaining, "headline": headline, "plans": plan_rows,

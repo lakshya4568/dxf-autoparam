@@ -175,6 +175,17 @@ def test_old_pictures_are_dropped_together_too():
     assert keep_pictures(h, keep=3, batch=3) == 0
 
 
+def test_a_picture_in_a_result_the_loop_wraps_is_sent_as_a_picture_not_as_text(tmp_path):
+    # a live run (7A, 2026-10-26): open_unit came as the fifth turn without an edit, the loop wrapped it with a nudge, and its six pictures went to the
+    # model as 1.9 M characters of encoded bytes — 480 k tokens a turn for pictures it never saw
+    sheet, _sm, _ua, _ub, gem = two_unit_session(tmp_path, [[reading(PLAIN)], *chatty(4), [call("open_unit", unit="U01")], [call("finish", summary="x")]])
+    run(sheet)
+    opened = next(r for turn in gem.seen for r in turn if r.name == "open_unit")
+    assert "nudge" in opened.response["result"], "the result was wrapped: the case this holds"
+    assert opened.parts and all(p.inline_data and p.inline_data.mime_type == "image/png" for p in opened.parts)
+    assert "png" not in json.dumps(opened.response, default=str), "no picture bytes in the JSON the model reads"
+
+
 # ── the record of the requests ───────────────────────────────────────────────────
 
 SYSTEM = "You turn a drawing into a parametric model. " * 20

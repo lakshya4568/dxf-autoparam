@@ -63,6 +63,9 @@ class Decisions:
     # The two lines of each size named by its lines rather than by a candidate: named like an accepted candidate, so the set-out takes
     # it before a sum nobody named that runs across it.
     named_pairs: set[tuple[str, str]] = field(default_factory=set)
+    # Which structure a line belongs to, where the answer has existing and new work: "existing" / "new" for a line only one of them uses. A gap from
+    # one structure's line to the other's is taken last, so each is set out from its own lines, the joints they share and the levels.
+    owner: dict[str, str] = field(default_factory=dict)
 
 
 def _tier(g) -> int:
@@ -223,8 +226,12 @@ def build(an: Analysis, dec: Decisions | None = None) -> Model:
                 return 1
             return 0
 
-        order = sorted(ax_gaps, key=lambda g: (deferred(g), group(g), pin_key(g), 0 if g.dims else 1, _tier(g), between(g), KIND_ORDER.get(g.kind, 9),
-                                               -conf(g), g.value))
+        def across(g, owner=dec.owner) -> int:
+            a, b = owner.get(g.a), owner.get(g.b)
+            return 1 if a and b and a != b else 0
+
+        order = sorted(ax_gaps, key=lambda g: (across(g), deferred(g), group(g), pin_key(g), 0 if g.dims else 1, _tier(g), between(g),
+                                               KIND_ORDER.get(g.kind, 9), -conf(g), g.value))
         uf = _UF()
         # The set-out origin: a pinned datum (a stated input level), else the drawing's
         # symmetry axis, else the drawn centre line most gaps are centred on, else the

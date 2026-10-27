@@ -39,6 +39,7 @@ from ..topology import DatumIndex, of
 from ..validator import apply
 from . import domain, labels, library
 from .context import drawing_context, fixed_lines, held_part_names, occurrence_pairs, owner, unit_context
+from .geometry import geometry, region_side, text_rows
 from .loop import AgentLoop, Budget
 from .parametrize import image_labels, images_for, prepare
 from .prompt import SYSTEM
@@ -55,7 +56,12 @@ What you see: a faithful picture, the set-out lines labelled (x… vertical, y�
 area R1, R2 … = the atomic parts), and an OVERVIEW. It opens with CONTEXT: the drawing (and the sheet revision) you work
 on, its view(s) and unit, units and frames, the references you may use, what is already decided (named values, which
 lines are set by what), equal sizes with their occurrences, fixed lines and held parts, sizes shared with other views,
-and what is still open. Then regions, lines, texts, dimensions, levels and candidate values c… measured between lines.
+and what is still open. Then the FRAME the numbers are in — mm across from the view's centre line (or its left face), and the reduced
+level (RL, m) up wherever the view states levels: the view's own numbers, not the sheet's — and a RULER per axis: its lines in order, the
+distance from each to the next, the candidate and the named value of that gap, and the regions that fill it. Read a section up its vertical
+ruler as the stack it was built as, with the level on each line: which size lies between which levels is there to read. Then regions (where
+each is in the frame, its fill, the labels whose leaders point at it — "(?)" where the engine is unsure of the target), lines (where, which
+region faces lie on it, the level written on it, how it is set out), texts, dimensions (with the two lines each measures) and candidates c….
 Every label on the pictures is an id of the overview: resolve_labels says what any label refers to.
 Ask for detail with the inspect tools: inspect_candidates shows each OCCURRENCE g… of a candidate (its two end lines,
 who sets them, the dimensions and regions on it, what drives it now); inspect_dimensions shows how a dimension or a
@@ -65,7 +71,10 @@ hangs from it.
 PLAYBOOK — small steps, each checked at once:
   1. set_structure: what the drawing is.
   2. define_parts for the parts, built from regions (assembly → component → subcomponent; every region in one leaf
-     part; existing work existing=true; details a draftsman leaves alone parametrize=false).
+     part; existing work existing=true — it is parametrized too, with its own values). Every part drawn against the structure or
+     set out from it follows it: parametrize it. parametrize=false keeps a part WHERE it is drawn — a size that pushes into it is
+     refused — so it is only for what a draftsman never changes (a symbol, a mark, the parts you cannot place: Unidentified) or
+     what the person names to keep as drawn.
   3. For each part to parametrize: inspect_regions / inspect_candidates → define_parameters for its DESIGN INPUTS,
      naming WHERE the size is: a candidate (c…) with the occurrences you mean (g… from inspect_candidates), or the two
      lines it spans, or a dimension (an annotation id) the engine ties to one pair of lines. The engine fills the value.
@@ -290,14 +299,14 @@ BATCH = {"define_parts": "define_part", "define_parameters": "define_parameter",
          "keep_dimensions": "keep_dimension"}
 
 
-def tools(extra: list | None = None, pack: dict | None = None):
+def tools(extra: list | None = None, pack: dict | None = None, hide: set[str] | frozenset[str] = frozenset()):
     """The tool list for the model: the unit tools (`knowledge` only when a domain pack is on, and the library tools only when that pack
-    has an engineering library), plus `extra` specs (the sheet session's own)."""
+    has an engineering library), plus `extra` specs (the sheet session's own), less those in `hide` (a group not opened: run.TOOL_GROUPS)."""
     from google.genai import types
 
     lib = library.LIBRARY_TOOL_SPECS if library.for_pack(pack) else []
     return [types.Tool(function_declarations=[types.FunctionDeclaration(name=n, description=d, parameters_json_schema=p)
-                                              for n, d, p in [*TOOL_SPECS, *(extra or []), *lib] if n != "knowledge" or pack])]
+                                              for n, d, p in [*TOOL_SPECS, *(extra or []), *lib] if (n != "knowledge" or pack) and n not in hide])]
 
 
 def agent_system(pack: dict | None = None) -> str:
@@ -367,8 +376,12 @@ class Workbench:
     @property
     def plan_required(self) -> bool:
         """The model's own reading says a change was asked: what moves and what stays is decided in a plan before behaviour is
-        written. Nothing here reads the person's words — only what the model said it understood, which the engine has checked."""
-        return any(i.get("kind") in ("change_value", "keep") and i.get("handled_by") == "plan" for i in self.ledger)
+        written. Nothing here reads the person's words — only what the model said it understood, which the engine has checked.
+
+        A value to change is what asks for the plan; what is to be kept (fixed, followed, left alone) is the plan's directives WITH it. A rule to keep
+        on its own ("existing work stays as drawn", in an instruction to make the drawing parametric) is no change: it is kept by constraints, which
+        must not wait for a plan nobody asked for (a live run had every constraint refused for it, and asked the person about a change never asked)."""
+        return any(i.get("kind") == "change_value" and i.get("handled_by") == "plan" for i in self.ledger)
 
     def validate(self, final: bool = False) -> None:
         """While the agent builds, every value stays editable (the AI's own "keep as drawn" recommendations are applied
@@ -415,7 +428,7 @@ class Workbench:
                         break
             out[rid] = {"width": self._mm(r.bbox[2] - r.bbox[0]), "height": self._mm(r.bbox[3] - r.bbox[1]), "fill": r.pattern or "none",
                         "holes": len(r.holes), "inside_region": r.parent, "edges": edges, "x_lines": xs[:12], "y_lines": ys[:12],
-                        "touches": [f"{k} ({_side(r, regions[k], self.an.drawing.tol)}, {self._mm(v)} mm)"
+                        "touches": [f"{k} ({region_side(r, regions[k], self.an.drawing.tol)}, {self._mm(v)} mm)"
                                     for k, v in sorted(r.neighbours.items(), key=lambda kv: -kv[1])][:8],
                         "notes_inside": inside, "sizes_across": sorted(across, key=lambda a: -a["occurrences"])[:10],
                         "in_part": [c["name"] for c in self.answer["components"] if rid in c.get("regions", [])]}
@@ -1321,7 +1334,62 @@ class Workbench:
         out = {"ok": not errs, **({"rejected": errs[:3]} if errs else {}), **({"note": warns} if warns else {})}
         if raw:
             out["failure"] = _from_finding(raw[0], item)
+        if kind == "define_parts" and not errs:
+            held = self._held_against(item)
+            if held:
+                out["held_against"] = held
         return out
+
+    def _same_size_named(self, eid: str) -> str | None:
+        """A dimension kept as drawn whose size is an occurrence of a candidate a named value already drives elsewhere (a box's left wall kept "as it
+        equals the right wall", the right wall named): keeping it leaves that member unparametrized — binding it as one more occurrence of the value
+        is what "equal" means. Said with the call that does it; the agent decides (two members that only happen to be equal stay two)."""
+        i = entity_index(eid)
+        an = self.an
+        mine = [g for g in an.gaps.values() if i in g.dims and g.cluster]
+        for g in mine:
+            for row in self.answer.get("parameters", []):
+                if row.get("candidate") != g.cluster:
+                    continue
+                occ = row.get("occurrences")
+                if occ in (None, "all", ["all"]) or g.id in occ:
+                    continue
+                return (f"{eid} measures {g.id} ({g.a}–{g.b}), an occurrence of {g.cluster} — the candidate {row['name']} is named on ({', '.join(occ)}). "
+                        f"If it is the same member size, bind it instead of keeping it: define_parameters {{name: {row['name']}, candidate: {g.cluster}, "
+                        f"occurrences: {[*occ, g.id]}}}")
+        return None
+
+    def _view_says_existing(self, name: str) -> str | None:
+        """A top-level part left new work in a view whose own title says it shows existing work (the library's status words — a live run left the
+        whole of a "HALF SECTION OF EXIST. BRIDGE" as new work): said, so the agent marks it existing=true or says why not. Only with a library on."""
+        if self.lib_session is None or self.scope is None:
+            return None
+        row = next((c for c in self.answer["components"] if c.get("name") == name), None)
+        if row is None or row.get("existing") or row.get("parent"):
+            return None
+        from ..identify import _Status
+
+        status = _Status(self.lib_session.lib.identify_vocab.get("status", []))
+        for vid in self.scope.sm.units[self.scope.uid].views:
+            title = self.scope.sm.layout.group(vid).name or ""
+            if title and {k for _at, k in status.marks(title)} == {"existing"}:  # "PROPOSED EXTENSION OF EXISTING BOX" says new work: not this
+                return f"the view {vid} is titled “{title}”: existing work — define {name} with existing=true, unless it is new work drawn in it"
+        return None
+
+    def _held_against(self, name: str) -> str | None:
+        """A part kept as drawn that meets parts which stay parametric: it stays where it is drawn, so their sizes cannot push into it — a live run
+        held the fill beside a box and its clear span could then no longer grow from the centre. Said with the parts it meets, so the agent decides
+        knowingly (a person's 'keep it as drawn' is a reason; 'a draftsman would not change it' is not, for a part drawn against the structure)."""
+        parts = self.prog.intent.get("parts") or {}
+        p = parts.get(name)
+        if p is None or p.parametrize or p.existing:
+            return None
+        free = {n for n, q in parts.items() if q.parametrize and n != name}
+        met = sorted({m["part"] for m in connections.meets_of(connections.contacts(self.prog, parts), name) if m["part"] in free})
+        if not met:
+            return None
+        return (f"{name} is kept where it is drawn, and it meets {', '.join(met[:6])}: their sizes cannot push into it (a change that moves a side "
+                f"toward it is refused). If it should follow them, define it with parametrize=true.")
 
     def status(self) -> dict:
         I = self.prog.intent
@@ -1456,6 +1524,13 @@ class Workbench:
                 doubt = labels.conflict(row or {"name": item}, labs) if row is None or row.get("level") != "assembly" else None
                 if doubt:
                     v["label_doubt"] = labels.sentence(doubt)
+            said = self._view_says_existing(item)
+            if said:
+                v["existing_doubt"] = said
+        if name == "keep_dimensions" and v["ok"]:
+            same = self._same_size_named(item)
+            if same:
+                v["same_size_named"] = same
         if name == "define_parameters" and v["ok"]:
             v["moves"] = self.prog.intent.get("impact", {}).get(item, {})
             v.update(self.checked.get(item, {}))
@@ -1572,8 +1647,9 @@ class Workbench:
             if val is None:  # a relation of that name there, not a value
                 continue
             same = abs(val - prm.value) <= max(1.0 / um, 2e-3 * abs(prm.value))
-            out.append(f"{uid}: {val * um:g} mm — " + ("the same number: if it is the same size seen again, share_sizes joins the views" if same
-                                                   else "a different number: rename one of them if they are different sizes"))
+            out.append(f"{uid}: {val * um:g} mm — " + ("the same number: if it is the same size seen again, share_sizes joins the views; if it belongs to "
+                                                    "another structure (existing work and new work), give each its own name instead" if same
+                                                   else "a different number, so a different size: rename one of them (finish asks for it)"))
         return out[:4]
 
     def nudge(self) -> str | None:
@@ -1750,79 +1826,45 @@ def _is_constant(expr: str) -> bool:
         return False
 
 
-def _side(r, other, tol) -> str:
-    a, b = r.bbox, other.bbox
-    if abs(b[1] - a[3]) <= 2 * tol:
-        return "above"
-    if abs(b[3] - a[1]) <= 2 * tol:
-        return "below"
-    if abs(b[0] - a[2]) <= 2 * tol:
-        return "right"
-    if abs(b[2] - a[0]) <= 2 * tol:
-        return "left"
-    return "inside" if r.parent == other.id or other.parent == r.id else "beside"
-
-
 # ── the overview the agent starts from (cached with the pictures) ────────────────
 
 
 def overview(an, base, context: dict | None = None, pack: dict | None = None) -> dict:
-    """Compact on purpose: rows, not objects; details come from the inspect tools. It carries what every edit needs —
-    each region's edge lines and every line's current formula — so the agent edits instead of reading for many turns.
-    `context` (ai.context): where the agent works — drawing / sheet revision, views and unit, frames, references,
-    decisions, fixed lines, shared sizes, open issues — first, so it frames everything after it."""
-    topo = of(an)
-    dix = DatumIndex(an)
+    """Compact on purpose: rows, not objects; details come from the inspect tools. It carries what every edit needs — each line where it is in the
+    view's own frame and what lies on it, each region where it is with what fills it and the labels pointing at it, and each axis as a ruler of the
+    gaps between its lines (ai.geometry) — so the agent reads the structure as a drafter does and edits instead of reading for many turns.
+    `context` (ai.context): where the agent works — drawing / sheet revision, views and unit, frames, references, decisions, fixed lines, shared
+    sizes, open issues — first, so it frames everything after it."""
     u = an.drawing.units_mm
     dr = an.drawing
-    texts = [it for it in dr.items if it.dxftype in ("TEXT", "MTEXT", "ATTRIB") and (it.text or "").strip()]
-    in_region: dict[str, list[str]] = {}
-    text_rows = []
-    for t in texts:
-        r = topo.region_at(t.pts[0])
-        s = " ".join((t.text or "").split())[:70]
-        if r is not None:
-            in_region.setdefault(r.id, []).append(s[:30])
-        text_rows.append([entity_id(t), s, r.id if r else None])
-    regions = []
-    for r in topo.regions:
-        neighbours = r.neighbours  # bound here: a closure would lose the narrowing of `r`
-        edges = "/".join(str(dix.at(ax, v) or "?") for ax, v in (("x", r.bbox[0]), ("x", r.bbox[2]), ("y", r.bbox[1]), ("y", r.bbox[3])))
-        regions.append(
-            [
-                r.id,
-                _r((r.bbox[2] - r.bbox[0]) * u),
-                _r((r.bbox[3] - r.bbox[1]) * u),
-                edges,
-                r.pattern or "",
-                r.parent or "",
-                " ".join(
-                    f"{k}:{_side(r, topo.by_id()[k], dr.tol)[0]}"
-                    for k in sorted(neighbours, key=lambda k: -neighbours[k])[:6]
-                ),
-                "; ".join(in_region.get(r.id, [])[:2]),
-            ]
-        )
+    named = {}
+    for row in (context or {}).get("named_values [name, mm, unit, between lines, kind]", []):
+        a, _, b = str(row[3]).partition("-")
+        if a and b:
+            named[(a, b)] = row[0]
+            named[(b, a)] = row[0]
+    geo = geometry(an, base, named)
     dims = []
     for it in dr.items:
         if it.dxftype == "DIMENSION":
-            cand = next((g.cluster for g in an.gaps.values() if it.index in g.dims and g.cluster), None)
-            dims.append([entity_id(it), _r((it.extra.get("measurement") or 0) * u), (it.text or "").strip() or "<>", cand])
+            g = next((g for g in an.gaps.values() if it.index in g.dims), None)
+            dims.append([entity_id(it), _r((it.extra.get("measurement") or 0) * u), (it.text or "").strip() or "<>", g.cluster if g else None,
+                         f"{g.a}-{g.b}" if g else ""])
     cands = []
     for c in sorted(an.clusters.values(), key=lambda c: (-c.confidence, -len(c.gaps)))[:90]:
         g = an.gaps[c.gaps[0]]
         cands.append([c.id, c.kind.value, _r(c.value * u), "".join(sorted(c.axes)), len(c.gaps), f"{g.a}-{g.b}", c.suggested or ""])
     return {
         **({"CONTEXT": context} if context else {}),
-        "drawing": {"units": "mm (levels m)", "extent_mm": [_r(v * u) for v in dr.extent], "entities": len(dr.items),
-                    "structural": sum(1 for i in dr.items if i.role == Role.STRUCTURAL), "symmetry_axes": {k: v for k, v in an.global_axis.items() if v}},
-        "regions [id, width, height, edge lines left/right/bottom/top, fill, inside, touches id:side(a/b/l/r), notes inside]": regions,
-        "lines [id, at mm, set out as]": [[d.id, _r(d.value * u), base.formulas.get(d.id, "as drawn")]
-                                          for d in sorted(an.datums.values(), key=lambda d: (d.axis, d.value))],
-        "open_lines (bound no region)": [entity_id(dr.items[i]) for i in topo.open_items][:40],
-        "texts [id, text, region]": text_rows[:160],
-        "dimensions [id, value, text, candidate]": dims[:120],
-        "stated_levels [line, words, m]": [[d, w, v] for d, _i, w, v in an.stated_levels],
+        "drawing": {"units": "mm (levels m)", "entities": len(dr.items), "structural": sum(1 for i in dr.items if i.role == Role.STRUCTURAL),
+                    "symmetry_axes": {k: v for k, v in an.global_axis.items() if v}},
+        "frame (where the numbers below are measured from)": geo["frame"],
+        "rulers (each axis: its lines in order, —gap mm, candidate, named value, [regions filling exactly that gap]→)": geo["rulers"],
+        "regions [id, width, height, where in the frame, edge lines left/right/bottom/top, fill, inside, touches id:side(a/b/l/r), labels on it]": geo["regions"],
+        "lines [id, where in the frame, region faces on it, level written on it, set out as]": geo["lines"],
+        "open_lines (bound no region)": [entity_id(dr.items[i]) for i in of(an).open_items][:40],
+        "texts [id, text, region]": text_rows(an),
+        "dimensions [id, value, text, candidate, lines]": dims[:120],
         "candidates [id, kind, value, axes, occurrences, first pair, drawing says]": cands,
         **({"concept names (offered by the domain pack; use one only when it is what the drawing shows)": domain.concept_names(pack),
             "structure families [id, label, parts]": domain.families(pack)} if pack else {}),

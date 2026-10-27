@@ -1066,6 +1066,117 @@ def hold_parts(prog: Program, parts: dict[str, Part], names: set[str], rep) -> i
     return count
 
 
+def unsplit_structures(an) -> None:
+    """Put back what an earlier build's split_structures changed in the analysis it shares with this one: the gaps' lines and the lines' views
+    (the datums and the slots the callers restore themselves, from the analysis as found)."""
+    for g in an.gaps.values():
+        if g.split_of is not None:
+            g.a, g.b = g.split_of
+            g.split_of = None
+    for c in an.cache.pop("split_lines", {}).values():
+        an.datum_views.pop(c, None)
+
+
+def _material_sides(parts: dict[str, Part], values: dict[str, float]) -> dict[tuple[str, str], float]:
+    """(part, line) → the side of the line its outline's material lies on (sign): the edges leaving the corners of its edges along that line."""
+    out: dict[tuple[str, str], float] = {}
+    for name, p in parts.items():
+        nbr: dict[tuple[str, str], list[tuple[str, str]]] = {}
+        for c1, c2 in p.edges:
+            nbr.setdefault(c1, []).append(c2)
+            nbr.setdefault(c2, []).append(c1)
+        for (xa, ya), (xb, yb) in p.edges:
+            k, line = (1, ya) if ya == yb and xa != xb else (0, xa) if xa == xb and ya != yb else (None, None)
+            if k is None or line not in values:
+                continue
+            ends = ((xa, ya), (xb, yb))
+            out[(name, line)] = out.get((name, line), 0.0) + sum(values[q[k]] - values[line] for c in ends for q in nbr.get(c, ()) if q not in ends and q[k] in values)
+    return out
+
+
+def split_structures(an, parts: dict[str, Part], keep: set[str], claims: dict[str, bool] | None = None) -> dict[str, str]:
+    """Existing work and new work drawn along ONE set-out line — the old box's soffit and the extension's, one horizontal line in a longitudinal
+    section — are two lines that coincide as drawn: each structure gets its own, so a value of one moves only that one (a value named on the existing
+    top slab used to lift the new box's slab with it). The existing work's entities, its parts and the sizes measured on it move to a copy of the line
+    (`<line>e`); the new work keeps the line. The set-out is then built on each copy from its own sizes, and the two still coincide at the values as drawn.
+
+    Kept as one line: a line where the two MEET across it (the joint between the old box's end and the new one's: one sits on the other side, and
+    they stay joined), a level's line and the lines in `keep` (a level is the one thing both structures hang on). `claims`: gap → whether it is the
+    existing work's, from the answer (a size named on a part says whose it is, before any geometry does). Returns {line: existing copy}."""
+    ex = {n for n, p in parts.items() if p.existing}
+    new = {n for n, p in parts.items() if not p.existing}
+    if not ex or not new:
+        return {}
+    ex_own = held_own_entities(an, parts, ex)
+    new_own = held_own_entities(an, parts, new) - ex_own
+    users: dict[str, list[int]] = {}
+    for (i, _k, _ax), (d, _off) in an.slot_datum.items():
+        if i in ex_own or i in new_own:
+            users.setdefault(d, [0, 0])[0 if i in ex_own else 1] += 1
+    values = {d.id: d.value for d in an.datums.values()}
+    leaves = {n: p for n, p in parts.items() if not any(q.parent == n for q in parts.values())}
+    side = _material_sides(leaves, values)
+    copies: dict[str, str] = {}
+    for d, (n_ex, n_new) in sorted(users.items()):
+        if not n_ex or not n_new or d in keep or d not in an.datums or an.datums[d].virtual:
+            continue
+        s_ex = sum(side.get((n, d), 0.0) for n, p in leaves.items() if p.existing)
+        s_new = sum(side.get((n, d), 0.0) for n, p in leaves.items() if not p.existing)
+        if s_ex * s_new < 0:
+            continue  # they meet across it: a joint, one line both follow
+        copies[d] = f"{d}e"
+    if not copies:
+        return {}
+    for d, c in copies.items():
+        src = an.datums[d]
+        an.datums[c] = Datum(id=c, axis=src.axis, value=src.value, virtual=src.virtual, weak=src.weak, source=src.source, items=set())
+        if d in an.datum_views:
+            an.datum_views[c] = list(an.datum_views[d])
+    an.cache["split_lines"] = dict(copies)
+    # a size measured on the existing work moves to its copies: a line used only by existing work says so; between two shared lines, the region
+    # the size was observed in says whose it is (a slab thickness inside the old slab, a clear height inside the old cell)
+    topo = of(an)
+    by_region = {r: n for n, p in leaves.items() for r in p.regions}
+    regions = topo.by_id()
+
+    def owner_at(pt) -> bool | None:
+        r = topo.region_at(pt) if pt is not None else None
+        while r is not None:
+            if r.id in by_region:
+                return parts[by_region[r.id]].existing
+            r = regions.get(r.parent) if r.parent else None
+        return None
+
+    # whose a size is: the entities drawn across it, from one of its lines to the other (a slab's own edges span its thickness), by majority;
+    # where none spans it, the region it was observed in
+    on_line: dict[str, set[int]] = {}
+    for (i, _k, _ax), (d, _off) in an.slot_datum.items():
+        on_line.setdefault(d, set()).add(i)
+    ex_dims: set[int] = set()
+    for g in an.gaps.values():
+        if g.a not in copies and g.b not in copies:
+            continue
+        across = on_line.get(g.a, set()) & on_line.get(g.b, set())
+        n_ex, n_new = len(across & ex_own), len(across & new_own)
+        mine = (claims or {}).get(g.id, n_ex > n_new if n_ex != n_new else owner_at(g.sample) is True)
+        if mine:
+            g.split_of = (g.a, g.b)
+            g.a, g.b = copies.get(g.a, g.a), copies.get(g.b, g.b)
+            ex_dims.update(g.dims)
+    for key, (d, off) in list(an.slot_datum.items()):
+        if d in copies and (key[0] in ex_own or key[0] in ex_dims):
+            an.slot_datum[key] = (copies[d], off)
+            an.datums[copies[d]].items.add(key[0])
+    for n in ex:  # the existing parts are drawn on their own copies now
+        q = parts[n]
+        sw = (lambda pr: tuple(copies.get(v, v) for v in pr))
+        q.datums = {copies.get(v, v) for v in q.datums}
+        q.own_datums = {copies.get(v, v) for v in q.own_datums}
+        q.nodes = {sw(x) for x in q.nodes}
+        q.edges = [(sw(a), sw(b)) for a, b in q.edges]
+    return copies
+
+
 def _split_shared_lines(prog: Program, parts: dict[str, Part], held: set[str], shared: set[str], levels: set[str]) -> int:
     """A line a held part shares with a free one (an extension drawn on the old box's soffit) is split: entities
     that belong ONLY to held parts move to a copy of the line that stays put; the free part keeps the original."""

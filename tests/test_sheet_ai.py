@@ -111,3 +111,39 @@ def test_the_sheet_picture_and_prompt_carry_no_values_of_their_own():
     for text in (sheet_ai.VIEWS_SYSTEM, sheet_ai.SHARED_SYSTEM):
         assert not any(ch.isdigit() for ch in text.replace("1:25", "")), "no numbers in a system prompt"
 
+
+
+def test_views_joined_during_a_run_leave_no_unit_id_behind(tmp_path):
+    # a live run (7A, 2026-10-26): the agent opened U01, then said V01 and V04 are drawn in projection — the sheet made one unit U01_04 of them, and
+    # every later call naming U01 (the open unit, review_parameters, the verdict) failed with "no unit U01"
+    from test_run import wait
+
+    from dxf_autoparam.ai.scripted import ScriptedModel
+    from dxf_autoparam.ai.scripted import call as scripted
+    from dxf_autoparam.workspace import SheetSession
+
+    sm = SheetModel.open(str(built_sheet(tmp_path / "sheet.dxf")))
+    el, pl = view(sm, "ELEVATION"), view(sm, "PLAN")
+    for lk in sm.links:  # the views start as two units, as 7A's did: their projection is weak, the agent's to state
+        if {lk["a"], lk["b"]} == {el, pl}:
+            lk["strong"] = False
+    sm._group_units(sm.units)
+    old = sm.unit_of_view[el]
+    assert old != sm.unit_of_view[pl], "two units before the run: the case this holds"
+    gem = ScriptedModel([[scripted("open_unit", unit=old)],
+                         [scripted("describe_views", relations=[{"a": el, "b": pl, "relation": "projection", "evidence": ["the plan is drawn under it"]}])],
+                         [scripted("review_parameters", unit=old)], [scripted("open_unit", unit=old)], [scripted("finish", summary="x")]])
+    sheet = SheetSession()
+    sheet.sm = sm
+    sheet.gem_factory = lambda: gem
+    rid = sheet.start_run({"instruction": "Say how the views relate.", "scope": {"kind": "drawing"}})["run"]
+    p = wait(sheet, rid)
+    joined = sm.unit_of_view[el]
+    assert joined == sm.unit_of_view[pl] != old and sm.resolve_unit(old) == joined
+    seen = {r.name: r.response for turn in gem.seen for r in turn}
+    described = json.dumps(seen["describe_views"])
+    assert f"{old} is now part of {joined}" in described
+    assert "error" not in json.dumps(seen["review_parameters"]), "an id from before the join reads the joined unit"
+    assert seen["open_unit"]["result"]["unit"] == joined
+    assert sheet.runs[rid].bench.active == joined, "the unit that was open is the joined one now"
+    assert not any(f"no unit {old}" in r for r in p["verdict"].get("remaining", [])), p["verdict"].get("remaining")

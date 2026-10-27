@@ -7,14 +7,14 @@ from test_run import DIRS2, READ2, SAID2, answer_all, parametrized_sheet, wait
 from test_web_contract import contract
 
 from dxf_autoparam.ai.narrate import DOING, PHASE_OF, STAGE_OF, STAGES, WORDS, doing, phase_of, stage_of
-from dxf_autoparam.ai.run import unified_tools
+from dxf_autoparam.ai.run import TOOL_GROUPS, unified_tools
 from dxf_autoparam.ai.scripted import call
 
 LIBRARY_TOOLS = ("list_skills", "load_skill", "search_library", "record_finding")
 
 
 def tool_names() -> list[str]:
-    return [fd.name for t in unified_tools(None) for fd in (t.function_declarations or [])] + list(LIBRARY_TOOLS)
+    return [fd.name for t in unified_tools(None, set(TOOL_GROUPS)) for fd in (t.function_declarations or [])] + list(LIBRARY_TOOLS)
 
 
 def test_every_agent_tool_has_a_stage_a_phase_and_plain_words():

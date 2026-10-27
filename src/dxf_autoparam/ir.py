@@ -143,6 +143,9 @@ class Gap:
     slope: tuple[str, str, str, str, float] | None = None
     circle: int | None = None  # DIAMETER / RING: the circle item it sizes
     inner: int | None = None  # RING: the circle inside it
+    # the lines it was measured on, when a line existing work and new work share was split for the build (intent.split_structures): every
+    # build starts by putting them back, so a split never outlives the answer it was made for
+    split_of: tuple[str, str] | None = None
 
 
 class Status(StrEnum):

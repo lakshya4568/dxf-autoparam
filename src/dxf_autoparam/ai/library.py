@@ -68,7 +68,7 @@ DEFAULT_SECTIONS = ["purpose", "applicability", "inputs", "recognition", "prereq
                     "conventions", "rules", "dependencies", "outputs", "validation"]
 ALL_SECTIONS = DEFAULT_SECTIONS + ["hazards", "scope", "scope_note", "permitted", "blocked", "evidence_requests", "sources"]
 
-LIBRARY_ID_PREFIXES = ("kb:", "kb.", "graded:", "skill:", "family:", "chunk:", "ontology:", "issue:", "rdso-doc:", "rdso-extract:", "rdso:", "proposal:", "teach:",
+LIBRARY_ID_PREFIXES = ("kb:", "kb.", "graded:", "rdso-sheet:", "skill:", "family:", "chunk:", "ontology:", "issue:", "rdso-doc:", "rdso-extract:", "rdso:", "proposal:", "teach:",
                        "component:")
 SHEET_ID = re.compile(r"^(v-)?[0-9a-f]{12}-p\d+(#[A-Za-z0-9_.-]+)?$")
 
@@ -359,6 +359,55 @@ class Library:
                     "provenance": {k: prov.get(k) for k in ("repository", "ref", "commit")}}
 
         return self._once("graded", build)
+
+    @property
+    def rdso_sheet(self) -> dict:
+        """The standard-drawing sheet this domain carries (domain.json `rdso_sheet`: tables by fill height and span x height, haunch bands,
+        key depth, notes, each value with its sheet, page, verification and kind), or {} when it has none. Built by tools/build_rdso_sheet.py."""
+        def build() -> dict:
+            rel = self.meta.get("rdso_sheet")
+            p = self.dir / rel if rel else None
+            return json.loads(p.read_text(encoding="utf-8")) if p and p.is_file() else {}
+        return self._once("rdso_sheet", build)
+
+    def rdso_reference(self, ident: str, full: bool = False) -> dict:
+        """`rdso-sheet:` lists the standards; `rdso-sheet:<standard>` reads one; `rdso-sheet:<standard>:<fill m>:<config>` one schedule row.
+        Context and a yardstick: a printed value with its sheet and page, never a value of the drawing in hand."""
+        sh = self.rdso_sheet
+        if not sh:
+            return {"found": False, "id": ident, "hint": "this library has no standard-drawing sheet"}
+        cols = sh["thickness_table"]["columns"]
+        rows = [dict(zip(cols, r, strict=False)) for r in sh["thickness_table"]["rows"]]
+        parts = ident.removeprefix("rdso-sheet:").split(":")
+        base = {"kind": "rdso_sheet", "kinds": sh.get("kinds"), "rules_of_use": sh.get("rules_of_use"),
+                "context_only": "printed values of standard drawings with their sheet and page: compare with the drawing's own values, never copy them in"}
+        if not parts[0]:
+            return {"found": True, "id": "rdso-sheet:", **base, "standards": [{k: s.get(k) for k in ("id", "series", "title", "structure", "track", "loading",
+                                                                                          "usable_fill_heights_m", "config_label_meaning", "extraction_status")}
+                                                                             for s in sh["standards"]], "hint": "get_reference('rdso-sheet:<id>') reads one standard"}
+        std = next((s for s in sh["standards"] if s["id"] == parts[0]), None)
+        if std is None:
+            return {"found": False, "id": ident, "hint": "the standards are listed by get_reference('rdso-sheet:')"}
+        mine = [r for r in rows if r["standard"] == std["id"]]
+        if len(parts) >= 3:
+            try:
+                fill = float(parts[1])
+            except ValueError:
+                return {"found": False, "id": ident, "hint": "rdso-sheet:<standard>:<fill height in m>:<span x height, e.g. 5mX4.5m>"}
+            row = next((r for r in mine if r["fill_m"] is not None and abs(r["fill_m"] - fill) < 1e-9 and r["config"] == parts[2]), None)
+            if row is None:
+                return {"found": False, "id": ident, "hint": f"no schedule row; fills tabulated: {std.get('usable_fill_heights_m')}"}
+            return {"found": True, "id": ident, **base, "row": row}
+        out = {"found": True, "id": ident, **base, "standard": std,
+               "haunch": [h for h in sh["haunch"] if h["standard"] == std["id"]], "key_depth": [k for k in sh["key_depth"] if k["standard"] == std["id"]],
+               "design_basis": [d for d in sh["design_basis"] if d["standard"] == std["id"]], "rules": [r for r in sh["rules"] if r["standard"] == std["id"]],
+               "relations": [r for r in sh["relations"] if r["id"].startswith(std["id"] + ":")], "disputes": [d for d in sh["disputes"] if d["standard"] == std["id"]],
+               "schedule_rows": len(mine)}
+        if full:
+            out["schedule"] = mine
+        else:
+            out["schedule_hint"] = "a row: get_reference('rdso-sheet:<standard>:<fill m>:<config>'); every row: full=true"
+        return out
 
     def graded_record(self, ident: str, count: int | None = None) -> dict | None:
         """A graded formula or a configuration relation as a record check_rule evaluates (`graded:<id>`): its statement, expression and
@@ -691,6 +740,8 @@ class Library:
             return self.skill(ident) is not None
         if ident.startswith("component:"):
             return self.component(ident) is not None
+        if ident.startswith("rdso-sheet:"):
+            return bool(self.rdso_reference(ident).get("found"))
         if ident.startswith("graded:"):
             local = ident.removeprefix("graded:")
             g = self.graded
@@ -711,6 +762,8 @@ class Library:
 
     def reference(self, ident: str, full: bool = False) -> dict:
         cap = MAX_LOAD_CHARS if full else REFERENCE_CHARS
+        if ident.startswith("rdso-sheet:"):
+            return self.rdso_reference(ident, full)
         if ident.startswith("component:"):
             c = self.component(ident)
             if c is None:
@@ -1297,6 +1350,20 @@ def overview_rows(pack: dict | None, texts: list[str]) -> dict:
         return {}
     skills = lib.skills
     matches = lib.discover(texts, top=3)
-    return {"engineering library (on for this run; retrieve with list_skills / load_skill / search_library)": {
-        "skills": {k: s.kind for k, s in sorted(skills.items())},
-        "match this drawing's printed words": [[m["skill"], m["score"], [b["printed"] for b in m["because"]][:5]] for m in matches] or "none"}}
+    out = {"skills": {k: s.kind for k, s in sorted(skills.items())},
+           "match this drawing's printed words": [[m["skill"], m["score"], [b["printed"] for b in m["because"]][:5]] for m in matches] or "none"}
+    # what the best-matching family is known to be made of, said up front: seven recorded runs never asked the library for it. A lead to check on the
+    # drawing, never a value of it (the graded knowledge's own trust rule says so)
+    fam = next((m["skill"].removeprefix("family:") for m in matches if m["skill"].startswith("family:")), None)
+    card = lib.family_card(fam) if fam else None
+    if card:
+        out["the family the words match (a lead: check it on the drawing)"] = {
+            "family": card["family"], "components": [c["label"] for c in card.get("components", [])][:10],
+            "must_be_known": card.get("must_be_known", [])[:10],
+            "level_chain (how each level follows; graded, DERIVED holds by definition)": [
+                f"{w['is']} ({w.get('status', '')})" for lv in card.get("level_chain", []) for w in (lv.get("ways") or [])[:1] if w.get("is")][:10],
+            "more": f"identify_structure; get_reference('family:{fam}') / get_reference('graded:{fam}') and check_rule for its formulas and rules"}
+    if lib.rdso_sheet:
+        out["standard drawings (tables by fill and span x height, haunch, key depth: a yardstick, never this drawing's value)"] = (
+            "get_reference('rdso-sheet:') lists them; get_reference('rdso-sheet:<standard>') reads one")
+    return {"engineering library (on for this run; retrieve with list_skills / load_skill / search_library)": out}

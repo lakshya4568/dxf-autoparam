@@ -20,6 +20,7 @@ Three kinds of material are kept apart:
 | Indexes, caches, traces | in memory; `.cache/library/` if cached; run events | generated, never committed |
 | Graded knowledge (another project's, with statuses) | `<domain>/graded/` + `PROVENANCE.json` | nobody here: `tools/import_graded_knowledge.py` |
 | What a drawing's words say it is | `<domain>/identify.json` (read by `identify.py`) | a person |
+| Standard drawings' tables (RDSO RCC box: five standards, each value with its sheet, page and kind) | `<domain>/rdso/` (`domain.json` `rdso_sheet`) | nobody here: `tools/build_rdso_sheet.py --index-only` from the extracts |
 
 To add a recipe: a new `skills/<id>.md`. To add reference material: a new source folder with the same layout as `agent_context` and a
 line in `domain.json`. To add another kind of structure's guidance: its skill file under the source's `skills/families/`, or an authored

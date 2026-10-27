@@ -353,7 +353,13 @@ export function setHover(i: number | null): void {
 // ── values ───────────────────────────────────────────────────────────────────────
 
 export async function openUnit(uid: string): Promise<void> {
-  const u = await guard("Reading the unit…", () => api.unit(uid));
+  // The engine re-joins units as the sheet moves on (V01 and V04, drawn in projection, become one unit): an id the list no longer has names
+  // the unit that now holds the views it had, never a unit that is gone ("no unit U01" and an empty values list)
+  const { summary, unit } = store.get();
+  const known = summary?.units ?? [];
+  const views = unit?.id === uid ? (unit.views ?? []) : [];
+  const id = known.length && !known.some((x) => x.id === uid) ? (known.find((x) => x.views.some((v) => views.includes(v))) ?? known.find((x) => x.parametrized) ?? known[0]).id : uid;
+  const u = await guard("Reading the unit…", () => api.unit(id));
   if (u) store.set({ unit: u });
 }
 

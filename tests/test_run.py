@@ -578,3 +578,41 @@ def test_a_change_made_while_the_agent_worked_is_never_overwritten_silently(tmp_
     p = wait(sheet, r["run"])
     assert p["status"] == "completed", p["verdict"]["remaining"]
     assert sheet.sm.current()[f"{uid}.ClearSpan"] == 2500 and sheet.sm.current()[other] == 320  # both stand
+
+
+def test_a_follow_up_run_keeps_the_scope_of_the_run_it_follows(tmp_path):
+    sheet, _uid, _g, _gem = session(tmp_path, [[call("finish", summary="x")], [call("finish", summary="y")]])
+    first = sheet.start_run({"instruction": "Make the drawing parametric.", "scope": {"kind": "drawing"}})["run"]
+    wait(sheet, first)
+    second = sheet.start_run({"instruction": "please continue", "scope": {"kind": "follow"}, "parent": first})["run"]
+    wait(sheet, second)
+    assert sheet.runs[second].scope["kind"] == "drawing" and sheet.runs[second].scope["units"] == list(sheet.sm.units)
+
+
+def test_a_run_on_a_selection_says_it_answers_for_the_selection_and_names_the_rest_of_the_sheet(tmp_path):
+    # a live run (7A, 2026-10-26): "please continue" ran on one selected polyline, parametrized that unit and said "Complete: every criterion holds"
+    # while seven units of the sheet had no work at all
+    from test_sheet import built_sheet
+
+    sheet = SheetSession(str(built_sheet(tmp_path / "sheet.dxf")))
+    gem = Scripted([[call("finish", summary="done")]])
+    sheet.gem_factory = lambda: gem
+    uid = next(iter(sheet.sm.units))
+    handle = sheet.sm.units[uid].back[0]
+    rid = sheet.start_run({"instruction": "Look at this.", "scope": {"kind": "selection", "entities": [handle]}})["run"]
+    p = wait(sheet, rid)
+    v = p["verdict"]
+    assert v["state"] != "completed" or v["headline"].startswith("Complete for the selection"), v["headline"]
+    assert any("outside this run's scope (the selection)" in n for n in v["notes"]), v["notes"]
+
+
+def test_a_tool_group_is_declared_once_the_agent_opens_it(tmp_path):
+    # the seven recorded runs never called these tools; every request re-sent their declarations. They are declared from the turn after more_tools.
+    sheet, _uid, _g, gem = session(tmp_path, [[call("more_tools", groups=["sheet_checks"])], [call("finish", summary="x")], [call("finish", summary="x")]])
+    rid = sheet.start_run({"instruction": "Look at the drawing.", "scope": {"kind": "drawing"}})["run"]
+    wait(sheet, rid)
+    first, second = gem.requests[0]["tools"], gem.requests[1]["tools"]
+    assert "more_tools" in first and "compare_views" not in first and "calculate" not in first
+    assert "compare_views" in second and "calculate" in second
+    opened = next(r.response for turn in gem.seen for r in turn if r.name == "more_tools")
+    assert opened["result"]["opened"] == ["sheet_checks"] and "compare_views" in opened["result"]["tools"]

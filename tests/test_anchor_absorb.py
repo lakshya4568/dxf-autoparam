@@ -137,7 +137,7 @@ def test_a_level_only_checked_against_holds_a_gap_nothing_holds_gives_and_nothin
 def test_a_part_kept_as_drawn_in_the_way_refuses_and_says_which_side_keeps_it(tmp_path):
     sm, uid = sheet(tmp_path, held=("Cushion",))
     _res, refused = chosen(sm, uid, "TopSlabThickness", "start")
-    assert refused is not None and "held part" in refused and "its end (right / top) staying keeps what may not move" in refused, refused
+    assert refused is not None and "held part (Cushion" in refused and "its end (right / top) staying" in refused and "keeps what may not move" in refused, refused
     sm, uid = sheet(tmp_path, held=("BaseCourse",))
     _res, refused = chosen(sm, uid, "BottomSlabThickness", "end")
     assert refused is not None and "its start (left / bottom) staying (its site levels follow)" in refused, refused

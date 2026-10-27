@@ -246,3 +246,32 @@ def test_a_run_whose_model_changes_a_value_is_unaffected_by_what_it_read(tmp_pat
     _gem, p = run_script(sheet, script)
     assert p["verdict"]["state"] in ("completed", "partial")
     assert sheet.sm.current() == before
+
+
+def test_a_part_left_new_in_a_view_titled_existing_is_said(tmp_path):
+    # a live run (7A, 2026-10-26) left every part of "HALF SECTION OF EXIST. BRIDGE" as new work (existing=false): said now, from the library's own
+    # status words and the view's title — a view whose title also says new work ("PROPOSED EXTENSION OF EXISTING …") is not
+    from dxf_autoparam.topology import of
+
+    g = box_gad(tmp_path / "box.dxf", Box(cells=1))
+    sm = SheetModel.open(g["path"])
+    uid = next(k for k, u in sm.units.items() if len(u.views) == 2)
+    sm.set_view(sm.units[uid].views[0], name="HALF SECTION OF EXISTING BOX")
+    region = max(of(sm.unit(uid).an).regions, key=lambda r: len(r.holes)).id
+    sheet = SheetSession()
+    sheet.sm = sm
+    gem, _p = run_script(sheet, [[call("open_unit", unit=uid)], [call("define_parts", items=[{"name": "Box", "type": "box", "regions": [region]}])],
+                                 [call("finish", summary="x")], [call("finish", summary="x")]], instruction="Make the drawing parametric.")
+    verdict = next(r.response for turn in gem.seen for r in turn if r.name == "define_parts")
+    row = verdict["result"]["result"][0] if "result" in verdict["result"] else verdict["result"][0]
+    assert "existing=true" in row.get("existing_doubt", ""), row
+
+
+def test_the_overview_says_what_the_matching_family_is_made_of_and_where_the_standard_tables_are():
+    # seven recorded runs never asked the library for anything: what the family the drawing's words match is known to be made of — its components,
+    # what must be known, how each level follows — is in the first overview, as a lead, with where the standard drawings' tables are
+    rows = L.overview_rows(domain.active("bridge"), ["RCC BOX CULVERT 1 x 4.9 x 4.5", "WING WALL", "TOP OF SLAB"])
+    lib = next(iter(rows.values()))
+    fam = next(v for k, v in lib.items() if k.startswith("the family the words match"))
+    assert fam["family"] == "rcc_box" and fam["components"] and any("soffit_level" in w for w in fam["level_chain (how each level follows; graded, DERIVED holds by definition)"])
+    assert any(k.startswith("standard drawings") and "rdso-sheet:" in v for k, v in lib.items())

@@ -40,6 +40,8 @@ from .intent import (
     impact_summary,
     measure_impact,
     resolve_parts,
+    split_structures,
+    unsplit_structures,
 )
 from .ir import Analysis
 from .plan import compile_plans, prepare_plans, verify_plan
@@ -181,6 +183,7 @@ def apply(an: Analysis, answer: dict, base_decisions: Decisions | None = None, h
     rep = Report()
     u = an.drawing.units_mm
     tol = _tol_mm(an)
+    unsplit_structures(an)  # an earlier build's split of this same analysis, put back: this answer decides its own
     datums = an.datums
     dec = base_decisions or Decisions()
 
@@ -188,6 +191,22 @@ def apply(an: Analysis, answer: dict, base_decisions: Decisions | None = None, h
     parts, unknown_ids = resolve_parts(an, answer) if answer.get("components") else ({}, [])
     if unknown_ids:
         rep.warn("V1", "components", f"unknown ids {unknown_ids[:6]} ignored")
+    # Existing work and new work drawn along one line get a line each (intent.split_structures): a value of one structure moves that one only.
+    # The levels both hang on — a site input, a level only checked against — stay one line, and so do the lines the answer names a formula on; a
+    # level that follows the structure (a soffit, a top of slab) is a face of one structure like any other
+    keep = ({lv.get("datum") for lv in answer.get("levels", []) if lv.get("role") in ("site_input", "check_only")}
+            | {f.get("datum") for f in answer.get("datum_formulas", [])})
+    claims: dict[str, bool] = {}
+    for p in answer.get("parameters", []):  # a size named on a part of one structure is that structure's, wherever its gaps are drawn
+        part, c = parts.get(p.get("component") or ""), an.clusters.get(p.get("candidate") or "")
+        if part is not None and c is not None:
+            occ = p.get("occurrences")
+            claims.update({g: part.existing for g in (c.gaps if occ in (None, "all", ["all"]) else occ) if g in an.gaps})
+    own_lines = split_structures(an, parts, keep, claims) if parts else {}
+    if own_lines:
+        answer = _on_existing_copies(answer, parts, own_lines)
+        rep.findings.append(Finding("V11", "info", "existing", f"{len(own_lines)} line(s) existing and new work are both drawn along are one line each: "
+                                    f"{', '.join(f'{d}/{c}' for d, c in list(own_lines.items())[:6])} — a value of one structure moves that one"))
     existing_d, proposed_d = set(), set()
     comp_existing = {}
     for part in parts.values():
@@ -195,6 +214,8 @@ def apply(an: Analysis, answer: dict, base_decisions: Decisions | None = None, h
         if part.level != "assembly" or not any(q.parent == part.name for q in parts.values()):
             (existing_d if part.existing else proposed_d).update(part.datums)
     existing_only = existing_d - proposed_d
+    if existing_only and proposed_d - existing_d:  # each structure set out from its own lines, the joints and the levels (build.Decisions.owner)
+        dec.owner = {**{d: "existing" for d in existing_only}, **{d: "new" for d in proposed_d - existing_d}}
 
     # ── levels (V1, V6): site inputs pinned, water levels checked only ─────────────
     stated = {d for d, *_ in an.stated_levels}
@@ -608,7 +629,7 @@ def apply(an: Analysis, answer: dict, base_decisions: Decisions | None = None, h
                for r in constraint_rows if (r.get("confidence") or 1) < REVIEW_BELOW]
     prog.intent = {"parts": parts, "line_roles": roles, "constraints": constraint_rows, "behaviours": behaviour_rows,
                    "impact": impact_summary(impact, parts), "selection": {"hold": sorted(hold), "exclude": sorted(selection.get("exclude", [])), "drop": sorted(dropped), "frozen": len(frozen)},
-                   "review": review, "uncovered_regions": loose}
+                   "review": review, "uncovered_regions": loose, **({"structure_lines": own_lines} if own_lines else {})}
 
     # ── every value regenerates a valid drawing (V8) ──────────────────────────────
     check_regeneration(prog, rep)
@@ -1363,9 +1384,26 @@ def _explain_break(prog: Program, issue: str, values: dict[str, float], plan=Non
     return f" — on {entity_id(it)}: moved {'; '.join(moved[:4]) or 'nothing'}; stayed {'; '.join(stayed[:4]) or 'nothing'}."
 
 
+def _on_existing_copies(answer: dict, parts: dict, split: dict[str, str]) -> dict:
+    """The answer read on the split lines: a size or a level a part of the existing work names between two lines is measured on the existing work's
+    own copies of them (the agent names the lines it sees; which structure the size belongs to is its `component`)."""
+    def existing(name: str | None) -> bool:
+        p = parts.get(name or "")
+        return bool(p and p.existing)
+
+    out = copy.deepcopy(answer)
+    for p in out.get("parameters", []):
+        if existing(p.get("component")):
+            for k in ("from_datum", "to_datum"):
+                if p.get(k) in split:
+                    p[k] = split[p[k]]
+    return out
+
+
 def baseline(an: Analysis, decisions: Decisions | None = None, rep: Report | None = None, selection: dict | None = None) -> Program:
     """The geometry-only program, with the engine's own rules applied (slopes kept, notes linked). Its parts are
     the regions of the drawing; a selection may hold some of them as drawn and keep some values as drawn."""
+    unsplit_structures(an)
     prog = from_model(build(an, decisions or Decisions()))
     rep = rep if rep is not None else Report()
     parts, _ = resolve_parts(an, None)

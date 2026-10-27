@@ -260,6 +260,24 @@ state is not. One anchor policy per axis and assembly. Dimension lines keep thei
 renderer (text in one font, hatches as faint fills), not by a CAD viewer. The model's reading is untested live; no accuracy figure for
 the real model exists until the acceptance run is made.
 
+## What the agent reads of the geometry (`ai/geometry.py`)
+
+The overview gives every number in the view's own frame — mm across from its centre line (or its left face), mm up from its lowest line, with the
+reduced level beside it on the lines of the views that state levels — never the sheet's own coordinates (a live run was given 541 448 mm for a wall).
+Each line says which region faces lie on it and the level written on it; each region where it is, its fill and the labels whose leaders point at it
+("(?)" where the target is uncertain); and each axis is a RULER: its lines in order, the gap to the next with its candidate, the value named on it and
+the regions that fill exactly that gap, then what spans several steps (a cell's opening past its haunch lines). zoom_view takes `box_local` in the
+same numbers. Tests: `tests/test_geometry_view.py`.
+
+## Tools offered on request, and how good each answer was
+
+Nine tools no recorded run ever called (compare_views, calculate, find_duplicates, inspect_layers, record_learned, accept_semantics, impact_plan,
+define_transforms, knowledge) are declared once the agent opens their group with `more_tools` (`run.TOOL_GROUPS`): every request re-sends every
+declaration. Each tool event records `result_chars` (what the model reads, pictures excluded). `tools/tool_audit.py` reads a run's events (a saved
+progress answer, a monitor's events.jsonl, or the live server read-only) and reports per tool: calls, refused, identical repeats, characters per call,
+pictures, time — and with the request log, the largest requests. On 7A R1 it showed coverage called 9 times (5 identical repeats, its answer trimmed
+out of the window: the working state now carries the sheet's progress unit by unit) and the pictures-as-text turns (BUG-15).
+
 ## The engineering library (domain knowledge, on demand)
 
 When a domain pack with a library is on (`options.domain`, `--domain`, `AUTOPARAM_DOMAIN`; the page preselects it when the sheet's own

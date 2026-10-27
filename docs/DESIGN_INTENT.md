@@ -528,3 +528,25 @@ cause: members that would cross (25), a shared value that would stop driving in 
 line beyond the size on another layer too), a held line in the push (27 — most of them right: the road level under a clear height), a size on both axes (6),
 one side per axis and assembly (4, below). Not done: two sizes of one assembly on
 one axis with different sides (`compile_plans` still refuses plans that disagree on the anchor).
+
+### 13.4 Two structures on one line, a part kept as drawn, a person's side (2026-10-26)
+
+Found on Bridge No.7A after a paid run (`out/agent-logs/FINDINGS-20261026-7A.md`), each fixed generically and measured on a copy of the saved work:
+
+- **Existing and new work on one line are two lines** (`intent.split_structures`, called by `validator.apply` before anything is bound). In a longitudinal
+  section the old box and its extension run along the same horizontal lines (soffit, top of slab); a value named on one moved the other. A line both
+  structures run *along* gets an existing copy (`<line>e`): the existing work's entities, its parts and the sizes measured on it (the agent's `component`
+  first, else the entities drawn across the gap, else the region it was observed in) move to the copy, and each is set out from its own sizes. Kept as one:
+  a line where they *meet across* (the joint at the old box's end — the extension stays attached), a level that is a site input or a check, a line with
+  a formula on it. Every build starts by putting the split back (`unsplit_structures`; `Gap.split_of`), so it never outlives its answer. 7A's
+  L-section: values moving both structures 12 of 19 → 10 of 19; what remains is the joints and lines set out from the other structure through a chain.
+- **Each structure is set out from its own lines** (`build.Decisions.owner`): a gap from a line only existing work uses to one only new work uses is
+  taken last, so neither hangs from the other except through a joint or a level. And a size's "what touches the assembly follows" stops at the other
+  structure (`plan.build_plan`): the extension touching the old box at their joint no longer follows the old box's values. Still open (measured on
+  7A's L-section after both, intent re-derived: 11 of 19 values move both structures): the joints along the barrel, and the stacking, which pushes
+  every line beyond a size on its axis — the other structure's lines on that axis too.
+- **A part kept as drawn stays where it is drawn**, so a size that pushes into it is refused. Holding the fill beside a box left its clear span unable to
+  grow from the centre. define_parts now says what a held part meets, the refusal names the part ("x3 is set by a held part (EarthFillSlope, kept as drawn
+  where it is: release it and it follows …)"), and the agent is told to hold only what a draftsman never changes.
+- **A person's side carries what the default carries**: `_person_plan` adds the "what touches the assembly moves with its side" directive the design-intent
+  plans have — a side used to be refused for a course under the box the plan said nothing about.

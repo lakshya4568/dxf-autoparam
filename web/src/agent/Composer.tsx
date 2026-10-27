@@ -3,13 +3,13 @@
 // session) asks, naming the model (a model listed as free does not ask); the model, the library, how often it pauses, the scope and the cost are always visible under the box.
 import { useEffect, useRef } from "react";
 import { useStore } from "../state/store";
-import { agent, canNote, cancelCost, canSend, confirmCost, costAccepted, currentRun, DEFAULT_PAUSE, isActive, libraryOn, modelIsFree, note, requestResume, requestSend, setDraft, setModel, setPauseEvery, setScopeKind, setUseLibrary, stop } from "../state/agent";
+import { agent, canNote, cancelCost, canSend, confirmCost, costAccepted, currentRun, DEFAULT_PAUSE, followedRun, isActive, libraryOn, modelIsFree, note, requestResume, requestSend, setDraft, setModel, setPauseEvery, setScopeKind, setUseLibrary, stop } from "../state/agent";
 import { store as workspace } from "../state/workspace";
 import type { Life } from "./model";
 
 export function Composer({ life }: { life: Life }) {
   const s = useStore(agent, (x) => ({ draft: x.draft, models: x.models, model: x.model, busy: x.busy, confirm: x.confirm, scopeKind: x.scopeKind, run: currentRun(x), ok: canSend(x), paid: costAccepted(x), free: modelIsFree(x),
-    noteOk: canNote(x), library: x.library, libOn: libraryOn(x), pause: x.pauseEvery }));
+    noteOk: canNote(x), library: x.library, libOn: libraryOn(x), pause: x.pauseEvery, follows: !!followedRun(x) }));
   const ws = useStore(workspace, (x) => ({ sel: x.selection.size, view: x.focusView }));
   const box = useRef<HTMLTextAreaElement>(null);
   const active = isActive(s.run);
@@ -45,7 +45,7 @@ export function Composer({ life }: { life: Life }) {
     } else if (e.key === "Escape" && active) void stop();
   };
 
-  const scopeLabel = s.scopeKind === "auto" ? (ws.sel ? `selection (${ws.sel})` : ws.view ? `view ${ws.view}` : "whole drawing") : s.scopeKind;
+  const scopeLabel = s.scopeKind !== "auto" ? s.scopeKind : s.follows ? "as the last run" : ws.sel ? `selection (${ws.sel})` : ws.view ? `view ${ws.view}` : "whole drawing";
 
   return (
     <div className="border-t border-slate-200 dark:border-slate-700 p-2" data-testid="composer">

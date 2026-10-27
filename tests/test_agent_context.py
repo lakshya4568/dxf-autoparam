@@ -62,6 +62,7 @@ def test_a_long_run_sends_a_bounded_context_and_a_full_one_grows(tmp_path):
     # the working state stands at the head of the compacted conversation: the person's words, the checklist, the status
     head = compact_gem.requests[-1]["history"][0].parts[0].text
     assert "THE PERSON'S INSTRUCTION" in head and INSTRUCTION[:40] in head and "CHECKLIST" in head and "WORKING STATE" in head
+    assert "THE SHEET, UNIT BY UNIT: " in head and "units parametrized" in head, "where the task stands survives the fold: coverage is not asked again for it"
     assert any(e["kind"] == "note" and "context compacted" in e.get("text", "") for e in p1["events"])
     # what is done is done once: both runs did the same work
     assert len([e for e in p1["events"] if e["kind"] == "tool"]) == len([e for e in p2["events"] if e["kind"] == "tool"])
@@ -219,3 +220,15 @@ def test_a_refused_read_is_a_result_not_a_crash(tmp_path):
     bad = [e for e in p["events"] if e["kind"] == "tool" and e["name"] in ("impact_plan", "inspect_view")]
     assert len(bad) == 2 and all(not e["ok"] for e in bad)
     assert p["status"] not in ("error",)
+
+
+def test_one_name_for_two_sizes_is_asked_before_finish(tmp_path):
+    # a live run (7A, 2026-10-26) named the existing box's 600 mm slab and the proposed box's 500 mm slab both TopSlabThickness: a hint said so and was
+    # passed over, the person met two values of one name. It is an open matter now, asked once before finish like a coverage gap.
+    sheet, _uid, _g, _gem = session(tmp_path, [])
+    from dxf_autoparam.ai.run import Run, SheetBench
+
+    bench = SheetBench(Run(sheet, "R9", "Make the drawing parametric.", {"kind": "drawing"}))
+    sheet.sm.unlinked_repeats = lambda: [{"name": "TopSlabThickness", "units": ["U05", "U08"], "joined": False, "values": {"U05": 600.0, "U08": 500.0}, "same": False}]
+    open_ = bench.open_matters()
+    assert any(m.startswith("one name, two sizes: TopSlabThickness") and "rename_values" in m for m in open_), open_

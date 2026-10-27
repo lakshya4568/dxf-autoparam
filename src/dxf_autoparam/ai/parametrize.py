@@ -21,6 +21,7 @@ from ..build import Decisions, build
 from ..cadjson import cad_json
 from ..display import scene
 from ..dxf_read import read_dxf
+from ..intent import unsplit_structures
 from ..program import Program, from_model
 from ..render import faithful_png, labelled_png, regions_png
 from ..topology import of as topology_of
@@ -58,6 +59,7 @@ def prepare(path: str, view: int | None = None, region=None, drawing=None, analy
     a copy is used, the original is never touched."""
     if analysis is not None:
         an = copy.deepcopy(analysis)
+        unsplit_structures(an)
         snap = _snapshot(an)
         base = from_model(build(an, Decisions()))
         _restore(an, snap)

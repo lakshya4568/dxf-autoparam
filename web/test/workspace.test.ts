@@ -3,7 +3,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DeltaResult, Failure, Prim, Summary } from "../src/api/types";
 import { DEFAULT_OVERLAYS } from "../src/canvas/renderer";
-import { applyChange, cancelPreview, chooseGrowth, deriveIntent, focusParam, hideWays, settleGrowth, showWays, takeBackChoice, openFile, startClean, keepUnnamedAsDrawn, liveChange, mergeDelta, previewChange, refusalLine, releaseKept, rowEntities, setOverlay, store, undo, unlockHeldPart } from "../src/state/workspace";
+import { applyChange, cancelPreview, chooseGrowth, deriveIntent, focusParam, hideWays, settleGrowth, showWays, takeBackChoice, openFile, startClean, keepUnnamedAsDrawn, liveChange, mergeDelta, openUnit, previewChange, refusalLine, releaseKept, rowEntities, setOverlay, store, undo, unlockHeldPart } from "../src/state/workspace";
 
 const L = (i: number, x: number): Prim => ({ i, k: "p", r: "structural", l: "0", v: "V1", p: [x, 0, x + 1, 1] });
 
@@ -502,5 +502,34 @@ describe("reading a drawing, and starting it over clean", () => {
     expect(store.get().message).toEqual({ text: expect.stringContaining("the agent is working"), kind: "bad" });
     expect(store.get().selection.size).toBe(1);
     quiet.mockRestore();
+  });
+});
+
+describe("an open unit the engine has since joined with another", () => {
+  const row = (id: string, views: string[], parametrized: boolean) => ({ id, views, built: true, entities: 1, parametrized, params: parametrized ? 3 : null, dropped: "" });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("is read again as the unit that now holds its views, not as the id that is gone", async () => {
+    const asked: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      asked.push(String(url));
+      return new Response(JSON.stringify({ id: "U01_04", revision: 7, views: ["V01", "V04"], params: [], measured: [], frozen: [], findings: [], components: [] }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }));
+    const stale = { id: "U01", revision: 3, views: ["V01"], params: [], measured: [], frozen: [], findings: [], components: [] };
+    store.set({ summary: { ...SUMMARY, units: [row("U01_04", ["V01", "V04"], true), row("U02", ["V02"], false)] }, unit: stale as never, message: null, busy: null });
+    await openUnit("U01");
+    expect(asked).toEqual(["/api/sheet/unit?id=U01_04"]);
+    expect(store.get().unit?.id).toBe("U01_04");
+  });
+
+  it("keeps asking for an id the list still has", async () => {
+    const asked: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      asked.push(String(url));
+      return new Response(JSON.stringify({ id: "U02", revision: 7, views: ["V02"], params: [], measured: [], frozen: [], findings: [], components: [] }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }));
+    store.set({ summary: { ...SUMMARY, units: [row("U01_04", ["V01", "V04"], true), row("U02", ["V02"], false)] }, unit: null, message: null, busy: null });
+    await openUnit("U02");
+    expect(asked).toEqual(["/api/sheet/unit?id=U02"]);
   });
 });

@@ -537,6 +537,8 @@ class UnderstandingSession:
 
     def call(self, name: str, a: dict) -> dict:
         sm = self.sm
+        if a.get("unit"):  # an id from before views were joined names the unit that holds them now
+            a = {**a, "unit": sm.resolve_unit(a["unit"])}
         with self.bench._lock():
             if name == "drawing_overview":
                 return drawing_overview(sm)

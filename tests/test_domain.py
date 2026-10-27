@@ -47,7 +47,8 @@ def test_the_knowledge_tool_exists_only_with_a_pack_and_answers_what_is_on():
     pack = domain.active("bridge")
     names = lambda t: {d.name for tool in t for d in tool.function_declarations}
     assert "knowledge" not in names(tools()) and "knowledge" not in names(unified_tools())
-    assert "knowledge" in names(tools(pack=pack)) and "knowledge" in names(unified_tools(pack))
+    assert "knowledge" in names(tools(pack=pack)) and "knowledge" not in names(unified_tools(pack)), "a session declares it once the agent opens its group"
+    assert "knowledge" in names(unified_tools(pack, {"knowledge"})) and "knowledge" not in names(unified_tools(None, {"knowledge"}))
     assert "no domain pack" in Workbench(XX).knowledge("span")[0]
     assert any("ClearSpan" in h for h in Workbench(XX, pack=pack).knowledge("clear span"))
 

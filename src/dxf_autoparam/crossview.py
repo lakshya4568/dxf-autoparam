@@ -39,7 +39,7 @@ from .display import primitives
 from .dxf_read import read_dxf
 from .dxf_write import audit, write_dxf
 from .graph import affects
-from .intent import _drives
+from .intent import _drives, unsplit_structures
 from .ir import Analysis, Drawing, Role
 from .plan import accept, build_plan, clashes, pairs_of, plan_errors_at, with_plan
 from .program import ExprError, Program
@@ -304,6 +304,19 @@ class SheetModel:
             self.units[uid] = u
             for v in ids:
                 self.unit_of_view[v] = uid
+
+    def resolve_unit(self, ref: str) -> str:
+        """The unit a reference names now: a unit id, a view id, or the id a unit had before its views were joined to others (a unit is named by
+        its views: U01 and U04 drawn in projection become U01_04). Raises SheetError when nothing on the sheet holds it."""
+        if ref in self.units:
+            return ref
+        if ref in self.unit_of_view:
+            return self.unit_of_view[ref]
+        views = [p if p in self.unit_of_view else "V" + p for p in ref.removeprefix("U").split("_")] if ref.startswith("U") else []
+        held = {self.unit_of_view.get(v) for v in views}
+        if views and len(held) == 1 and None not in held:
+            return held.pop()
+        raise SheetError(f"no unit {ref}: the sheet has {', '.join(sorted(self.units))}")
 
     def unit(self, uid: str) -> Unit:
         if uid not in self.units:
@@ -1076,8 +1089,11 @@ class SheetModel:
         return held - {d for c in comps if not c.held for d in c.datums}
 
     def _person_plan(self, prog0, ans0, uid: str, local: str, pairs, policy: str) -> dict:
-        """The plan for a person's side: questions about attached parts are answered by what the set-out does now (a choice about one value)."""
-        req = {"id": f"A_{local}", "driver": {"parameter": local, "pairs": pairs}, "anchor": {"policy": policy, "source": "person"}}
+        """The plan for a person's side: questions about attached parts are answered by what the set-out does now (a choice about one value), and
+        what touches the assembly moves with its side — as the engine's own default plans have it (a side chosen by a person used to be refused for a
+        course under the box that the plan said nothing about, where the default for the same value moved it)."""
+        req = {"id": f"A_{local}", "driver": {"parameter": local, "pairs": pairs}, "anchor": {"policy": policy, "source": "person"},
+               "directives": [dict(design_intent.FOLLOW, source="person's side")]}
         plan = build_plan(prog0, ans0, req, sheet=self._plan_sheet(uid))
         if plan["status"] == "needs_decision" and all(q["about"].startswith("attached:") for q in plan["questions"]):
             plan = build_plan(prog0, ans0, {**req, "decisions": {q["about"]: "follow" for q in plan["questions"]}}, sheet=self._plan_sheet(uid))
@@ -1545,6 +1561,7 @@ class SheetModel:
         assert u.snap is not None
         assert u.gap_clusters is not None
         an = copy.deepcopy(u.an)
+        unsplit_structures(an)  # what the last build split for existing and new work is the build's, not the analysis as found
         if u.orig_datums is not None:
             an.datums = {did: copy.deepcopy(d) for did, d in u.orig_datums.items()}
         if u.orig_slot_datum is not None:

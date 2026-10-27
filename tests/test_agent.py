@@ -156,3 +156,37 @@ def test_after_six_turns_of_only_looking_looking_is_refused_until_an_edit():
                                        [call("finish", summary="x")], [call("finish", summary="x")]])
     agent_parametrize(BOX, gem=gem, log=lambda *a: None)
     assert "refused" in json.dumps(gem.seen[6]) and "refused" not in json.dumps(gem.seen[8])  # open again after the edit
+
+
+def test_a_part_held_against_the_structure_is_said_with_what_it_meets():
+    # a live run (7A, 2026-10-26) held the fill beside the proposed box (parametrize=false, "a draftsman leaves it"): the box's clear span could then
+    # not grow from its centre, and the agent never knew why. The verdict says what a held part meets and what holding it costs.
+    concrete, _l, _r, pcc, _span, _x, _y = ids()
+    script = [[call("define_parts", items=[{"name": "Box", "type": "box", "level": "assembly", "regions": [concrete]},
+                                           {"name": "PccCourse", "type": "courses", "regions": [pcc], "parametrize": False}])],
+              [call("finish", summary="done")], [call("finish", summary="done")]]
+    gem = ScriptedGemini(script)
+    agent_parametrize(BOX, gem=gem, on_event=lambda e: None, log=lambda *a: None)
+    box, course = gem.seen[0][0]["result"]
+    assert "held_against" not in box
+    assert "PccCourse is kept where it is drawn" in course["held_against"] and "Box" in course["held_against"], course
+
+
+def test_a_dimension_kept_as_drawn_that_is_another_occurrence_of_a_named_size_is_said():
+    # a live run (7A, 2026-10-26) kept a box's left wall "as it equals the right wall" and named only the right one: the left wall was then never
+    # parametrized. The verdict says the dimension is one more occurrence of the named size, with the call that binds it.
+    an, *_ = prepare(BOX)
+    c = next(c for c in an.clusters.values() if len([g for g in c.gaps if an.gaps[g].dims and an.gaps[g].axis in ("x", "y")]) >= 2)
+    g1, g2 = [g for g in c.gaps if an.gaps[g].dims and an.gaps[g].axis in ("x", "y")][:2]
+    from dxf_autoparam.cadjson import entity_id
+
+    dim2 = entity_id(an.drawing.items[an.gaps[g2].dims[0]])
+    concrete, *_ = ids()
+    script = [[call("define_parts", items=[{"name": "Box", "type": "box", "level": "assembly", "regions": [concrete]}]),
+               call("define_parameters", items=[{"name": "WallThickness", "part": "Box", "candidate": c.id, "occurrences": [g1]}]),
+               call("keep_dimensions", items=[{"dimension": dim2, "why": "it equals the other one"}])],
+              [call("finish", summary="done")], [call("finish", summary="done")]]
+    gem = ScriptedGemini(script)
+    agent_parametrize(BOX, gem=gem, on_event=lambda e: None, log=lambda *a: None)
+    kept = gem.seen[0][2]["result"][0]
+    assert kept["ok"] and "an occurrence of" in kept["same_size_named"] and g2 in kept["same_size_named"] and "WallThickness" in kept["same_size_named"], kept

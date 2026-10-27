@@ -1,7 +1,8 @@
 // The agent store against a fake engine: what is sent, what is refused, and when polling stops. No model is ever involved.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RunEvent, RunProgress } from "../src/api/types";
-import { agent, answer, canNote, canSend, confirmCost, currentRun, follow, libraryOn, note, refreshLibrary, requestAnswer, requestResume, requestSend, resume, runOptions, send, setDraft, setPauseEvery, setUseLibrary, stop, stopFollowing } from "../src/state/agent";
+import { agent, answer, canNote, canSend, confirmCost, currentRun, follow, libraryOn, note, refreshLibrary, requestAnswer, requestResume, requestSend, resume, runOptions, send, setDraft, setPauseEvery, setScopeKind, setUseLibrary, stop, stopFollowing } from "../src/state/agent";
+import { store as workspace } from "../src/state/workspace";
 
 type Call = { method: string; path: string; body: unknown };
 
@@ -162,6 +163,29 @@ describe("sending", () => {
     await send();
     const second = eng.calls.filter((c) => c.path === "/api/sheet/ai/run")[1];
     expect(second.body).toMatchObject({ instruction: "two", parent: "R1" });
+  });
+
+  it("a message that follows a run keeps its scope, even with an entity selected, unless the person picks another", async () => {
+    // a live run (7A, 2026-10-26): "please continue" after a whole-drawing run went out scoped to the one polyline selected on the canvas
+    agent.set({ paidFor: "m1" });
+    setDraft("parametrize everything");
+    await send();
+    eng.status = "partial";
+    await settle(1500);
+    workspace.set({ selection: new Set([7]) });
+    setDraft("please continue");
+    await send();
+    const follow = eng.calls.filter((c) => c.path === "/api/sheet/ai/run")[1];
+    expect(follow.body).toMatchObject({ parent: "R1", scope: { kind: "follow" } });
+    eng.status = "partial";
+    await settle(1500);
+    setScopeKind("selection");
+    setDraft("only this one");
+    await send();
+    const picked = eng.calls.filter((c) => c.path === "/api/sheet/ai/run")[2];
+    expect(picked.body).toMatchObject({ scope: { kind: "selection", entities: [7] } });
+    setScopeKind("auto");
+    workspace.set({ selection: new Set() });
   });
 
   it("a run that can be continued takes the message as a note instead of starting another", async () => {

@@ -31,7 +31,20 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from .assembly import AXIS_SOURCES, MID, assembly_lines, centre_candidates, is_axis, level_of, line_values_mm, mirror_stats, mirrored, protected_lines, rates
+from .assembly import (
+    AXIS_SOURCES,
+    MID,
+    assembly_lines,
+    centre_candidates,
+    held_root,
+    is_axis,
+    level_of,
+    line_values_mm,
+    mirror_stats,
+    mirrored,
+    protected_lines,
+    rates,
+)
 from .plan import accept, build_plan, core_parts, drives_pairs, pairs_of
 from .program import Program
 
@@ -254,22 +267,6 @@ def _existing_side(prog: Program, parts: dict, axis: str, asm: Assembly) -> str 
         return "start_fixed"
     if above and not below:
         return "end_fixed"
-    return None
-
-
-def held_root(parts: dict, line: str) -> str | None:
-    """The part that keeps `line` as drawn: the top-most part held (its parametrization switched off) whose subtree is drawn on the line."""
-    for n, p in parts.items():
-        if line not in p.datums:
-            continue
-        top, cur, seen = None, n, set()
-        while cur in parts and cur not in seen:
-            seen.add(cur)
-            if not parts[cur].parametrize:
-                top = cur
-            cur = parts[cur].parent
-        if top is not None:
-            return top
     return None
 
 

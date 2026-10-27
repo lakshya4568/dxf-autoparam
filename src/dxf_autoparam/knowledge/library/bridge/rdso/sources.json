@@ -1,0 +1,263 @@
+{
+ "extract_root": "/Users/proximus/Documents/Aagento Systems/Aagento-GAD-Foundation-Model/knowledge/sources/rdso/extracts/rcc-box",
+ "raw_root": "/Users/proximus/Documents/Aagento Systems/Aagento-GAD-Foundation-Model/knowledge/sources/rdso/raw/rcc-box",
+ "files": [
+  {
+   "path": "RDSO-RCC-BOX-10151R-SERIES/p1.json",
+   "sha256": "3b816e7300018a1bdcfe6f9d8667adda087579b62430dfce0c13edabaab0eb19"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10151R-SERIES/p2.json",
+   "sha256": "15bde573f6cc25cd6dbf1957533859eaa76763dab4e6dd4c5d5d0c7bbba094db"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10151R-SERIES/p3.json",
+   "sha256": "8507a85d491d8959eddf78bdb04c235b6e220cfad975865c6209dac500c0fe45"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10151R-SERIES/p4.json",
+   "sha256": "487eb01996f2016f79b5976fb0d86732da8ab78d39ad3af910b0d55533cefc08"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10151R-SERIES/p5.json",
+   "sha256": "19d1ba28bbb2acce1f29d8dc3b3903b6b7696b2ac2be5b76ac68ecb158125806"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10151R-SERIES/p6.json",
+   "sha256": "04d2f3edd48966a89dfc7df1659b46dd0ca471306206a0f8e168fc1a73bdda13"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10151R-SERIES/p7.json",
+   "sha256": "327b0b414198d8eeebb53ffc5507f6546ebe544b52e6ca458adf444702be6f45"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10151R-SERIES/p8.json",
+   "sha256": "a96994b0520b18707a96c09b2a727422b33ee48479d3a314d951edf9f26fbc95"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10151R-SERIES/p9.json",
+   "sha256": "d422caef7263235b4fdd86513d84247fa01518cc4d1cabafa5ece9f6a556de40"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10151R-SERIES/p10.json",
+   "sha256": "1e172f14230b696d2536ddf7e3aa580adc2cd416319ab341dc1f6b77e9fc3b5b"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10151R-SERIES/doc.md",
+   "sha256": "d433257528cba6f1114dedeaca3f1cdd116cffcd0f147c45d8f7d611bcdc45c5"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10151R-SERIES/doc.json",
+   "sha256": "9167d3a1dd3ebece8e9f97d2c35fbd8e1ef7b20376e35e2fa835fd5fcad86566"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10152-R-SERIES/p1.json",
+   "sha256": "eae53023a431fb4e144c08c37e81989a193e933b647cd37eacf4ceb97e274468"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10152-R-SERIES/p2.json",
+   "sha256": "7bf992832c9639a070f424af223c48a3f6503f3eb62e937c67e5aa849c4e3090"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10152-R-SERIES/p3.json",
+   "sha256": "14824a219611db473c2fdfae2a1ec629c72eebcab4df30da91d4d3aa44ad04d9"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10152-R-SERIES/p4.json",
+   "sha256": "df2c1f8037fe1792eefe63169b90fd12c0be7e34a486c367c81c4ce6fcb8e85b"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10152-R-SERIES/p5.json",
+   "sha256": "7e1b2216c0ba324af964737010f2885e42b61ec950b0a9c584f6a05577880613"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10152-R-SERIES/p6.json",
+   "sha256": "4bcda363fd65a9a3fdad0aca9cd3df6d837be69efb27ca2711ce4a9fea7430eb"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10152-R-SERIES/p7.json",
+   "sha256": "eb1298fbc7791dbb1e23ccafcfd45729d56b96b2a1cf01172c78c03d85e76fec"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10152-R-SERIES/p8.json",
+   "sha256": "d54d134e0d3317be9e9d931f7f24f594df19453748a1b253c915f969558c22ab"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10152-R-SERIES/p9.json",
+   "sha256": "c6e792051779659147a2412406e48076eecdd7d20c7a636a8d0b972336496273"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10152-R-SERIES/p10.json",
+   "sha256": "45b61624c443b8f99bc05bafa733c7a4d09961ec0ff00d334de6d627f3e5113d"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10152-R-SERIES/doc.md",
+   "sha256": "56846d482f13fc9155dae820c91db6c3ef0fe7ce62aa74905c5a2678e2b0909a"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10152-R-SERIES/doc.json",
+   "sha256": "99fbc882b809d8d412650ab7a0acc4c4e6d3569681b5b09196ad2b21dcb770fe"
+  },
+  {
+   "path": "RDSO-RCC-BOX-RDSO-B-10153-SERIES/p1.json",
+   "sha256": "42b95cdfae2f883aebddf2109c1ed227f972dc680b2c075b9b134aba0912d858"
+  },
+  {
+   "path": "RDSO-RCC-BOX-RDSO-B-10153-SERIES/p2.json",
+   "sha256": "5c897448a6609b435e72131d3e3446127a5ee179a668323eea40f7c3efb88465"
+  },
+  {
+   "path": "RDSO-RCC-BOX-RDSO-B-10153-SERIES/p3.json",
+   "sha256": "8d2801521d887dd5482e11c2e932e399dad174518191e1260121fb990301db43"
+  },
+  {
+   "path": "RDSO-RCC-BOX-RDSO-B-10153-SERIES/p4.json",
+   "sha256": "1426f0ec562525c40959735c30e0f94b58c4771a4fa8dabfa71e08dde5349998"
+  },
+  {
+   "path": "RDSO-RCC-BOX-RDSO-B-10153-SERIES/p5.json",
+   "sha256": "cf1c2aab5ad6936dc37cbd76455e0a7a59380c37d24fb29f8216ba5a91897cb1"
+  },
+  {
+   "path": "RDSO-RCC-BOX-RDSO-B-10153-SERIES/p6.json",
+   "sha256": "a72d4ae47beb63b3293d837c2cbf32d09cbe043c6fe4b0c83247c84b5363f437"
+  },
+  {
+   "path": "RDSO-RCC-BOX-RDSO-B-10153-SERIES/doc.md",
+   "sha256": "c793b05c9532daa1fc0ee30a3da91e0f1c0802e5f04ae43a1ebe3a095f6dc016"
+  },
+  {
+   "path": "RDSO-RCC-BOX-RDSO-B-10153-SERIES/doc.json",
+   "sha256": "9b5ff250a6ff6e0352d5d1b90fcdf8544f91e38dbc5fd64efc9bc507f056b1e3"
+  },
+  {
+   "path": "RDSO-RCC-BOX-RDSO-B-10155-TO-10155-5/p1.json",
+   "sha256": "0fcb000b85d457695c703b9117dc53741d11a93689e44d11f8df3088ffec2bd9"
+  },
+  {
+   "path": "RDSO-RCC-BOX-RDSO-B-10155-TO-10155-5/p2.json",
+   "sha256": "a7402f61067cac017b804de7833108e7f3c02525d353c21ac49e5b709f62714a"
+  },
+  {
+   "path": "RDSO-RCC-BOX-RDSO-B-10155-TO-10155-5/p3.json",
+   "sha256": "94dc46070ceced09a0ab3faf9e206f35f2bbe67fb6ae69cc82df3a72ac900d61"
+  },
+  {
+   "path": "RDSO-RCC-BOX-RDSO-B-10155-TO-10155-5/p4.json",
+   "sha256": "1f15d484ef6a493fa2a9f45387928271d85eae183e182ea807d142954f48d004"
+  },
+  {
+   "path": "RDSO-RCC-BOX-RDSO-B-10155-TO-10155-5/p5.json",
+   "sha256": "cad379c0d6d49441f93ad19851e853c01ce0cc9f68d5c8680f705ef20246be2e"
+  },
+  {
+   "path": "RDSO-RCC-BOX-RDSO-B-10155-TO-10155-5/p6.json",
+   "sha256": "f859c6ad3342d34020d238dca549f3a538a52b1b8e0bdbfdd996281f32287981"
+  },
+  {
+   "path": "RDSO-RCC-BOX-RDSO-B-10155-TO-10155-5/doc.md",
+   "sha256": "dc7dbdec2008b22c02493ff95c89d8b181851d3c86f02260dcaa5d1cd6b54c9b"
+  },
+  {
+   "path": "RDSO-RCC-BOX-RDSO-B-10155-TO-10155-5/doc.json",
+   "sha256": "f87d889dd7a17a39808f3f5981896c6b4980368eadcce40346305a8e4de47c56"
+  },
+  {
+   "path": "RDSO-RCC-BOX-RDSO-B-10155-6-TO-10155-10/p1.json",
+   "sha256": "85d72c4ed5d59a3fe890cc90a3534b905a62a5ea71e306db19add45444897502"
+  },
+  {
+   "path": "RDSO-RCC-BOX-RDSO-B-10155-6-TO-10155-10/p2.json",
+   "sha256": "7664083ac78890303c550146870ad21d7833048a3a7c640e179b729fdc69ccbb"
+  },
+  {
+   "path": "RDSO-RCC-BOX-RDSO-B-10155-6-TO-10155-10/doc.md",
+   "sha256": "afadfd215fd5f3bdd21efd896caf34097d59afa7749dd269967ce7ceb66f3ecd"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10157-TO10157-5/p1.json",
+   "sha256": "06152e4e55399adf2542f6f183fe788e9cca88bee93549249daf4a920d7f3cef"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10157-TO10157-5/p2.json",
+   "sha256": "32424c5b8e32f429b714e84ccf7b39d6c3c596163461e252863c7532db350895"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10157-TO10157-5/p3.json",
+   "sha256": "3182b6ebf5e99987b7b74df82d6b934a5b8cf6d4d2b3edf987232081addb02bf"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10157-TO10157-5/p4.json",
+   "sha256": "1938856d09e3bc01ff2791013a42e52a057227fa9df6e2593653fea05330f7ec"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10157-TO10157-5/p5.json",
+   "sha256": "7fc02bfdc44679a9a21a2ded678c654906d57cd19c8e5a267dcf17c798526c25"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10157-TO10157-5/p6.json",
+   "sha256": "ff4a04d78f91ed3517be3d151736f786be0dbf924378ea75d04ab49f7333a74b"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10157-TO10157-5/doc.md",
+   "sha256": "c32cfacca9e9f60ece2d3e166312b16a0755162830349a16b856d64f235eba23"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10157-TO10157-5/doc.json",
+   "sha256": "fcbf2bdcc7eff0812900cec91e95b17d4bb90af4d2257c5fdae255e012c90826"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10157-6TO-10157-10/p1.json",
+   "sha256": "10bd343317d6068b484c1898a6b7ddeec81399ccecf19557ddd62f1d47a79236"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10157-6TO-10157-10/p2.json",
+   "sha256": "f127d2565a838feab08c81bd1b62098c985280b2c8de145306275507e2951a92"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10157-6TO-10157-10/doc.md",
+   "sha256": "591ed634544bf5d84d38ddfb39f6138d12e50529bc68dda3b06081b0dbaf24d2"
+  },
+  {
+   "path": "RDSO-RCC-BOX-10157-6TO-10157-10/doc.json",
+   "sha256": "50d1152a688d47819df9caf81cafd353f7469475869b4c7a6d0f353750cc064b"
+  }
+ ],
+ "pdfs": [
+  {
+   "pdf": "10151R SERIES.pdf",
+   "sha256": "5891c6e6794e7f4803d8e9bff5497a6ecdd559866c0bf8a102a481edfdd05003",
+   "present": true
+  },
+  {
+   "pdf": "10152-R series.pdf",
+   "sha256": "4a678ec4234cb537113e72fd72e049a3fb8fcd493f181c04a18c9bbf9a0814fc",
+   "present": true
+  },
+  {
+   "pdf": "RDSO_B_10153_series.pdf",
+   "sha256": "891deba163cd6f213618fae5caaa36265e5a5b749a300b4be6f8d74fc5a59ad4",
+   "present": true
+  },
+  {
+   "pdf": "RDSO_B_10155 to 10155-5 .pdf",
+   "sha256": "c040c6efcad7545b6946607ba743345be08e47cb13a59d71d499c64ed9b54ffb",
+   "present": true
+  },
+  {
+   "pdf": "RDSO_B_10155_6 to 10155-10_.pdf",
+   "sha256": "e7b8193ea1239190b1f93a10ca9cac22cc2846f9802c7cb5c3fd96b28968b884",
+   "present": true
+  },
+  {
+   "pdf": "10157 to10157-5.pdf",
+   "sha256": "d5b0b512c57934b41bc0af6473ce46cceb3f138c78d675b0461118c2d87ff3d1",
+   "present": true
+  },
+  {
+   "pdf": "10157-6to 10157-10.pdf",
+   "sha256": "eb302f39127c6abb8db9b60cbaa930f779b7fa47b10693348cf49fb66e60c7b9",
+   "present": true
+  }
+ ]
+}

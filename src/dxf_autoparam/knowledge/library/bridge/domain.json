@@ -27,5 +27,6 @@
   "production_knowledge": "../../production",
   "components": "components.json",
   "identify": "identify.json",
-  "graded": "graded"
+  "graded": "graded",
+  "rdso_sheet": "rdso/rdso_rcc_box_index.json"
 }

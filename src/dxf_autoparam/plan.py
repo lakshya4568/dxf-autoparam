@@ -440,6 +440,10 @@ def pairs_of(prog: Program, answer: dict | None, name: str) -> list[tuple[str, s
             out = [(an.gaps[g].a, an.gaps[g].b) for g in gids if g in an.gaps and an.gaps[g].axis in ("x", "y")]
         elif row.get("from_datum") and row.get("to_datum"):
             out = [(cast(str, row["from_datum"]), cast(str, row["to_datum"]))]
+            split = prog.intent.get("structure_lines") or {}
+            comp = _parts(prog).get(row.get("component") or "")
+            if split and comp is not None and comp.existing:  # a size of the existing work is measured on its own copies of shared lines
+                out = [(split.get(a, a), split.get(b, b)) for a, b in out]
     if not out:
         c = next((c for c in an.clusters.values() if c.name == name), None)
         if c is not None:
@@ -829,9 +833,13 @@ def build_plan(prog: Program, answer: dict, request: dict, sheet: dict | None = 
                                  seed={x for p in pairs for x in p}, exclude=fixed_parts)
         if parts:
             attached = {n: why for n, why in _attached(prog, parts, members, core | followers, axis).items() if n not in sibling}
+    # the structure the size belongs to: what touches it and is the OTHER structure (existing work beside new work, at their joint) does not follow
+    # a value of this one — only a level both stand on moves both (the owner, 2026-10-23)
+    status = {parts[n].existing for n in own_core if n in parts}
+    other = {n for n, p in parts.items() if len(status) == 1 and p.existing != next(iter(status))}
     for d in [x for x in dirs if x["kind"] == "generic"]:
         if d["target"] == "connected":  # what touches the assembly — not what the set-out merely hangs on its lines
-            d["expands_to"] = sorted(n for n, why in attached.items() if _touches(why))
+            d["expands_to"] = sorted(n for n, why in attached.items() if _touches(why) and n not in other)
             for n in d["expands_to"]:
                 if not _behaves(dirs, n):
                     add(n, "part", d["mode"] if d["mode"] in MOVING_MODES else "follow", d["clause"], source="instruction (connected geometry)")

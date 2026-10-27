@@ -232,8 +232,17 @@ export async function initAgent(): Promise<void> {
 
 // ── acting ───────────────────────────────────────────────────────────────────────
 
+/** The run a new message follows (the engine's parent link): the conversation's last run when it can no longer be continued. */
+export function followedRun(s: AgentState = agent.get()): RunData | null {
+  const r = currentRun(s);
+  return r && !r.saved && !r.progress?.can?.continue ? r : null;
+}
+
+/** Where the instruction applies. A message that follows a run keeps that run's scope unless the person picks another: "please continue" after a
+ * whole-drawing run is the whole drawing, not the one entity that happens to be selected on the canvas. */
 export function scopePayload(): Record<string, unknown> {
   const a = agent.get(), w = workspace.get();
+  if (a.scopeKind === "auto" && followedRun(a)) return { kind: "follow" };
   const hasSel = w.selection.size > 0;
   const kind = a.scopeKind === "auto" ? (hasSel ? "selection" : w.focusView ? "view" : "drawing") : a.scopeKind;
   if (kind === "selection" && hasSel) return { kind, entities: [...w.selection] };
@@ -305,7 +314,7 @@ export async function send(): Promise<void> {
       agent.set({ draft: "" });
       follow(r.id, true);
     } else {
-      const started = await api.startRun(text, scopePayload(), runOptions(s), r && !r.saved ? r.id : undefined);
+      const started = await api.startRun(text, scopePayload(), runOptions(s), followedRun(s)?.id);
       putRun(started.run, (cur) => cur);
       agent.set({ draft: "", currentId: started.run });
       follow(started.run);

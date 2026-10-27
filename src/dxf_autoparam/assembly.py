@@ -220,12 +220,31 @@ def level_of(prog: Program, d: str) -> str | None:
     return next((n for n in sorted(names) if n in prog.params and prog.params[n].kind == "level"), None)
 
 
+def held_root(parts: dict, line: str) -> str | None:
+    """The part that keeps `line` as drawn: the top-most part held (its parametrization switched off) whose subtree is drawn on the line."""
+    for n, p in parts.items():
+        if line not in p.datums:
+            continue
+        top, cur, seen = None, n, set()
+        while cur in parts and cur not in seen:
+            seen.add(cur)
+            if not parts[cur].parametrize:
+                top = cur
+            cur = parts[cur].parent
+        if top is not None:
+            return top
+    return None
+
+
 def protected_lines(prog: Program, fixed: set[str] | None = None) -> dict[str, str]:
-    """Lines the stacking never rewrites, with why (in words; a site level says which)."""
+    """Lines the stacking never rewrites, with why (in words; a site level says which, a held part which part — and that releasing it lets it follow)."""
     out: dict[str, str] = {}
+    parts = prog.intent.get("parts") or {}
     for d, kind in protection_kinds(prog, fixed).items():
         name = level_of(prog, d) if kind == "level" else None
         words = "a level only checked against" if kind == "level" and d in prog.reference_only else PROTECTION_WORDS[kind]
+        if kind == "held" and (part := held_root(parts, d)):
+            words += f" ({part}, kept as drawn where it is: release it and it follows what it is set out from)"
         out[d] = words + (f" ({name})" if name else "")
     return out
 

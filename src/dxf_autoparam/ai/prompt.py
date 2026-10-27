@@ -44,8 +44,9 @@ Your job — say WHAT things are, WHICH sizes drive which, and WHAT must stay tr
      (the details of a member: haunches, copings, steps, keys). Give each part the regions (R…) it is made of, and open entities
      (track, ground) that belong to it. Every structural region belongs to exactly one leaf part; parts you cannot place go in
      one component named Unidentified with parametrize=false. `type`: a short word of your own for what the part is (a pack's
-     concept id when a pack is on); existing=true for existing / old work; parametrize=false for details a draftsman would leave
-     as drawn. Give evidence and confidence.
+     concept id when a pack is on); existing=true for existing / old work (parametrized too, with its own values); parametrize=false
+     keeps a part where it is drawn, so only for what a draftsman never changes (a symbol, a mark) or what the person keeps as
+     drawn — a part drawn against the structure follows it. Give evidence and confidence.
   C. line_roles: for every set-out line your parameters, formulas or constraints use — which part it bounds and how
      (inner face, outer face, top, bottom, soffit, centre line, toe …).
   D. levels: every y-datum that carries a stated level. role = site_input for levels the site gives (bed, formation, rail,

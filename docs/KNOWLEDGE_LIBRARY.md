@@ -147,18 +147,27 @@ formula or relation on the agent's own named values. The first look at the sheet
 Statuses are the source's and are never promoted: DERIVED is geometry; NORMATIVE cites a verified clause (the IRBM 2024 copy in hand);
 COMMON_PRACTICE, ASSUMPTION, DISPUTED and UNKNOWN are never values. Configuration formulas are identities over values read from the drawing.
 
-### The RDSO slot (the owner adds the standard drawings later)
+### The RDSO standards sheet (five RCC box standards, 2026-10-23)
 
-The library holds no RDSO number: no formation width or track centre per configuration (KC-13 open), no standard box, slab or pipe sizes. GADs
-cite the sheets they follow (`RDSO/B-10152/1R`, `RDSO/B-10155/10`, `RDSO/BA-10236` — `identify` lists them as `standard_drawing` facts). When
-the owner adds those PDFs:
+The owner's extracts of five RDSO RCC box standard drawing sets (read by eye from the PDFs in Aagento-GAD-Foundation-Model,
+`knowledge/sources/rdso/extracts/rcc-box/`) are indexed as one sheet: RDSO/B-10151/R (single box, DFC 32.5 t, single straight line),
+RDSO/B-10152/R (single box, 25 t-2008, single line), RDSO/B-10153 (segmental box for limited height subways, 25 t-2008), RDSO/B-10155
+(single box, double line, 25 t-2008) and RDSO/B-10157 (single box, double line, DFC). `tools/build_rdso_sheet.py --index-only` writes
+`knowledge/library/bridge/rdso/` (`rdso_rcc_box_index.json`, the readable `RDSO_RCC_BOX_STANDARDS.md`, `sources.json` with the sha256 of every
+extract file and source PDF). The agent reads it with `get_reference('rdso-sheet:')` (the standards and what each applies to),
+`rdso-sheet:<id>` (tables, haunch bands, key depth, notes, relations, printed discrepancies) and `rdso-sheet:<id>:<fill m>:<span x height>`
+(one schedule row).
 
-1. Keep them outside the repository's code (they are large and licensed): a folder the library points at, like the IRBM 2024 copy.
-2. Record each as a source in `graded/sources.json`'s shape (id, title, edition, `trust: VERIFIED_LOCAL`, sha256, path) — in aagento-bridge,
-   then import again, so both projects read one register.
-3. Index each sheet with page numbers (the clause index of `irbm-2024.json` is the pattern) and link the drawing ids GADs cite to their sheet.
-4. Promote a value only with its sheet and clause: a rule NORMATIVE on a verified sheet; a size table as a relation to check on the drawing's
-   own values (`check_rule`), never a value written into a drawing.
+Every item carries a kind: **explicit** (printed, with its verification level: checked against the drawing, spot-checked, or transcribed
+and not re-checked), **derived** (follows from the printed notations, written out), **unverified** (flagged unclear, or on a page the
+extraction did not check or says not to use). Implementation rules and engineer choices are not RDSO content and are not in the sheet.
+Rules of use, as the sheet states them: a value applies only to its own standard, fill and configuration (the five are not
+interchangeable); no interpolation (the notes allow the immediately higher span/height configuration; for an intermediate fill height
+the sheets say nothing, and taking the next higher tabulated fill is an engineer's choice); a printed value is compared with the drawing's
+own value and never written into a drawing; unverified values never decide a check. Other RDSO sets (B-10154, B-10156, B-10158 …, BA-10236)
+are not in the sheet yet: add their extract folders to `STANDARDS` in the builder and rebuild.
+
+The RCC box template of Bridge No. 7A (out/independent-7A, `gadparam.rccbox`) uses the same sheet for its RDSO checks.
 
 ## Limits, said plainly
 

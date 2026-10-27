@@ -8,6 +8,9 @@ full, or a grounded example sheet as a compact reading; `check_rule` compares a 
 its kind, what is existing and what is proposed, what it crosses, what it carries and how many, spans, loading, the standard drawings it cites —
 with where each word is printed, and the graded card of that kind (its components, level chain, formulas and rules with their status, open
 questions): read it early, then confirm on the drawing; a graded formula is checked with `check_rule(rule='graded:<id>', …)`.
+`get_reference('rdso-sheet:')` lists the standard drawings whose tables the library holds (what each applies to, which sheets were checked);
+`rdso-sheet:<id>` reads one, `rdso-sheet:<id>:<fill m>:<span x height>` one schedule row — printed values with their sheet and page, to
+compare with the values you read, never to put in their place.
 Library content is CONTEXT, each item labelled with its review state. It can name a part, suggest which levels or relations to look for, and
 warn of a misreading. It is NEVER a value of this drawing: every size, level and relation you define comes from what this drawing shows, and
 where the library and the drawing disagree the drawing wins — say so (record_finding, kind conflict). A match is a lead, not a

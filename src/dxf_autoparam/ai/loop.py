@@ -255,10 +255,14 @@ def pack(call, res) -> object:
     from google.genai import types
 
     images = []
-    if isinstance(res, dict):
-        one = res.pop("_image", None)
-        many = res.pop("_images", None) or []
-        images = ([one] if one else []) + list(many)
+    # the loop wraps a turn's last result to add its status, a nudge or the unit's budget ({"result": res, …}): the pictures are found under
+    # every wrapper, or they would be serialised into the JSON as text — a megabyte of encoded bytes the model pays for and cannot see
+    holder = res
+    while isinstance(holder, dict):
+        one = holder.pop("_image", None)
+        many = holder.pop("_images", None) or []
+        images += ([one] if one else []) + list(many)
+        holder = holder.get("result")
     if images:
         parts = [types.FunctionResponsePart(inline_data=types.FunctionResponseBlob(mime_type="image/png", data=im["png"])) for im in images]
         return types.Part.from_function_response(name=call.name, response={"result": res}, parts=parts)
@@ -553,6 +557,18 @@ def execute_calls(bench, calls: list, emit, state: LoopState, budget: Budget, tu
     return parts, done
 
 
+def result_chars(res) -> int:
+    """How much of a result the model reads as text (its pictures are sent as pictures): what a tool's answer costs every turn it stays."""
+    def text(o):
+        if isinstance(o, dict):
+            return {k: text(v) for k, v in o.items() if k not in ("_image", "_images")}
+        if isinstance(o, list):
+            return [text(v) for v in o]
+        return o
+
+    return len(json.dumps(text(res), default=str))
+
+
 def _attach(res, key: str, value):
     """Add a field beside a turn's last result, in the wrapper the loop already uses for status and nudges (or in a new one)."""
     if isinstance(res, dict) and "result" in res and ("status" in res or "nudge" in res):
@@ -563,7 +579,7 @@ def _attach(res, key: str, value):
 def _tool_event(cid: str, name: str, a: dict, ok: bool, why: str, res, t0: float, bench, images: list[dict] | None = None) -> dict:
     ev = {"kind": "tool", "id": cid, "name": name, "args": short(a), "args_full": shrink(a), "ok": bool(ok), "why": why, "doing": doing(name), "stage": stage_of(name), "phase": phase_of(stage_of(name)),
           "result": shrink(res), "summary": summarise(name, a, res), "ms": int((time.perf_counter() - t0) * 1000),
-          "unit": bench.unit_label() if hasattr(bench, "unit_label") else None}
+          "result_chars": result_chars(res), "unit": bench.unit_label() if hasattr(bench, "unit_label") else None}
     why_text = a.get("why") if isinstance(a, dict) else None
     if isinstance(why_text, str) and why_text.strip():
         ev["said"] = why_text.strip()[:240]
