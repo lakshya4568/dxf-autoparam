@@ -32,6 +32,7 @@ engine that checks every claim. Read this first; the details are in `README.md` 
 | Area | Where |
 |---|---|
 | Geometry engine (no AI): read DXF → datums, gaps, candidate sizes → a program where every line is a formula of named sizes → regenerate / write DXF | `dxf_read.py` `analyse.py` `build.py` `program.py` `regen.py` `dxf_write.py` `topology.py` |
+| Curved structure: an ellipse arc or a spline (a plan's wing wall) set out from its two ends, redrawn by one affine map in the page and the file; a curve no bigger than 10× the text height is a mark; curves flattened to 2·10⁻⁶ of the sheet's x/y size | `dxf_read.entity_points` / `_curves_as_marks`, `display.curve_map`, `analyse` §6b, `regen` (a curve turning inside out) |
 | A whole sheet: views, units (views drawn in projection are one unit), shared sizes across views, plans, undo | `sheet.py` `crossview.py` (`SheetModel`) |
 | Instruction-guided plans and anchors (which side of an assembly stays) compiled into the set-out and measured | `plan.py` `assembly.py` |
 | **Design intent**: which side of each size stays when it changes (symmetry → fixed → existing → convention), tried for real, stored as plans of source `design intent`; how to settle what is undecided | `design_intent.py`, `docs/DESIGN_INTENT.md` §13 |

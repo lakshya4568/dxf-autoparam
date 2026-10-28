@@ -17,7 +17,7 @@ from __future__ import annotations
 import copy
 from collections import Counter, defaultdict
 
-from .dxf_read import read_dxf
+from .dxf_read import ReadOptions, read_dxf
 from .feature import AXIS, BAND, FIXED, LEFT, MAX_REFUSALS, PARTIAL, RIGHT, STRETCH, FeatureRefused, Operation, _classify, instances
 from .regen import regenerate_program
 from .topology import of as topology_of
@@ -30,7 +30,7 @@ class PlanBlock(str):
 def carry(sm, op: Operation, derived) -> tuple[object, list[str]]:
     """The sheet of the derived drawing with the old sheet's state carried over, validated — or FeatureRefused. Reads `sm`, builds a new model."""
     base = op.base
-    new_dr, _ = read_dxf(derived.path)
+    new_dr, _ = read_dxf(derived.path, ReadOptions(curves=sm.dr.curves))  # read as the sheet it derives from
     src = {it.src: it.index for it in new_dr.items}
     img: dict[int, int] = {}  # the sheet's entity → the entity it is now
     cps: dict[int, list[int]] = {}  # → its copies, in order
@@ -81,7 +81,7 @@ def bake(sm, work, request: dict) -> object:
         raise FeatureRefused([f"the drawing with its current values does not hold: {e}" for e in rep["errors"][:3]])
     if rep.get("dimension_render_failed") or rep.get("blocks_exploded") or rep.get("arrays_not_reshaped"):
         raise FeatureRefused("writing the current values out would reshape a block reference or a dimension it cannot re-draw: reset those values first")
-    new_dr, _ = read_dxf(path)
+    new_dr, _ = read_dxf(path, ReadOptions(curves=sm.dr.curves))
     src = {it.src: it.index for it in new_dr.items}
     img = {}
     for it in sm.dr.items:

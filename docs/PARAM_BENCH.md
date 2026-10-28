@@ -95,6 +95,21 @@ code of 2026-10-23 (commits `2f19cd1` … `2c0b44a`). The other cases were not r
 it could leave a named size inside it worked out). The slope rule as first written cost 20A eight dimensions (72 %): it bound corners along a face
 that turns, a set-out the design intent cannot stack through; it now binds only along edges that keep their slope.
 
+**2026-10-27 — curved structure** (raw rows `out/agent-logs/20261027-bench-curves/`, all 22 cases, no model call). An ellipse arc or a spline larger
+than 10× the drawing's text height is now structure, set out from its two ends (the plans' quarter-ellipse wing walls); a project saved before keeps
+reading its curves as marks (its ids number the structure as it was read then). Read fresh, with the curves:
+
+| case | dimensions | ceiling before → now | editable values (ceiling) | annotation correct |
+|---|---|---|---|---|
+| Bridge-7A | 122 | 106 = 87 % → 112 = 92 % (plan unit 19 → 25 of 31) | 94/94 | 10/10 |
+| mib173 | 200 | 144 = 72 % → 186 = 93 % (no structural curve: the gain is not from this change; the earlier figure was one pass, a lower bound) | 141/141 | 19/19 |
+| gad-1790232095 | 93 | 77 = 83 % → 80 = 86 % | 64/64 | 12/12 |
+| 173A, 20A (saved work, read as made) | 95, 136 | unchanged: 83 = 87 %, 106 = 78 % (baselines 58, 60) | 64/65, 82/87 | 32/32, 12/12 |
+| the other 16 (BVP-minor, L-section, BRG80, GAD-general, box-1…4cell, ex-*) | | unchanged | unchanged | unchanged |
+
+Read fresh with the curves, 173A's ceiling was 87 = 92 % (its plan unit 39 → 43 of 50) — measured before the fix of a contact tested on a curve's
+chord, so NOT VERIFIED as a final number; its bench case starts from saved work.
+
 Refused ±10 % steps, failed checks by kind (the ceiling where measured, else the baseline):
 
 - 173A: incomplete_model 2

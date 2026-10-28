@@ -21,6 +21,7 @@ import ezdxf.recover
 import ezdxf.upright
 from ezdxf.math import Vec3
 
+from .display import curve_map
 from .ir import Item, Role
 from .regen import Regenerated
 
@@ -63,8 +64,15 @@ def _apply(e, it: Item, pts: list, reg: Regenerated, report: dict) -> None:
         if t == "ARC" and it.index in getattr(reg, "turns", {}):  # a turned part: the arc turns with it
             e.dxf.start_angle = (float(e.dxf.start_angle) + reg.turns[it.index]) % 360
             e.dxf.end_angle = (float(e.dxf.end_angle) + reg.turns[it.index]) % 360
-    elif t in ("ELLIPSE",):
-        e.dxf.center = _v(pts[0], e.dxf.center.z)
+    elif t in ("ELLIPSE", "SPLINE"):
+        # redrawn between its two ends by the same map the page draws it with; ezdxf's own transform keeps an ellipse exact
+        m = curve_map(it.pts, pts, getattr(reg, "turns", {}).get(it.index, 0.0))
+        if not m.is_identity():
+            try:
+                e.transform(m.matrix())
+            except (ezdxf.DXFError, NotImplementedError, ArithmeticError) as exc:
+                report.setdefault("not_written", []).append(f"{t} {it.src}: {type(exc).__name__}")
+                return
     elif t in ("TEXT", "ATTRIB"):
         e.dxf.insert = _v(pts[0])
         if it.index in getattr(reg, "turns", {}):
@@ -141,12 +149,6 @@ def _apply(e, it: Item, pts: list, reg: Regenerated, report: dict) -> None:
         e.dxf.location = _v(pts[0])
     elif t == "INSERT":
         e.dxf.insert = _v(pts[0], e.dxf.insert.z)
-    elif t == "SPLINE":
-        dx, dy = pts[0][0] - it.pts[0][0], pts[0][1] - it.pts[0][1]
-        if len(e.control_points):
-            e.control_points = [Vec3(p[0] + dx, p[1] + dy, p[2]) for p in e.control_points]
-        if len(e.fit_points):
-            e.fit_points = [Vec3(p[0] + dx, p[1] + dy, p[2]) for p in e.fit_points]
     elif it.extra.get("compound") or it.extra.get("frame"):
         # a multileader, a wipeout, an image frame, a table: moved as a whole (by where it is held — a multileader's tip).
         # Its parts are not reshaped one by one: a tip and its content moving apart is said, not silently averaged.

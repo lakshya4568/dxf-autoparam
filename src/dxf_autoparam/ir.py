@@ -61,8 +61,8 @@ class Item:
     # A rigid symbol (a small block: a level marker, a north arrow) moves as one piece
     # with its insertion point; this is the index of that insertion point's item.
     anchor: int | None = None
-    # Curves the prototype does not reshape (ellipse, spline, text outlines), as
-    # flattened world polylines for display; they translate with pts[0].
+    # Curves drawn from their outline (ellipse, spline; a compound's parts), as flattened world polylines. An ellipse or
+    # a spline is set out from its two ends (pts) and redrawn stretched between them (display.curve_map).
     display: list[list[tuple[float, float]]] = field(default_factory=list)
 
 
@@ -79,6 +79,8 @@ class Drawing:
     # What the file held and what of it is read, drawn, editable and exportable (fidelity.coverage_report) — by type,
     # with the handles of every visible entity that is not drawn. Empty for a drawing not read from a file.
     coverage: dict = field(default_factory=dict)
+    # Free curves (ellipse arcs, splines) read as structure (ReadOptions.curves); a project records it, so saved work is read as it was made.
+    curves: bool = True
 
 
 # ── Analysis: what the geometry says about itself ───────────────────────────────

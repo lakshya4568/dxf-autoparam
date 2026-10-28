@@ -23,6 +23,7 @@ Nothing here executes text: an instruction is read into ids and modes, and the d
 from __future__ import annotations
 
 import copy
+import itertools
 import math
 import os
 import re
@@ -1339,6 +1340,11 @@ def _seg_dist(p, q, r, s) -> float:
 
 
 def _segments(it, pts) -> list:
+    if it.display and len(it.vertex_pts) == 2 and len(pts) == 2:  # a curve: its own outline, redrawn between its ends — not the chord across them
+        from .display import curve_map
+
+        m = curve_map(it.pts, pts)
+        return [(m.apply(p), m.apply(q)) for poly in it.display for p, q in itertools.pairwise(poly)]
     if it.segments:
         return [(pts[i], pts[j]) for i, j in it.segments if i < len(pts) and j < len(pts)]
     vs = [pts[k] for k in it.vertex_pts if k < len(pts)] or pts
@@ -1347,6 +1353,8 @@ def _segments(it, pts) -> list:
 
 def _touch(a, pa, b, pb, tol) -> bool:
     sa, sb = _segments(a, pa), _segments(b, pb)
+    # a curve's outline is chords, each up to its flattening tolerance off the curve a line was drawn to
+    tol += max(a.extra.get("flat_tol", 0.0), b.extra.get("flat_tol", 0.0))
     return any(_seg_dist(p, q, r, s) <= tol for p, q in sa for r, s in sb)
 
 

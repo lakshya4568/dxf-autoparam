@@ -74,9 +74,15 @@ class ReadOptions:
     symbol_max_entities: int = 40  # a block with fewer entities than this, and small, is a rigid symbol
     symbol_max_size_frac: float = 0.05  # ... and smaller than this share of the drawing
     units_mm: float | None = None  # override $INSUNITS
+    # Free curves (ellipse arcs, splines) as structure, set out from their two ends. False reads them as the reader did before 2026-10-27 —
+    # marks moved by one point — for work saved then: its datum, gap and candidate ids count the structure as it was read when it was made.
+    curves: bool = True
 
 
-STRUCTURAL_TYPES = {"LINE", "LWPOLYLINE", "POLYLINE", "ARC", "CIRCLE"}
+CURVE_TYPES = ("ELLIPSE", "SPLINE")  # free curves: drawn from their flattened outline, set out from their two ends
+STRUCTURAL_TYPES = {"LINE", "LWPOLYLINE", "POLYLINE", "ARC", "CIRCLE", *CURVE_TYPES}
+# A curve no bigger than this many times the drawing's own writing is a mark (a glyph, a fill symbol, a bolt head), not a part.
+CURVE_MARK_TEXT_HEIGHTS = 10.0
 # Not readable as geometry here: ACIS solids / regions (their data is a modeller's), OLE objects, and paper-space viewports
 # (the reader works in one layout; the coverage report lists the layouts and their viewports).
 UNSUPPORTED = {"OLE2FRAME", "OLEFRAME", "VIEWPORT", "MESH", "3DSOLID", "REGION", "BODY", "SURFACE", "EXTRUDEDSURFACE",
@@ -117,7 +123,7 @@ def _role(doc: EzDoc, e, layer_name: str, opts: ReadOptions, style: dict | None 
     if re.search(opts.fixed_layers, layer, re.IGNORECASE) or layer_name in opts.extra_fixed:
         return Role.FIXED
     t = e.dxftype()
-    if t not in STRUCTURAL_TYPES:
+    if t not in STRUCTURAL_TYPES or (t in CURVE_TYPES and not opts.curves):
         return Role.ANNOTATION
     if opts.include_layers is not None and layer_name not in opts.include_layers:
         return Role.ANNOTATION
@@ -150,8 +156,8 @@ def _dim_text(e) -> dict:
 
 
 
-def entity_points(e, tol: float = 1.0) -> dict | None:
-    """The positioning points of one (upright, world-coordinate) entity, in a fixed order the writer replays."""
+def entity_points(e, tol: float = 1.0, curves: bool = True) -> dict | None:
+    """The positioning points of one (upright, world-coordinate) entity, in a fixed order the writer replays. `curves`: ReadOptions.curves."""
     t = e.dxftype()
     if t == "LINE":
         return {"pts": [_xy(e.dxf.start), _xy(e.dxf.end)], "vertex_pts": [0, 1], "segments": [(0, 1)]}
@@ -177,10 +183,17 @@ def entity_points(e, tol: float = 1.0) -> dict | None:
         }
     if t == "CIRCLE":
         return {"pts": [_xy(e.dxf.center)], "vertex_pts": [0], "segments": [], "radius": float(e.dxf.radius)}
-    if t in ("ELLIPSE", "SPLINE"):
-        disp = _flatten(e, tol)
-        anchor = _xy(e.dxf.center) if t == "ELLIPSE" else (disp[0][0] if disp else (0.0, 0.0))
-        return {"pts": [anchor], "vertex_pts": [], "segments": [], "display": disp}
+    if t in CURVE_TYPES:
+        # the curve's own flattening: a path made of Béziers first is itself an approximation (1 mm off a 10 m ellipse)
+        try:
+            disp = [pts] if len(pts := [_xy(v) for v in e.flattening(tol)]) >= 2 else []
+        except DATA_ERRORS:  # a curve its own maths cannot flatten: the general path
+            disp = _flatten(e, tol)
+        if not disp or not curves:  # a mark moved by one point: its centre, or where it starts
+            anchor = _xy(e.dxf.center) if t == "ELLIPSE" else (disp[0][0] if disp else (0.0, 0.0))
+            return {"pts": [anchor], "vertex_pts": [], "segments": [], "display": disp}
+        # set out from its two ends — where a curved wall meets the lines it joins; it is redrawn stretched between them (display.curve_map)
+        return {"pts": [disp[0][0], disp[-1][-1]], "vertex_pts": [0, 1], "segments": [], "display": disp, "extra": {"flat_tol": tol}}
     if t in ("TEXT", "ATTRIB", "ATTDEF"):
         pts = [_xy(e.dxf.insert)]
         if e.dxf.hasattr("align_point") and (e.dxf.get("halign", 0) or e.dxf.get("valign", 0)):
@@ -330,9 +343,35 @@ def _block_size(doc: EzDoc, name: str) -> tuple[int, float]:
         from ezdxf import bbox
 
         b = bbox.extents(blk, fast=True)
-        return n, (b.size.magnitude if b.has_data else 0.0)
+        return n, (_diagonal(b) if b.has_data else 0.0)
     except DATA_ERRORS:  # extents unknown: not treated as a small symbol
         return n, 0.0
+
+
+def _curves_as_marks(items: list[Item], notes: list[str]) -> None:
+    """A curve the size of the writing is a mark — a glyph of an imported PDF, a fill symbol, a bolt head — not a part: it stays
+    annotation, as a symbol block does. The yardstick is the drawing's own text height (its median), so it holds at any scale;
+    a drawing with no writing keeps its curves as structure."""
+    heights = sorted(it.text_height for it in items if it.dxftype in ("TEXT", "MTEXT", "ATTRIB") and (it.text_height or 0) > 0)
+    if not heights:
+        return
+    limit = CURVE_MARK_TEXT_HEIGHTS * heights[len(heights) // 2]
+    marks = 0
+    for it in items:
+        if it.role == Role.STRUCTURAL and it.dxftype in CURVE_TYPES:
+            xs = [x for poly in it.display for x, _ in poly]
+            ys = [y for poly in it.display for _, y in poly]
+            if not xs or math.hypot(max(xs) - min(xs), max(ys) - min(ys)) <= limit:
+                it.role = Role.ANNOTATION
+                marks += 1
+    if marks:
+        notes.append(f"{marks} curve(s) no bigger than {CURVE_MARK_TEXT_HEIGHTS:g}× the drawing's text height read as marks, not structure.")
+
+
+def _diagonal(b) -> float:
+    """The diagonal of extents on the sheet (x, y). Elevations are not size: an L-section's texts written at their
+    reduced level in z (kilometres) made a 414 m sheet read as 918 km across."""
+    return math.hypot(b.size.x, b.size.y)
 
 
 def read_dxf(path: str, opts: ReadOptions | None = None) -> tuple[Drawing, EzDoc]:
@@ -371,12 +410,14 @@ def read_dxf(path: str, opts: ReadOptions | None = None) -> tuple[Drawing, EzDoc
         from ezdxf import bbox
 
         ext = bbox.extents(layout, fast=True)
-        sheet = ext.size.magnitude if ext.has_data else 1.0
+        sheet = _diagonal(ext) if ext.has_data else 1.0
     except DATA_ERRORS:
         sheet = 1.0
         notes.append("The sheet's extents could not be computed; curves are flattened at a default tolerance.")
     sizes: dict[str, tuple[int, float]] = {}
-    tol_flat = max(sheet * 2e-4, 1e-6)
+    # A spline or an ellipse is drawn from its flattened outline, so the outline must stay smooth when one view is zoomed
+    # to fill the screen: a chord may leave the curve by two millionths of the sheet (0.2 mm on a 100 m sheet).
+    tol_flat = max(sheet * 2e-6, 1e-9)
 
     def handle_of(e) -> str:
         orig = getattr(e, "source_of_copy", None) or e
@@ -395,7 +436,7 @@ def read_dxf(path: str, opts: ReadOptions | None = None) -> tuple[Drawing, EzDoc
             return None
         try:
             _upright(e)
-            info = entity_points(e, tol_flat)
+            info = entity_points(e, tol_flat, opts.curves)
         except (*DATA_ERRORS, AttributeError, TypeError) as exc:  # one malformed entity: counted, the rest is read
             unsupported[f"{t} (unreadable: {type(exc).__name__})"] += 1
             cov.drop(t, handle_of(e), f"unreadable ({type(exc).__name__})")
@@ -533,12 +574,14 @@ def read_dxf(path: str, opts: ReadOptions | None = None) -> tuple[Drawing, EzDoc
     else:
         units_mm = declared or _guess_units(items, notes)
     _fix_frames(items, notes)
+    _curves_as_marks(items, notes)
     struct = [it.pts[k] for it in items if it.role == Role.STRUCTURAL for k in it.vertex_pts]
+    struct += [p for it in items if it.role == Role.STRUCTURAL and it.dxftype in CURVE_TYPES for poly in it.display for p in poly]
     xs = [p[0] for p in struct]
     ys = [p[1] for p in struct]
     extent = (min(xs), min(ys), max(xs), max(ys)) if xs else (0.0, 0.0, 0.0, 0.0)
     dr = Drawing(path=path, units_mm=units_mm, tol=opts.tol_mm / units_mm, items=items, extent=extent,
-                 unsupported=dict(unsupported), notes=notes, layout=layout.name)
+                 unsupported=dict(unsupported), notes=notes, layout=layout.name, curves=opts.curves)
     dr.coverage = coverage_report(dr, doc, cov, layout)
     if not dr.coverage["faithful"]:
         notes.append("Not everything visible in the file is drawn here: " + "; ".join(dr.coverage["problems"][:4]))

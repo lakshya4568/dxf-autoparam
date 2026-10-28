@@ -23,6 +23,51 @@ from .fidelity import pattern_segments, rigid, transform_part, wide_polygons
 from .ir import Item
 
 
+class CurveMap:
+    """x' = sx·x + kx·y + tx, y' = ky·x + sy·y + ty — how a curve follows its two ends (curve_map)."""
+
+    def __init__(self, sx: float = 1.0, kx: float = 0.0, tx: float = 0.0, ky: float = 0.0, sy: float = 1.0, ty: float = 0.0):
+        self.sx, self.kx, self.tx, self.ky, self.sy, self.ty = sx, kx, tx, ky, sy, ty
+
+    def apply(self, p) -> tuple[float, float]:
+        return (self.sx * p[0] + self.kx * p[1] + self.tx, self.ky * p[0] + self.sy * p[1] + self.ty)
+
+    def matrix(self):
+        from ezdxf.math import Matrix44
+
+        return Matrix44([self.sx, self.ky, 0, 0, self.kx, self.sy, 0, 0, 0, 0, 1, 0, self.tx, self.ty, 0, 1])  # row vectors (ezdxf)
+
+    def is_identity(self) -> bool:
+        return (self.sx, self.kx, self.tx, self.ky, self.sy, self.ty) == (1.0, 0.0, 0.0, 0.0, 1.0, 0.0)
+
+    def mirrors(self) -> bool:
+        return self.sx * self.sy - self.kx * self.ky < 0
+
+
+def curve_map(old: list, new: list, turn: float = 0.0) -> CurveMap:
+    """How a curve (ellipse arc, spline) set out from its two ends follows them. Each axis is scaled between where its ends
+    were and where they are — an affine map, so an ellipse stays an ellipse and a spline its own curve, and a wall drawn
+    from a box's face to its end line stays on both; on an axis where the ends coincide (a closed curve) it moves with
+    its first end. A part turned by a component transform (`turn`, degrees) turns the curve with it about its first end."""
+    if not old or not new:
+        return CurveMap()
+    (a0x, a0y), (b0x, b0y) = old[0], new[0]
+    if turn:
+        c, s = math.cos(math.radians(turn)), math.sin(math.radians(turn))
+        return CurveMap(c, -s, b0x - c * a0x + s * a0y, s, c, b0y - s * a0x - c * a0y)
+    (a1x, a1y), (b1x, b1y) = old[-1], new[-1]
+
+    def axis(a0: float, a1: float, b0: float, b1: float) -> tuple[float, float]:
+        if abs(a1 - a0) <= 1e-9 * max(1.0, abs(a0), abs(a1)):
+            return 1.0, b0 - a0
+        k = (b1 - b0) / (a1 - a0)
+        return k, b0 - a0 * k
+
+    sx, tx = axis(a0x, a1x, b0x, b1x)
+    sy, ty = axis(a0y, a1y, b0y, b1y)
+    return CurveMap(sx, 0.0, tx, 0.0, sy, ty)
+
+
 def _bulge_arc(a, b, bulge, n=12):
     from ezdxf.math import Vec2, bulge_to_arc
 
@@ -313,10 +358,10 @@ def primitives(it: Item, pts: list[tuple[float, float]], radius: float | None, t
         rigid_, dx, dy = _moved_rigidly(it, pts)
         parts = it.extra["parts"]
         out.extend([transform_part(q, rigid(dx, dy)) for q in parts] if rigid_ else _follow(parts, it.pts, pts))
-    elif it.display:  # ellipse, spline: carried with their anchor
-        dx, dy = pts[0][0] - it.pts[0][0], pts[0][1] - it.pts[0][1]
+    elif it.display:  # ellipse, spline: redrawn between their two ends
+        m = curve_map(it.pts, pts, turn)
         for poly in it.display:
-            out.append({"k": "p", "pts": [(x + dx, y + dy) for x, y in poly]})
+            out.append({"k": "p", "pts": [m.apply(p) for p in poly]})
     for o in out:
         o["i"] = it.index
         o["role"] = it.role.value

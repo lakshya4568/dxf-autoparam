@@ -36,7 +36,7 @@ from .analyse import analyse
 from .cadjson import entity_id
 from .connections import torn
 from .display import primitives
-from .dxf_read import read_dxf
+from .dxf_read import ReadOptions, read_dxf
 from .dxf_write import audit, write_dxf
 from .graph import affects
 from .intent import _drives, unsplit_structures
@@ -2165,6 +2165,7 @@ class SheetModel:
                             "confidence": g.confidence, "evidence": g.evidence, "questions": g.questions, "counts": g.counts})
             views.append(row)
         return {"format": "dxf-autoparam/sheet-1", "dxf": self.path, "fingerprint": self.fingerprint(), "revision": self.revision,
+                "reader": {"curves": self.dr.curves},
                 "unlinked": sorted(list(k) for k in self.unlinked),
                 "answers": {uid: u.answer for uid, u in self.units.items() if u.answer},
                 "shared": [asdict(p) for p in self.shared.values()], "values": self.values, "originals": originals,
@@ -2178,7 +2179,9 @@ class SheetModel:
     @classmethod
     def load(cls, project: str, dxf: str | None = None) -> SheetModel:
         d = json.loads(Path(project).read_text())
-        dr, _ = read_dxf(dxf or d["dxf"])
+        # read as the work was made: its datum, gap, candidate and region ids number the structure as it was read then (a project saved
+        # before free curves were read as structure has no "reader" record, and keeps reading them as marks; a fresh start reads them)
+        dr, _ = read_dxf(dxf or d["dxf"], ReadOptions(curves=bool((d.get("reader") or {}).get("curves", False))))
         sm = cls(dr, unlinked={tuple(k) for k in d.get("unlinked", [])})
         if sm.fingerprint() != d.get("fingerprint"):
             raise SheetError("the DXF has changed since this project was saved: its views and values may not match")

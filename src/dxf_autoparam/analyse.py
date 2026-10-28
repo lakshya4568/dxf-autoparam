@@ -401,6 +401,15 @@ def analyse(dr: Drawing, opts: AnalyseOptions | None = None) -> Analysis:
                 for ax in ("x", "y"):
                     add_gap(ax, did(it, 0, ax), did(it, k, ax), GapKind.ARC)
 
+    # ── 6b. a free curve (an ellipse arc, a spline) is set out from its two ends: the run and the rise between them are
+    # its sizes (a quarter-ellipse wing wall: its splay along the face and its reach), and it is redrawn stretched between them
+    for it in structural:
+        if it.display and len(it.vertex_pts) == 2:
+            poly = it.display[0]
+            mid = poly[len(poly) // 2]
+            add_gap("x", did(it, 0, "x"), did(it, 1, "x"), GapKind.RUN, sample=mid)
+            add_gap("y", did(it, 0, "y"), did(it, 1, "y"), GapKind.RISE, sample=mid)
+
     # ── 7. construction axes: drawn, each symmetric outline's own, the whole drawing's ─
     axes: list[str] = [d.id for d in [*dx.datums, *dy.datums] if d.source == "drawn-axis"]
     loop_axis: dict[int, dict[str, str]] = {}  # item -> axis -> axis datum id

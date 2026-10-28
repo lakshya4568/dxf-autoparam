@@ -888,7 +888,9 @@ def segment(dr: Drawing, grid: int = 800, trace: list | None = None) -> SheetLay
                 ix = max(0, min(p.bounds[2], q.bounds[2]) - max(p.bounds[0], q.bounds[0]) + 1) * max(0, min(p.bounds[3], q.bounds[3]) - max(p.bounds[1], q.bounds[1]) + 1)
                 pa = (p.bounds[2] - p.bounds[0] + 1) * (p.bounds[3] - p.bounds[1] + 1)
                 contained = (inside_frac(p, q, g0) >= 0.6 and (w <= 8 * g0 or inside_frac(p, q, 0) >= 0.95)) or (pa >= 16 and ix >= 0.5 * pa)
-                satellite = w <= 3 * g0 and extent(p) <= 0.6 * extent(q) and p.count <= 0.2 * q.count
+                # (a piece with a view title of its own is a view, not a satellite: a half section 1.7 m below a plan whose curved walls made it
+                # five times heavier was swallowed by it, title and all)
+                satellite = not p.titles and w <= 3 * g0 and extent(p) <= 0.6 * extent(q) and p.count <= 0.2 * q.count
                 # a titled piece right next to an untitled one: the title names the whole drawing
                 titled_part = bool(p.titles) and not q.titles and w <= 2 * g0
                 # a thin piece set out on the other's lines: its dimension chain, its level lines

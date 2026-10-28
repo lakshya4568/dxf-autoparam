@@ -138,6 +138,8 @@ def _vanishes(it: Item, pts, tol: float) -> bool:
         return abs(_area([pts[k] for k in it.vertex_pts])) <= tol * tol < abs(_area([it.pts[k] for k in it.vertex_pts]))
     if it.segments:
         return all(math.dist(pts[i], pts[j]) <= tol for i, j in it.segments) and any(math.dist(it.pts[i], it.pts[j]) > tol for i, j in it.segments)
+    if it.display and len(it.vertex_pts) == 2 and len(pts) == 2:  # a curve whose two ends meet: a wall of no splay
+        return math.dist(*pts) <= tol < math.dist(*it.pts)
     return False
 
 
@@ -181,6 +183,12 @@ def check_invariants(model: Model, r: Regenerated, items=None, zero_ok: set[str]
                 issues.append(f"{_name(it)}: the outline crosses itself")
         if it.dxftype == "CIRCLE" and r.radius.get(it.index, it.radius or 1) <= 0:
             issues.append(f"{_name(it)}: radius becomes zero")
+        if it.display and len(old) == 2 and math.dist(*old) > tol:  # a curve redrawn between its two ends (display.curve_map)
+            for k in (0, 1):
+                span0, span1 = old[1][k] - old[0][k], new[1][k] - new[0][k]
+                if abs(span0) > tol and (abs(span1) <= tol or (span0 > 0) != (span1 > 0)):
+                    issues.append(f"{_name(it)}: the curve " + ("flattens to a line" if abs(span1) <= tol else "turns inside out"))
+                    break
     return issues[:20]
 
 

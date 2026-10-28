@@ -9,6 +9,7 @@ a block, true colours), so every regression seen on real files has a synthetic, 
 
 from __future__ import annotations
 
+import itertools
 import math
 from pathlib import Path
 
@@ -175,6 +176,29 @@ def test_a_dashed_linetype_without_a_total_length_stays_dashed(tmp_path):
     assert line.extra["style"]["dash"] == pytest.approx([5.0, 2.5]), "the elements × $LTSCALE"
     row = dr.coverage["linetypes"]["ZEROLEN"]
     assert row["drawn_as"].startswith("dashed") and "no total length" in row["drawn_as"]
+
+
+def test_curves_stay_smooth_on_a_sheet_whose_texts_sit_at_their_level_in_z(tmp_path):
+    """A wing wall drawn as a quarter ellipse and a spline on a sheet whose L-section texts are written at their reduced level in z
+    (kilometres): the elevation is not the sheet's size, so the outline is flattened finely enough to stay on the curve when one
+    view is zoomed to the screen (it was flattened at a 184 m tolerance: four chords a quarter, 210 mm off the curve)."""
+    doc = ezdxf.new("R2018")
+    msp = doc.modelspace()
+    msp.add_line((0, 0), (40000, 0))
+    msp.add_line((0, 0), (0, 30000))
+    msp.add_text("RL 102.500", dxfattribs={"insert": (500, 500, -2.6e6), "height": 250})
+    msp.add_ellipse((20000, 15000), major_axis=(10200, 0), ratio=0.714, start_param=math.pi, end_param=1.5 * math.pi)
+    msp.add_spline([(1000, 20000), (4000, 26000), (9000, 27000), (14000, 22000)])
+    doc.saveas(tmp_path / "curves.dxf")
+    dr, _ = read_dxf(str(tmp_path / "curves.dxf"))
+    (ell,) = _items(dr, "ELLIPSE")
+    poly = ell.display[0]
+    assert len(poly) > 20, "a quarter ellipse 10 m across is not four chords"
+    for (x0, y0), (x1, y1) in itertools.pairwise(poly):  # each chord's middle lies on the ellipse within a millimetre
+        u, v = ((x0 + x1) / 2 - 20000) / 10200, ((y0 + y1) / 2 - 15000) / (10200 * 0.714)
+        assert abs(math.hypot(u, v) - 1) * 7283 < 1.0
+    (spl,) = _items(dr, "SPLINE")
+    assert len(spl.display[0]) > 12
 
 
 def test_dimension_keeps_its_arrowheads_and_text(drawing):

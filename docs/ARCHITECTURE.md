@@ -28,7 +28,9 @@ It turns a DXF into a *program* that reproduces the drawing exactly, then lets y
 
 ```
  DXF
-  │ READ         dxf_read, dxf_repair    lines, arcs, text, dimensions, hatches  → "items"
+  │ READ         dxf_read, dxf_repair    lines, arcs, ellipses, splines, text, dimensions, hatches  → "items"
+  │                                       (an ellipse arc or a spline is set out from its two ends and redrawn
+  │                                       stretched between them; one the size of the writing is a mark)
   │ DATUMS       analyse                 set-out lines that many shapes share:
   │                                       x1 x2 x3 … (vertical)   y1 y2 … (horizontal)
   │ GAPS         analyse                 distance between neighbouring datums: x3 − x2 = 3000
