@@ -41,7 +41,7 @@ from .dxf_write import audit, write_dxf
 from .graph import affects
 from .intent import _drives, unsplit_structures
 from .ir import Analysis, Drawing, Role
-from .plan import accept, build_plan, clashes, pairs_of, plan_errors_at, with_plan
+from .plan import accept, build_plan, clashes, core_parts, pairs_of, plan_errors_at, with_plan
 from .program import ExprError, Program
 from .regen import Regenerated, regenerate_program
 from .sheet import Group, SheetLayout, segment, view_drawing
@@ -1013,7 +1013,7 @@ class SheetModel:
             # an earlier choice written as formulas on these lines (by the old pair-only anchor) is cleared first
             ans["datum_formulas"] = [f for f in ans.get("datum_formulas", []) if f.get("datum") not in lines]
             if ans != (u.answer or {}):
-                self.commit_answer(uid, ans)
+                self.commit_answer(uid, ans, intent=False)  # a step on the way: the choice derives the intent at the end
                 u = self.unit(uid)
                 assert u.prog is not None
             # A person's side outranks a site level in its way: the level FOLLOWS the structure (its line moves with the side that moves, its RL
@@ -1037,7 +1037,14 @@ class SheetModel:
                 self.commit_answer(uid, ans_l, discard_values=True, intent=False)  # a step on the way: the choice derives the intent at the end
             if plan["status"] != "ready":
                 raise SheetError(f"{name} cannot grow from its {mode} in {uid}: " + "; ".join(plan["conflicts"][:2] + [q["text"] for q in plan["questions"]][:1]))
-            self.commit_answer(uid, with_plan(ans0, accept(plan)), discard_values=bool(freed))
+            chosen = with_plan(ans0, accept(plan))
+            # the choice is asked of the whole sheet first, on its own: what the engine derives around it governs the OTHER sizes and does not
+            # repair it — a choice the sheet refuses was refused only after the whole unit's intent had been worked out (ten minutes, a joined section
+            # and plan of curved walls, while the page waited)
+            problem = self._dry_commit(uid, chosen, discard_values=bool(freed))
+            if problem:
+                raise SheetError(problem)
+            self.commit_answer(uid, chosen, discard_values=bool(freed))
         except SheetError:
             self._restore(before)
             del self.history[depth:]
@@ -1096,7 +1103,17 @@ class SheetModel:
                "directives": [dict(design_intent.FOLLOW, source="person's side")]}
         plan = build_plan(prog0, ans0, req, sheet=self._plan_sheet(uid))
         if plan["status"] == "needs_decision" and all(q["about"].startswith("attached:") for q in plan["questions"]):
-            plan = build_plan(prog0, ans0, {**req, "decisions": {q["about"]: "follow" for q in plan["questions"]}}, sheet=self._plan_sheet(uid))
+            # the parts of the OTHER structure stay as built — changing the new box never moves the old one (the existing plan of an old box drawn
+            # inside its extension's span followed a side chosen for the new span, was re-set from both ends and lost its own span); the parts of the
+            # same structure follow, as the engine's own default plans have it
+            parts = prog0.intent.get("parts") or {}
+            mine = {parts[c].existing for c in core_parts(parts, pairs, prog0) if c in parts}
+
+            def pick(about: str) -> str:
+                n = about.split(":", 1)[1]
+                return "keep_fixed" if len(mine) == 1 and n in parts and parts[n].existing not in mine else "follow"
+
+            plan = build_plan(prog0, ans0, {**req, "decisions": {q["about"]: pick(q["about"]) for q in plan["questions"]}}, sheet=self._plan_sheet(uid))
         return plan
 
     @staticmethod
@@ -1220,12 +1237,25 @@ class SheetModel:
         self._settle_cache = {k: v for k, v in self._settle_cache.items() if k[0] == self.revision}  # what was found on another revision is not true of this one
         if key in self._settle_cache:
             return self._settle_cache[key]
+        started = time.monotonic()
         u = self.unit(uid)
         base = design_intent.strip(u.answer or copy.deepcopy(EMPTY_ANSWER))
         build = self._trial_builder(uid)
         prog0, rep0 = build(base)
         sheet = self._plan_sheet(uid)
-        intent = design_intent.resolve(prog0, base, build, sheet=sheet)
+        # what the unit's last commit decided is read back, not worked out again: on a big unit that is many whole builds, and the sheet is held
+        # while a person waits (a joined section + plan of curved walls froze the page for twenty minutes). Every attempt below is in one time limit
+        intent = design_intent.stored(u.answer or {})
+        if intent is None:
+            try:
+                with design_intent.within(self.SETTLE_BUDGET_S):
+                    intent = design_intent.resolve(prog0, base, build, sheet=sheet)
+            except design_intent.OutOfTime:
+                out_t = {"unit": uid, "name": name, "local": local, "revision": self.revision, "axis": None, "assembly": None, "status": "not worked out",
+                         "evidence": [], "blocked": [], "drivers": [], "choices": [], "rejected": [],
+                         "notes": [f"the design intent of {uid} could not be worked out in {int(self.SETTLE_BUDGET_S)} s: nothing was tried"]}
+                self._settle_cache[key] = out_t
+                return out_t
         mine = [a for a in intent.axes if local in design_intent.names_of(a)]  # one value can belong to two structures (its occurrences lie in both)
         dec = next((a for a in mine if a.status == "undecided"), mine[0] if mine else None)
         out: dict[str, Any] = {"unit": uid, "name": name, "local": local, "revision": self.revision, "axis": dec.axis if dec else None,
@@ -1240,16 +1270,17 @@ class SheetModel:
                "errors": {(e["code"], e["item"]) for e in rep0.errors()}}
         sets, notes = design_intent.edits_for(base, dec)
         out["notes"] += notes
-        started = time.monotonic()
-        for k, edits in enumerate(sets):
-            if time.monotonic() - started > self.SETTLE_BUDGET_S:
-                out["notes"].append(f"stopped after {int(time.monotonic() - started)} s: {len(sets) - k} more change(s) were not tried")
-                break
-            choice, why = self._try_settle(uid, local, base, ctx, edits)
-            if choice is not None:
-                out["choices"].append(choice)
-            else:
-                out["rejected"].append({"id": design_intent.choice_id(edits), "why": why})
+        with design_intent.within(max(self.SETTLE_BUDGET_S - (time.monotonic() - started), 0.0)):  # one limit for all of them, from the start
+            for k, edits in enumerate(sets):
+                try:
+                    choice, why = self._try_settle(uid, local, base, ctx, edits)
+                except design_intent.OutOfTime:
+                    out["notes"].append(f"stopped after {int(time.monotonic() - started)} s: {len(sets) - k} more change(s) were not tried")
+                    break
+                if choice is not None:
+                    out["choices"].append(choice)
+                else:
+                    out["rejected"].append({"id": design_intent.choice_id(edits), "why": why})
         rank = {"level": 0, "part": 1, "reading": 2}
         out["choices"].sort(key=lambda c: (not c["asked_in_growth"], len(c["left_out"]), c["status"] != "decided", len(c["stops_being_input"]),
                                            min(rank[k] for k in c["kinds"]), c["id"]))

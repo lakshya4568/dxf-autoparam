@@ -7,6 +7,7 @@ import gzip
 import io
 import json
 import threading
+import time
 import urllib.error
 import urllib.request
 from http.server import ThreadingHTTPServer
@@ -141,6 +142,36 @@ def test_a_drawing_is_read_outside_the_sheet_lock_and_the_page_can_ask_what_is_g
         t.join(30)
     assert out["r"][0] == 200 and j(call(base, "/api/sheet/loading")) == {"loading": False}
     assert j(call(base, "/api/sheet"))["file"] == path.name
+
+
+def test_a_request_that_holds_the_sheet_long_is_said_to_the_page(server, monkeypatch):
+    """A side chosen on a big unit works its design intent out again with the sheet held (2026-10-28: minutes on a joined section and plan); every
+    other request waited behind it and the page showed "Loading the sheet…" with nothing else. The loading status, which needs no lock, says what
+    holds the sheet and for how long."""
+    from dxf_autoparam import workspace as W
+
+    base, path = server
+    assert call(base, f"/api/sheet/open?name={path.name}", raw=path.read_bytes())[0] == 200
+    gate, held = threading.Event(), threading.Event()
+    real = W.SheetSession.summary
+
+    def slow(self):
+        held.set()
+        assert gate.wait(20), "the test never let the request go on"
+        return real(self)
+
+    monkeypatch.setattr(W.SheetSession, "summary", slow)
+    t = threading.Thread(target=lambda: call(base, "/api/sheet/apply", body={"changes": {}}))
+    t.start()
+    try:
+        assert held.wait(20)
+        time.sleep(1.2)
+        status = j(call(base, "/api/sheet/loading"))
+        assert status["loading"] is False and status["busy"]["what"] == "applying a value" and status["busy"]["elapsed_s"] >= 1.0, status
+    finally:
+        gate.set()
+        t.join(30)
+    assert "busy" not in j(call(base, "/api/sheet/loading")), "nothing holds it any more"
 
 
 def test_a_drawing_that_cannot_be_read_says_so_and_the_next_one_opens(server, monkeypatch):

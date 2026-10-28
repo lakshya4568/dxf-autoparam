@@ -1119,12 +1119,14 @@ def bind_on_slopes(prog: Program, rep: Report, dims: dict[str, list[tuple[str, s
             for idx, p1, p2, a, b in edges:
                 if idx == it.index or c[0] in (a[0], b[0]) or c[1] in (a[1], b[1]):
                     continue
-                if not owner.get(it.index) or not owner.get(idx) or owner[it.index] & owner[idx] or not own_line(c[0], owner[it.index]):
-                    continue  # not a corner of one part on another part's edge, on a line of its own
+                if not owner.get(it.index) or not owner.get(idx) or owner[it.index] & owner[idx]:
+                    continue  # not a corner of one part on another part's edge
                 dx, dy = p2[0] - p1[0], p2[1] - p1[1]
                 t = ((x - p1[0]) * dx + (y - p1[1]) * dy) / (dx * dx + dy * dy)
                 if not 0.02 < t < 0.98 or abs((x - p1[0]) * dy - (y - p1[1]) * dx) / math.hypot(dx, dy) > tol:
                     continue
+                if not own_line(c[0], owner[it.index]):  # asked after the corner is found on the edge: it reads every entity drawn on the line
+                    continue  # not on a line of its own
                 names = sorted((_reads(prog, a[0]) | _reads(prog, a[1]) | _reads(prog, b[0]) | _reads(prog, b[1]) | _reads(prog, c[0])
                                 | _reads(prog, c[1])) - levels)[:12]
                 steps = [(n, w) for n in names for P in [prog.params[n].value] for d in [delta_of(prog, n)] for w in (P + d, P - min(d, 0.5 * abs(P)))]

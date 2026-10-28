@@ -51,3 +51,31 @@ def test_a_split_never_outlives_the_answer_it_was_made_for():
     prog, _rep = apply(an, plain)
     assert not prog.intent.get("structure_lines")
     assert not any(g.split_of for g in an.gaps.values()) and not any(g.a.endswith("e") or g.b.endswith("e") for g in an.gaps.values())
+
+
+def test_a_parent_named_over_both_structures_does_not_make_one_assembly_of_them():
+    # a paid run (7A, 2026-10-28) named one part over the old box and its extension in a joined section and plan: every value's assembly was the whole
+    # crossing, a side a person chose for the new span re-set the old box from both ends, its own span stopped driving and every side was refused
+    from dxf_autoparam.assembly import assembly_lines
+    from dxf_autoparam.plan import core_parts, pairs_of
+
+    ans = copy.deepcopy(ANSWER)
+    for c in ans["components"]:
+        if c.get("parent") is None:
+            c["parent"] = "WholeCrossing"
+    ans["components"].insert(0, {**ans["components"][0], "name": "WholeCrossing", "parent": None, "existing": False})
+    an, *_ = prepare(XX)
+    prog, rep = apply(an, ans)
+    assert rep.errors() == []
+    parts = prog.intent["parts"]
+    for name in ("ClearHeight", "FlooringThickness"):  # a size of the new box, and one drawn on a line the old box's bed is drawn on too
+        pairs = pairs_of(prog, ans, name)
+        core = core_parts(parts, pairs, prog)
+        assert core and "WholeCrossing" not in core and not any(parts[n].existing for n in core), (name, core)
+        axis = an.datums[pairs[0][0]].axis
+        old = held_own_entities(an, parts, {n for n, p in parts.items() if p.existing})
+        new = held_own_entities(an, parts, {n for n, p in parts.items() if not p.existing})
+        only_old = {d for (i, _k, _ax), (d, _o) in an.slot_datum.items() if i in old} - {d for (i, _k, _ax), (d, _o) in an.slot_datum.items() if i in new}
+        assert not (assembly_lines(prog, parts, core, axis) & only_old), f"{name}: the assembly takes lines only the old box is drawn on"
+    ex, new_moved = moved_by(prog, "FlooringThickness")
+    assert new_moved and not ex, (ex, new_moved)

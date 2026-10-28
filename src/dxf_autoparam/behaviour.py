@@ -111,6 +111,56 @@ def _unit_state(sm, uid: str, changes: dict[str, float]):
     return u, vals0, vals1, d0, d1, p0, p1
 
 
+def crossings(sm, changes: dict[str, float]) -> set[tuple[str, int, int]]:
+    """(unit, entity, entity): structural entities of the units a change touches that cross after it and did not cross as drawn."""
+    from .plan import clashes
+
+    out: set[tuple[str, int, int]] = set()
+    for uid in sorted(sm._touched(changes)):
+        u, _v0, _v1, _d0, _d1, _pts0, pts1 = _unit_state(sm, uid, changes)
+        items = u.an.drawing.items
+        tol = max(u.an.drawing.tol * 2, 0.5 / max(u.sub.units_mm, 1e-9))
+        moved = {i for i, it in enumerate(items) if it.role.value == "structural" and any(
+            math.dist(a, b) > tol for a, b in zip(it.pts, pts1.get(i, it.pts), strict=False))}
+        out |= {(uid, i, j) for i, j in (clashes(u.prog, pts1, moved) if moved else [])}
+    return out
+
+
+def crossing_steps(sm, units: list[str] | None = None, step: float = 0.1) -> list[dict]:
+    """Every named length of these units (all, by default) stepped by ±`step`: those whose step makes structural members cross that do not cross with
+    the values as they are — a value the sheet accepts (a crossing refuses only against a plan a person accepted) that still runs a wall into a slab.
+    Each with the first pair it makes cross, as the drawing names them."""
+    from .cadjson import entity_id
+
+    cur = sm.current()
+    seen: set[str] = set()
+    out = []
+    for uid in units or list(sm.units):
+        u = sm.units.get(uid)
+        if u is None or not u.answer:
+            continue
+        prog = sm.unit(uid).prog
+        if prog is None:
+            continue
+        for name, p in prog.params.items():
+            if p.source != "ai" or p.kind != "length" or not p.measures:
+                continue
+            key = sm._key(uid, name)
+            if key in seen or not isinstance(cur.get(key), (int, float)) or not cur[key]:
+                continue
+            seen.add(key)
+            base = crossings(sm, {key: float(cur[key])})
+            for f in (1 + step, 1 - step):
+                new = sorted(crossings(sm, {key: float(cur[key]) * f}) - base)
+                if new:
+                    w, i, j = new[0]
+                    its = sm.unit(w).an.drawing.items
+                    out.append({"value": key, "step": f"{'+' if f > 1 else '−'}{round(step * 100)} %", "pairs": len(new),
+                                "first": f"{w}: {entity_id(its[i])} runs into {entity_id(its[j])}"})
+                    break
+    return out
+
+
 def behaviour_report(sm, changes: dict[str, float], sr=None, plans: bool = True) -> dict:
     """The change regenerated (or `sr`, a regeneration already made) and checked category by category. Nothing is committed."""
     sr = sr if sr is not None else sm.preview(changes)

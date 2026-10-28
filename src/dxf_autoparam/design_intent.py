@@ -23,11 +23,14 @@ plans (source "design intent"), so it is measured every time, undone with the st
 
 from __future__ import annotations
 
+import contextlib
 import copy
 import json
 import re
+import time
 from collections import Counter
 from collections.abc import Callable
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -102,6 +105,41 @@ class Intent:
         return {"axes": [a.as_dict() for a in self.axes], "plans": len(self.plans)}
 
 
+class OutOfTime(Exception):
+    """A search given a time (`within`) ran past it: what it had found so far is not an answer, and the caller says so."""
+
+
+_DEADLINE: ContextVar[float | None] = ContextVar("design_intent_deadline", default=None)
+
+
+@contextlib.contextmanager
+def within(seconds: float):
+    """Every attempt started inside this block is refused (OutOfTime) once `seconds` have passed. For a question a person waits on with the sheet
+    held — the ways to settle one value tried for real, each a whole unit built — never for a commit, which decides with no limit."""
+    token = _DEADLINE.set(time.monotonic() + seconds)
+    try:
+        yield
+    finally:
+        _DEADLINE.reset(token)
+
+
+def _in_time() -> None:
+    end = _DEADLINE.get()
+    if end is not None and time.monotonic() > end:
+        raise OutOfTime("the time given to this search ran out")
+
+
+def stored(answer: dict) -> Intent | None:
+    """The intent an answer records — derived when it was committed (its plans and `intent_axes`) — or None when it records none, or a record
+    from before what was tried was kept (the ways to settle an axis are read from that)."""
+    if answer.get("intent_axes") is None or any("tried" not in a for a in answer["intent_axes"]):
+        return None
+    keys = AxisDecision.__dataclass_fields__
+    axes = [AxisDecision(**{"dropped": [], "tried": [], "blocked": [], "centre": None, **{k: v for k, v in a.items() if k in keys}})
+            for a in answer["intent_axes"]]
+    return Intent(plans=[copy.deepcopy(p) for p in answer.get("plans", []) if derived(p)], axes=axes)
+
+
 def strip(answer: dict) -> dict:
     """The answer without the plans the engine derived, and without its record of having derived them: what is left is what a person or the agent wrote."""
     out = copy.deepcopy(answer)
@@ -159,7 +197,7 @@ def assemblies(prog: Program, parts: dict, axis: str, group: list[Driver], sheet
     items = []
     for d in group:
         for pr, extra in [(p, False) for p in d.pairs] + [(p, True) for p in d.extra]:
-            core = core_parts(parts, [pr]) if parts else set()
+            core = core_parts(parts, [pr], prog) if parts else set()
             items.append((d, pr, extra, assembly_lines(prog, parts or None, core or None, axis, seed=set(pr))))
     root = list(range(len(items)))
 
@@ -245,7 +283,7 @@ def _existing_side(prog: Program, parts: dict, axis: str, asm: Assembly) -> str 
     if not parts:
         return None
     pairs = [p for d in asm.drivers for p in d.pairs]
-    core = core_parts(parts, pairs)
+    core = core_parts(parts, pairs, prog)
     if not core or any(parts[n].existing for n in core if n in parts):
         return None
     v = line_values_mm(prog)
@@ -381,6 +419,7 @@ def _attempt(prog: Program, base: dict, sheet: dict | None, build: Build, asm: A
     dropped: list[dict] = []
     memo: dict = {}  # each driver's plan for this anchor, built once while the group shrinks
     while group:
+        _in_time()  # each round builds the whole unit: a question a person waits on stops here when its time is up
         who: str | None = None
         why = ""
         for follow_all in (False, True):  # a part only hung on the assembly by the set-out stays; when that breaks a binding, it follows
@@ -549,7 +588,7 @@ def with_intent(answer: dict, intent: Intent) -> dict:
     out = strip(answer)
     for p in intent.plans:
         out = _add(out, p)
-    out["intent_axes"] = [{k: v for k, v in a.as_dict().items() if k != "tried"} for a in intent.axes]
+    out["intent_axes"] = [a.as_dict() for a in intent.axes]  # what was tried too: the ways to settle an undecided axis are read from it (`stored`)
     return out
 
 

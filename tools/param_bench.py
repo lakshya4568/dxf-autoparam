@@ -9,7 +9,8 @@ The metrics (docs/PARAM_BENCH.md), all measured by the engine on the drawing's o
   driven         a value somebody named (not one the engine generated) moves the dimension's two lines (coverage.py)
   PARAMETRIZED   driven, AND that value can be edited: its ±10 % step (levels ±0.1 m) regenerates a valid sheet both ways. The headline share.
                  Naming a part counts for nothing; a name the engine generated counts for nothing; a value that breaks the sheet when edited
-                 counts for nothing
+                 counts for nothing, and neither does one whose step the sheet accepts but runs structural members into each other that do
+                 not cross with the value as it is (2026-10-28; before, such a step counted as an edit)
   edits          every named value stepped ±10 %: the share whose both steps are accepted, and each refused step's failures by kind (refusal.py:
                  the edit cannot be drawn / the model does not carry it / an accepted plan says otherwise / a rule / the solver)
   views          shared values (one value bound in several views): the share whose steps are accepted — accepted means every view measured the
@@ -69,6 +70,8 @@ def named_values(sm) -> dict[str, tuple[str, str, str]]:
 
 def step_values(sm, keys: dict[str, tuple[str, str, str]]) -> dict[str, dict]:
     """key → {"ok": both steps accepted, "kinds": failures of the refused steps, by kind, "checks": by check}."""
+    from dxf_autoparam.behaviour import crossings
+
     now = sm.current()
     out = {}
     for key, (_uid, _local, kind) in keys.items():
@@ -76,13 +79,21 @@ def step_values(sm, keys: dict[str, tuple[str, str, str]]) -> dict[str, dict]:
         kinds: Counter = Counter()
         checks: Counter = Counter()
         oks = []
+        base: set | None = None
         for w in ([v + STEP, v - STEP] if kind == "level" else [v * (1 + STEP), v * (1 - STEP)]):
             r = sm.regenerate({key: w})
-            oks.append(r.ok)
+            ok = r.ok
             if not r.ok:
                 for f in sm.explain(r, {key: w}):
                     kinds[f["kind"] + (" (already failing)" if f.get("existing") else "")] += 1
                     checks[f["check"]] += 1
+            else:  # accepted, and still not an edit if it runs members into each other (the sheet refuses that only against a person's plan)
+                base = crossings(sm, {key: v}) if base is None else base
+                if crossings(sm, {key: w}) - base:
+                    ok = False
+                    kinds["members cross (accepted by the sheet)"] += 1
+                    checks["members cross"] += 1
+            oks.append(ok)
         out[key] = {"ok": all(oks), "steps_ok": sum(oks), "kinds": dict(kinds), "checks": dict(checks)}
     return out
 

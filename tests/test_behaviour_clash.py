@@ -35,3 +35,17 @@ def test_a_cell_closed_up_past_its_haunches_fails_the_validity_check_naming_both
     assert "LeftWall" in first["issue"] and "Haunch" in first["issue"], "the parts are named, not only the entities"
     assert len(first["entities"]) == 2 and all(isinstance(k, int) for k in first["entities"]), "sheet indices: the page can zoom to them"
     assert not any("no member runs into another" in r["issue"] for r in rep["categories"]["validity"]["items"]), "a pass row must not sit beside a failure"
+
+
+def test_a_value_whose_step_runs_members_into_each_other_is_named_with_the_first_pair(tmp_path):
+    # a paid run (2026-10-28) finished "Complete: every criterion holds" and the bench counted 79 of 80 values editable, while 44 of its named lengths
+    # ran walls into slabs at ±10 %: the sheet accepts such a step (a crossing refuses only against a plan a person accepted). One sweep now says it
+    # — the run's finish, its verdict and the bench all read it
+    from dxf_autoparam.behaviour import crossing_steps
+
+    sm, uid, _g = box_sheet(tmp_path)
+    assert crossing_steps(sm, [uid]) == [], "a box whose every size steps ±10 % cleanly"
+    found = {c["value"]: c for c in crossing_steps(sm, [uid], step=0.97)}  # a 3000 mm span far past what the box holds, either way
+    assert f"{uid}.ClearSpan" in found, found
+    c = found[f"{uid}.ClearSpan"]
+    assert c["step"] in ("+97 %", "−97 %") and c["pairs"] >= 1 and c["first"].startswith(f"{uid}: ") and " runs into " in c["first"]

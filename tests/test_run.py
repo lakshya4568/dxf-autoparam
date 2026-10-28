@@ -580,6 +580,32 @@ def test_a_change_made_while_the_agent_worked_is_never_overwritten_silently(tmp_
     assert sheet.sm.current()[f"{uid}.ClearSpan"] == 2500 and sheet.sm.current()[other] == 320  # both stand
 
 
+def test_a_change_made_while_the_agent_worked_is_asked_about_at_the_first_refused_commit_not_only_at_finish(tmp_path):
+    # a live run (2026-10-28): a person changed a value in the page while the run worked; opening the next unit refused the previous one as
+    # stale, and so every unit after it, for the rest of the chunk — the question "apply on top or discard?" was only asked inside finish,
+    # which the chunk never reached: five units' work was lost and the verdict said "6 of 12 units parametrized" with one on the sheet
+    from test_sheet import built_sheet
+
+    sheet = SheetSession(str(built_sheet(tmp_path / "sheet.dxf")))
+    a, b = list(sheet.sm.units)[:2]
+    gem = Scripted([[call("open_unit", unit=a), call("set_structure", structure_type="box culvert")], [call("open_unit", unit=b)],
+                    [call("finish", summary="x")], [call("finish", summary="x")]])
+    sheet.gem_factory = lambda: gem
+    rid = sheet.start_run({"instruction": "Look at these two units.", "scope": {"kind": "drawing"}, "options": {"budget": {"soft_turns": 1}}})["run"]
+    assert wait(sheet, rid)["status"] == "paused"
+    other = sheet.sm.units[b].views[0]
+    sheet.sm.set_view(other, name="A TITLE A PERSON GAVE")  # the person changes the sheet while the run is paused
+    sheet.continue_run({"run": rid})
+    p = wait(sheet, rid, until=lambda q: q["status"] == "awaiting_user" or q["status"] not in ACTIVE and q["status"] != "paused")
+    assert p["status"] == "awaiting_user", p["status"]
+    assert p["questions"][0]["about"] == "rebase" and "changed while the agent worked" in p["questions"][0]["text"]
+    assert not sheet.sm.units[a].answer, "nothing applied over the person's change"
+    sheet.apply_run({"run": rid})  # the person applies what is valid, with the sheet as it is in front of them
+    assert sheet.sm.units[a].answer.get("structure_type") == "box culvert"
+    assert sheet.sm.layout.group(other).name == "A TITLE A PERSON GAVE"  # both stand
+    assert any("applied on the sheet as it is now" in e.get("text", "") for e in sheet.run_progress(rid, 0)["events"])
+
+
 def test_a_follow_up_run_keeps_the_scope_of_the_run_it_follows(tmp_path):
     sheet, _uid, _g, _gem = session(tmp_path, [[call("finish", summary="x")], [call("finish", summary="y")]])
     first = sheet.start_run({"instruction": "Make the drawing parametric.", "scope": {"kind": "drawing"}})["run"]

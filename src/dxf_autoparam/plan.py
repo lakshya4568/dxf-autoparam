@@ -489,22 +489,40 @@ def _parts(prog: Program) -> dict[str, Part]:
 
 
 def _top(parts: dict[str, Part], n: str) -> str:
+    """The assembly a part moves with: its topmost ancestor whose parts are all of one structure with it. An assembly named over both the
+    existing work and the new (a plan of an old box drawn inside its extension's span) is two for a size of either: a side chosen for the new
+    span re-set the old box's own lines from both ends, and its clear span stopped driving anything — every side was refused."""
     seen = {n}
+    mine = parts[n].existing
     while True:
         parent = parts[n].parent
         if parent is None or parent not in parts or parent in seen:
+            break
+        under = [d for d in descendants(parts, parent) if d in parts and not any(q.parent == d for q in parts.values())]
+        if any(parts[d].existing != mine for d in under):
             break
         n = parent
         seen.add(n)
     return n
 
 
-def core_parts(parts: dict[str, Part], pairs: list[tuple[str, str]]) -> set[str]:
+def core_parts(parts: dict[str, Part], pairs: list[tuple[str, str]], prog: Program | None = None) -> set[str]:
     """The parts a size belongs to: the leaf parts drawn on its lines, and the assembly they are part of."""
     ends = {x for p in pairs for x in p}
     leaves = [n for n, p in parts.items() if p.own_datums & ends and not any(q.parent == n for q in parts.values())]
     if not leaves:
         leaves = [n for n, p in parts.items() if p.own_datums & ends]
+    if prog is not None and len({parts[n].existing for n in leaves}) > 1:
+        # existing work and new work both counted on the size's lines (an old box drawn inside its extension's span in plan): the size is the
+        # structure's whose own entities are drawn on both its lines, and the other keeps its own set-out — taken in, the old box was re-set from
+        # both ends and its own span stopped driving anything, so every side a person chose for the new span was refused
+        drawn_on: dict[int, set[str]] = {}
+        for (i, _k, _ax), (d, _off) in prog.analysis.slot_datum.items():
+            drawn_on.setdefault(i, set()).add(d)
+        lines = {n: {d for i in part_entities(prog, parts, n) for d in drawn_on.get(i, ())} for n in leaves}
+        whole = [n for n in leaves if any(a in lines[n] and b in lines[n] for a, b in pairs)]
+        if whole and len({parts[n].existing for n in whole}) == 1:
+            leaves = whole
     return {_top(parts, n) for n in leaves}
 
 
@@ -552,7 +570,7 @@ def _sibling_parts(prog: Program, parts: dict[str, Part], answer: dict | None, n
     other = [tuple(pr) for pr in parameter_pairs(prog, answer, name) if tuple(pr) not in mine]
     if not other:
         return set()
-    core = core_parts(parts, other)
+    core = core_parts(parts, other, prog)
     out: set[str] = set()
     for n in core:
         out |= {n} | descendants(parts, n)
@@ -819,7 +837,7 @@ def build_plan(prog: Program, answer: dict, request: dict, sheet: dict | None = 
         if q.source in ("ai", "dimension", "person") and q.kind != "level"
     }
     fixed_parts = {d["target"] for d in dirs if d["kind"] == "part" and d["mode"] in FIXED_MODES and d["status"] == "accepted"}
-    core = core_parts(parts, pairs) if parts and pairs else set()
+    core = core_parts(parts, pairs, prog) if parts and pairs else set()
     plan["affected"]["core"] = sorted(core)
     followers = {d["target"] for d in dirs if d["kind"] == "part" and d["mode"] in MOVING_MODES and d["status"] == "accepted"}
     own_core: set[str] = set()
@@ -1242,7 +1260,7 @@ def prepare_plans(prog: Program, answer: dict, parts: dict[str, Part]) -> dict:
         followers = {d["target"] for _r, _drv, ds in g["items"] for d in ds if d["kind"] == "part" and d["mode"] in MOVING_MODES}
         core = set()
         for drv in drivers:
-            core |= core_parts(parts, drv.pairs) if parts else set()
+            core |= core_parts(parts, drv.pairs, prog) if parts else set()
         pins = out["pin"] | set().union(*(out["pin_of"].get(r["id"], set()) for r, _d, _x in g["items"]))
         fixed = out["hold"] | pins
         g["members"] = assembly_lines(prog, parts if parts else None, (core | followers) if parts else None, axis,
@@ -1351,11 +1369,51 @@ def _segments(it, pts) -> list:
     return [(vs[k], vs[k + 1]) for k in range(len(vs) - 1)] or [(vs[0], vs[0])] if vs else []
 
 
+def _box(ps) -> tuple[float, float, float, float]:
+    return min(x for x, _ in ps), min(y for _, y in ps), max(x for x, _ in ps), max(y for _, y in ps)
+
+
+def _outline_box(it, pts) -> tuple[float, float, float, float]:
+    """The box an entity's outline lies in: its points' box — for a curve, the box of its own outline as drawn carried by the map that redraws
+    it (an affine map keeps the outline inside the image of its box), since a curve bulges past the box of its two ends."""
+    if it.display and len(it.vertex_pts) == 2 and len(pts) == 2:
+        from .display import curve_map
+
+        x0, y0, x1, y1 = _box([c for poly in it.display for c in poly])
+        m = curve_map(it.pts, pts)
+        return _box([m.apply(c) for c in ((x0, y0), (x0, y1), (x1, y0), (x1, y1))])
+    return _box(pts)
+
+
+def _near_pairs(sa: list, sb: list, tol: float):
+    """The pairs of segments whose boxes come within `tol` of each other, by a sweep along x: a curve's hundreds of chords are tested only
+    against the few of another entity that are near them (every pair against every pair froze the sheet on a plan of curved wing walls)."""
+    if len(sa) * len(sb) <= 64:  # a line against a line: the sweep would cost more than the pairs
+        yield from itertools.product(sa, sb)
+        return
+
+    def box(s):
+        return min(s[0][0], s[1][0]) - tol, max(s[0][0], s[1][0]) + tol, min(s[0][1], s[1][1]) - tol, max(s[0][1], s[1][1]) + tol
+
+    A = sorted(((box(s), s) for s in sa), key=lambda t: t[0][0])
+    B = sorted(((box(s), s) for s in sb), key=lambda t: t[0][0])
+    active: list = []
+    j = 0
+    for ba, s in A:
+        while j < len(B) and B[j][0][0] <= ba[1]:
+            active.append(B[j])
+            j += 1
+        active = [t for t in active if t[0][1] >= ba[0]]
+        for bb, r in active:
+            if bb[0] <= ba[1] and bb[2] <= ba[3] and ba[2] <= bb[3]:
+                yield s, r
+
+
 def _touch(a, pa, b, pb, tol) -> bool:
     sa, sb = _segments(a, pa), _segments(b, pb)
     # a curve's outline is chords, each up to its flattening tolerance off the curve a line was drawn to
     tol += max(a.extra.get("flat_tol", 0.0), b.extra.get("flat_tol", 0.0))
-    return any(_seg_dist(p, q, r, s) <= tol for p, q in sa for r, s in sb)
+    return any(_seg_dist(p, q, r, s) <= tol for (p, q), (r, s) in _near_pairs(sa, sb, tol / 2))
 
 
 def _crosses(p, q, r, t, eps: float) -> bool:
@@ -1377,28 +1435,59 @@ def clashes(prog: Program, pts: dict[int, list], moved: set[int]) -> list[tuple[
     items = an.drawing.items
     eps = an.drawing.tol
     struct = [it for it in items if it.role.value == "structural" and len(it.pts) > 1]
-
-    def box(ps):
-        return (min(x for x, _ in ps), min(y for _, y in ps), max(x for x, _ in ps), max(y for _, y in ps))
-
     after = {it.index: pts.get(it.index, it.pts) for it in struct}
-    boxes = {i: box(ps) for i, ps in after.items()}
+    boxes = {it.index: _outline_box(it, after[it.index]) for it in struct}
+    if not boxes:
+        return []
+    segs: dict[int, list] = {}
+    # what is true of the drawing as drawn is worked out once per reading: each entity's outline, and whether two entities crossed (a plan is
+    # verified at many values, each asking it again of every pair it meets)
+    memo = an.__dict__.setdefault("_clash_memo", {"drawn": {}, "crossed": {}})
+
+    def outline(j: int) -> list:
+        if j not in segs:
+            segs[j] = _segments(items[j], after[j])
+        return segs[j]
+
+    def drawn(j: int) -> list:
+        if j not in memo["drawn"]:
+            memo["drawn"][j] = _segments(items[j], items[j].pts)
+        return memo["drawn"][j]
+
+    def crossed(i: int, j: int) -> bool:
+        k = (i, j)
+        if k not in memo["crossed"]:
+            memo["crossed"][k] = any(_crosses(p, q, r, t, eps) for (p, q), (r, t) in _near_pairs(drawn(i), drawn(j), eps))
+        return memo["crossed"][k]
+
+    # the entities near each moved one are found in a grid of the sheet, not by asking every structural entity (a joined section and plan of
+    # a few thousand: millions of box tests per value tried)
+    x0, y0 = min(b[0] for b in boxes.values()), min(b[1] for b in boxes.values())
+    cw = max((max(b[2] for b in boxes.values()) - x0) / 128, eps * 4, 1e-9)
+    ch = max((max(b[3] for b in boxes.values()) - y0) / 128, eps * 4, 1e-9)
+
+    def cells(b):
+        return ((cx, cy) for cx in range(int((b[0] - eps - x0) // cw), int((b[2] + eps - x0) // cw) + 1)
+                for cy in range(int((b[1] - eps - y0) // ch), int((b[3] + eps - y0) // ch) + 1))
+
+    grid: dict[tuple[int, int], list[int]] = {}
+    for j, b in boxes.items():
+        for c in cells(b):
+            grid.setdefault(c, []).append(j)
     out = []
     for i in sorted(moved):
         if i not in after:
             continue
-        si, si0 = _segments(items[i], after[i]), _segments(items[i], items[i].pts)
+        si = outline(i)
         bi = boxes[i]
-        for it in struct:
-            j = it.index
+        near = sorted({j for c in cells(bi) for j in grid.get(c, ())})
+        for j in near:
             if j == i or (j in moved and j < i):
                 continue
             bj = boxes[j]
             if bj[0] > bi[2] + eps or bi[0] > bj[2] + eps or bj[1] > bi[3] + eps or bi[1] > bj[3] + eps:
                 continue
-            sj, sj0 = _segments(it, after[j]), _segments(it, it.pts)
-            if any(_crosses(p, q, r, t, eps) for p, q in si for r, t in sj) and \
-                    not any(_crosses(p, q, r, t, eps) for p, q in si0 for r, t in sj0):
+            if any(_crosses(p, q, r, t, eps) for (p, q), (r, t) in _near_pairs(si, outline(j), eps)) and not crossed(i, j):
                 out.append((i, j))
     return out
 

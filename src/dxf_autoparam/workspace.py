@@ -56,6 +56,7 @@ The agent — ONE instruction, one session (ai/run.py):
 
 from __future__ import annotations
 
+import contextlib
 import gzip
 import json
 import shutil
@@ -67,6 +68,16 @@ from typing import cast
 from urllib.parse import parse_qs
 
 from .crossview import SheetError, SheetModel, SheetRegen
+
+# what a request that holds the sheet is doing, in the page's words (the rest are said by their path)
+HOLDING_WORDS = {
+    "/api/sheet/anchor": "choosing how a value grows (the unit's design intent is worked out again)",
+    "/api/sheet/settle": "trying the ways to settle a value, each for real",
+    "/api/sheet/intent": "working out the design intent",
+    "/api/sheet/apply": "applying a value",
+    "/api/sheet/preview": "previewing a value",
+    "/api/sheet/behaviour": "checking a change on the whole sheet",
+}
 
 STATIC = Path(__file__).parent / "static"
 
@@ -88,6 +99,7 @@ class SheetSession:
         self.gem_per_run = False
         self.autosave = None  # autosave.Autosave: keeps the work on disk while it is made (the server sets it; a test or script does without)
         self.loading: dict | None = None  # the drawing being read right now: {name, since} (read by the page while the request is out)
+        self.holding: dict | None = None  # the request that holds the sheet right now: {what, since} (said by loading_status while others wait)
         self._dims: dict[str, tuple[object, dict]] = {}  # per unit: how many dimensions its values drive, for the program it was measured on (not asked again per step)
         self._opening = threading.Lock()  # one drawing is read at a time
         self.pictures = None
@@ -163,8 +175,20 @@ class SheetSession:
 
     def loading_status(self) -> dict:
         """What the page shows while a drawing is read: the name and how long it has taken (read without the sheet lock, so it can always be asked)."""
-        cur = self.loading
-        return {"loading": cur is not None, **({"name": cur["name"], "elapsed_s": round(time.time() - cur["since"], 1)} if cur else {})}
+        cur, held = self.loading, self.holding
+        busy = {"busy": {"what": held["what"], "elapsed_s": round(time.time() - held["since"], 1)}} if held and time.time() - held["since"] > 1.0 else {}
+        return {"loading": cur is not None, **({"name": cur["name"], "elapsed_s": round(time.time() - cur["since"], 1)} if cur else {}), **busy}
+
+    @contextlib.contextmanager
+    def held_for(self, method: str, path: str):
+        """The sheet lock, with what holds it on record: a request that takes long (a side chosen on a big unit works its design intent out again)
+        is said to the page, which otherwise waits on every other request with nothing to show."""
+        with self.lock:
+            self.holding = {"what": HOLDING_WORDS.get(path, f"{method} {path.removeprefix('/api/sheet/')}"), "since": time.time()}
+            try:
+                yield
+            finally:
+                self.holding = None
 
     def _sm(self) -> SheetModel:
         if self.sm is None:
@@ -909,7 +933,7 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
         if method == "POST" and path == "/api/sheet/reopen":
             body = json.loads(handler._body() or b"{}")
             return handler._json(sheet.reopen(bool(body.get("fresh")))) or True
-        with sheet.lock:
+        with sheet.held_for(method, path):
             if method == "GET":
                 if path == "/api/sheet":
                     return handler._json(sheet.summary() if sheet.sm else {"empty": True}) or True

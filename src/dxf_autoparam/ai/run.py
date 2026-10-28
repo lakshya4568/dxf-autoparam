@@ -391,6 +391,10 @@ class SheetBench:
 
             res = {"ok": False, "error": str(exc), **({"failures": compact(exc.failures)} if exc.failures else {})}
             self.commit_results[uid] = res
+            if str(exc).startswith("stale"):
+                # the sheet changed from outside the run (a person's edit in the page): every later commit of this run would be refused the same
+                # way, so the person decides now — not only at finish, which a run paused or ended at its chunk never reached (five units lost)
+                self.ask_rebase(str(exc))
             return res
         kept = done["commit"].get("kept_as_drawn") or []
         if kept:  # the measured sizes nobody named are kept as drawn on the sheet: the bench's own answer says so too, or its next commit would hand them back
@@ -406,6 +410,11 @@ class SheetBench:
                "intent": done["commit"].get("intent"), "intent_skipped": done["commit"].get("intent_skipped")}
         self.commit_results[uid] = res
         return res
+
+    def ask_rebase(self, why: str) -> None:
+        """The sheet changed while the agent worked: the person is asked whether its edits go on top of the current sheet or are discarded."""
+        if self.rebase is None:
+            self.rebase = {"text": f"The sheet was changed while the agent worked ({why[:200]}). Apply the agent's edits on top of the current sheet, or discard them?"}
 
     def commit_all(self, force: bool = False) -> dict[str, dict]:
         out = {}
@@ -742,7 +751,7 @@ class SheetBench:
         refused = {u: r for u, r in results.items() if not r["ok"]}
         stale = [r["error"] for r in refused.values() if str(r["error"]).startswith("stale")]
         if stale:
-            self.rebase = {"text": f"The sheet was changed while the agent worked ({stale[0][:200]}). Apply the agent's edits on top of the current sheet, or discard them?"}
+            self.ask_rebase(stale[0])
             return {"done": False, "waiting_for": [self.rebase["text"]], "hint": "the person decides first: the run asks them and continues you with their answer"}, False
         if refused and self.commit_refusals < 2:
             self.commit_refusals += 1
@@ -1240,12 +1249,15 @@ class SheetBench:
         kinds = {i.get("kind") for i in self.ledger}
         return not (kinds & {"question", "check"}) or bool(kinds & {"parametrize", "annotate"})
 
-    def coverage(self) -> tuple[list[dict], bool]:
+    def coverage(self, final: bool = False) -> tuple[list[dict], bool]:
         """Which units of the run's scope the sheet really holds work for (coverage.py), and whether that is asked of this run: a run over the whole
         drawing that asks for it to be made parametric and is not carrying out a change. A change asked of one value is not a promise to parametrize
         every unit, and neither is a question about the drawing."""
         scope_units = self.run.scope_units()
-        rows = unit_rows(self.sm, scope_units, {uid: w.answer for uid, w in self.units.items()}, UT.notes_of(self.sm)["checklist"], self.open_refusals())
+        # work not yet applied counts (the gate asks before it applies); in the verdict (`final`), work the sheet REFUSED does not — a run that
+        # ended with five units refused as stale said "6 of 12 units parametrized" with one on the sheet
+        pending = {uid: w.answer if not final or (self.commit_results.get(uid) or {}).get("ok", True) else {} for uid, w in self.units.items()}
+        rows = unit_rows(self.sm, scope_units, pending, UT.notes_of(self.sm)["checklist"], self.open_refusals())
         change_asked = any(i.get("kind") in ("change_value", "keep") and i.get("handled_by") == "plan" for i in self.ledger)
         return rows, self.run.scope.get("kind") == "drawing" and len(scope_units) > 1 and not change_asked and self.parametrizing()
 
@@ -1272,12 +1284,23 @@ class SheetBench:
             # one name for two sizes (an existing box's 600 mm slab and the proposed one's 500 mm, both "TopSlabThickness"): the person reading the values
             # cannot tell them apart, and a later link would join two structures — asked once before finish, the way a gap in the coverage is
             out += [f"{n} — rename one of them (rename_values), e.g. after the structure it belongs to" for n in self.repeat_notes() if n.startswith("one name")]
+            for c in self.crossing_values()[:6]:  # "changing each main value keeps the whole sheet valid": accepted is not enough if walls run into slabs
+                more = f", {c['pairs']} pairs in all" if c["pairs"] > 1 else ""
+                out.append(f"{c['value']} at {c['step']} runs members into each other ({c['first']}{more}) — check_behaviour shows it; say which side "
+                           "stays or what follows it (propose_plan), or leave it out on purpose")
         rows, asked = self.coverage()  # last: what the model can still repair comes first, and the units nobody covered are said in full after it
         if asked and any(not r["covered"] for r in rows):
             todo = [r for r in rows if not r["covered"]]
             out.append(f"{sentence(rows)} — open_unit each of {', '.join(r['unit'] for r in todo[:12])} and parametrize it; where a unit has nothing to parametrize, "
                        "say so on the checklist (update_checklist: status 'skipped', its id and the reason in the text) — not only in your closing words")
         return out
+
+    def crossing_values(self) -> list[dict]:
+        """The named lengths of the units this run applied whose ±10 % step runs structural members into each other (behaviour.crossing_steps)."""
+        from ..behaviour import crossing_steps
+
+        with self._lock():
+            return crossing_steps(self.sm, [u for u in self.touched if u in self.sm.units])
 
     def dimension_gaps(self, limit: int = 6) -> list[str]:
         """The units this run parametrized whose own DIMENSIONS nothing named drives yet (coverage.py), part by part — said until each is bound,
@@ -1685,7 +1708,15 @@ class Run:
             raise RunError(f"a run that is {self.status} has nothing pending to apply")
         self.to("running", "applying what is valid")
         try:
-            self.bench.commit_all()
+            b = self.bench
+            if b.rebase is not None or b.own_revision != self.host.sm.revision:
+                # the person asked for the valid work to be applied, with the sheet as it is now in front of them: their edits stand and the
+                # agent's go on top, checked on the whole sheet (as "apply on the current sheet" does) — not refused as stale unit by unit
+                b.sync_revision()
+                b.rebase = None
+                self.depth0 = len(self.host.sm.history)  # as the rebase answer does: a revert takes back the agent's edits, never the person's
+                self.emit({"kind": "note", "text": "the sheet was changed while the agent worked: its valid edits are applied on the sheet as it is now"})
+            b.commit_all()
             return self._finalize("applied")
         except Exception as exc:  # reported in the run, not lost
             self.error = f"{type(exc).__name__}: {exc}"
@@ -1932,7 +1963,7 @@ class Run:
         add("finished", ended_by == "finished", "the model finished and the engine's gate accepted it" if ended_by == "finished" else
             f"the run ended without a finish ({ended_by}): what was valid was applied, the rest was not worked on")
         with b._lock():
-            coverage, coverage_asked = b.coverage()
+            coverage, coverage_asked = b.coverage(final=True)
         if not b.parametrizing():  # a question or a check does not touch the units: listing them all as untouched would say the opposite of what was asked
             coverage = []
         if coverage_asked:  # said by the sheet, not by the model: a unit the run left untouched is not "left as drawn"
@@ -1983,6 +2014,10 @@ class Run:
             bad_links = [x for x in plan["links"] if not x["holds"]]
             add("plan_holds", not bad_links, f"{len(plan['links'])} link(s) stated in the plan, each holds on the sheet" if not bad_links else
                 "; ".join(f"{x['what']}: {x['why'][:120]}" for x in bad_links[:3]))
+        if b.parametrizing():  # each value an edit, not only accepted: a step the sheet takes that runs a wall into a slab is not one
+            crossing = b.crossing_values()
+            add("edits_keep_members_apart", not crossing, "every named length steps ±10 % without running members into each other" if not crossing else
+                f"{len(crossing)} named value(s) run members into each other at ±10 %: " + "; ".join(f"{c['value']} {c['step']} ({c['first']})" for c in crossing[:3]))
         prod_summary = b.prod.summary() if b.prod is not None else None
         if prod_summary and prod_summary["at_the_end"]:  # what the production rules guard must hold on the sheet the run leaves
             broken = [f"{r['id']}: {r['status']}" for r in prod_summary["at_the_end"]

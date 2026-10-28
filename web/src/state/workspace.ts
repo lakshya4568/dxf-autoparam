@@ -91,6 +91,13 @@ function say(text: string, kind: "ok" | "bad" | "info" = "info"): void {
 
 async function guard<T>(what: string, fn: () => Promise<T>): Promise<T | undefined> {
   store.set({ busy: what });
+  // a request waits while another holds the sheet (a side chosen on a big unit works its design intent out again, for minutes): what holds it is
+  // said, so the page does not look dead
+  const tick = setInterval(() => {
+    api.loading().then((l) => {
+      if (store.get().busy && l.busy) store.set({ busy: `${what} — the sheet is busy ${l.busy.what}: ${Math.round(l.busy.elapsed_s)} s` });
+    }).catch(() => undefined);
+  }, 1500);
   try {
     return await fn();
   } catch (e) {
@@ -98,6 +105,7 @@ async function guard<T>(what: string, fn: () => Promise<T>): Promise<T | undefin
     say(e instanceof EngineError || e instanceof Error ? e.message : String(e), "bad");
     return undefined;
   } finally {
+    clearInterval(tick);
     store.set({ busy: null });
   }
 }

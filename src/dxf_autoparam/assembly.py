@@ -249,6 +249,29 @@ def protected_lines(prog: Program, fixed: set[str] | None = None) -> dict[str, s
     return out
 
 
+def _other_structure_lines(prog: Program, parts: dict[str, Part], names: set[str], lines: set[str]) -> set[str]:
+    """Of an assembly of one structure (all existing work, or all new), the lines only the OTHER structure's parts draw on: a part's lines come from its
+    regions, and an old box drawn inside its extension's outline in plan gave the extension the old box's faces — a value of the new box then re-set
+    the old one (or, the old one kept as built, was refused for a line no new entity is on)."""
+    leaves = [n for n in names if n in parts and not any(q.parent == n for q in parts.values())]
+    mine = {parts[n].existing for n in leaves}
+    if len(mine) != 1 or all(p.existing in mine for p in parts.values()):
+        return set()
+    own = mine.pop()
+    structure: dict[int, set[bool]] = {}
+    for n, p in parts.items():
+        if any(q.parent == n for q in parts.values()):
+            continue
+        for i in part_entities(prog, parts, n):
+            structure.setdefault(i, set()).add(p.existing)
+    items = prog.analysis.drawing.items
+    on: dict[str, set[bool]] = {}
+    for (i, _k, _ax), (d, _off) in prog.analysis.slot_datum.items():
+        if d in lines and i in structure and items[i].role.value == "structural":
+            on.setdefault(d, set()).update(structure[i])
+    return {d for d, s in on.items() if own not in s}
+
+
 def assembly_lines(prog: Program, parts: dict[str, Part] | None, core: set[str] | None, axis: str,
                    seed: set[str] | None = None, exclude: set[str] | None = None) -> set[str]:
     """The lines on `axis` that move as one assembly.
@@ -273,6 +296,7 @@ def assembly_lines(prog: Program, parts: dict[str, Part] | None, core: set[str] 
             for n in exclude:
                 if n in parts and n not in names:
                     out -= parts[n].own_datums - keep
+        out -= _other_structure_lines(prog, parts, names, out)
     else:
         topo = of(an)
         from .intent import resolve_parts
@@ -753,6 +777,9 @@ def stack(prog: Program, axis: str, drivers: list[Driver], members: set[str], st
 
     for p in list(placed):
         push(p)
+    fitted: set[str] = set()
+    pairs_any: list = []
+    pairs_free: list = []
     while len([d for d in rer if d not in placed]):
         while heap:
             _r, _dist, _q, p, s, coefs, const, kind = heapq.heappop(heap)
@@ -775,8 +802,21 @@ def stack(prog: Program, axis: str, drivers: list[Driver], members: set[str], st
         if not placed:  # nothing on this axis stays put to set the assembly out from
             st.why = "nothing on this axis stays where it is to set the size out from"
             return st
-        sources = [p for p in placed if p not in checked] or list(placed)
-        s, p = min(((s, p) for s in left for p in sources), key=fit)
+        # the nearest pair over every line still to place and every placed line (a check-only level only when nothing else is placed): a pair's
+        # key never changes once its source is placed and the lines to place only get fewer, so the pairs are kept in heaps across the rounds —
+        # rescanning them all for each line placed was quadratic, and froze a sheet whose joined unit has a few hundred lines on an axis
+        for p_ in placed:
+            if p_ not in fitted:
+                fitted.add(p_)
+                for s_ in left:
+                    k = fit((s_, p_))
+                    heapq.heappush(pairs_any, k)
+                    if p_ not in checked:
+                        heapq.heappush(pairs_free, k)
+        pairs = pairs_free if any(p_ not in checked for p_ in placed) else pairs_any
+        while pairs[0][3] in placed:
+            heapq.heappop(pairs)
+        s, p = pairs[0][3], pairs[0][4]
         coefs = {n: pred[n].get(s, 0.0) - placed[p][n] for n in pred}
         coefs = {n: c for n, c in coefs.items() if abs(c) > 1e-12}
         const = v[s] - v[p] - sum(c * prog.params[n].value for n, c in coefs.items())
