@@ -48,6 +48,7 @@ EPS = 1e-6
 # "Centred" with no line drawn at the middle: each occurrence of the size grows half each way about its own middle — a construction the
 # person asked for, never a line of the drawing (and never the engine's default, which needs a drawn axis or the faces' own symmetry).
 MID = "@mid"
+KEPT_TYPE = "kept as drawn"  # the type of the part of the entities a person keeps where they are drawn (SheetModel.anchor `keep_as_drawn`)
 
 
 # ── linear forms ─────────────────────────────────────────────────────────────────
@@ -253,19 +254,20 @@ def _other_structure_lines(prog: Program, parts: dict[str, Part], names: set[str
     """Of an assembly of one structure (all existing work, or all new), the lines only the OTHER structure's parts draw on: a part's lines come from its
     regions, and an old box drawn inside its extension's outline in plan gave the extension the old box's faces — a value of the new box then re-set
     the old one (or, the old one kept as built, was refused for a line no new entity is on)."""
-    leaves = [n for n in names if n in parts and not any(q.parent == n for q in parts.values())]
+    leaves = [n for n in names if n in parts and not any(q.parent == n for q in parts.values()) and parts[n].type != KEPT_TYPE]
     mine = {parts[n].existing for n in leaves}
-    if len(mine) != 1 or all(p.existing in mine for p in parts.values()):
+    kept = any(p.type == KEPT_TYPE for p in parts.values())
+    if len(mine) != 1 or (all(p.existing in mine for p in parts.values() if p.type != KEPT_TYPE) and not kept):
         return set()
     own = mine.pop()
-    structure: dict[int, set[bool]] = {}
+    structure: dict[int, set[object]] = {}  # per entity: the structure it is drawn for (existing or not), or KEPT_TYPE when a person keeps it as drawn
     for n, p in parts.items():
         if any(q.parent == n for q in parts.values()):
             continue
         for i in part_entities(prog, parts, n):
-            structure.setdefault(i, set()).add(p.existing)
+            structure.setdefault(i, set()).add(KEPT_TYPE if p.type == KEPT_TYPE else p.existing)
     items = prog.analysis.drawing.items
-    on: dict[str, set[bool]] = {}
+    on: dict[str, set[object]] = {}
     for (i, _k, _ax), (d, _off) in prog.analysis.slot_datum.items():
         if d in lines and i in structure and items[i].role.value == "structural":
             on.setdefault(d, set()).update(structure[i])
@@ -970,6 +972,8 @@ def part_entities(prog: Program, parts: dict[str, Part], name: str) -> set[int]:
     for n in names:
         if n in parts:
             out |= parts[n].entities
+    # entities a person keeps where they are drawn (a part of their own, KEPT_TYPE) are no longer any other part's, whatever regions they border
+    out -= {i for n, p in parts.items() if p.type == KEPT_TYPE and n not in names for i in p.entities}
     return {i for i in out if an.drawing.items[i].role.value in ("structural", "reference")}
 
 

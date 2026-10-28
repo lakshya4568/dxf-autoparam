@@ -387,9 +387,10 @@ class SheetBench:
                 done = commit_unit(self.sm, uid, wb.answer, self.own_revision, lock=self._lock())
                 self.sync_revision()
         except SheetError as exc:  # the sheet's refusal (stale, a shared size that would stop driving, a broken promise) is a result, not a crash
-            from ..refusal import compact
+            from ..refusal import compact, person_question
 
-            res = {"ok": False, "error": str(exc), **({"failures": compact(exc.failures)} if exc.failures else {})}
+            ask = person_question(exc.failures)  # members of different parts in each other's way: the person's decision, with the question to ask
+            res = {"ok": False, "error": str(exc), **({"failures": compact(exc.failures)} if exc.failures else {}), **({"ask_person": ask} if ask else {})}
             self.commit_results[uid] = res
             if str(exc).startswith("stale"):
                 # the sheet changed from outside the run (a person's edit in the page): every later commit of this run would be refused the same

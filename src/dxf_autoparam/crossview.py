@@ -33,6 +33,7 @@ from typing import Any, cast
 
 from . import design_intent, generic
 from .analyse import analyse
+from .assembly import KEPT_TYPE
 from .cadjson import entity_id
 from .connections import torn
 from .display import primitives
@@ -51,6 +52,11 @@ EMPTY_ANSWER = {"structure_type": "", "family": "other", "views": [], "summary":
                 "parameters": [], "datum_formulas": [], "relations": [], "behaviours": [], "constraints": [], "questions": []}
 NAME_KEYS = ("name", "parameter", "target")
 EXPR_KEYS = ("expr", "value")
+KEPT_AS_DRAWN = "KeptAsDrawn"  # the part of the entities a person keeps where they are drawn when a side is chosen (anchor `keep_as_drawn`)
+
+
+class _Asked(Exception):
+    """A dry side choice the whole sheet would take: raised to put the state back, never seen outside `anchor`."""
 
 
 class SheetError(ValueError):
@@ -986,11 +992,15 @@ class SheetModel:
             out["settled"] = list(mine.values())
         return out
 
-    def anchor(self, name: str, uid: str, mode: str) -> dict:
+    def anchor(self, name: str, uid: str, mode: str, decisions: dict[str, str] | None = None, keep_as_drawn: list[str] | None = None,
+               dry: bool = False) -> dict:
         """Choose how a value grows in one unit: `start` — its start line stays and everything beyond grows away from it;
         `end` — the other way; `centre` — the assembly stays about the centre line. Written as an accepted plan for the
         WHOLE assembly the value belongs to (every other size keeps its drawn value: walls, haunches, slabs), committed
-        only if it measures right on the sheet; otherwise refused with the reason and nothing changes."""
+        only if it measures right on the sheet; otherwise refused with the reason and nothing changes.
+
+        What a person answered when it was refused (`anchor_options`): `decisions` — a part tied to the assembly → "follow" | "keep_fixed";
+        `keep_as_drawn` — entities that stay where they are drawn (held as a part of their own). `dry`: asked of the whole sheet and nothing kept."""
         policy = {"start": "start_fixed", "end": "end_fixed", "centre": "centered"}.get(mode)
         if policy is None:
             raise SheetError("anchor is start, end or centre")
@@ -1006,6 +1016,11 @@ class SheetModel:
         pairs = pairs_of(u.prog, u.answer, local)
         lines = {x for p in pairs for x in p}
         ans = copy.deepcopy(u.answer) if u.answer else copy.deepcopy(EMPTY_ANSWER)
+        if keep_as_drawn:  # entities a person keeps where they are drawn (a boundary mark, a line of other work): a part of their own, held as built
+            had = next((c for c in ans.get("components", []) if c.get("name") == KEPT_AS_DRAWN), None)
+            ents = sorted(set(keep_as_drawn) | set((had or {}).get("entities", [])))
+            ans["components"] = [c for c in ans.get("components", []) if c.get("name") != KEPT_AS_DRAWN] + [
+                {"name": KEPT_AS_DRAWN, "type": KEPT_TYPE, "entities": ents, "parametrize": False}]
         # ONE step, all or nothing: a refused choice leaves the sheet exactly as it was (it used to keep the formulas it cleared on the way, and a
         # second step), and an accepted one is undone by one undo
         before, rev, depth, future, live = self._state(), self.revision, len(self.history), list(self.future), self._live
@@ -1022,7 +1037,7 @@ class SheetModel:
             freed: list[str] = self._free_levels_on_side(uid, pairs, policy)
             for _round in range(4):
                 prog0, ans0 = self._plain(uid)
-                plan = self._person_plan(prog0, ans0, uid, local, pairs, policy)
+                plan = self._person_plan(prog0, ans0, uid, local, pairs, policy, decisions)
                 if plan["status"] == "ready":
                     break
                 levels = [n for n in self._levels_in_way(prog0, plan, policy) if n not in freed]
@@ -1044,7 +1059,15 @@ class SheetModel:
             problem = self._dry_commit(uid, chosen, discard_values=bool(freed))
             if problem:
                 raise SheetError(problem)
+            if dry:
+                raise _Asked()  # it holds: nothing is kept (the state is put back below)
             self.commit_answer(uid, chosen, discard_values=bool(freed))
+        except _Asked:
+            self._restore(before)
+            del self.history[depth:]
+            self.future, self.revision, self._live = future, rev, live
+            self.units[uid].prog = None
+            return {"ok": True, "dry": True, "plan": plan["id"]}
         except SheetError:
             self._restore(before)
             del self.history[depth:]
@@ -1055,6 +1078,103 @@ class SheetModel:
         g = next(x for x in self.growth(name) if x["unit"] == uid)
         return {**g, "plan": plan["id"], "anchor_line": (plan.get("anchor") or {}).get("line"),
                 **({"levels_follow": self._followers(uid, local, freed, before)} if freed else {})}
+
+    ANCHOR_OPTIONS_BUDGET_S = 60.0  # how long looking for the ways out of a refused side may take (each is the choice asked of the whole sheet)
+
+    def anchor_options(self, name: str, uid: str, mode: str) -> dict:
+        """A side refused, turned into a question for the person: what stood in the way, thing by thing — the entities the refusal names, by the part
+        they belong to (or none), with their layer — and the ways out, each TRIED FOR REAL (the side asked of the whole sheet with it, nothing kept):
+        another side; a part tied to the assembly following it instead of staying, or staying instead of following; the entities that broke kept
+        where they are drawn. Only what the sheet takes is offered (`choices`), what it did not take is said (`rejected`). Nothing is changed."""
+        import re
+        import time
+
+        from .assembly import part_entities
+        from .cadjson import entity_id
+
+        started = time.monotonic()
+        out: dict[str, Any] = {"unit": uid, "name": name, "mode": mode, "revision": self.revision, "refused": "", "blocked": [], "choices": [],
+                               "rejected": [], "notes": []}
+        try:
+            self.anchor(name, uid, mode, dry=True)
+            out["notes"].append("it holds as asked: nothing stands in the way")
+            return out
+        except SheetError as exc:
+            out["refused"] = str(exc)
+        u = self.unit(uid)
+        assert u.prog is not None and u.an is not None
+        prog, items = u.prog, u.an.drawing.items
+        parts = prog.intent.get("parts") or {}
+        leaves = [n for n in parts if not any(q.parent == n for q in parts.values())]
+        owner: dict[int, str] = {}
+        for n in leaves:
+            for i in part_entities(prog, parts, n):
+                owner.setdefault(i, n)
+        by_id = {entity_id(it): it.index for it in items}
+        by_handle = {str(it.handle).upper(): it.index for it in items if it.handle}
+        text = out["refused"]
+        hit = {by_id[m] for m in re.findall(r"\b([A-Z]{1,3}\d+)\b", text) if m in by_id}
+        hit |= {by_handle[m] for m in re.findall(r"\b[A-Z]+ ([0-9A-F]{2,})\b", text) if m in by_handle}
+        still = set(re.findall(r"\b([xy]\d+[a-z]?) moved \+?0\.0 mm", text))  # lines of the assembly that did not move as the side says
+        for (i, _k, _ax), (d, _off) in u.an.slot_datum.items():
+            if d in still:
+                hit.add(i)
+        groups: dict[str, list[int]] = {}
+        for i in sorted(hit):
+            if items[i].role.value == "structural":
+                groups.setdefault(owner.get(i, ""), []).append(i)
+        for n, ents in groups.items():
+            out["blocked"].append({"part": n or None, "existing": parts[n].existing if n in parts else None, "count": len(ents),
+                                   "entities": [entity_id(items[i]) for i in ents][:12], "layers": sorted({str(items[i].layer) for i in ents})[:3],
+                                   "sheet": [u.back[i] for i in ents if i < len(u.back)]})  # the sheet's own indices: the page zooms to them
+        parts_of = {n: parts[n] for n in groups if n in parts}
+        pairs = pairs_of(prog, u.answer, self._local_name(name, uid))
+        mine = {parts[c].existing for c in core_parts(parts, pairs, prog) if c in parts}
+        side = {"start": "its start side stays", "centre": "it grows equally on both sides", "end": "its far side stays"}
+        cands: list[tuple[str, str, str, dict | None, list | None]] = []
+        small = {n: ents for n, ents in groups.items() if len(ents) <= 40}
+        kept_all = [entity_id(items[i]) for ents in small.values() for i in ents]
+        for n, ents in small.items():
+            cands.append((f"keep:{n or 'no part'}", f"Keep {len(ents)} entit{'y' if len(ents) == 1 else 'ies'} of {n or 'no part'} where they are drawn",
+                          mode, None, [entity_id(items[i]) for i in ents]))
+        for n, p in parts_of.items():
+            dec = "follow" if (len(mine) == 1 and p.existing not in mine) else "keep_fixed"  # the opposite of what the side does with it now
+            cands.append((f"part:{n}:{dec}", f"{n} {'follows the side' if dec == 'follow' else 'stays where it is'}", mode, {n: dec}, None))
+        if len(small) > 1:
+            cands.append(("keep:all", f"Keep all {len(kept_all)} where they are drawn", mode, None, kept_all))
+        for other in ("start", "centre", "end"):
+            if other != mode:
+                cands.append((f"side:{other}", f"Instead: {side[other]}", other, None, None))
+                if kept_all:
+                    cands.append((f"side:{other}+keep", f"Instead: {side[other]}, and keep the {len(kept_all)} where they are drawn", other, None, kept_all))
+        def named(why: str) -> list[str]:  # the structural entities a refusal names
+            got = {by_id[x] for x in re.findall(r"\b([A-Z]{1,3}\d+)\b", why) if x in by_id}
+            got |= {by_handle[x] for x in re.findall(r"\b[A-Z]+ ([0-9A-F]{2,})\b", why) if x in by_handle}
+            return [entity_id(items[i]) for i in sorted(got) if items[i].role.value == "structural"]
+
+        for k, (cid, title, m, dec, keep) in enumerate(cands):
+            if time.monotonic() - started > self.ANCHOR_OPTIONS_BUDGET_S:
+                out["notes"].append(f"stopped after {int(time.monotonic() - started)} s: {len(cands) - k} more way(s) were not tried")
+                break
+            why = ""
+            for _round in range(4 if keep else 1):  # keeping some as drawn can put the next ones in the way: those are kept too, a few rounds at most
+                try:
+                    self.anchor(name, uid, m, decisions=dec, keep_as_drawn=keep, dry=True)
+                    why = ""
+                    break
+                except SheetError as exc:
+                    why = str(exc).removeprefix("refused, nothing changed: ")
+                more = [e for e in named(why) if keep is not None and e not in keep]
+                if not more or len(keep or []) + len(more) > 80 or time.monotonic() - started > self.ANCHOR_OPTIONS_BUDGET_S:
+                    break
+                keep = [*(keep or []), *more]
+                title = f"Keep {len(keep)} entities where they are drawn (those in the way, and those that keeping them puts in the way)" + (
+                    f", and {side[m]}" if m != mode else "")
+            if why:
+                out["rejected"].append({"id": cid, "title": title, "why": why[:300]})
+                continue
+            out["choices"].append({"id": cid, "title": title, "mode": m, "decisions": dec or {}, "keep_as_drawn": keep or []})
+        return out
 
     def _free_levels_on_side(self, uid: str, pairs, policy: str) -> list[str]:
         """The site levels on the side a person's choice moves — beyond the size, on its axis, in the views its lines are drawn in — made to
@@ -1095,7 +1215,7 @@ class SheetModel:
         held = {d for c in comps if c.held for d in c.datums}
         return held - {d for c in comps if not c.held for d in c.datums}
 
-    def _person_plan(self, prog0, ans0, uid: str, local: str, pairs, policy: str) -> dict:
+    def _person_plan(self, prog0, ans0, uid: str, local: str, pairs, policy: str, decisions: dict[str, str] | None = None) -> dict:
         """The plan for a person's side: questions about attached parts are answered by what the set-out does now (a choice about one value), and
         what touches the assembly moves with its side — as the engine's own default plans have it (a side chosen by a person used to be refused for a
         course under the box that the plan said nothing about, where the default for the same value moved it)."""
@@ -1111,6 +1231,8 @@ class SheetModel:
 
             def pick(about: str) -> str:
                 n = about.split(":", 1)[1]
+                if decisions and n in decisions:  # what the person answered for this part when the side was refused
+                    return decisions[n]
                 return "keep_fixed" if len(mine) == 1 and n in parts and parts[n].existing not in mine else "follow"
 
             plan = build_plan(prog0, ans0, {**req, "decisions": {q["about"]: pick(q["about"]) for q in plan["questions"]}}, sheet=self._plan_sheet(uid))

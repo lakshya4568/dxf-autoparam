@@ -263,6 +263,29 @@ export interface SettleChoice {
   discards: string[];
 }
 
+/** One way out of a refused side, TRIED FOR REAL by the engine (SheetModel.anchor_options): another side, a part tied to the assembly following
+ * or staying, the entities in the way kept where they are drawn. Only what the whole sheet takes is offered. */
+export interface AnchorChoice {
+  id: string;
+  title: string;
+  mode: "start" | "end" | "centre";
+  decisions: Record<string, "follow" | "keep_fixed">;
+  keep_as_drawn: string[];
+}
+
+/** A refused side as a question: the refusal, what stood in the way (entities by part), the ways out that hold and those that did not, with why. */
+export interface AnchorOptions {
+  unit: string;
+  name: string;
+  mode: string;
+  revision: number;
+  refused: string;
+  blocked: { part: string | null; existing: boolean | null; count: number; entities: string[]; layers: string[]; sheet: number[] }[];
+  choices: AnchorChoice[];
+  rejected: { id: string; title: string; why: string }[];
+  notes: string[];
+}
+
 export interface SettleOptions {
   unit: string;
   name: string;

@@ -62,6 +62,21 @@ def compact(failures: list[dict], n: int = 5) -> list[dict]:
              for k in keep if f.get(k) not in (None, [], "")} for f in failures[:n]]
 
 
+def person_question(failures: list[dict]) -> dict | None:
+    """A refusal where different members collide is a decision about those members, not a number to try again: the question to put to the person
+    (ask_person) — what each part in the way does when the value changes — or None. The engine tries a chosen answer for real before it is kept."""
+    parts: list[str] = []
+    for f in failures:
+        if f.get("check") in ("clash", "connection", "CLASH") or "run" in str(f.get("basis", "")) and "into" in str(f.get("basis", "")):
+            parts += [p for p in f.get("parts", []) if p not in parts]
+    if len(parts) < 2:
+        return None
+    options = [f"{p} follows the change" for p in parts[:2]] + [f"{p} stays where it is drawn" for p in parts[:2]]
+    return {"text": f"Changing it runs {' and '.join(parts[:3])} into each other. What should happen to them when this value changes?",
+            "options": options[:4], "why": "what a member in the way does (follows, stays, is cut back or extended) is the person's decision; "
+            "the drawing does not say it"}
+
+
 def summary(failures: list[dict]) -> str:
     """One line for a banner: how many checks failed, of which kind, and whether any already failed before the change."""
     if not failures:

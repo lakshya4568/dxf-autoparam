@@ -16,7 +16,8 @@ shares, anchors, links and view corrections are transactions with undo / redo.
     POST /api/sheet/undo | redo
     GET  /api/sheet/unit?id=…             one unit's values, parts, findings (analysed on first use)
     GET  /api/sheet/param?name=…          what a value moves (per view), how it grows, how far it can go
-    POST /api/sheet/share | unshare | rename | anchor | link | view | merge | split
+    POST /api/sheet/share | unshare | rename | anchor | link | view | merge | split     (anchor: {name, unit, mode[, decisions, keep_as_drawn]})
+    GET  /api/sheet/anchor_options?name=…&unit=…&mode=…   a refused side as a question: what stood in the way, the ways out tried for real
     POST /api/sheet/intent   {unit?}      the design intent derived again (which side of each size stays, decided from the drawing) — one undoable step
     GET  /api/sheet/proposals?units=…     sizes two views both state
     GET  /api/sheet/export                the edited DXF
@@ -73,6 +74,7 @@ from .crossview import SheetError, SheetModel, SheetRegen
 HOLDING_WORDS = {
     "/api/sheet/anchor": "choosing how a value grows (the unit's design intent is worked out again)",
     "/api/sheet/settle": "trying the ways to settle a value, each for real",
+    "/api/sheet/anchor_options": "trying the ways out of a refused side, each for real",
     "/api/sheet/intent": "working out the design intent",
     "/api/sheet/apply": "applying a value",
     "/api/sheet/preview": "previewing a value",
@@ -350,6 +352,12 @@ class SheetSession:
         self._sm()
         return {"prims": self._prims(self.shown, None), "styles": self.styles}
 
+    def anchor_options(self, name: str, unit: str, mode: str) -> dict:
+        """A refused side as a question: what stood in the way and the ways out, each tried for real (SheetModel.anchor_options): nothing changes."""
+        if self.running():
+            raise SheetError("the agent is working on this sheet: stop it first")
+        return self._sm().anchor_options(name, unit, mode)
+
     def settle_options(self, name: str, unit: str) -> dict:
         """The ways to settle a value whose direction of growth could not be decided, each tried for real (SheetModel.settle_options): nothing changes."""
         if self.running():
@@ -374,7 +382,8 @@ class SheetSession:
         elif op == "rename":
             sm.rename(body["old"], body["new"])
         elif op == "anchor":
-            result = sm.anchor(body["name"], body["unit"], body["mode"])
+            result = sm.anchor(body["name"], body["unit"], body["mode"], decisions=body.get("decisions") or None,
+                               keep_as_drawn=body.get("keep_as_drawn") or None)
         elif op == "intent":
             if self.running():
                 raise SheetError("the agent is working on this sheet: stop it first")
@@ -947,6 +956,8 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
                     return handler._json(sheet.param(q.get("name", [""])[0])) or True
                 if path == "/api/sheet/settle":
                     return handler._json(sheet.settle_options(q.get("name", [""])[0], q.get("unit", [""])[0])) or True
+                if path == "/api/sheet/anchor_options":
+                    return handler._json(sheet.anchor_options(q.get("name", [""])[0], q.get("unit", [""])[0], q.get("mode", [""])[0])) or True
                 if path == "/api/sheet/proposals":
                     units = [u for u in q.get("units", [""])[0].split(",") if u] or None
                     return handler._json({"proposals": sheet._sm().shared_proposals(units)}) or True

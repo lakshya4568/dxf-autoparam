@@ -3,7 +3,7 @@
 // The camera changes only when the person pans, zooms or asks to fit something: an edit, a preview, an undo never move it.
 import { api, EngineError } from "../api/client";
 import { entitySet } from "../api/normalize";
-import type { BehaviourReport, Box, DeltaResult, EntityRecord, Failure, Geometry, ParamInfo, Prim, SettleOptions, Style, Summary, UnitInfo } from "../api/types";
+import type { AnchorOptions, BehaviourReport, Box, DeltaResult, EntityRecord, Failure, Geometry, ParamInfo, Prim, SettleOptions, Style, Summary, UnitInfo } from "../api/types";
 import { DEFAULT_OVERLAYS, type HighlightSets, type Overlays } from "../canvas/renderer";
 import { GridIndex, primBox } from "../canvas/spatial";
 import { type Camera, DEFAULT_CAMERA, fitBox, padBox, toScreen, unionBox, ViewHistory } from "../canvas/viewport";
@@ -51,6 +51,8 @@ export interface WorkspaceState {
   param: { key: string; info: ParamInfo | null } | null;
   /** The ways to settle an undecided direction, asked of the engine for one value of one unit (they are tried for real: it takes a moment). */
   ways: { key: string; unit: string; loading: boolean; options: SettleOptions | null } | null;
+  /** A side the sheet refused, as a question: what stood in the way and the ways out, asked of the engine (each tried for real). */
+  anchorWays: { key: string; unit: string; mode: string; loading: boolean; options: AnchorOptions | null } | null;
   unit: UnitInfo | null;
   preview: Preview | null;
   /** The entities that differ from the drawing as it was read, as it had them — fetched only while the Original overlay is on. */
@@ -79,7 +81,7 @@ export const store = new Store<WorkspaceState>({
   summary: null, prims: [], styles: [], index: null, revision: 0, cam: DEFAULT_CAMERA, fitted: false, W: 800, H: 600,
   theme: typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light",
   hiddenLayers: new Set(), hiddenStatus: new Set(), statusOf: null, overlays: { ...DEFAULT_OVERLAYS }, selection: new Set(), hover: null,
-  focusView: null, highlight: null, param: null, ways: null, unit: null, preview: null, original: null, behaviour: null, issues: new Set(), entity: null, message: null,
+  focusView: null, highlight: null, param: null, ways: null, anchorWays: null, unit: null, preview: null, original: null, behaviour: null, issues: new Set(), entity: null, message: null,
   busy: null, stepping: false, viewTab: null, leftTab: "views", rightTab: "inspect", leftWidth: 320, rightWidth: 360, leftOpen: true, rightOpen: true, agentOpen: false, agentWidth: 440, frameMs: 0,
 });
 
@@ -408,9 +410,15 @@ const SIDE_WORDS: Record<"start" | "end" | "centre", string> = { start: "its sta
 
 /** A person says which side of a value stays when it changes. The engine writes it as their plan for the whole assembly the value belongs to and
  * measures it on the sheet; refused, it says why and nothing changes. A person's choice always replaces the engine's default. */
-export async function chooseGrowth(key: string, unit: string, mode: "start" | "end" | "centre"): Promise<void> {
-  const res = await guard("Choosing which side stays…", () => api.anchor(key, unit, mode));
-  if (!res) return;
+export async function chooseGrowth(key: string, unit: string, mode: "start" | "end" | "centre",
+  answer?: { decisions?: Record<string, string>; keep_as_drawn?: string[] }): Promise<void> {
+  const res = await guard("Choosing which side stays…", () => api.anchor(key, unit, mode, answer));
+  if (!res) {
+    // refused: not a dead end — the engine is asked what stood in the way and which ways out hold, and the person decides
+    if (!answer) void showAnchorWays(key, unit, mode);
+    return;
+  }
+  store.set({ anchorWays: null });
   afterCommit(res);
   // at the drawn value nothing moves; at another value (one already stepped) the drawing follows the side that was chosen. A site level on the
   // side that moves follows the structure now (it was an input): said, never refused for it
@@ -443,6 +451,20 @@ export async function showWays(key: string, unit: string): Promise<void> {
   const now = store.get().ways;
   if (!now || now.key !== key || now.unit !== unit) return; // another value was opened meanwhile
   store.set({ ways: options ? { key, unit, loading: false, options } : null });
+}
+
+/** A refused side: what stood in the way (the entities the refusal names, by part) and the ways out — another side, a part following or staying,
+ * the entities in the way kept where they are drawn — each tried on the whole sheet. Nothing changes until the person chooses one. */
+export async function showAnchorWays(key: string, unit: string, mode: string): Promise<void> {
+  store.set({ anchorWays: { key, unit, mode, loading: true, options: null } });
+  const options = await guard("Refused — trying the ways out, each on the whole sheet (up to a minute)…", () => api.anchorOptions(key, unit, mode));
+  const now = store.get().anchorWays;
+  if (!now || now.key !== key || now.unit !== unit) return;
+  store.set({ anchorWays: options ? { key, unit, mode, loading: false, options } : null });
+}
+
+export function hideAnchorWays(): void {
+  store.set({ anchorWays: null });
 }
 
 export function hideWays(): void {

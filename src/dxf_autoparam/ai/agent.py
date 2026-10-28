@@ -127,7 +127,8 @@ with set_formulas to get a direction — say what you know (the person's words, 
 
 EVERY VERDICT is ok, or rejected with a `failure`: {{code, binding, refs, expected, measured, cause, repair}}. repair
 "agent" = yours to fix (another occurrence, the other end, a formula); repair "person" = a decision that is not yours
-(a held part, existing work, a size shared with another view): ask_person, never work around it. An accepted size
+(a held part, existing work, a size shared with another view): ask_person, never work around it. A refusal that carries `ask_person`
+(members of different parts run into each other) is that question, ready: put it to the person as it is. An accepted size
 says which occurrences it DRIVES and which end grows. The engine checks every batch: the drawing must still be exactly
 as drawn at the current values, and no fixed line may move.
 

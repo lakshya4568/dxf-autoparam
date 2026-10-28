@@ -5,7 +5,7 @@ import { api } from "../api/client";
 import { entityList } from "../api/normalize";
 import type { Blocker, ComponentRow, FrozenRow, GrowthRow, MeasuredRow, ParamRow, SettleChoice, UnitInfo } from "../api/types";
 import { useStore } from "../state/store";
-import { checkBehaviour, chooseGrowth, clearParam, deriveIntent, fitEntities, focusParam, hideWays, keepUnnamedAsDrawn, liveChange, openUnit, releaseKept, settleGrowth, showWays, store, takeBackChoice, unlockHeldPart } from "../state/workspace";
+import { checkBehaviour, chooseGrowth, clearParam, deriveIntent, fitEntities, focusParam, hideAnchorWays, hideWays, keepUnnamedAsDrawn, liveChange, openUnit, releaseKept, settleGrowth, showWays, store, takeBackChoice, unlockHeldPart } from "../state/workspace";
 
 function fmt(v: number, unit: string): string {
   return unit === "m" ? v.toFixed(3) : Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(2);
@@ -170,6 +170,7 @@ function GrowthLine({ g, rowKey, many }: { g: GrowthRow; rowKey: string; many: b
         </p>
       ))}
       <SettleWays rowKey={rowKey} unit={g.unit} />
+      <AnchorWays rowKey={rowKey} unit={g.unit} />
     </div>
   );
 }
@@ -235,6 +236,63 @@ function SettleWays({ rowKey, unit }: { rowKey: string; unit: string }) {
         <details className="mt-1 text-[11px] text-slate-500" data-testid="settle-rejected">
           <summary className="cursor-pointer">Tried and did not hold ({o.rejected.length})</summary>
           <ul className="ml-3 list-disc">{o.rejected.map((r) => <li key={r.id}>{r.why}</li>)}</ul>
+        </details>
+      )}
+    </div>
+  );
+}
+
+const SIDE_SAID: Record<string, string> = { start: "its start side stays", centre: "centred", end: "its far side stays" };
+
+/** A side the sheet refused, as a question: what stood in the way, by part, and the ways out the engine tried on the whole sheet — only what holds
+ * can be chosen; what did not hold is one click away, with why. A choice is written as the person's own (one undo takes it back). */
+function AnchorWays({ rowKey, unit }: { rowKey: string; unit: string }) {
+  const w = useStore(store, (s) => s.anchorWays);
+  if (!w || w.key !== rowKey || w.unit !== unit) return null;
+  if (w.loading || !w.options) return <p className="mt-1 text-[11px] text-slate-500" data-testid="anchor-ways-loading">Refused — trying the ways out on the whole sheet…</p>;
+  const o = w.options;
+  const refused = o.refused.replace(/^refused, nothing changed: /, "");
+  return (
+    <div className="mt-1 rounded border border-amber-300 dark:border-amber-800 bg-amber-50/60 dark:bg-amber-950/20 p-1.5" data-testid="anchor-ways">
+      <div className="mb-1 flex items-center justify-between text-[11px] uppercase tracking-wide text-slate-400">
+        <span>{SIDE_SAID[w.mode] ?? w.mode} was refused — what should happen?</span>
+        <button className={link} onClick={hideAnchorWays}>Close</button>
+      </div>
+      {o.blocked.length > 0 && (
+        <div className="mb-1 text-[11px] text-slate-600 dark:text-slate-300" data-testid="anchor-blocked">
+          In the way:
+          <ul className="ml-3 list-disc">
+            {o.blocked.map((b) => (
+              <li key={b.part ?? "none"}>
+                <b>{b.part ?? "no part"}</b>{b.existing ? " (existing work)" : b.existing === false ? " (new work)" : ""}: {b.count} entit{b.count === 1 ? "y" : "ies"} —{" "}
+                <button className={link} onClick={() => fitEntities(new Set(b.sheet))}>{b.entities.slice(0, 6).join(", ")}{b.count > 6 ? "…" : ""}</button>
+                {b.layers.length > 0 && <span className="text-slate-500"> · {b.layers.join(", ")}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {o.choices.length > 0 ? (
+        <ul className="space-y-1">
+          {o.choices.map((c) => (
+            <li key={c.id} className="flex items-start justify-between gap-2 rounded border border-slate-200 dark:border-slate-700 p-1.5" data-testid="anchor-choice">
+              <span className="text-[12px]">{c.title}</span>
+              <button className="shrink-0 rounded bg-blue-600 px-2 py-0.5 text-[12px] text-white hover:bg-blue-700 dark:bg-amber-500 dark:text-slate-950"
+                data-testid="anchor-choose" onClick={() => void chooseGrowth(rowKey, unit, c.mode, { decisions: c.decisions, keep_as_drawn: c.keep_as_drawn })}>Choose</button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-[11px] text-amber-700 dark:text-amber-300" data-testid="anchor-none">
+          No way out holds on the whole sheet: the drawing itself has to say what the things in the way do when this value changes (extended, cut back,
+          moved, or not structure at all). {refused.length > 220 ? `${refused.slice(0, 217)}…` : refused}
+        </p>
+      )}
+      {o.notes.map((n) => <p key={n} className="mt-1 text-[11px] text-slate-500">{n}</p>)}
+      {o.rejected.length > 0 && (
+        <details className="mt-1 text-[11px] text-slate-500" data-testid="anchor-rejected">
+          <summary className="cursor-pointer">Tried and did not hold ({o.rejected.length})</summary>
+          <ul className="ml-3 list-disc">{o.rejected.map((r) => <li key={r.id}><b>{r.title}</b>: {r.why}</li>)}</ul>
         </details>
       )}
     </div>

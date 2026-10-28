@@ -2,6 +2,7 @@
 // raised as an Error carrying the engine's reason, so the page says it instead of guessing.
 import type {
   AgentNotes,
+  AnchorOptions,
   Annotation,
   AutosaveInfo,
   BehaviourReport,
@@ -98,7 +99,9 @@ export const api = {
   purgeGeneric: (unit?: string, dry_run = false) => call<EditResult>("POST", "/api/sheet/purge_generic", { unit, dry_run }),
   releaseFrozen: (unit: string, names?: string[]) => call<EditResult>("POST", "/api/sheet/release_frozen", { unit, names }),
   unlockPart: (unit: string, part: string) => call<EditResult>("POST", "/api/sheet/unlock_part", { unit, part }),
-  anchor: (name: string, unit: string, mode: "start" | "end" | "centre") => call<EditResult>("POST", "/api/sheet/anchor", { name, unit, mode }),
+  anchor: (name: string, unit: string, mode: "start" | "end" | "centre", answer?: { decisions?: Record<string, string>; keep_as_drawn?: string[] }) =>
+    call<EditResult>("POST", "/api/sheet/anchor", { name, unit, mode, ...(answer ?? {}) }),
+  anchorOptions: (name: string, unit: string, mode: string) => call<AnchorOptions>("GET", `/api/sheet/anchor_options?${q({ name, unit, mode })}`),
   settleOptions: (name: string, unit: string) => call<SettleOptions>("GET", `/api/sheet/settle?${q({ name, unit })}`),
   settle: (name: string, unit: string, choice: string, discard_values = false) =>
     call<EditResult>("POST", "/api/sheet/settle", { name, unit, choice, ...(discard_values ? { discard_values } : {}) }),

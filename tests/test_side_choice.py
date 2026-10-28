@@ -103,3 +103,52 @@ def test_a_crossing_with_an_entity_no_part_owns_is_said_and_one_between_two_part
     r = sm.apply({f"{uid}.OuterWall": 900.0})
     assert r.ok, [f["message"] for f in r.failures]
     assert any("belongs to no part" in w for w in r.warnings), r.warnings
+
+
+def test_a_refused_side_is_a_question_tried_for_real_and_asking_changes_nothing(tmp_path):
+    # a person chose "centred" for a span on a real sheet, was refused with a page of checks, and had no way on: the refusal is now a question —
+    # what stood in the way, and the ways out the engine tried on the whole sheet (only what holds can be chosen)
+    import json
+
+    sm, uid, _g = box_sheet(tmp_path)
+    holds = sm.anchor_options(f"{uid}.ClearSpan", uid, "start")
+    assert holds["refused"] == "" and holds["notes"] == ["it holds as asked: nothing stands in the way"]
+    before = (sm.revision, len(sm.history), json.dumps(sm.unit(uid).answer, sort_keys=True))
+    o = sm.anchor_options(f"{uid}.ThkY1", uid, "centre")  # a size the side cannot be chosen for (it is worked out from other inputs there)
+    assert o["refused"] and isinstance(o["blocked"], list)
+    assert all({"id", "title", "mode", "decisions", "keep_as_drawn"} <= set(c) for c in o["choices"])
+    assert all(r["why"] for r in o["rejected"]), "what did not hold says why"
+    assert (sm.revision, len(sm.history), json.dumps(sm.unit(uid).answer, sort_keys=True)) == before, "asking changes nothing"
+
+
+def test_entities_kept_where_they_are_drawn_stay_when_the_value_moves_and_one_undo_takes_it_back(tmp_path):
+    from dxf_autoparam.cadjson import entity_id
+    from dxf_autoparam.crossview import KEPT_AS_DRAWN
+
+    sm, uid, g = box_sheet(tmp_path)
+    items = sm.unit(uid).sub.items
+    pit = next(it for it in items if it.handle == g["handles"]["PitchingDetail"])
+    drawn = list(pit.pts)
+    depth = len(sm.history)
+    sm.anchor(f"{uid}.ClearSpan", uid, "end", keep_as_drawn=[entity_id(pit)])
+    assert any(c["name"] == KEPT_AS_DRAWN and entity_id(pit) in c["entities"] for c in sm.unit(uid).answer["components"])
+    assert not sm.preview({f"{uid}.ClearSpan": 3400.0}).errors
+    from dxf_autoparam.regen import regenerate_program
+
+    now = regenerate_program(sm.unit(uid).prog, {"ClearSpan": 3400.0}).pts[pit.index]
+    assert [tuple(p) for p in now] == pytest.approx([tuple(p) for p in drawn]), "kept where it is drawn while the span grows"
+    assert len(sm.history) == depth + 1, "one step"
+    sm.undo()
+    assert not any(c["name"] == KEPT_AS_DRAWN for c in sm.unit(uid).answer.get("components", []))
+
+
+def test_members_of_two_parts_in_each_other_s_way_come_back_to_the_agent_as_a_question_for_the_person(tmp_path):
+    from dxf_autoparam.refusal import person_question
+
+    sm, uid, _g = box_sheet(tmp_path)
+    sm.apply_plan(uid, {"instruction": "Change the clear span to 3600, the left side stays fixed. " + FOLLOW_ALL})
+    r = sm.apply({f"{uid}.OuterWall": 900.0})  # the bottom slab grows into the pitching detail
+    q = person_question(r.failures)
+    assert q and "PitchingDetail" in q["text"] and len(q["options"]) == 4
+    assert any(o.endswith("follows the change") for o in q["options"]) and any(o.endswith("stays where it is drawn") for o in q["options"])
+    assert person_question([]) is None
