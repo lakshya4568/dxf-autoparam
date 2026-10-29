@@ -787,6 +787,29 @@ class SheetBench:
                 **({"engineering_library": self.lib_session.hint()} if self.lib_session is not None else {}),
             }
 
+    def _legend_note(self, uid: str) -> dict | None:
+        """What the sheet's own legend says this unit's entities are, by the colour they are drawn in (legend.py): said to the model, so work to be
+        dismantled is not named as a part of the new structure, and a boundary is not set out from it."""
+        from ..cadjson import entity_id
+        from ..legend import read_legend
+
+        states = self.sm.legend_states()
+        u = self.sm.units[uid]
+        mine = {i: states[s] for i, s in enumerate(u.back) if s in states}
+        if not mine:
+            return None
+        lg = read_legend(self.sm.dr)
+        sub = self.sm.unit(uid).sub
+        count: dict[str, int] = {}
+        for st in mine.values():
+            count[st] = count.get(st, 0) + 1
+        ids = {st: [entity_id(sub.items[i]) for i, s in sorted(mine.items()) if s == st][:40] for st in ("dismantled", "boundary")}
+        return {"says": {st: cs for st, cs in lg.colours.items()}, "entities_of_this_unit": count,
+                **{f"{st}_entities": v for st, v in ids.items() if v},
+                "note": "the sheet's legend, by colour: work to be dismantled and a boundary stay where they are drawn (the engine holds them, and new work "
+                        "may pass through dismantled work) — do not name values on them or put them in a part of the new structure; existing / proposed "
+                        "by colour is evidence for which parts are existing work"}
+
     def more_tools(self, groups: list | None = None) -> dict:
         """Declare the tools of the groups asked for (TOOL_GROUPS) from the next turn on; said with what each opened tool does."""
         asked = [g for g in (groups or []) if g in TOOL_GROUPS]
@@ -824,6 +847,8 @@ class SheetBench:
         out = {"unit": uid, "views": u.views, "committed_previous": prev, "overview": overview, "image": ps["overview"]["id"],
                "revision": sm.revision, "pictures": self._look(ps, u.sub.units_mm),
                "note": "the pictures show this unit AS DRAWN with its main set-out lines labelled; the numbers in the overview describe the same geometry"}
+        if (legend := self._legend_note(uid)) is not None:
+            out["legend"] = legend
         if bounded:
             out["tables_bounded"] = bounded
         self._deliver(out, pics, f"open_unit {uid}")

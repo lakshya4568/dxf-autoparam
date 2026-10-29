@@ -278,7 +278,7 @@ function AnchorWays({ rowKey, unit }: { rowKey: string; unit: string }) {
             <li key={c.id} className="flex items-start justify-between gap-2 rounded border border-slate-200 dark:border-slate-700 p-1.5" data-testid="anchor-choice">
               <span className="text-[12px]">{c.title}</span>
               <button className="shrink-0 rounded bg-blue-600 px-2 py-0.5 text-[12px] text-white hover:bg-blue-700 dark:bg-amber-500 dark:text-slate-950"
-                data-testid="anchor-choose" onClick={() => void chooseGrowth(rowKey, unit, c.mode, { decisions: c.decisions, keep_as_drawn: c.keep_as_drawn })}>Choose</button>
+                data-testid="anchor-choose" onClick={() => void chooseGrowth(rowKey, unit, c.mode, { decisions: c.decisions, keep_as_drawn: c.keep_as_drawn, dismantle: c.dismantle })}>Choose</button>
             </li>
           ))}
         </ul>

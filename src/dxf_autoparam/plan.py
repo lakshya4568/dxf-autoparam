@@ -1434,7 +1434,10 @@ def clashes(prog: Program, pts: dict[int, list], moved: set[int]) -> list[tuple[
     an = prog.analysis
     items = an.drawing.items
     eps = an.drawing.tol
-    struct = [it for it in items if it.role.value == "structural" and len(it.pts) > 1]
+    from .connections import dismantled
+
+    gone = dismantled(prog)  # new work may pass through work that is dismantled: not a clash
+    struct = [it for it in items if it.role.value == "structural" and len(it.pts) > 1 and it.index not in gone]
     after = {it.index: pts.get(it.index, it.pts) for it in struct}
     boxes = {it.index: _outline_box(it, after[it.index]) for it in struct}
     if not boxes:

@@ -33,7 +33,7 @@ from typing import Any, cast
 
 from . import design_intent, generic
 from .analyse import analyse
-from .assembly import KEPT_TYPE
+from .assembly import BOUNDARY_TYPE, DISMANTLED_TYPE, HELD_TYPES, KEPT_TYPE
 from .cadjson import entity_id
 from .connections import torn
 from .display import primitives
@@ -53,6 +53,7 @@ EMPTY_ANSWER = {"structure_type": "", "family": "other", "views": [], "summary":
 NAME_KEYS = ("name", "parameter", "target")
 EXPR_KEYS = ("expr", "value")
 KEPT_AS_DRAWN = "KeptAsDrawn"  # the part of the entities a person keeps where they are drawn when a side is chosen (anchor `keep_as_drawn`)
+DISMANTLED_BY_PERSON = "DismantledWhereCrossed"  # the existing work a person dismantles where the new work crosses it (anchor `dismantle`)
 
 
 class _Asked(Exception):
@@ -376,7 +377,7 @@ class SheetModel:
                 for name, v in (self.values.get(u.id) or {}).items():  # a size a person had stepped was on the old scale too
                     if name in {p.get("name") for p in u.answer.get("parameters", [])}:
                         self.values[u.id][name] = v / ratio
-            u.prog, u.report = apply(u.an, u.answer)
+            u.prog, u.report = apply(u.an, self._with_legend(u, u.answer))
             if ratio is not None:
                 u.report.findings.append(Finding("V2", "info", u.id, f"the unit is now read at its own scale: the values named for it before were {ratio:g} times what the drawing "
                                                                      "measures, and are measured again (names, parts and levels are kept)"))
@@ -386,6 +387,33 @@ class SheetModel:
         assert u.prog is not None
         for b in (b for p in self.shared.values() for b in p.bindings if b.unit == u.id):
             self._bind_status(u, b)
+
+    def legend_states(self) -> dict[int, str]:
+        """sheet index → what the sheet's own legend says it is (proposed, existing, dismantled, a boundary), by the colour it is drawn in (legend.py)."""
+        if getattr(self, "_legend_cache", None) is None:
+            from .legend import entity_states
+
+            self._legend_cache = entity_states(self.dr)
+        return self._legend_cache
+
+    def _with_legend(self, u: Unit, answer: dict) -> dict:
+        """The answer a unit is built from, with the parts the sheet's legend makes of its entities: work to be dismantled and a boundary, each held
+        where it is drawn (a structure's value never re-sets them; new work may pass through dismantled work). Built in, never saved in the answer."""
+        from .legend import HELD_STATES
+
+        states = self.legend_states()
+        assert u.sub is not None
+        by: dict[str, list[str]] = {}
+        for i, s in enumerate(u.back):
+            st = states.get(s)
+            if st in HELD_STATES and i < len(u.sub.items):
+                by.setdefault(st, []).append(entity_id(u.sub.items[i]))
+        own = [c for c in answer.get("components", []) if c.get("source") != "legend"]
+        if not by:
+            return answer if len(own) == len(answer.get("components", [])) else {**answer, "components": own}
+        legend = [{"name": f"Legend{st.title()}", "type": DISMANTLED_TYPE if st == "dismantled" else BOUNDARY_TYPE, "entities": ents,
+                   "parametrize": False, "source": "legend"} for st, ents in sorted(by.items())]
+        return {**answer, "components": own + legend}
 
     def _drop_layout_gaps(self, u: Unit) -> None:
         """Views linked one over the other share their vertical lines; the distance from one view's horizontal lines to
@@ -993,14 +1021,15 @@ class SheetModel:
         return out
 
     def anchor(self, name: str, uid: str, mode: str, decisions: dict[str, str] | None = None, keep_as_drawn: list[str] | None = None,
-               dry: bool = False) -> dict:
+               dry: bool = False, dismantle: list[str] | None = None) -> dict:
         """Choose how a value grows in one unit: `start` — its start line stays and everything beyond grows away from it;
         `end` — the other way; `centre` — the assembly stays about the centre line. Written as an accepted plan for the
         WHOLE assembly the value belongs to (every other size keeps its drawn value: walls, haunches, slabs), committed
         only if it measures right on the sheet; otherwise refused with the reason and nothing changes.
 
         What a person answered when it was refused (`anchor_options`): `decisions` — a part tied to the assembly → "follow" | "keep_fixed";
-        `keep_as_drawn` — entities that stay where they are drawn (held as a part of their own). `dry`: asked of the whole sheet and nothing kept."""
+        `keep_as_drawn` — entities that stay where they are drawn (held as a part of their own); `dismantle` — existing work the new work crosses,
+        dismantled there (held as drawn, and nothing may not pass through it). `dry`: asked of the whole sheet and nothing kept."""
         policy = {"start": "start_fixed", "end": "end_fixed", "centre": "centered"}.get(mode)
         if policy is None:
             raise SheetError("anchor is start, end or centre")
@@ -1016,11 +1045,15 @@ class SheetModel:
         pairs = pairs_of(u.prog, u.answer, local)
         lines = {x for p in pairs for x in p}
         ans = copy.deepcopy(u.answer) if u.answer else copy.deepcopy(EMPTY_ANSWER)
-        if keep_as_drawn:  # entities a person keeps where they are drawn (a boundary mark, a line of other work): a part of their own, held as built
-            had = next((c for c in ans.get("components", []) if c.get("name") == KEPT_AS_DRAWN), None)
-            ents = sorted(set(keep_as_drawn) | set((had or {}).get("entities", [])))
-            ans["components"] = [c for c in ans.get("components", []) if c.get("name") != KEPT_AS_DRAWN] + [
-                {"name": KEPT_AS_DRAWN, "type": KEPT_TYPE, "entities": ents, "parametrize": False}]
+        for part, kind, ids in ((KEPT_AS_DRAWN, KEPT_TYPE, keep_as_drawn), (DISMANTLED_BY_PERSON, DISMANTLED_TYPE, dismantle)):
+            if not ids:
+                continue
+            # what a person keeps where it is drawn (a boundary mark, a line of other work), or dismantles where the new work crosses it: a part of
+            # their own, held as built — dismantled work is also passed through by the new work (no clash)
+            had = next((c for c in ans.get("components", []) if c.get("name") == part), None)
+            ents = sorted(set(ids) | set((had or {}).get("entities", [])))
+            ans["components"] = [c for c in ans.get("components", []) if c.get("name") != part] + [
+                {"name": part, "type": kind, "entities": ents, "parametrize": False}]
         # ONE step, all or nothing: a refused choice leaves the sheet exactly as it was (it used to keep the formulas it cleared on the way, and a
         # second step), and an accepted one is undone by one undo
         before, rev, depth, future, live = self._state(), self.revision, len(self.history), list(self.future), self._live
@@ -1131,49 +1164,65 @@ class SheetModel:
         pairs = pairs_of(prog, u.answer, self._local_name(name, uid))
         mine = {parts[c].existing for c in core_parts(parts, pairs, prog) if c in parts}
         side = {"start": "its start side stays", "centre": "it grows equally on both sides", "end": "its far side stays"}
-        cands: list[tuple[str, str, str, dict | None, list | None]] = []
+        # (id, title, side, decisions, kept as drawn, dismantled where crossed)
+        cands: list[tuple[str, str, str, dict | None, list | None, list | None]] = []
         small = {n: ents for n, ents in groups.items() if len(ents) <= 40}
         kept_all = [entity_id(items[i]) for ents in small.values() for i in ents]
+        old = {n: ents for n, ents in small.items() if n in parts and parts[n].existing}
+        for n, ents in old.items():  # existing work the new work runs into, first: it can be dismantled where crossed
+            cands.append((f"dismantle:{n}", f"Dismantle {len(ents)} entit{'y' if len(ents) == 1 else 'ies'} of {n} where the new work crosses it",
+                          mode, None, None, [entity_id(items[i]) for i in ents]))
         for n, ents in small.items():
             cands.append((f"keep:{n or 'no part'}", f"Keep {len(ents)} entit{'y' if len(ents) == 1 else 'ies'} of {n or 'no part'} where they are drawn",
-                          mode, None, [entity_id(items[i]) for i in ents]))
+                          mode, None, [entity_id(items[i]) for i in ents], None))
         for n, p in parts_of.items():
             dec = "follow" if (len(mine) == 1 and p.existing not in mine) else "keep_fixed"  # the opposite of what the side does with it now
-            cands.append((f"part:{n}:{dec}", f"{n} {'follows the side' if dec == 'follow' else 'stays where it is'}", mode, {n: dec}, None))
+            cands.append((f"part:{n}:{dec}", f"{n} {'follows the side' if dec == 'follow' else 'stays where it is'}", mode, {n: dec}, None, None))
         if len(small) > 1:
-            cands.append(("keep:all", f"Keep all {len(kept_all)} where they are drawn", mode, None, kept_all))
+            cands.append(("keep:all", f"Keep all {len(kept_all)} where they are drawn", mode, None, kept_all, None))
         for other in ("start", "centre", "end"):
             if other != mode:
-                cands.append((f"side:{other}", f"Instead: {side[other]}", other, None, None))
+                cands.append((f"side:{other}", f"Instead: {side[other]}", other, None, None, None))
                 if kept_all:
-                    cands.append((f"side:{other}+keep", f"Instead: {side[other]}, and keep the {len(kept_all)} where they are drawn", other, None, kept_all))
+                    cands.append((f"side:{other}+keep", f"Instead: {side[other]}, and keep the {len(kept_all)} where they are drawn", other, None, kept_all, None))
+        existing_ents = {entity_id(items[i]) for n, p in parts.items() if p.existing and p.type not in HELD_TYPES for i in part_entities(prog, parts, n)}
+
         def named(why: str) -> list[str]:  # the structural entities a refusal names
             got = {by_id[x] for x in re.findall(r"\b([A-Z]{1,3}\d+)\b", why) if x in by_id}
             got |= {by_handle[x] for x in re.findall(r"\b[A-Z]+ ([0-9A-F]{2,})\b", why) if x in by_handle}
             return [entity_id(items[i]) for i in sorted(got) if items[i].role.value == "structural"]
 
-        for k, (cid, title, m, dec, keep) in enumerate(cands):
+        for k, (cid, title, m, dec, keep, gone) in enumerate(cands):
             if time.monotonic() - started > self.ANCHOR_OPTIONS_BUDGET_S:
                 out["notes"].append(f"stopped after {int(time.monotonic() - started)} s: {len(cands) - k} more way(s) were not tried")
                 break
             why = ""
-            for _round in range(4 if keep else 1):  # keeping some as drawn can put the next ones in the way: those are kept too, a few rounds at most
+            for _round in range(4 if keep or gone else 1):  # keeping or dismantling some can put the next ones in the way: a few rounds at most
                 try:
-                    self.anchor(name, uid, m, decisions=dec, keep_as_drawn=keep, dry=True)
+                    self.anchor(name, uid, m, decisions=dec, keep_as_drawn=keep, dismantle=gone, dry=True)
                     why = ""
                     break
                 except SheetError as exc:
                     why = str(exc).removeprefix("refused, nothing changed: ")
-                more = [e for e in named(why) if keep is not None and e not in keep]
-                if not more or len(keep or []) + len(more) > 80 or time.monotonic() - started > self.ANCHOR_OPTIONS_BUDGET_S:
+                if keep is not None:
+                    more = [e for e in named(why) if e not in keep]
+                    if not more or len(keep) + len(more) > 80 or time.monotonic() - started > self.ANCHOR_OPTIONS_BUDGET_S:
+                        break
+                    keep = [*keep, *more]
+                    title = f"Keep {len(keep)} entities where they are drawn (those in the way, and those that keeping them puts in the way)" + (
+                        f", and {side[m]}" if m != mode else "")
+                elif gone is not None:  # only existing work is dismantled: what else stands in the way stops the search
+                    more = [e for e in named(why) if e in existing_ents and e not in gone]
+                    if not more or len(gone) + len(more) > 80 or time.monotonic() - started > self.ANCHOR_OPTIONS_BUDGET_S:
+                        break
+                    gone = [*gone, *more]
+                    title = f"Dismantle {len(gone)} entities of existing work where the new work crosses them"
+                else:
                     break
-                keep = [*(keep or []), *more]
-                title = f"Keep {len(keep)} entities where they are drawn (those in the way, and those that keeping them puts in the way)" + (
-                    f", and {side[m]}" if m != mode else "")
             if why:
                 out["rejected"].append({"id": cid, "title": title, "why": why[:300]})
                 continue
-            out["choices"].append({"id": cid, "title": title, "mode": m, "decisions": dec or {}, "keep_as_drawn": keep or []})
+            out["choices"].append({"id": cid, "title": title, "mode": m, "decisions": dec or {}, "keep_as_drawn": keep or [], "dismantle": gone or []})
         return out
 
     def _free_levels_on_side(self, uid: str, pairs, policy: str) -> list[str]:

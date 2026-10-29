@@ -106,6 +106,13 @@ def expected(meets: list[dict], wants: list[dict], card_of: dict[str, str]) -> l
     return out
 
 
+def dismantled(prog) -> set[int]:
+    """The entities of work to be dismantled (a part of type dismantled: the sheet's legend, or a person's choice)."""
+    from .assembly import DISMANTLED_TYPE
+
+    return {i for p in (prog.intent.get("parts") or {}).values() if p.type == DISMANTLED_TYPE for i in p.entities}
+
+
 def torn(prog, pts_after: dict[int, list], limit: int = 6) -> list[dict]:
     """Structural entities of different parts (or of a part and no part) that touched as drawn and do not touch at the regenerated points:
     the corners a change pulled apart. Entities that moved by the same offset, or did not move, are not looked at again."""
@@ -128,12 +135,13 @@ def torn(prog, pts_after: dict[int, list], limit: int = 6) -> list[dict]:
         return (dx, dy) if all(abs(a[0] - b[0] - dx) <= 1e-9 and abs(a[1] - b[1] - dy) <= 1e-9 for a, b in zip(p1, p0, strict=False)) else None
 
     owner = _entity_parts(prog)
+    gone = dismantled(prog)  # work to be dismantled: what it touched as drawn may part from it
     out, seen = [], set()
     for i, js in of(an).connections.items():
-        if items[i].role.value != "structural":
+        if items[i].role.value != "structural" or i in gone:
             continue
         for j in js:
-            if (min(i, j), max(i, j)) in seen or items[j].role.value != "structural" or not (owner.get(i) or owner.get(j)):
+            if (min(i, j), max(i, j)) in seen or items[j].role.value != "structural" or not (owner.get(i) or owner.get(j)) or j in gone:
                 continue
             seen.add((min(i, j), max(i, j)))
             if owner.get(i) and owner.get(j) and owner[i] & owner[j]:

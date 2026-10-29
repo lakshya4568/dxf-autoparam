@@ -99,7 +99,7 @@ export const api = {
   purgeGeneric: (unit?: string, dry_run = false) => call<EditResult>("POST", "/api/sheet/purge_generic", { unit, dry_run }),
   releaseFrozen: (unit: string, names?: string[]) => call<EditResult>("POST", "/api/sheet/release_frozen", { unit, names }),
   unlockPart: (unit: string, part: string) => call<EditResult>("POST", "/api/sheet/unlock_part", { unit, part }),
-  anchor: (name: string, unit: string, mode: "start" | "end" | "centre", answer?: { decisions?: Record<string, string>; keep_as_drawn?: string[] }) =>
+  anchor: (name: string, unit: string, mode: "start" | "end" | "centre", answer?: { decisions?: Record<string, string>; keep_as_drawn?: string[]; dismantle?: string[] }) =>
     call<EditResult>("POST", "/api/sheet/anchor", { name, unit, mode, ...(answer ?? {}) }),
   anchorOptions: (name: string, unit: string, mode: string) => call<AnchorOptions>("GET", `/api/sheet/anchor_options?${q({ name, unit, mode })}`),
   settleOptions: (name: string, unit: string) => call<SettleOptions>("GET", `/api/sheet/settle?${q({ name, unit })}`),

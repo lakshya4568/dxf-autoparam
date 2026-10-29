@@ -16,7 +16,7 @@ shares, anchors, links and view corrections are transactions with undo / redo.
     POST /api/sheet/undo | redo
     GET  /api/sheet/unit?id=…             one unit's values, parts, findings (analysed on first use)
     GET  /api/sheet/param?name=…          what a value moves (per view), how it grows, how far it can go
-    POST /api/sheet/share | unshare | rename | anchor | link | view | merge | split     (anchor: {name, unit, mode[, decisions, keep_as_drawn]})
+    POST /api/sheet/share | unshare | rename | anchor | link | view | merge | split     (anchor: {name, unit, mode[, decisions, keep_as_drawn, dismantle]})
     GET  /api/sheet/anchor_options?name=…&unit=…&mode=…   a refused side as a question: what stood in the way, the ways out tried for real
     POST /api/sheet/intent   {unit?}      the design intent derived again (which side of each size stays, decided from the drawing) — one undoable step
     GET  /api/sheet/proposals?units=…     sizes two views both state
@@ -383,7 +383,7 @@ class SheetSession:
             sm.rename(body["old"], body["new"])
         elif op == "anchor":
             result = sm.anchor(body["name"], body["unit"], body["mode"], decisions=body.get("decisions") or None,
-                               keep_as_drawn=body.get("keep_as_drawn") or None)
+                               keep_as_drawn=body.get("keep_as_drawn") or None, dismantle=body.get("dismantle") or None)
         elif op == "intent":
             if self.running():
                 raise SheetError("the agent is working on this sheet: stop it first")

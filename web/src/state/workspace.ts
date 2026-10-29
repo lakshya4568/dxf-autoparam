@@ -411,7 +411,7 @@ const SIDE_WORDS: Record<"start" | "end" | "centre", string> = { start: "its sta
 /** A person says which side of a value stays when it changes. The engine writes it as their plan for the whole assembly the value belongs to and
  * measures it on the sheet; refused, it says why and nothing changes. A person's choice always replaces the engine's default. */
 export async function chooseGrowth(key: string, unit: string, mode: "start" | "end" | "centre",
-  answer?: { decisions?: Record<string, string>; keep_as_drawn?: string[] }): Promise<void> {
+  answer?: { decisions?: Record<string, string>; keep_as_drawn?: string[]; dismantle?: string[] }): Promise<void> {
   const res = await guard("Choosing which side stays…", () => api.anchor(key, unit, mode, answer));
   if (!res) {
     // refused: not a dead end — the engine is asked what stood in the way and which ways out hold, and the person decides

@@ -152,3 +152,21 @@ def test_members_of_two_parts_in_each_other_s_way_come_back_to_the_agent_as_a_qu
     assert q and "PitchingDetail" in q["text"] and len(q["options"]) == 4
     assert any(o.endswith("follows the change") for o in q["options"]) and any(o.endswith("stays where it is drawn") for o in q["options"])
     assert person_question([]) is None
+
+
+def test_existing_work_dismantled_where_the_new_work_crosses_it_no_longer_stands_in_the_way(tmp_path):
+    from dxf_autoparam.cadjson import entity_id
+    from dxf_autoparam.crossview import DISMANTLED_BY_PERSON
+
+    sm, uid, g = box_sheet(tmp_path)
+    sm.apply_plan(uid, {"instruction": "Change the clear span to 3600, the left side stays fixed. " + FOLLOW_ALL})
+    assert not sm.apply({f"{uid}.OuterWall": 900.0}).ok, "the bottom slab runs into the pitching detail"
+    pit = next(it for it in sm.unit(uid).sub.items if it.handle == g["handles"]["PitchingDetail"])
+    drawn = list(pit.pts)
+    sm.anchor(f"{uid}.ClearSpan", uid, "start", dismantle=[entity_id(pit)])
+    assert any(c["name"] == DISMANTLED_BY_PERSON and c["type"] == "dismantled" for c in sm.unit(uid).answer["components"])
+    r = sm.apply({f"{uid}.OuterWall": 900.0})
+    assert r.ok, [f["message"] for f in r.failures]
+    from dxf_autoparam.regen import regenerate_program
+
+    assert regenerate_program(sm.unit(uid).prog, {"OuterWall": 900.0}).pts[pit.index] == pytest.approx(drawn), "dismantled work stays as drawn"

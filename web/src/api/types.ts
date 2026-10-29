@@ -271,6 +271,7 @@ export interface AnchorChoice {
   mode: "start" | "end" | "centre";
   decisions: Record<string, "follow" | "keep_fixed">;
   keep_as_drawn: string[];
+  dismantle: string[];
 }
 
 /** A refused side as a question: the refusal, what stood in the way (entities by part), the ways out that hold and those that did not, with why. */
