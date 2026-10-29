@@ -413,6 +413,9 @@ class Program:
     # the build, so a check value changed never moves the structure.
     reference_only: set[str] = field(default_factory=set)
     _order: list[str] | None = None
+    # the lines at the values as they are, with what they were evaluated from (the formulas and every value): asked for hundreds of thousands of
+    # times while a unit's design intent is tried, on programs that do not change in between
+    _at_defaults: tuple | None = field(default=None, repr=False, compare=False)
 
     # ── evaluation ───────────────────────────────────────────────────────────────
 
@@ -457,13 +460,22 @@ class Program:
     def datum_values(self, values: dict[str, float] | None = None) -> dict[str, float]:
         """Every datum in DRAWING units."""
         scope = self.defaults()
+        u = self.analysis.drawing.units_mm
+        key = None
         if values:
             scope.update(values)
-        u = self.analysis.drawing.units_mm
+        else:  # the same formulas and values give the same lines: compared whole, so any change to either is a miss
+            key = (u, tuple(self.formulas.items()), tuple(scope.items()))
+            if self._at_defaults is not None and self._at_defaults[0] == key:
+                return dict(self._at_defaults[1])
         out_mm: dict[str, float] = {}
         for d in self.order():  # one scope filled in dependency order (copying it per line was quadratic on big sheets)
             out_mm[d] = scope[d] = evaluate(self.formulas[d], scope)
-        return {d: v / u for d, v in out_mm.items()}
+        out = {d: v / u for d, v in out_mm.items()}
+        if key is not None:
+            self._at_defaults = (key, out)
+            return dict(out)
+        return out
 
     def change_plan(self) -> tuple[dict[str, int], dict[str, list[str]], dict[str, float]]:
         """For many one-value changes in a row (the ±10 % checks): each line's place in the order, the lines that

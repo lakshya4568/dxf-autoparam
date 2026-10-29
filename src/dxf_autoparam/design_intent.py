@@ -401,11 +401,12 @@ def _holds(prog1: Program, base: dict, plans: list[dict], build: Build, group: l
 
 
 def _culprit(prog: Program, base: dict, sheet: dict | None, build: Build, asm: Assembly, suffix: str, policy: str, centre: str | None,
-             evidence: list[str], status: str, group: list[Driver], watch: list[Driver] | None) -> Driver | None:
-    """The size of the group the rest can do without: with it left out the candidate holds. None when no single size is the cause."""
+             evidence: list[str], status: str, group: list[Driver], watch: list[Driver] | None, memo: dict | None = None) -> Driver | None:
+    """The size of the group the rest can do without: with it left out the candidate holds. None when no single size is the cause. `memo`: the
+    attempt's plans per driver (each depends on its own request only) — leaving each size out in turn otherwise built every other one's again."""
     for d in group:
         rest = [x for x in group if x is not d]
-        plans, _why, _who, _x = _plans_for(prog, base, sheet, rest, asm.id, suffix, policy, centre, evidence, status, False)
+        plans, _why, _who, _x = _plans_for(prog, base, sheet, rest, asm.id, suffix, policy, centre, evidence, status, False, memo)
         if plans is not None and _holds(prog, base, plans, build, rest, watch)[0]:
             return d
     return None
@@ -440,7 +441,7 @@ def _attempt(prog: Program, base: dict, sheet: dict | None, build: Build, asm: A
             group = [d for d in group if d.name != who]
             continue
         # a size that is NOT being planned lost its binding (or now hangs on what the others move): one size of the group is the cause
-        culprit = _culprit(prog, base, sheet, build, asm, suffix, policy, centre, evidence, status, group, watch)
+        culprit = _culprit(prog, base, sheet, build, asm, suffix, policy, centre, evidence, status, group, watch, memo)
         if culprit is None:
             return None
         dropped.append({"name": culprit.name, "why": f"it would take the binding of {who or 'another size'} away: {why}"})
