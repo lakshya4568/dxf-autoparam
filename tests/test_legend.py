@@ -66,22 +66,53 @@ def _with_dismantling(msp):
     msp.add_line((36000, 19120), (39000, 19120), dxfattribs={"true_color": rgb2int(ORANGE)})
 
 
-def test_work_to_be_dismantled_stays_where_it_is_drawn_when_the_new_work_beside_it_changes(tmp_path, monkeypatch):
+def _dismantling_box(path, b):
+    """The box with an old wall's stub against its right wall, drawn in the legend's dismantling colour."""
     from dxf_autoparam.plan_bench import box_gad
 
-    def dismantling_box(path, b):  # the box with an old wall's stub against its right wall, drawn in the legend's dismantling colour
-        g = box_gad(path, b)
-        doc = ezdxf.readfile(g["path"])
-        msp = doc.modelspace()
-        stub = msp.add_line((7000, 1600), (8000, 1600), dxfattribs={"true_color": rgb2int(ORANGE)})
-        _with_dismantling(msp)
-        doc.saveas(g["path"])
-        g["stub"] = stub.dxf.handle
-        return g
+    g = box_gad(path, b)
+    doc = ezdxf.readfile(g["path"])
+    msp = doc.modelspace()
+    stub = msp.add_line((7000, 1600), (8000, 1600), dxfattribs={"true_color": rgb2int(ORANGE)})
+    _with_dismantling(msp)
+    doc.saveas(g["path"])
+    g["stub"] = stub.dxf.handle
+    return g
 
+
+def test_a_held_part_is_no_structure_a_size_belongs_to():
+    from dxf_autoparam.assembly import BOUNDARY_TYPE, DISMANTLED_TYPE
+    from dxf_autoparam.intent import Part
+    from dxf_autoparam.plan import core_parts
+
+    parts = {"Wall": Part("Wall", own_datums={"x1", "x2"}), "Stub": Part("Stub", type=DISMANTLED_TYPE, own_datums={"x1", "x2"}),
+             "Fence": Part("Fence", type=BOUNDARY_TYPE, own_datums={"x2", "x3"})}
+    assert core_parts(parts, [("x1", "x2")]) == {"Wall"}, "the wall's size, though the stub to be dismantled is drawn on its lines too"
+    assert core_parts(parts, [("x2", "x3")]) == {"Wall"}
+    assert core_parts({"Stub": parts["Stub"]}, [("x1", "x2")]) == {"Stub"}, "a size of the dismantled work alone is its own: refused there, honestly"
+
+
+def test_work_to_be_dismantled_against_the_box_does_not_change_how_the_box_grows(tmp_path, monkeypatch):
     import test_intent_plan as T
 
-    monkeypatch.setattr(T, "box_gad", dismantling_box)
+    from dxf_autoparam.plan_bench import box_gad
+
+    def sides(sm, uid):  # each axis: the sizes that grow together, and which side stays
+        return sorted((a["axis"], sorted(a.get("drivers", [])), a["policy"], a.get("centre") or "") for a in sm.unit(uid).answer["intent_axes"])
+
+    monkeypatch.setattr(T, "box_gad", _dismantling_box)
+    sm, uid, _g = box_sheet(tmp_path)
+    with_stub = sides(sm, uid)
+    monkeypatch.setattr(T, "box_gad", box_gad)  # the same box without the stub
+    (tmp_path / "plain").mkdir()
+    sm2, uid2, _g2 = box_sheet(tmp_path / "plain")
+    assert with_stub == sides(sm2, uid2), "the stub stays where it is drawn: the wall it is drawn against still grows with the span, about the axis"
+
+
+def test_work_to_be_dismantled_stays_where_it_is_drawn_when_the_new_work_beside_it_changes(tmp_path, monkeypatch):
+    import test_intent_plan as T
+
+    monkeypatch.setattr(T, "box_gad", _dismantling_box)
     sm, uid, g = box_sheet(tmp_path)
     k = next(it.index for it in sm.dr.items if it.handle == g["stub"])
     assert sm.legend_states().get(k) == "dismantled"

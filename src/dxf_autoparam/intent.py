@@ -1102,19 +1102,26 @@ def split_structures(an, parts: dict[str, Part], keep: set[str], claims: dict[st
 
     Kept as one line: a line where the two MEET across it (the joint between the old box's end and the new one's: one sits on the other side, and
     they stay joined), a level's line and the lines in `keep` (a level is the one thing both structures hang on). `claims`: gap → whether it is the
-    existing work's, from the answer (a size named on a part says whose it is, before any geometry does). Returns {line: existing copy}."""
-    ex = {n for n, p in parts.items() if p.existing}
-    new = {n for n, p in parts.items() if not p.existing}
+    existing work's, from the answer (a size named on a part says whose it is, before any geometry does). Returns {line: existing copy}.
+
+    What stays where it is drawn (kept as drawn, work to be dismantled, a boundary) is neither structure's: told by the regions around it, a
+    dismantled stub inside the old box's outline went onto the old box's copy of its line, which moves, and no holding ever saw that line."""
+    from .assembly import HELD_TYPES  # assembly reads this module
+
+    held = {n for n, p in parts.items() if p.type in HELD_TYPES}
+    ex = {n for n, p in parts.items() if p.existing and n not in held}
+    new = {n for n, p in parts.items() if not p.existing and n not in held}
     if not ex or not new:
         return {}
-    ex_own = held_own_entities(an, parts, ex)
-    new_own = held_own_entities(an, parts, new) - ex_own
+    held_entities = {i for n in held for i in parts[n].entities}
+    ex_own = held_own_entities(an, parts, ex) - held_entities
+    new_own = held_own_entities(an, parts, new) - ex_own - held_entities
     users: dict[str, list[int]] = {}
     for (i, _k, _ax), (d, _off) in an.slot_datum.items():
         if i in ex_own or i in new_own:
             users.setdefault(d, [0, 0])[0 if i in ex_own else 1] += 1
     values = {d.id: d.value for d in an.datums.values()}
-    leaves = {n: p for n, p in parts.items() if not any(q.parent == n for q in parts.values())}
+    leaves = {n: p for n, p in parts.items() if not any(q.parent == n for q in parts.values()) and n not in held}
     side = _material_sides(leaves, values)
     copies: dict[str, str] = {}
     for d, (n_ex, n_new) in sorted(users.items()):

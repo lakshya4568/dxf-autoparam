@@ -32,6 +32,7 @@ from typing import cast
 
 from .ai import domain
 from .assembly import (
+    HELD_TYPES,
     MID,
     POLICIES,
     POLICY_WORDS,
@@ -512,6 +513,11 @@ def core_parts(parts: dict[str, Part], pairs: list[tuple[str, str]], prog: Progr
     leaves = [n for n, p in parts.items() if p.own_datums & ends and not any(q.parent == n for q in parts.values())]
     if not leaves:
         leaves = [n for n, p in parts.items() if p.own_datums & ends]
+    held = [n for n in leaves if parts[n].type in HELD_TYPES]
+    if held and len(held) < len(leaves):
+        # a part that stays where it is drawn (kept as drawn, work to be dismantled, a boundary) is no structure a size belongs to while a structure's
+        # part is drawn on its lines too: taken in, its lines were the assembly's and could not move, and every side of the new box was refused
+        leaves = [n for n in leaves if n not in held]
     if prog is not None and len({parts[n].existing for n in leaves}) > 1:
         # existing work and new work both counted on the size's lines (an old box drawn inside its extension's span in plan): the size is the
         # structure's whose own entities are drawn on both its lines, and the other keeps its own set-out — taken in, the old box was re-set from
@@ -532,7 +538,8 @@ def _part_lines(parts: dict[str, Part], n: str, axis: str, an) -> set[str]:
 
 def _attached(prog: Program, parts: dict[str, Part], members: set[str], core: set[str], axis: str) -> dict[str, str]:
     """Parts outside the assembly that are tied to it on this axis, with how: drawn on its lines, set out from them,
-    or touching it — each needs an accepted behaviour before the assembly may move."""
+    or touching it — each needs an accepted behaviour before the assembly may move. A part that stays where it is drawn (kept as drawn, work to be
+    dismantled, a boundary) is never tied: it has its behaviour already, and taken along as touching the assembly it held every side of it."""
     an = prog.analysis
     inside = set()
     for n in core:
@@ -544,8 +551,8 @@ def _attached(prog: Program, parts: dict[str, Part], members: set[str], core: se
         for x, y in ((a, b), (b, a)):
             if x in inside and y not in inside:
                 touch.setdefault(y, f"touches {x} ({row['evidence']})")
-    for n in parts:
-        if n in inside or any(a in inside for a in _ancestors(parts, n)) or any(q.parent == n for q in parts.values()):
+    for n, p in parts.items():
+        if n in inside or any(a in inside for a in _ancestors(parts, n)) or any(q.parent == n for q in parts.values()) or p.type in HELD_TYPES:
             continue
         own = entity_lines(prog, part_entities(prog, parts, n), axis) or _part_lines(parts, n, axis, an)
         shared = sorted(own & members)
@@ -1434,9 +1441,9 @@ def clashes(prog: Program, pts: dict[int, list], moved: set[int]) -> list[tuple[
     an = prog.analysis
     items = an.drawing.items
     eps = an.drawing.tol
-    from .connections import dismantled
+    from .connections import not_members
 
-    gone = dismantled(prog)  # new work may pass through work that is dismantled: not a clash
+    gone = not_members(prog)  # new work may pass through work that is dismantled, or a boundary: not a clash
     struct = [it for it in items if it.role.value == "structural" and len(it.pts) > 1 and it.index not in gone]
     after = {it.index: pts.get(it.index, it.pts) for it in struct}
     boxes = {it.index: _outline_box(it, after[it.index]) for it in struct}

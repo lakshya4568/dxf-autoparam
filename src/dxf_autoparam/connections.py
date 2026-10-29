@@ -106,11 +106,12 @@ def expected(meets: list[dict], wants: list[dict], card_of: dict[str, str]) -> l
     return out
 
 
-def dismantled(prog) -> set[int]:
-    """The entities of work to be dismantled (a part of type dismantled: the sheet's legend, or a person's choice)."""
-    from .assembly import DISMANTLED_TYPE
+def not_members(prog) -> set[int]:
+    """The entities that are no structure's members: work to be dismantled (the sheet's legend, or a person's choice) and a boundary the legend
+    names (railway land). Both stay where they are drawn; new work may pass through them, and what touched them as drawn may part from them."""
+    from .assembly import BOUNDARY_TYPE, DISMANTLED_TYPE
 
-    return {i for p in (prog.intent.get("parts") or {}).values() if p.type == DISMANTLED_TYPE for i in p.entities}
+    return {i for p in (prog.intent.get("parts") or {}).values() if p.type in (DISMANTLED_TYPE, BOUNDARY_TYPE) for i in p.entities}
 
 
 def torn(prog, pts_after: dict[int, list], limit: int = 6) -> list[dict]:
@@ -135,7 +136,7 @@ def torn(prog, pts_after: dict[int, list], limit: int = 6) -> list[dict]:
         return (dx, dy) if all(abs(a[0] - b[0] - dx) <= 1e-9 and abs(a[1] - b[1] - dy) <= 1e-9 for a, b in zip(p1, p0, strict=False)) else None
 
     owner = _entity_parts(prog)
-    gone = dismantled(prog)  # work to be dismantled: what it touched as drawn may part from it
+    gone = not_members(prog)  # work to be dismantled, a boundary: what it touched as drawn may part from it
     out, seen = [], set()
     for i, js in of(an).connections.items():
         if items[i].role.value != "structural" or i in gone:
