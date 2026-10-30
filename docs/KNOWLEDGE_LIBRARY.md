@@ -165,9 +165,29 @@ Rules of use, as the sheet states them: a value applies only to its own standard
 interchangeable); no interpolation (the notes allow the immediately higher span/height configuration; for an intermediate fill height
 the sheets say nothing, and taking the next higher tabulated fill is an engineer's choice); a printed value is compared with the drawing's
 own value and never written into a drawing; unverified values never decide a check. Other RDSO sets (B-10154, B-10156, B-10158 …, BA-10236)
-are not in the sheet yet: add their extract folders to `STANDARDS` in the builder and rebuild.
+are not in the sheet yet.
 
 The RCC box template of Bridge No. 7A (out/independent-7A, `gadparam.rccbox`) uses the same sheet for its RDSO checks.
+
+### Adding standards (the integration point, 2026-10-29)
+
+Nothing is added from memory or from engineering knowledge: a standard enters the library only from the owner's extracts of its own sheets.
+
+- **Another RCC box set** (B-10154 …): its extract folders (one JSON per page, as `_PROTOCOL.md` in the extracts describes) go under
+  `knowledge/sources/rdso/extracts/rcc-box/`; ONE row in `knowledge/library/bridge/rdso/standards.json` names the set (`id`, `series`) and its
+  parts (`folder`, `pdf`, and the extraction's own `verification`, `checked_pages`, `spot_checked` per page, `do_not_use_pages`, `unchecked`);
+  `uv run python -I tools/build_rdso_sheet.py --index-only` rebuilds the sheet. No code changes. The builder reading the manifest was checked
+  to write byte for byte what the list in its code wrote (only `built_utc` differs); `tests/test_library_rdso.py` holds the manifest to the
+  sheet (every standard the sheet holds is a row).
+- **Another family** (slab, girder, pipe, subway …, whose tables are not by fill height and span × height): its own builder writes its own sheet
+  file — `standards` (id, series, title, structure, track, loading, extraction_status) and its records as lists, each record naming its
+  `standard` and carrying its `sheet`, `page`, `kind` (explicit · derived · unverified) — and the domain lists it in domain.json `rdso_sheets`
+  (the RCC box sheet first). The library reads every sheet listed: `rdso-sheet:` lists all their standards, `rdso-sheet:<id>` reads the
+  standard and every record of its sheet that names it. A sheet listed but not on disk is no sheet (nothing is retrieved for a family whose
+  standards are not extracted yet).
+- **What the agent may do with it** is unchanged: retrieve and compare. A printed value is context and a yardstick for the drawing's own
+  value, never copied into the drawing; an unverified value decides nothing; a requirement of a standard stays apart from a formula of the
+  engine, an assumption and an engineer's input (each item's `kind`); the engine makes no claim of compliance.
 
 ## Limits, said plainly
 

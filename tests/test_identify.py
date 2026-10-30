@@ -16,6 +16,10 @@ import pytest
 from dxf_autoparam.ai import library as L
 from dxf_autoparam.identify import main_kind, read, relations_for
 
+# these tests measure the engine within ONE unit made of a section and its plan (conftest.joined_units): local systems, each view its own,
+# are test_local_systems.py
+pytestmark = pytest.mark.usefixtures("joined_units")
+
 ROOT = Path(__file__).resolve().parents[1]
 VOCAB = L.open_domain("bridge").identify_vocab
 

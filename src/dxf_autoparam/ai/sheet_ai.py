@@ -196,7 +196,8 @@ def apply_views(sm: SheetModel, answer: dict) -> dict:
                 continue
             if not lk["strong"]:
                 sm.accept_link(lk["a"], lk["b"])
-            done.append(f"{a}–{b}: drawn in projection ({lk['planes']} common lines) — one unit")
+            done.append(f"{a}–{b}: drawn in projection ({lk['planes']} common lines) — "
+                        + ("one unit" if sm.systems == "joined" else "linked: a size named between faces both show is one shared value in both"))
             keys.append(rkey)
         elif rel in ("same_structure", "detail_of"):
             sm.relations.append({"a": a, "b": b, "relation": rel, "evidence": r.get("evidence", [])[:3]})
@@ -296,8 +297,10 @@ def parametrize_unit(sm: SheetModel, uid: str, gem, instructions: str = "", on_e
     x1 = max(sm.layout.group(v).bbox[2] for v in u.views)
     y1 = max(sm.layout.group(v).bbox[3] for v in u.views)
     views = "; ".join(f"{v}: {sm.layout.group(v).name or sm.layout.group(v).view_type}" for v in u.views)
+    from ..projection import note_for
+
     note = f"This drawing is {'the views ' if len(u.views) > 1 else 'view '}{views} of a larger sheet" + (
-        " — drawn in projection: their common lines are one set-out line." if len(u.views) > 1 else ".")
+        " — drawn in projection: their common lines are one set-out line." if len(u.views) > 1 else "." + note_for(sm, uid))
     prog, rep, info = agent_parametrize(sm.path, region=(x0, y0, x1, y1), instructions=instructions.strip(), note=note,
                                         start=start, gem=gem, on_event=on_event, stop=stop, log=log, drawing=u.sub,
                                         analysis=analysis, scope=scope, **kw)

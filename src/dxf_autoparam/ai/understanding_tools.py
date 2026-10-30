@@ -27,6 +27,7 @@ from collections import Counter
 from ..cache import decisions_key, drawing_key, layout_key, values_key
 from ..cadjson import entity_id, entity_index
 from ..crossview import SheetError
+from ..projection import described
 
 S, N, B = {"type": "string"}, {"type": "number"}, {"type": "boolean"}
 LIST = {"type": "array", "items": {"type": "string"}}
@@ -196,7 +197,7 @@ def drawing_overview(sm) -> dict:
             "status": {"counts": st["counts"], "learned_colours": {k: {"status": v["status"], "notes": v["count"], "contrary": v.get("contrary", 0)}
                                                                    for k, v in st["learned_colours"].items()}},
             "views": views,
-            "links": [{"views": [lk["a"], lk["b"]], "axis": lk["axis"], "shared_lines": lk["planes"], "one_unit": sm.is_linked(lk)} for lk in sm.links],
+            "links": described(sm),
             "shared_values": [{"name": p.name, "value_mm": round(p.value, 1), "units": [b.unit for b in p.bindings]} for p in sm.shared.values()],
             "levels": levels[:40],
             "annotations": {"total": len(anns), "by_kind": dict(Counter(a["kind"] for a in anns).most_common()),

@@ -63,7 +63,9 @@ def test_views_stage_applies_what_holds_and_refuses_the_rest(sheet):
     assert sheet.layout.group(el).name == "LONGITUDINAL ELEVATION"
     assert any("V99" in r for r in res["refused"]) and any("V98" in r for r in res["refused"])
     assert any(de in r and "share no set-out lines" in r for r in res["refused"])  # a projection the geometry denies
-    assert sheet.unit_of_view[el] == sheet.unit_of_view[pl] != sheet.unit_of_view[de]
+    # local systems: the projection is taken as a link between the two units, never a join of them
+    assert len({sheet.unit_of_view[el], sheet.unit_of_view[pl], sheet.unit_of_view[de]}) == 3
+    assert any({lk["a"], lk["b"]} == {el, pl} and sheet.is_linked(lk) for lk in sheet.links)
     assert {"a": de, "b": el, "relation": "detail_of", "evidence": ["the wall of the box"]} in sheet.relations
     assert sheet.questions == answer["questions"]
     assert table in {g.id for g in sheet.layout.groups} and len(sheet.layout.views()) == 3  # nothing deleted
@@ -99,11 +101,12 @@ def test_unit_stage_runs_the_agent_on_the_units_own_drawing(sheet):
                           [call("finish", summary="done")]])  # the first finish is held once: the unit's other dimensions are not driven yet
     res = sheet_ai.parametrize_unit(sheet, uid, gem, log=lambda *a: None)
     assert res["named"] >= 1 and "ClearSpan" in sheet.unit(uid).prog.params
-    assert sheet.current()[f"{uid}.ClearSpan"] == pytest.approx(12000)
-    r = sheet.apply({f"{uid}.ClearSpan": 13000})
+    # the plan is drawn in projection with the elevation: the size named in the elevation is ONE shared value there too
+    assert sheet.current()["ClearSpan"] == pytest.approx(12000)
+    r = sheet.apply({"ClearSpan": 13000})
     assert r.ok and set(r.by_view) == {el, view(sheet, "PLAN")}
-    assert sheet.undo() and sheet.undo()  # the value, then the agent's whole parametrization
-    assert "ClearSpan" not in sheet.unit(uid).prog.params
+    assert sheet.undo() and sheet.undo()  # the value, then the agent's whole parametrization (its binding into the plan with it)
+    assert "ClearSpan" not in sheet.unit(uid).prog.params and "ClearSpan" not in sheet.current()
 
 
 def test_the_sheet_picture_and_prompt_carry_no_values_of_their_own():
@@ -113,9 +116,10 @@ def test_the_sheet_picture_and_prompt_carry_no_values_of_their_own():
 
 
 
-def test_views_joined_during_a_run_leave_no_unit_id_behind(tmp_path):
+def test_views_joined_during_a_run_leave_no_unit_id_behind(tmp_path, joined_units):
     # a live run (7A, 2026-10-26): the agent opened U01, then said V01 and V04 are drawn in projection — the sheet made one unit U01_04 of them, and
-    # every later call naming U01 (the open unit, review_parameters, the verdict) failed with "no unit U01"
+    # every later call naming U01 (the open unit, review_parameters, the verdict) failed with "no unit U01". (On a sheet of joined units: local
+    # systems never join units, test_local_systems.py.)
     from test_run import wait
 
     from dxf_autoparam.ai.scripted import ScriptedModel

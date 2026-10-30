@@ -1,6 +1,7 @@
 // The conversation's messages: what the person said (with where it applies), what the agent did (its thinking, shut; its activity, open
 // while it works), a pending decision, and — when the work has ended — its result: the engine's verdict word first (the page never says
 // "done" over what the engine refused), then the agent's own summary, then what remains; the checks sit under Details.
+import { api } from "../api/client";
 import type { CoverageRow } from "../api/types";
 import { useStore } from "../state/store";
 import { agent, applyHeld, currentRun, requestResume, revert } from "../state/agent";
@@ -30,7 +31,22 @@ export function UserBubble({ m }: { m: UserMessage }) {
         {m.note && <div className="mb-0.5 text-[10.5px] uppercase tracking-wide text-slate-400">Note while it works</div>}
         {m.text ? <Prose text={m.text} /> : <span className="text-slate-500">Answered {answered} question{answered === 1 ? "" : "s"}</span>}
         {m.text && answered > 0 && <div className="mt-1 text-[11px] text-slate-500">and answered {answered} question{answered === 1 ? "" : "s"}</div>}
+        {m.pictures && m.runId && (
+          <div className="mt-1.5 flex flex-wrap justify-end gap-1.5" data-testid="user-pictures">
+            {m.pictures.map((p) => (
+              <a key={p.id} href={api.attachmentUrl(m.runId as string, p.id)} target="_blank" rel="noreferrer" title={`${p.id} · ${p.name} (${p.size[0]}×${p.size[1]} px)`}>
+                <img src={api.attachmentUrl(m.runId as string, p.id)} alt={p.name} className="h-14 w-20 rounded border border-slate-300 dark:border-slate-600 object-cover" />
+              </a>
+            ))}
+          </div>
+        )}
       </div>
+      {m.brief && (
+        <details className="mt-0.5 max-w-[92%] text-[11px] text-slate-500" data-testid="user-brief">
+          <summary className="cursor-pointer select-none text-right hover:underline">What went to the model with your words</summary>
+          <div className="mt-1 whitespace-pre-wrap rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5 text-left">{m.brief}</div>
+        </details>
+      )}
       {where && (
         <button className="mt-0.5 text-[11px] text-slate-400 hover:underline" onClick={() => { const v = (m.scope?.views as string[] | undefined)?.[0]; if (v) fitView(v); }}>
           {where}

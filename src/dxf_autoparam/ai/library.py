@@ -361,33 +361,47 @@ class Library:
         return self._once("graded", build)
 
     @property
+    def rdso_sheets(self) -> list[dict]:
+        """The standard-drawing sheets this domain carries — domain.json `rdso_sheets` (a list, one sheet per family of standards: RCC boxes, and
+        what is added later) or `rdso_sheet` (one) — each built by its own builder (tools/build_rdso_sheet.py for the RCC box sets, from
+        rdso/standards.json) with every value's sheet, page, verification and kind. [] when it has none. A sheet named that is not on disk is no
+        sheet: a family whose standards are not extracted yet has nothing to retrieve, and nothing is made up for it."""
+        def build() -> list[dict]:
+            rels = list(self.meta.get("rdso_sheets") or []) or ([self.meta["rdso_sheet"]] if self.meta.get("rdso_sheet") else [])
+            return [json.loads(p.read_text(encoding="utf-8")) for p in (self.dir / r for r in rels) if p.is_file()]
+        return self._once("rdso_sheets", build)
+
+    @property
     def rdso_sheet(self) -> dict:
-        """The standard-drawing sheet this domain carries (domain.json `rdso_sheet`: tables by fill height and span x height, haunch bands,
-        key depth, notes, each value with its sheet, page, verification and kind), or {} when it has none. Built by tools/build_rdso_sheet.py."""
-        def build() -> dict:
-            rel = self.meta.get("rdso_sheet")
-            p = self.dir / rel if rel else None
-            return json.loads(p.read_text(encoding="utf-8")) if p and p.is_file() else {}
-        return self._once("rdso_sheet", build)
+        """The first of the domain's standard-drawing sheets (rdso_sheets), or {}."""
+        return self.rdso_sheets[0] if self.rdso_sheets else {}
 
     def rdso_reference(self, ident: str, full: bool = False) -> dict:
-        """`rdso-sheet:` lists the standards; `rdso-sheet:<standard>` reads one; `rdso-sheet:<standard>:<fill m>:<config>` one schedule row.
-        Context and a yardstick: a printed value with its sheet and page, never a value of the drawing in hand."""
-        sh = self.rdso_sheet
-        if not sh:
+        """`rdso-sheet:` lists the standards of every sheet; `rdso-sheet:<standard>` reads one; `rdso-sheet:<standard>:<fill m>:<config>` one
+        schedule row (a sheet with a schedule by fill height and span x height). Context and a yardstick: a printed value with its sheet and page,
+        never a value of the drawing in hand."""
+        sheets = self.rdso_sheets
+        if not sheets:
             return {"found": False, "id": ident, "hint": "this library has no standard-drawing sheet"}
+        parts = ident.removeprefix("rdso-sheet:").split(":")
+        context = "printed values of standard drawings with their sheet and page: compare with the drawing's own values, never copy them in"
+        if not parts[0]:
+            return {"found": True, "id": "rdso-sheet:", "kind": "rdso_sheet", "kinds": sheets[0].get("kinds"), "rules_of_use": sheets[0].get("rules_of_use"),
+                    "context_only": context,
+                    "standards": [{k: s.get(k) for k in ("id", "series", "title", "structure", "track", "loading", "usable_fill_heights_m", "config_label_meaning",
+                                                         "extraction_status")} for sh in sheets for s in sh.get("standards", [])],
+                    "hint": "get_reference('rdso-sheet:<id>') reads one standard"}
+        sh = next((x for x in sheets if any(s["id"] == parts[0] for s in x.get("standards", []))), None)
+        if sh is None:
+            return {"found": False, "id": ident, "hint": "the standards are listed by get_reference('rdso-sheet:')"}
+        std = next(s for s in sh["standards"] if s["id"] == parts[0])
+        base = {"kind": "rdso_sheet", "kinds": sh.get("kinds"), "rules_of_use": sh.get("rules_of_use"), "context_only": context}
+        if "thickness_table" not in sh:  # a sheet of another family: its standard, and every record of it that names that standard
+            return {"found": True, "id": ident, **base, "standard": std,
+                    **{k: [r for r in v if r.get("standard") == std["id"]] for k, v in sh.items() if isinstance(v, list) and k != "standards"
+                       and all(isinstance(r, dict) for r in v)}}
         cols = sh["thickness_table"]["columns"]
         rows = [dict(zip(cols, r, strict=False)) for r in sh["thickness_table"]["rows"]]
-        parts = ident.removeprefix("rdso-sheet:").split(":")
-        base = {"kind": "rdso_sheet", "kinds": sh.get("kinds"), "rules_of_use": sh.get("rules_of_use"),
-                "context_only": "printed values of standard drawings with their sheet and page: compare with the drawing's own values, never copy them in"}
-        if not parts[0]:
-            return {"found": True, "id": "rdso-sheet:", **base, "standards": [{k: s.get(k) for k in ("id", "series", "title", "structure", "track", "loading",
-                                                                                          "usable_fill_heights_m", "config_label_meaning", "extraction_status")}
-                                                                             for s in sh["standards"]], "hint": "get_reference('rdso-sheet:<id>') reads one standard"}
-        std = next((s for s in sh["standards"] if s["id"] == parts[0]), None)
-        if std is None:
-            return {"found": False, "id": ident, "hint": "the standards are listed by get_reference('rdso-sheet:')"}
         mine = [r for r in rows if r["standard"] == std["id"]]
         if len(parts) >= 3:
             try:

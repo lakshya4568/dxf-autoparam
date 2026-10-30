@@ -18,6 +18,10 @@ from dxf_autoparam.design_intent import derived
 from dxf_autoparam.plan_bench import Box, box_answer, box_gad
 from dxf_autoparam.workspace import SheetSession
 
+# these tests measure the engine within ONE unit made of a section and its plan (conftest.joined_units): local systems, each view its own,
+# are test_local_systems.py
+pytestmark = pytest.mark.usefixtures("joined_units")
+
 INSTRUCTION = ("Reduce the clear span to 2500 mm, centred about the centre line. Keep the foundation fixed. Wing walls follow the box. "
                "Do not modify the unrelated pitching detail.")
 

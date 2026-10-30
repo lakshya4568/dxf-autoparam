@@ -31,51 +31,22 @@ DEFAULT_SRC = Path("/Users/proximus/Documents/Aagento Systems/Aagento-GAD-Founda
 DEFAULT_KB = Path("/Users/proximus/Documents/Aagento Systems/Aagento-GAD-Foundation-Model/knowledge/kb/entries")
 DEFAULT_RAW = Path("/Users/proximus/Documents/Aagento Systems/Aagento-GAD-Foundation-Model/knowledge/sources/rdso/raw/rcc-box")
 
-# The five standards of this iteration. `parts` are the extract folders that hold the set (a set split over two PDFs has two).
-# `verification` is the extraction's own status (agent/out/file-status/<folder>/STATUS.md), copied so a reader knows what was checked.
-STANDARDS = [
-    {
-        "id": "RDSO-RCC-BOX-10151",
-        "series": "RDSO/B-10151/R",
-        "parts": [{"folder": "RDSO-RCC-BOX-10151R-SERIES", "pdf": "10151R SERIES.pdf",
-                   "verification": "p1 general arrangement (view level); p2 spot check of columns 2mX1.8m and 2mX2.0m and rows a1 and b (match); p3 to p10 schedules not checked",
-                   "checked_pages": [1], "spot_checked": {2: ["2mX1.8m", "2mX2.0m"]}, "do_not_use_pages": []}],
-    },
-    {
-        "id": "RDSO-RCC-BOX-10152-R-SERIES",
-        "series": "RDSO/B-10152/R",
-        "parts": [{"folder": "RDSO-RCC-BOX-10152-R-SERIES", "pdf": "10152-R series.pdf",
-                   "verification": "p1 general arrangement (view level; haunch table and callout checked earlier); p9 spot check of column 2mX1.8m (match); p2 to p8 and p10 schedules not checked",
-                   "checked_pages": [1], "spot_checked": {9: ["2mX1.8m"]}, "do_not_use_pages": []}],
-    },
-    {
-        "id": "RDSO-RCC-BOX-10153",
-        "series": "RDSO/B-10153",
-        "parts": [{"folder": "RDSO-RCC-BOX-RDSO-B-10153-SERIES", "pdf": "RDSO_B_10153_series.pdf",
-                   "verification": "p1 general arrangement (view level); p2 to p6 schedules not checked; open: span height differs between p3 and p4; Table X row 3 unresolved",
-                   "checked_pages": [1], "spot_checked": {}, "do_not_use_pages": []}],
-    },
-    {
-        "id": "RDSO-RCC-BOX-10155",
-        "series": "RDSO/B-10155",
-        "parts": [{"folder": "RDSO-RCC-BOX-RDSO-B-10155-TO-10155-5", "pdf": "RDSO_B_10155 to 10155-5 .pdf",
-                   "verification": "p1 general arrangement (view level); p2 to p6 schedules verified cell by cell in a second pass (corrections applied)",
-                   "checked_pages": [1, 2, 3, 4, 5, 6], "spot_checked": {}, "do_not_use_pages": []},
-                  {"folder": "RDSO-RCC-BOX-RDSO-B-10155-6-TO-10155-10", "pdf": "RDSO_B_10155_6 to 10155-10_.pdf",
-                   "verification": "partly done: 2 of 5 pages saved, nothing checked; p1 row h digit clipped for 6mX4.0m and 6mX5.0m; p2 only column 2mX1.8m read",
-                   "checked_pages": [], "spot_checked": {}, "do_not_use_pages": [], "unchecked": True}],
-    },
-    {
-        "id": "RDSO-RCC-BOX-10157",
-        "series": "RDSO/B-10157",
-        "parts": [{"folder": "RDSO-RCC-BOX-10157-TO10157-5", "pdf": "10157 to10157-5.pdf",
-                   "verification": "p1 general arrangement (view level); p4 spot check of column 2mX1.8m (match); p2, p3, p5, p6 schedules not checked",
-                   "checked_pages": [1], "spot_checked": {4: ["2mX1.8m"]}, "do_not_use_pages": []},
-                  {"folder": "RDSO-RCC-BOX-10157-6TO-10157-10", "pdf": "10157-6to 10157-10.pdf",
-                   "verification": "partly done: page 1 values were never read from a displayed image; the extraction says: do not use page 1 until re-read",
-                   "checked_pages": [], "spot_checked": {}, "do_not_use_pages": [1], "unchecked": True}],
-    },
-]
+# The standards of the sheet, one row each in the manifest (the five of the first iteration). `parts` are the extract folders that hold the set
+# (a set split over two PDFs has two). `verification` is the extraction's own status (agent/out/file-status/<folder>/STATUS.md), copied so a reader
+# knows what was checked.
+MANIFEST =Path(__file__).resolve().parents[1] / "src" / "dxf_autoparam" / "knowledge" / "library" / "bridge" / "rdso" / "standards.json"
+
+
+def load_standards(path: Path = MANIFEST) -> list[dict]:
+    """The sets of the sheet, from the manifest (adding a set is adding a row there): a part's spot-checked pages are numbers, as JSON keeps them as text."""
+    rows = json.loads(path.read_text(encoding="utf-8"))["standards"]
+    for std in rows:
+        for part in std["parts"]:
+            part["spot_checked"] = {int(k): list(v) for k, v in (part.get("spot_checked") or {}).items()}
+    return rows
+
+
+STANDARDS = load_standards()
 
 KINDS = {
     "explicit": "Printed on the RDSO sheet and read from a displayed image of it (verification level says whether it was re-checked).",

@@ -3,7 +3,7 @@
 // sent them; the conversation is derived from them (agent/model.ts). A run is paid model time, so one is started only by the person's
 // own send, and only after they accepted the cost for the chosen model.
 import { api } from "../api/client";
-import type { AgentNotes, LibraryInfo, RunProgress } from "../api/types";
+import type { AgentNotes, LibraryInfo, PendingPicture, RunProgress } from "../api/types";
 import { ACTIVE, type RunData } from "../agent/model";
 import { Store } from "./store";
 import { refreshSheet, store as workspace } from "./workspace";
@@ -35,15 +35,47 @@ export interface AgentState {
   pauseEvery: number;
   /** the pictures the agent was given: the gallery open over the thread, and the picture shown large (independent of each other) */
   gallery: { open: boolean; shown: string | null };
+  /** pictures the person attached in the composer: they go with the next message (a new run, a note while it works, a continue) */
+  pictures: PendingPicture[];
 }
+
+/** What the engine takes with one message (ai/attachments.py): the page refuses more before sending, the engine checks again. */
+export const PICTURE_LIMITS = { count: 4, bytes: 8 * 1024 * 1024, types: ["image/png", "image/jpeg", "image/webp"] };
 
 /** Turns between pauses unless the person chooses otherwise (the engine's own default). */
 export const DEFAULT_PAUSE = 30;
 
 export const agent = new Store<AgentState>({
   runs: {}, order: [], currentId: null, models: [], model: "", paidFor: null, draft: "", scopeKind: "auto", busy: null, confirm: null, error: null, notes: null,
-  loaded: false, folds: {}, gallery: { open: false, shown: null }, library: null, useLibrary: null, pauseEvery: DEFAULT_PAUSE,
+  loaded: false, folds: {}, gallery: { open: false, shown: null }, library: null, useLibrary: null, pauseEvery: DEFAULT_PAUSE, pictures: [],
 });
+
+const readAsDataUrl = (f: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result));
+    r.onerror = () => reject(r.error ?? new Error(`${f.name}: could not be read`));
+    r.readAsDataURL(f);
+  });
+
+/** Pictures the person attached (a file chosen, pasted or dropped): kept in the composer until the message is sent. What is not a picture the
+ * engine takes, or is too big, or over the count, is refused here with the reason (and the engine refuses it again if it were sent). */
+export async function addPictures(files: File[]): Promise<void> {
+  const room = PICTURE_LIMITS.count - agent.get().pictures.length;
+  const bad: string[] = [];
+  const add: PendingPicture[] = [];
+  for (const f of files) {
+    if (!PICTURE_LIMITS.types.includes(f.type)) bad.push(`${f.name || "a file"}: PNG, JPEG or WebP only`);
+    else if (f.size > PICTURE_LIMITS.bytes) bad.push(`${f.name}: ${(f.size / 1e6).toFixed(1)} MB — at most 8 MB a picture`);
+    else if (add.length >= room) bad.push(`${f.name}: at most ${PICTURE_LIMITS.count} pictures with one message`);
+    else add.push({ name: f.name || `picture ${agent.get().pictures.length + add.length + 1}.png`, data: await readAsDataUrl(f), bytes: f.size });
+  }
+  agent.set((s) => ({ pictures: [...s.pictures, ...add], error: bad.length ? bad.join("; ") : s.error }));
+}
+
+export function removePicture(i: number): void {
+  agent.set((s) => ({ pictures: s.pictures.filter((_, k) => k !== i) }));
+}
 
 const POLL_MS = 600;
 const polling = new Map<string, number>(); // run id → the token of the poll loop that owns it (a newer loop replaces an older one)
@@ -297,7 +329,7 @@ export function canSend(s: AgentState = agent.get()): boolean {
 
 /** Something the person can say to an agent that is working: it reads it at the start of its next turn (no Stop, no call lost). */
 export function canNote(s: AgentState = agent.get()): boolean {
-  return !s.busy && currentRun(s)?.progress?.status === "running" && s.draft.trim().length > 0;
+  return !s.busy && currentRun(s)?.progress?.status === "running" && (s.draft.trim().length > 0 || s.pictures.length > 0);
 }
 
 /** The person's message. A run that can be continued takes it as a note and goes on; otherwise it starts a new run that follows the
@@ -310,13 +342,13 @@ export async function send(): Promise<void> {
   agent.set({ busy: r?.progress?.can?.continue ? "continuing" : "starting", error: null });
   try {
     if (r?.progress?.can?.continue) {
-      await api.continueRun(r.id, { note: text });
-      agent.set({ draft: "" });
+      await api.continueRun(r.id, { note: text }, s.pictures);
+      agent.set({ draft: "", pictures: [] });
       follow(r.id, true);
     } else {
-      const started = await api.startRun(text, scopePayload(), runOptions(s), followedRun(s)?.id);
+      const started = await api.startRun(text, scopePayload(), runOptions(s), followedRun(s)?.id, s.pictures);
       putRun(started.run, (cur) => cur);
-      agent.set({ draft: "", currentId: started.run });
+      agent.set({ draft: "", pictures: [], currentId: started.run });
       follow(started.run);
     }
   } catch (e) {
@@ -332,8 +364,8 @@ export async function note(): Promise<void> {
   const text = s.draft.trim();
   if (!r || !canNote(s)) return;
   try {
-    await api.noteRun(r.id, text);
-    agent.set({ draft: "" });
+    await api.noteRun(r.id, text, s.pictures);
+    agent.set({ draft: "", pictures: [] });
   } catch (e) {
     fail(e);
   }

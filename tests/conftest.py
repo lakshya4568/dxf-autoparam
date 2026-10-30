@@ -19,3 +19,11 @@ def _no_token_harbor(monkeypatch, tmp_path):
     tokenharbor.forget()
     yield
     tokenharbor.forget()
+
+
+@pytest.fixture
+def joined_units(monkeypatch):
+    """A sheet opened fresh analyses views drawn in projection as ONE unit, as sheets were made before local systems (and as work saved that way is
+    still read). For the tests that measure the engine within such a unit — a section with its plan, one answer, one set of line ids; a module says
+    `pytestmark = pytest.mark.usefixtures("joined_units")`. Local systems, each view its own: test_local_systems.py."""
+    monkeypatch.setenv("AUTOPARAM_SYSTEMS", "joined")

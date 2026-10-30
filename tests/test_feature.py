@@ -34,6 +34,10 @@ from dxf_autoparam.production.bench import PLAN_DECISIONS, PLAN_INSTRUCTION, _sh
 from dxf_autoparam.production.bridge import default_bridge
 from dxf_autoparam.workspace import SheetSession
 
+# these tests measure the engine within ONE unit made of a section and its plan (conftest.joined_units): local systems, each view its own,
+# are test_local_systems.py
+pytestmark = pytest.mark.usefixtures("joined_units")
+
 STATUS = default_bridge().status()
 needs_bridge = pytest.mark.skipif(not STATUS["available"], reason=f"the production rule bridge cannot run here: {STATUS.get('reason')}")
 

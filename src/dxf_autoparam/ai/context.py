@@ -153,9 +153,9 @@ def unit_context(sm, uid: str, an, prog: Program, labels: dict | None = None, re
         views.append({"id": v, "name": g.name, "type": g.view_type, "scale": f"1:{g.scale:g}" if g.scale else None,
                       "own_units_mm": g.units_mm, "questions": g.questions[:3]})
     ctx["views"] = views
-    ctx["projection"] = [{"views": [lk["a"], lk["b"]], "shared_lines": lk["planes"], "axis": lk["axis"],
-                          "one_unit": sm.is_linked(lk)}
-                         for lk in sm.links if lk["a"] in u.views or lk["b"] in u.views]
+    from ..projection import described
+
+    ctx["projection"] = described(sm, u.views)
     shared = []
     for p in sm.shared.values():
         mine = [b for b in p.bindings if b.unit == uid]

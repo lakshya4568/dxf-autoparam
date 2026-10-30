@@ -8,7 +8,8 @@ from what the change measurably does to the lines it moves:
   incomplete_model  the change could be drawn, but the model does not carry it: a line set out through an intersection or a formula that moves
                     it many times the change (a gentle slope meeting a moved level); an entity with one end on a line that follows the change
                     and one on a line that stays, the gap between them owned by no value and no dimension; a part's own entities, or an entity
-                    no part owns, running into a member; a view showing the same size that does not follow it; a value worked out there
+                    no part owns, running into a member; a view showing the same size that does not follow it; a value worked out there;
+                    two views drawn in projection taking a value they share on different sides (its faces no longer in line)
   broken_promise    the change moves what an accepted plan says stays: the plan and the change disagree, and a person decides which holds
   rule              a production / engineering rule bound to the sheet fails at these values
   solver_failure    the program cannot be evaluated at these values (a formula outside its domain, a value it no longer has)
@@ -299,6 +300,14 @@ def _follow(g: dict, c: dict | None) -> None:
                                             f"{g.get('measured_mm')} mm, not {g.get('wanted_mm'):g} — set its lines out from the shared value there")
 
 
+def _projection(g: dict, c: dict | None) -> None:
+    g["values"] = [g.get("value")]
+    units = g.get("units") or []
+    g.update(kind="incomplete_model", basis=f"{' and '.join(units)} are drawn in projection and share {g.get('value')}: the change moves its face "
+                                            f"{' and '.join(f'{m:+g} mm' for m in g.get('moves_mm') or [])} — one side for it in both views (anchor), "
+                                            "or the views no longer show one structure")
+
+
 def _worked_out(g: dict, c: dict | None) -> None:
     g["values"] = [g.get("value")]
     g.update(kind="incomplete_model", basis=f"{g.get('value')} is worked out in {g.get('unit')}, not an input there: that view cannot take a new value "
@@ -329,7 +338,7 @@ def _as_is(g: dict, c: dict | None) -> None:
 
 
 HOW = {"GEOMETRY": _geometry, "CLASH": _clash, "POSITIVE": _positive, "PLAN": _plan, "FOLLOW": _follow, "WORKED_OUT": _worked_out, "RULE": _rule,
-       "SOLVER": _solver, "UNBOUND": _unbound, "VALUES": _values}
+       "SOLVER": _solver, "UNBOUND": _unbound, "VALUES": _values, "PROJECTION": _projection}
 
 
 # ── does the sheet as it stands fail it too? ─────────────────────────────────────
@@ -350,6 +359,8 @@ def _key(f: dict) -> tuple:
         about = m.groups() if m else issue
     elif check in ("FOLLOW", "WORKED_OUT", "UNBOUND"):
         about = f.get("value")
+    elif check == "PROJECTION":
+        about = (f.get("value"), tuple(f.get("lines") or ()))
     elif check == "VALUES":
         about = tuple(f.get("values") or ())
     else:  # a rule's or the solver's own words: the numbers in them are the values tried

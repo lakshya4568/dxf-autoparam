@@ -13,11 +13,16 @@ token counts come from live runs only and are never invented here."""
 
 from __future__ import annotations
 
+import pytest
 from test_run import INSTRUCTION, session, wait
 
 from dxf_autoparam.ai.loop import history_size
 from dxf_autoparam.ai.scripted import call
 from dxf_autoparam.ai.understanding_tools import component_context, drawing_overview, learned_now, notes_of, parameter_review, view_context
+
+# these tests measure the engine within ONE unit made of a section and its plan (conftest.joined_units): local systems, each view its own,
+# are test_local_systems.py
+pytestmark = pytest.mark.usefixtures("joined_units")
 
 
 def reads(n: int, uid: str) -> list:

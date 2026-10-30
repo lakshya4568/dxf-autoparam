@@ -10,6 +10,7 @@ import copy
 import json
 import time
 
+import pytest
 from test_agent import XX
 
 from dxf_autoparam.ai import domain
@@ -21,6 +22,10 @@ from dxf_autoparam.ai.scripted import ScriptedModel, call
 from dxf_autoparam.crossview import SheetModel
 from dxf_autoparam.plan_bench import Box, box_answer, box_gad
 from dxf_autoparam.workspace import SheetSession
+
+# these tests measure the engine within ONE unit made of a section and its plan (conftest.joined_units): local systems, each view its own,
+# are test_local_systems.py
+pytestmark = pytest.mark.usefixtures("joined_units")
 
 LIB_TOOLS = {"list_skills", "load_skill", "search_library", "get_reference", "check_rule", "record_finding"}
 

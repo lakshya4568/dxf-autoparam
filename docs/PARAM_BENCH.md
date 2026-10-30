@@ -191,3 +191,21 @@ Refused ±10 % steps, failed checks by kind (the ceiling where measured, else th
 **Against the 70–80 % target:** the harness lets an agent reach it on 6 of 7 real drawings, and 80 % or more on 4. What a MODEL
 reaches with the new harness is **NOT VERIFIED**: it needs one paid run (the owner's go-ahead); the free models were too slow to measure it
 (`docs/BRIDGE_GEOMETRY_HARNESS.md`).
+
+### Local systems (2026-10-29/30): every view its own unit
+
+The same ceiling with every view a unit of its own and projection links as explicit constraints (`projection.py`, `docs/MULTIVIEW.md` §4), the metric
+unchanged (and stricter since 2026-10-28: a ±10 % step that runs members into each other is no edit). Measured free, `out/agent-logs/20261029-local-systems/`.
+
+| Case | Joined (before) | Local systems | What differs |
+|---|---|---|---|
+| 173A (saved work) | 70 / 84 | 70 / 84 | saved work reads as it was made (20A's joined U02_03 likewise — by construction, not re-measured) |
+| Bridge-7A, BVP-minor, gad-1790232095, the examples | 58 / 93 · 27 / 39 · 51 / 80 · … | the same | no views joined in them |
+| generated boxes, 1–4 cells | 100 % | 100 % | section and plan two units; the plan takes ClearSpan and OuterWall across the projection |
+| mib173 (V01 + V05 + V07 were one unit) | 124 / 182 | **104 / 178** | 74 steps refused by the projection check: a shared value the views take differently |
+
+Parametrized / driven. On mib173 the joined unit kept its three views in line by construction (one set-out line per common face); as local systems the
+same changes are refused when one view's set-out moves a common face the other's does not ("V01's x7 −400 mm, V07's x11 +0 mm") — with every view its
+own and nothing checking them, 132 were "parametrized", the views apart. The side a view takes for a shared value, and the faces it moves with it, are
+carried to the other view first (`projection.preferred`); where the second view's own set-out still does not follow, the change is refused, said.
+mib173's whole ceiling took 308 s on local systems against 879 s joined (both beside other jobs on the machine: an indication, not a timing).

@@ -22,6 +22,10 @@ from dxf_autoparam.plan_bench import Box, box_answer, box_gad
 from dxf_autoparam.regen import regenerate_program
 from dxf_autoparam.validator import baseline
 
+# these tests measure the engine within ONE unit made of a section and its plan (conftest.joined_units): local systems, each view its own,
+# are test_local_systems.py
+pytestmark = pytest.mark.usefixtures("joined_units")
+
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES = sorted((ROOT / "examples").glob("*.dxf"))
 
@@ -488,3 +492,24 @@ def test_a_provisional_direction_is_shown_as_provisional_with_its_evidence():
     row = next(r for r in sm.unit(uid).answer["intent_axes"] if r["status"] == "provisional")
     shown = sm.growth(f"{uid}.{row['drivers'][0]}")[0]["intent"]
     assert shown["status"] == "provisional" and shown["evidence"] == row["evidence"] and "assumed" in shown["evidence"][0]
+
+
+def test_what_stands_in_the_way_is_said_the_same_in_every_process(tmp_path):
+    """A refused side names the lines in its way in their order along the axis — not in the order a set happened to hold them, which changed from
+    one process to the next (the same plans, another first line each time a person asked)."""
+    import json
+    import os
+    import subprocess
+    import sys
+
+    script = ("import json, sys; from pathlib import Path; sys.path.insert(0, sys.argv[1]); from test_design_intent import pinned_box_sheet; "
+              "sm, uid, _g = pinned_box_sheet(Path(sys.argv[2])); row = sm.growth(uid + '.TopSlab')[0]['undecided']; "
+              "print(json.dumps({'blocked': row['blocked'], 'evidence': row['evidence']}))")
+    got = []
+    for seed in ("1", "2"):
+        d = tmp_path / seed
+        d.mkdir()
+        out = subprocess.run([sys.executable, "-c", script, str(Path(__file__).parent), str(d)], capture_output=True, text=True, timeout=300,
+                             env={**os.environ, "PYTHONHASHSEED": seed}, check=True)
+        got.append(json.loads(out.stdout.strip().splitlines()[-1]))
+    assert got[0] == got[1] and got[0]["blocked"]

@@ -23,6 +23,10 @@ from dxf_autoparam.ai.sheet_ai import parametrize_unit
 from dxf_autoparam.crossview import SheetError, SheetModel
 from dxf_autoparam.topology import of
 
+# these tests measure the engine within ONE unit made of a section and its plan (conftest.joined_units): local systems, each view its own,
+# are test_local_systems.py
+pytestmark = pytest.mark.usefixtures("joined_units")
+
 GAD_A = FIXTURES / "gad_ezdxf_a.dxf"
 
 

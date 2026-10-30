@@ -19,6 +19,10 @@ from test_intent_plan import FOLLOW_ALL, box_sheet
 from dxf_autoparam.crossview import EMPTY_ANSWER, SheetModel
 from dxf_autoparam.program import names_in
 
+# these tests measure the engine within ONE unit made of a section and its plan (conftest.joined_units): local systems, each view its own,
+# are test_local_systems.py
+pytestmark = pytest.mark.usefixtures("joined_units")
+
 
 @pytest.fixture(autouse=True)
 def bridge_pack(monkeypatch):

@@ -19,6 +19,10 @@ from dxf_autoparam.crossview import EMPTY_ANSWER, SheetModel
 from dxf_autoparam.dxf_read import read_dxf
 from dxf_autoparam.sheet import segment
 
+# these tests measure the engine within ONE unit made of a section and its plan (conftest.joined_units): local systems, each view its own,
+# are test_local_systems.py
+pytestmark = pytest.mark.usefixtures("joined_units")
+
 
 def part(name: str, level: str = "assembly") -> dict:
     return {"name": name, "type": "box", "level": level, "parent": None, "regions": [], "entities": [], "existing": False, "parametrize": True,

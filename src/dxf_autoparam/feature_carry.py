@@ -105,7 +105,7 @@ def _assemble(sm, new_dr, img: dict[int, int], cps: dict[int, list[int]], op) ->
     """The new model for `new_dr` (which `img` / `cps` relate entity by entity to the sheet's), with the sheet's state carried over."""
     from .crossview import SheetModel
 
-    new = SheetModel(new_dr)
+    new = SheetModel(new_dr, systems=sm.systems)
     notes: list[str] = []
     gmap = _match_views(sm, new, img)
     for og in sm.layout.groups:

@@ -6,9 +6,9 @@ against the model as it stands, now and again at the end of the run:
 
   * every unit, view, part and value a link names must exist (the names are the model's own, kept as written — nothing here knows
     a structure, a family or a word of any vocabulary);
-  * a link that says it is BOUND must be: by a shared value that drives each unit it names, by views drawn in projection (one unit),
-    or by a relation between the views — otherwise it says it is only NOTED, and the person reads it as an assumption the model does
-    not enforce;
+  * a link that says it is BOUND must be: by a shared value that drives each unit it names, by views drawn in projection (a link
+    taken between their local systems; one unit on a sheet saved with joined units), or by a relation between the views — otherwise
+    it says it is only NOTED, and the person reads it as an assumption the model does not enforce;
   * what the model did and the plan leaves out is listed (a shared value, a relation between views, a name used in several units
     for the same value) — the engine counts, the model decides.
 
@@ -84,7 +84,7 @@ def resolve_place(sm: SheetModel, ref: dict) -> tuple[dict | None, str | None]:
 def _related_views(sm: SheetModel) -> list[tuple[str, str]]:
     """Views the sheet holds as related: the model's own relations (same structure, detail of) and views drawn in projection."""
     pairs = [(r["a"], r["b"]) for r in sm.relations if r.get("a") and r.get("b")]
-    pairs += [(lk["a"], lk["b"]) for lk in sm.links if lk["strong"] and (lk["a"], lk["b"]) not in sm.unlinked]
+    pairs += [(lk["a"], lk["b"]) for lk in sm.links if sm.is_linked(lk)]
     for u in sm.units.values():  # views the engine took as one unit are related by construction
         pairs += [(a, b) for i, a in enumerate(u.views) for b in u.views[i + 1:]]
     return pairs
@@ -143,8 +143,11 @@ def check_link(sm: SheetModel, link: dict) -> list[str]:
             if p["value"] and p["unit"] in by_unit and p["value"] != by_unit[p["unit"]].param:
                 problems.append(f"in {p['unit']} the shared value is called {by_unit[p['unit']].param}, not {p['value']}: cite that name (or the part)")
     elif bound == "projection":
-        if len(units) != 1:
+        if sm.systems == "joined" and len(units) != 1:
             problems.append(f"views drawn in projection are one unit; these places are in {', '.join(sorted(units))}")
+        elif sm.systems == "views" and not _connected([sm.unit(u).views[0] for u in units], [(lk["a"], lk["b"]) for lk in sm.links if sm.is_linked(lk)]):
+            problems.append(f"{', '.join(sorted(units))} are not drawn in projection with each other (no link taken between their views: "
+                            "describe_views with relation projection, where they share faces)")
     elif bound == "view_relation":
         if not _connected([p["view"] or sm.unit(p["unit"]).views[0] for p in places], _related_views(sm)):
             problems.append("the views of these places are not related on the sheet (describe_views with a relation: same_structure, detail_of, projection), "

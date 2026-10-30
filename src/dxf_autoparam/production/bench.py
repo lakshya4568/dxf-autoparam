@@ -37,11 +37,13 @@ PLAN_INSTRUCTION = "Reduce the clear span to {v} mm. Maintain the outer wall thi
 PLAN_DECISIONS = {"attached:WingLeft": "follow", "attached:WingRight": "follow", "attached:PitchingDetail": "keep_fixed"}
 
 
-def _sheet(b: Box, workdir: Path, name: str, unlink: bool = False) -> tuple[SheetModel, str, str, dict]:
+def _sheet(b: Box, workdir: Path, name: str, unlink: bool = False, systems: str = "joined") -> tuple[SheetModel, str, str, dict]:
+    """The generated box with the generator's answer on its section. `systems`: its section and plan analysed as one unit ("joined" — the rules are
+    bound to that unit, as the bench was measured) or as two local systems linked by projection ("views": the plan takes the sizes it shows)."""
     g = box_gad(workdir / f"{name}.dxf", b)
-    sm = SheetModel.open(g["path"])
-    two = next(k for k, u in sm.units.items() if len(u.views) == 2)
-    va, vb = sm.units[two].views
+    sm = SheetModel.open(g["path"], systems=systems)
+    lk = next(lk for lk in sm.links if lk["strong"])
+    va, vb = lk["a"], lk["b"]
     if unlink:
         sm.link(va, vb, False)
     sec = max((va, vb), key=lambda v: sm.layout.group(v).bbox[3])

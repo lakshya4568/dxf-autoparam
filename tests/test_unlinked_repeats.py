@@ -5,12 +5,17 @@ projection) existed on the sheet. Seven names recurred across units — five wit
 
 from __future__ import annotations
 
+import pytest
 from test_crossview import mini_gad
 
 from dxf_autoparam.ai.run import Run, SheetBench
 from dxf_autoparam.crossview import SheetModel
 from dxf_autoparam.generic import is_generated
 from dxf_autoparam.workspace import SheetSession
+
+# these tests measure the engine within ONE unit made of a section and its plan (conftest.joined_units): local systems, each view its own,
+# are test_local_systems.py
+pytestmark = pytest.mark.usefixtures("joined_units")
 
 
 def name_value(sm, uid: str, value: float, new: str) -> None:

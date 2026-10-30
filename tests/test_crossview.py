@@ -4,6 +4,7 @@ is one shared parameter, every change is checked on the regenerated sheet and co
 from __future__ import annotations
 
 import copy
+import json
 from pathlib import Path
 
 import ezdxf
@@ -39,20 +40,39 @@ def xs(sm: SheetModel, sr, vid: str) -> list[float]:
     return sorted(out)
 
 
-def test_views_drawn_in_projection_are_one_unit_and_change_together(sheet):
+def test_views_drawn_in_projection_are_local_systems_that_change_together(sheet):
+    """Each view its own unit; the projection binds the size named in the elevation into its plan (one shared value) and keeps the faces in line."""
     el, pl, de = view(sheet, "ELEVATION"), view(sheet, "PLAN"), view(sheet, "DETAIL OF WALL")
-    assert sheet.unit_of_view[el] == sheet.unit_of_view[pl] != sheet.unit_of_view[de]
+    assert sheet.systems == "views" and len({sheet.unit_of_view[el], sheet.unit_of_view[pl], sheet.unit_of_view[de]}) == 3
     link = next(lk for lk in sheet.links if {lk["a"], lk["b"]} == {el, pl})
-    assert link["strong"] and link["axis"] == "x" and link["planes"] == 4
-    uid = sheet.unit_of_view[el]
+    assert link["strong"] and link["axis"] == "x" and link["planes"] == 4 and sheet.is_linked(link)
+    uid, up = sheet.unit_of_view[el], sheet.unit_of_view[pl]
     p = sheet.share("ClearSpan", [(uid, opening(sheet, uid, 12000, "void"))])
-    assert p.bindings[0].status == "drives"
+    assert {b.unit: b.status for b in p.bindings} == {uid: "drives", up: "drives"}, "bound into the plan across the projection"
     r = sheet.apply({"ClearSpan": 14000})
     assert r.ok, r.errors
     assert set(r.by_view) == {el, pl}  # the elevation and its plan: nothing else moved
     # the plan's lines are where the elevation's faces are: the projection still holds
     assert set(xs(sheet, r, pl)) <= set(xs(sheet, r, el))
-    assert r.measured["ClearSpan"][uid] == pytest.approx(14000)
+    assert r.measured["ClearSpan"] == {uid: pytest.approx(14000), up: pytest.approx(14000)}
+    assert sheet.undo() and "ClearSpan" in sheet.current() and sheet.undo() and "ClearSpan" not in sheet.current(), "one share, one undo — the plan's too"
+
+
+def test_a_sheet_saved_with_joined_units_reads_them_joined(tmp_path):
+    sheet = SheetModel.open(str(built_sheet(tmp_path / "sheet.dxf")), systems="joined")
+    el, pl, de = view(sheet, "ELEVATION"), view(sheet, "PLAN"), view(sheet, "DETAIL OF WALL")
+    assert sheet.unit_of_view[el] == sheet.unit_of_view[pl] != sheet.unit_of_view[de]
+    uid = sheet.unit_of_view[el]
+    sheet.share("ClearSpan", [(uid, opening(sheet, uid, 12000, "void"))])
+    r = sheet.apply({"ClearSpan": 14000})
+    assert r.ok and set(r.by_view) == {el, pl} and set(xs(sheet, r, pl)) <= set(xs(sheet, r, el))
+    proj = tmp_path / "joined.autoparam.json"
+    sheet.save(str(proj))
+    assert SheetModel.load(str(proj)).systems == "joined"
+    d = json.loads(proj.read_text())
+    del d["systems"]  # saved before local systems: a unit named by two views says it was joined
+    proj.write_text(json.dumps(d))
+    assert SheetModel.load(str(proj)).systems == "joined"
 
 
 def test_a_change_that_breaks_the_sheet_is_refused_and_nothing_changes(sheet):
@@ -202,12 +222,13 @@ def test_a_real_sheet_section_and_plan_follow_one_barrel_length(tmp_path):
     sm = SheetModel.open(str(FIXTURES / "gad_ezdxf_a.dxf"))
     sec, plan = view(sm, "LONGITUDINAL SECTION(X-X)"), view(sm, "PLAN TOP")
     uid = sm.unit_of_view[sec]
-    assert sm.unit_of_view[plan] == uid  # drawn in projection: one unit
+    assert sm.unit_of_view[plan] != uid  # drawn in projection: two local systems, linked
     cid = opening(sm, uid, 11740)
     p = sm.share("BarrelLength", [(uid, cid)], evidence=["written in both views"])
-    assert p.bindings[0].status == "drives"
-    # which end the barrel grows at is the person's decision: the upstream end stays, the downstream end moves
-    assert sm.anchor("BarrelLength", uid, "start")["mode"] == "start"
+    assert [b.status for b in p.bindings] == ["drives", "drives"] and {b.unit for b in p.bindings} == {uid, sm.unit_of_view[plan]}
+    # which end the barrel grows at is the person's decision: the upstream end stays, the downstream end moves — in the plan as well
+    got = sm.anchor("BarrelLength", uid, "start")
+    assert got["mode"] == "start" and [x["mode"] for x in got["projection"]] == ["start"]
     for v in (10000, 13000):
         r = sm.preview({"BarrelLength": v})
         assert r.ok, r.errors[:3]
@@ -289,8 +310,9 @@ def dim_labels(sm, sr) -> list[str]:
 
 def test_a_size_a_unit_already_named_is_linked_across_views_as_is(tmp_path):
     """Parametrized first, linked after (the Gemini stages in order): the shared name is the very size the unit already
-    calls by that name — it is bound, not refused as a namesake; a namesake of another size is still refused."""
-    sm = SheetModel.open(mini_gad(tmp_path / "mini.dxf"))
+    calls by that name — it is bound, not refused as a namesake; a namesake of another size is still refused. (The section and its plan
+    analysed as one unit, as a sheet saved with joined units: the candidate ids are that unit's.)"""
+    sm = SheetModel.open(mini_gad(tmp_path / "mini.dxf"), systems="joined")
     uid = next(k for k, u in sm.units.items() if len(u.views) == 2)
     other = next(k for k in sm.units if k != uid)
     answer = {**copy.deepcopy(EMPTY_ANSWER), "parameters": [
@@ -310,7 +332,7 @@ def test_a_dimension_point_off_any_vertex_follows_the_line_it_lies_on(tmp_path):
     """The wall dimension is taken along the slab: its inner point (300, 0) lies on the inner face's line but on no
     drawn vertex. It follows that face, so the dimension reads the new wall, not 300 carried along with the corner."""
     sm = SheetModel.open(mini_gad(tmp_path / "mini.dxf"))
-    uid = next(k for k, u in sm.units.items() if len(u.views) == 2)
+    uid = sm.unit_of_view[view(sm, "CROSS SECTION A-A")]
     wall = next(n for n, p in sm.unit(uid).prog.params.items() if round(p.value) == 300 and p.measures and sm.unit(uid).an.datums[p.measures[0]].axis == "x")
     sr = sm.preview({f"{uid}.{wall}": 400.0})
     assert sr.ok, sr.errors

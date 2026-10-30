@@ -11,6 +11,10 @@ from dxf_autoparam.crossview import SheetError, SheetModel
 from dxf_autoparam.plan_bench import Box, box_answer, box_gad
 from dxf_autoparam.workspace import SheetSession
 
+# these tests measure the engine within ONE unit made of a section and its plan (conftest.joined_units): local systems, each view its own,
+# are test_local_systems.py
+pytestmark = pytest.mark.usefixtures("joined_units")
+
 
 def box_sheet(tmp_path, keep: bool = False, name: str = "box"):
     g = box_gad(tmp_path / f"{name}.dxf", Box())

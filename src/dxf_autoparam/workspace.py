@@ -45,12 +45,14 @@ The agent — ONE instruction, one session (ai/run.py):
     GET  /api/sheet/ai/usage?period=today|all              tokens and cost per model, from the usage ledger
     GET  /api/sheet/ai/library                             the engineering libraries, and the one this sheet's printed words match
     GET  /api/sheet/ai/models                              the models the picker offers (and the default)
-    POST /api/sheet/ai/run {instruction, scope, options, parent}   start a run (options.model: one of those models; scope {kind: follow}: the parent run's)
-    GET  /api/sheet/ai/progress?run=R1&since=n             its events, state, budget, questions, verdict
+    POST /api/sheet/ai/run {instruction, scope, options, parent, pictures}   start a run (options.model: one of those models; scope {kind: follow}: the
+                                                           parent run's; pictures: [{name, data: base64 or data URL}] the person attaches — ai/attachments.py)
+    GET  /api/sheet/ai/progress?run=R1&since=n             its events, state, budget, questions, verdict (a "brief" event: what went to the model with the words)
     POST /api/sheet/ai/continue {run, answers, note}       after it asked, or after a budget pause
-    POST /api/sheet/ai/note {run, note}                    something said while it works: read at its next turn (no stop)
+    POST /api/sheet/ai/note {run, note, pictures}          something said (and shown) while it works: read at its next turn (no stop)
     POST /api/sheet/ai/stop | apply | revert {run}
-    GET  /api/sheet/ai/runs                                the history; GET /api/sheet/ai/image?run=R1&id=IMG3
+    GET  /api/sheet/ai/runs                                the history; GET /api/sheet/ai/image?run=R1&id=IMG3 (a picture the model was given);
+                                                           GET /api/sheet/ai/attachment?run=R1&id=P1 (one the person attached)
     GET  /api/sheet/ai/requests?run=R1&since=0&limit=50    (&brief=1) every model call: what it was made of, what was the same as the call before, what it cost and
                                                            how much of it the provider cached; &call=57 is that request whole (pictures' bytes left out)
 """
@@ -521,7 +523,8 @@ class SheetSession:
         if (scope or {}).get("kind") == "follow":  # a follow-up keeps where the conversation applies ("please continue" after a whole-drawing run is the drawing)
             parent = self.runs.get(body.get("parent") or "")
             scope = parent.requested_scope if parent is not None else {"kind": "drawing"}
-        run = Run(self, f"R{self.run_n + 1}", body.get("instruction", ""), scope, body.get("options"), parent=body.get("parent"))
+        run = Run(self, f"R{self.run_n + 1}", body.get("instruction", ""), scope, body.get("options"), parent=body.get("parent"),
+                  pictures=body.get("pictures"))
         self.run_n += 1  # an id is used up only by a run that exists
         self.runs[run.id] = run
         self.current_run = run.id
@@ -532,7 +535,7 @@ class SheetSession:
         run = self._run(body.get("run"))
         if self.running():
             raise SheetError("the agent is already working on this sheet")
-        run.resume(answers=body.get("answers"), note=body.get("note", ""), more_turns=body.get("more_turns"))
+        run.resume(answers=body.get("answers"), note=body.get("note", ""), more_turns=body.get("more_turns"), pictures=body.get("pictures"))
         self.current_run = run.id
         return {"ok": True, "run": run.id}
 
@@ -542,8 +545,8 @@ class SheetSession:
         return {"ok": True, "run": run.id, "status": run.status}
 
     def note_run(self, body: dict) -> dict:
-        """What the person says while the agent works: read at its next turn (no stop, no lost call)."""
-        return self._run(body.get("run")).say(body.get("note", ""))
+        """What the person says while the agent works — words and pictures: read at its next turn (no stop, no lost call)."""
+        return self._run(body.get("run")).say(body.get("note", ""), body.get("pictures"))
 
     def apply_run(self, body: dict) -> dict:
         run = self._run(body.get("run"))
@@ -906,6 +909,12 @@ def handle(handler, sheet: SheetSession, method: str, url) -> bool:
                 if png is None:
                     return handler._json({"ok": False, "error": "that picture is no longer kept: ask the agent to look again"}, 404) or True
                 return handler._send(200, png, "image/png", {"Cache-Control": "max-age=3600"}) or True
+            if path == "/api/sheet/ai/attachment":  # a picture the person attached (as the engine re-encoded it and gave it to the model)
+                run = sheet.runs.get(q.get("run", [""])[0] or "")
+                pic = next((a for a in (run.attachments if run is not None else []) if a.id == q.get("id", [""])[0]), None)
+                if pic is None:
+                    return handler._json({"ok": False, "error": "no such picture in that run (pictures are kept while the server runs)"}, 404) or True
+                return handler._send(200, pic.png, "image/png", {"Cache-Control": "max-age=3600"}) or True
             if path == "/api/sheet/autosave":
                 return handler._json(sheet.autosave.status() if sheet.autosave is not None else None) or True
             if path == "/api/sheet/loading":  # no sheet lock: it is asked while a drawing is being read

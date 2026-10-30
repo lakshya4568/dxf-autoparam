@@ -275,9 +275,12 @@ flowchart TD
 ## Part 6 — A whole sheet
 
 A GAD sheet holds many views of one structure. `sheet.py` finds them (frame, panel rules, pieces of geometry merged by
-containment, satellites and titles; tables, notes, title block), `crossview.py` analyses views drawn in projection as
-ONE unit (a face they share is one set-out line) and binds sizes separate views state into a shared parameter, checks
-every change on the regenerated sheet and commits it only when everything holds. `workspace.py` + `static/workspace.html`
+containment, satellites and titles; tables, notes, title block). Each view is a LOCAL SYSTEM — a unit of its own in `crossview.py`
+(its set-out, dependency graph, values and frame) — and views drawn in projection are linked by explicit constraints
+(`projection.py`: their common faces matched by coordinate, a size or a level named across them ONE shared value bound in both,
+the faces kept in line after every change, a side chosen in one chosen in both). Sizes separate views state are bound into a
+shared parameter the same way; every change is checked on the regenerated sheet and committed only when everything holds. A
+sheet saved with views joined in one unit (before 2026-10-29) reads as it was made. `workspace.py` + `static/workspace.html`
 are the canvas workspace; `ai/sheet_ai.py` runs Gemini in checked stages. The full design, the measurements and what
 remains: `docs/MULTIVIEW.md`.
 

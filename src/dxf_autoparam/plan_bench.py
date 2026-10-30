@@ -235,6 +235,28 @@ def box_answer(sm, uid: str, b: Box, handles: dict, names: dict | None = None) -
     return ans
 
 
+ACROSS = ("ClearSpan", "OuterWall")  # the box's sizes across its barrel: what a plan under the section shows too
+
+
+def box_answers(sm, b: Box, handles: dict, names: dict | None = None) -> dict[str, dict]:
+    """The generator's own parametrization on local systems (`SheetModel.systems == "views"`): one answer per view — the section's parts with every
+    size, the plan's parts with the sizes it shows (those across the barrel, on the axis it shares with the section) and no level (a plan states
+    none). Committed section first: the sizes both views name are then one shared value, bound across the projection (projection.py)."""
+    out: dict[str, dict] = {}
+    for uid in sm.units:
+        own = {it.handle for it in sm.unit(uid).an.drawing.items}
+        mine = {n: h for n, h in handles.items() if h in own}
+        if not mine:
+            continue
+        section = any(n in mine for n in ("TopSlab", "BottomSlab"))
+        keep = names if section else {n for n in ACROSS if names is None or n in names}
+        ans = box_answer(sm, uid, b, mine, keep)
+        if not section:
+            ans["levels"] = []
+        out[uid] = ans
+    return dict(sorted(out.items(), key=lambda kv: not any(c["name"] == "TopSlab" for c in kv[1]["components"])))
+
+
 def answer_as_calls(ans: dict) -> list[tuple[str, dict]]:
     """An answer (box_answer's) as the tool calls a model would make to build it: parts by region, named sizes by candidate and
     occurrences (or by their two lines), levels. For a scripted model in tests and the demo — the engine checks every one."""
@@ -441,7 +463,9 @@ def run_case(case: Case, workdir: Path) -> dict:
     t0 = time.perf_counter()
     g = box_gad(workdir / f"{case.id}.dxf", case.box)
     b = g["box"]
-    sm = SheetModel.open(g["path"])
+    # an instruction about the section and its plan (the wings follow) is compiled for one unit: the cases measure the plan compiler, on the
+    # section and plan analysed together
+    sm = SheetModel.open(g["path"], systems="joined")
     uid = next((k for k, u in sm.units.items() if len(u.views) >= 2), None) or max(sm.units, key=lambda k: len(sm.units[k].items))
     sm.commit_answer(uid, box_answer(sm, uid, b, g["handles"]))
     u = sm.unit(uid)

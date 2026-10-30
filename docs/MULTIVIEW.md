@@ -29,8 +29,10 @@ DRAWING      the DXF as read: entities, coordinates, layers, dimensions, texts  
 SEMANTIC     views, tables, notes, title block            sheet.py      (logical: lists of entity indices)
              projection links between views, relations    crossview.py  (view_links, accept_link, relations)
    │
-PARAMETRIC   one program per UNIT (a view, or views drawn in projection, analysed together)
-             shared parameters bound by name into several units          crossview.py (SheetModel)
+PARAMETRIC   one program per UNIT — a LOCAL SYSTEM: one view, its own set-out, dependency graph, values and frame
+             shared parameters bound by name into several units: the ONE authoritative value of a quantity several views show
+             projection links as explicit constraints between local systems  projection.py, crossview.py (SheetModel)
+             (a sheet saved before 2026-10-29 with views joined in one unit reads as it was made: systems = "joined")
    │
 EXECUTION    regenerate only what a change touches; check the whole sheet; commit or refuse     crossview.py
 VALIDATION   per view (collapse, flip, inside-out), across views (every bound size measures the shared value),
@@ -80,9 +82,27 @@ Measured on four real sheets (VERIFIED, `tests/test_sheet.py` + overlays):
   drawn in projection. Strong links (≥ 6 faces and ≥ 25 % of the smaller view's, or ≥ 4 and ≥ 60 %) are taken; weak ones
   are proposals a person or the views stage confirms. Counting every vertex instead linked all 16 views of the PDF
   conversion by chance; exact CAD tolerance missed its noise.
-- **Units.** Linked views are analysed together: a face they share is ONE set-out line, so a change in one view changes
-  the other by construction — no duplicated rule. Distances between them across the projection are sheet layout and
-  are dropped.
+- **Units are local systems (2026-10-29).** Every view is a unit of its own: its analysis, its program (one dependency graph), its
+  values and its frame (frames.py: millimetres from its own origin, RL where it states a level; to the sheet and back exactly). A change
+  regenerates the units it reaches and nothing else; the design intent of a view is tried on that view alone (a joined section and plan
+  took 2–4 minutes per commit, and a clash in the plan refused the section's sides). A projection link joins nothing; it is an explicit
+  constraint (projection.py):
+  - **faces** — the lines of the two views on the link's axis that stand at one sheet coordinate (to the precision the link was found with);
+  - **values** — a size one view names between two such faces, or a level on one, is ONE shared value bound in both, when that view commits
+    (or shares it): the other view takes the same name (its own name for that size gives way), or is bound by its two lines there. A view
+    that cannot take it is said in the commit's `projection` rows, never forced. One undo takes the commit and its bindings back;
+  - **alignment** — after any change the common faces still stand in line: each moves as its counterpart does (check PROJECTION, refusal kind
+    incomplete_model, naming both views and the faces). A held line (dismantled work, a boundary, a part kept as drawn) is no face;
+  - **sides** — a side chosen for a shared value (`anchor`: start = left or bottom, end = right or top, centre) is chosen in every view drawn
+    in projection with it, in that view's own set-out; if one view cannot take it the whole choice is refused and says which view and why. The
+    side the engine derives for a shared value in one view is the first it tries in the other ("drawn in projection with V01, where ClearSpan
+    grows about its centre"), with the faces the first view moves with that value made members of the second view's assembly too (each view's
+    own connectivity would otherwise decide what follows — a wall face connected to the span in the section and not in the plan stayed in the
+    plan while it moved in the section), so both grow alike unless the drawing says otherwise; what still does not line up is refused, said.
+  A sheet saved with joined units (a unit named by two views, U01_03) keeps them (`systems: "joined"` in the project; AUTOPARAM_SYSTEMS=joined
+  opens a fresh sheet that way): its answers number the joined unit's lines, candidates and entities, and are read as they were made.
+- **Units on a joined sheet.** Linked views are analysed together: a face they share is ONE set-out line, so a change in one view changes
+  the other by construction. Distances between them across the projection are sheet layout and are dropped.
 - **Shared parameters.** A size two separate views both state (a dimension or a note in each) is proposed; a person or
   Gemini names it; `share()` binds the name into each unit's answer and every unit is rebuilt by the validated engine —
   refused as a whole when the views do not state one size or it drives none of them.

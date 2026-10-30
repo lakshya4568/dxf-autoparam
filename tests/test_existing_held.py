@@ -17,6 +17,10 @@ from dxf_autoparam.intent import held_own_entities
 from dxf_autoparam.plan_bench import Box, box_answer, box_gad
 from dxf_autoparam.workspace import SheetSession
 
+# these tests measure the engine within ONE unit made of a section and its plan (conftest.joined_units): local systems, each view its own,
+# are test_local_systems.py
+pytestmark = pytest.mark.usefixtures("joined_units")
+
 HELD = ("Foundation", "PitchingDetail")  # the existing work: kept as built
 
 

@@ -478,9 +478,26 @@ export interface PictureMeta {
 }
 
 /** One event of a run, as the engine emitted it (src/dxf_autoparam/ai/run.py, loop.py, narrate.py). Fields depend on `kind`. */
+/** A picture the person attached to what they said (the engine's record of it: never the bytes — GET /api/sheet/ai/attachment has them). */
+export interface AttachedPicture {
+  id: string; // P1, P2 … over the whole run
+  name: string;
+  size: [number, number];
+  caption?: string;
+  turn?: number; // the turn it reached the model before (0: with the instruction)
+}
+
+/** A picture waiting in the composer: what goes to the engine with the next message. */
+export interface PendingPicture {
+  name: string;
+  data: string; // a data URL
+  bytes: number;
+}
+
 export interface RunEvent {
-  kind: string; // run_start · user · stage · turn · call · thought · say · retry · tool_start · tool · image · applied · state · question · verdict · error · note · budget · status
+  kind: string; // run_start · user · brief · stage · turn · call · thought · say · retry · tool_start · tool · image · applied · state · question · verdict · error · note · budget · status
   while_working?: boolean; // a `user` event: said while the agent worked (a note), not an answer or a new instruction
+  pictures?: AttachedPicture[]; // run_start / user: the pictures the person attached to it
   seq?: number;
   t?: number; // seconds since the run started
   turn?: number;

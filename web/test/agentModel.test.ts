@@ -28,6 +28,17 @@ describe("a run becomes a conversation", () => {
     expect(msgs[1].type).toBe("agent");
   });
 
+  it("keeps the pictures the person attached and what went to the model with their words (the engine's brief), on their message", () => {
+    const pic = { id: "P1", name: "site.png", size: [64, 40] as [number, number], turn: 0 };
+    const msgs = buildRunMessages(run([ev("run_start", { instruction: "Name the span", scope: { kind: "drawing" }, pictures: [pic] }),
+      ev("brief", { text: "WHAT THE ENGINE KNOWS OF THIS SHEET: …" }), ev("user", { text: "and look at this", while_working: true, pictures: [{ ...pic, id: "P2" }] })]), true);
+    const users = msgs.filter((m) => m.type === "user");
+    expect(users[0]).toMatchObject({ text: "Name the span", runId: "R1", pictures: [pic], brief: "WHAT THE ENGINE KNOWS OF THIS SHEET: …" });
+    expect(users[1]).toMatchObject({ text: "and look at this", note: true, pictures: [{ id: "P2" }] });
+    expect(users[1]).not.toHaveProperty("brief");
+    expect(msgs.filter((m) => m.type === "agent")).toHaveLength(2);
+  });
+
   it("pairs a call with its result: the tool's name and whether it ran — and keeps nothing it was given or returned", () => {
     const m = agentOf(run([start(), turn(1), ts("c1", "inspect_view", "looking", "inspecting"), tr("c1", "inspect_view", "looking", "inspecting", { said: "look first" })]))[0];
     const [c] = tools(m);

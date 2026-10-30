@@ -6,7 +6,12 @@ import importlib.util
 import re
 from pathlib import Path
 
+import pytest
 from test_design_intent import box_sheet
+
+# these tests measure the engine within ONE unit made of a section and its plan (conftest.joined_units): local systems, each view its own,
+# are test_local_systems.py
+pytestmark = pytest.mark.usefixtures("joined_units")
 
 ROOT = Path(__file__).resolve().parents[1]
 _spec = importlib.util.spec_from_file_location("audit_run", ROOT / "tools" / "audit_run.py")

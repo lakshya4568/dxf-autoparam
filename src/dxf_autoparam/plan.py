@@ -854,9 +854,12 @@ def build_plan(prog: Program, answer: dict, request: dict, sheet: dict | None = 
     # ── 4. generic directives expand to the parts they mean ──
     members: set[str] = set()
     attached: dict[str, str] = {}
+    # the faces a view drawn in projection with this one moves with the same shared value (projection.preferred): members here too, so the
+    # two views move their common faces alike — each view's own connectivity would otherwise decide what follows, and the projection break
+    projected = {d for d in request.get("members_from_projection") or [] if d in prog.analysis.datums and prog.analysis.datums[d].axis == axis}
     if name and axis and prog.params[name].kind != "level":
         members = assembly_lines(prog, parts if parts else None, (core | followers) if parts else None, axis,
-                                 seed={x for p in pairs for x in p}, exclude=fixed_parts)
+                                 seed={x for p in pairs for x in p}, exclude=fixed_parts) | projected
         if parts:
             attached = {n: why for n, why in _attached(prog, parts, members, core | followers, axis).items() if n not in sibling}
     # the structure the size belongs to: what touches it and is the OTHER structure (existing work beside new work, at their joint) does not follow
@@ -907,7 +910,7 @@ def build_plan(prog: Program, answer: dict, request: dict, sheet: dict | None = 
     if name and axis and parts and prog.params[name].kind != "level":
         # the directives above (a generic "what touches it follows", a person's answers) have just named more parts that move with the assembly:
         # its lines are worked out again, or the anchor below would be tried on a smaller assembly than the one that moves
-        members = assembly_lines(prog, parts, core | followers, axis, seed={x for p in pairs for x in p}, exclude=fixed_parts)
+        members = assembly_lines(prog, parts, core | followers, axis, seed={x for p in pairs for x in p}, exclude=fixed_parts) | projected
         attached = {n: why for n, why in _attached(prog, parts, members, core | followers, axis).items() if n not in sibling}
     # ── 6. conflicts between directives, and with the driver ──
     by_target: dict[str, list[dict]] = {}

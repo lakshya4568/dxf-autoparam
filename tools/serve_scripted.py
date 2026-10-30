@@ -14,6 +14,7 @@ questions (one with a recommendation, one where several choices may apply) befor
 from __future__ import annotations
 
 import argparse
+import os
 import tempfile
 import threading
 from http.server import ThreadingHTTPServer
@@ -119,6 +120,9 @@ def main() -> None:
     ap.add_argument("--port", type=int, default=8799)
     ap.add_argument("--delay", type=float, default=0.0, help="seconds each scripted model turn takes (to try Stop)")
     a = ap.parse_args()
+    # the scripted run is written for ONE unit made of the box's section and its plan (its plan has the wings follow the box): the demo and the
+    # agent e2e measure the page, on a sheet of joined units — local systems are measured by tests/test_local_systems.py
+    os.environ.setdefault("AUTOPARAM_SYSTEMS", "joined")
     tmp = Path(tempfile.mkdtemp(prefix="scripted-"))
     g = box_gad(tmp / "box.dxf", Box())
     sheet = SheetSession(g["path"])

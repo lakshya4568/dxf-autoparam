@@ -19,6 +19,10 @@ from dxf_autoparam.crossview import SheetError, SheetModel
 from dxf_autoparam.generic import is_generated
 from dxf_autoparam.workspace import SheetSession
 
+# these tests measure the engine within ONE unit made of a section and its plan (conftest.joined_units): local systems, each view its own,
+# are test_local_systems.py
+pytestmark = pytest.mark.usefixtures("joined_units")
+
 
 def bench_on(tmp_path):
     sheet, uid, _g, _gem = session(tmp_path, [])

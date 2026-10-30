@@ -22,6 +22,10 @@ from dxf_autoparam.intent import _boxes, _geometry, classify
 from dxf_autoparam.plan import build_plan, plan_errors_at, read_instruction, verify_plan, vocabulary
 from dxf_autoparam.plan_bench import Box, _expected_points, box_answer, box_gad
 
+# these tests measure the engine within ONE unit made of a section and its plan (conftest.joined_units): local systems, each view its own,
+# are test_local_systems.py
+pytestmark = pytest.mark.usefixtures("joined_units")
+
 
 @pytest.fixture(autouse=True)
 def bridge_pack(monkeypatch):
@@ -33,8 +37,10 @@ FOLLOW_ALL = "Wing walls follow the box. The foundation follows the box. Do not 
 
 
 def box_sheet(tmp_path, b: Box | None = None, names=None, edit=None):
+    """The generated box, its section and plan analysed as ONE unit (joined, as a sheet saved before local systems): these tests measure the
+    engine within a unit — plans, design intent, anchors. Local systems, each view its own: test_local_systems.py."""
     g = box_gad(tmp_path / "box.dxf", b or Box())
-    sm = SheetModel.open(g["path"])
+    sm = SheetModel.open(g["path"], systems="joined")
     uid = next(k for k, u in sm.units.items() if len(u.views) >= 2)
     ans = box_answer(sm, uid, g["box"], g["handles"], names)
     if edit:

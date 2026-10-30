@@ -1,17 +1,37 @@
 // The persistent message composer. Enter sends, Shift+Enter is a new line. While the agent works the box stays open: Enter says it to the
 // agent, which reads it on its next turn (Stop is its own button). Sending calls a paid model, so the first send for a model (per page
 // session) asks, naming the model (a model listed as free does not ask); the model, the library, how often it pauses, the scope and the cost are always visible under the box.
-import { useEffect, useRef } from "react";
+// Pictures (a screenshot of the drawing, a photo, a page of a standard) go with the message: chosen, pasted or dropped onto the box.
+import { useEffect, useRef, useState } from "react";
 import { useStore } from "../state/store";
-import { agent, canNote, cancelCost, canSend, confirmCost, costAccepted, currentRun, DEFAULT_PAUSE, followedRun, isActive, libraryOn, modelIsFree, note, requestResume, requestSend, setDraft, setModel, setPauseEvery, setScopeKind, setUseLibrary, stop } from "../state/agent";
+import { addPictures, agent, canNote, cancelCost, canSend, confirmCost, costAccepted, currentRun, DEFAULT_PAUSE, followedRun, isActive, libraryOn, modelIsFree, note, PICTURE_LIMITS, removePicture, requestResume, requestSend, setDraft, setModel, setPauseEvery, setScopeKind, setUseLibrary, stop } from "../state/agent";
 import { store as workspace } from "../state/workspace";
 import type { Life } from "./model";
 
 export function Composer({ life }: { life: Life }) {
   const s = useStore(agent, (x) => ({ draft: x.draft, models: x.models, model: x.model, busy: x.busy, confirm: x.confirm, scopeKind: x.scopeKind, run: currentRun(x), ok: canSend(x), paid: costAccepted(x), free: modelIsFree(x),
-    noteOk: canNote(x), library: x.library, libOn: libraryOn(x), pause: x.pauseEvery, follows: !!followedRun(x) }));
+    noteOk: canNote(x), library: x.library, libOn: libraryOn(x), pause: x.pauseEvery, follows: !!followedRun(x), pictures: x.pictures }));
   const ws = useStore(workspace, (x) => ({ sel: x.selection.size, view: x.focusView }));
   const box = useRef<HTMLTextAreaElement>(null);
+  const picker = useRef<HTMLInputElement>(null);
+  const [over, setOver] = useState(false);
+  const imagesOf = (items: DataTransferItemList | null | undefined): File[] =>
+    Array.from(items ?? []).filter((it) => it.kind === "file" && it.type.startsWith("image/")).map((it) => it.getAsFile()).filter((f): f is File => !!f);
+  const onPaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const files = imagesOf(e.clipboardData?.items);
+    if (files.length) {
+      e.preventDefault();
+      void addPictures(files);
+    }
+  };
+  const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    setOver(false);
+    const files = Array.from(e.dataTransfer?.files ?? []).filter((f) => f.type.startsWith("image/"));
+    if (files.length) {
+      e.preventDefault();
+      void addPictures(files);
+    }
+  };
   const active = isActive(s.run);
   const can = s.run?.progress?.can;
   const awaiting = !!can?.answer;
@@ -58,10 +78,32 @@ export function Composer({ life }: { life: Life }) {
           </div>
         </div>
       )}
-      <div className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500/40 dark:focus-within:border-amber-400 dark:focus-within:ring-amber-400/40">
-        <textarea ref={box} rows={1} value={s.draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={onKey} placeholder={placeholder} aria-label="Message to the agent" data-testid="composer-input"
+      <div className={`rounded-lg border bg-white dark:bg-slate-900 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500/40 dark:focus-within:border-amber-400 dark:focus-within:ring-amber-400/40 ${over ? "border-blue-500 dark:border-amber-400" : "border-slate-300 dark:border-slate-600"}`}
+        onDragOver={(e) => { if (Array.from(e.dataTransfer?.items ?? []).some((it) => it.kind === "file")) { e.preventDefault(); setOver(true); } }}
+        onDragLeave={() => setOver(false)} onDrop={onDrop}>
+        {s.pictures.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 px-2 pt-2" data-testid="composer-pictures">
+            {s.pictures.map((p, i) => (
+              <div key={`${p.name}-${i}`} className="relative">
+                <img src={p.data} alt={p.name} title={`${p.name} · ${(p.bytes / 1e6).toFixed(1)} MB`} className="h-12 w-16 rounded border border-slate-300 dark:border-slate-600 object-cover" />
+                <button className="absolute -right-1.5 -top-1.5 h-4 w-4 rounded-full bg-slate-700 text-[10px] leading-4 text-white hover:bg-red-600" onClick={() => removePicture(i)}
+                  aria-label={`Remove ${p.name}`} data-testid="picture-remove">×</button>
+              </div>
+            ))}
+          </div>
+        )}
+        <textarea ref={box} rows={1} value={s.draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={onKey} onPaste={onPaste} placeholder={placeholder} aria-label="Message to the agent" data-testid="composer-input"
           className="block w-full resize-none bg-transparent px-3 pt-2 pb-1 text-[13px] outline-none placeholder:text-slate-400" />
         <div className="flex items-center gap-2 px-2 pb-1.5">
+          <input ref={picker} type="file" accept={PICTURE_LIMITS.types.join(",")} multiple hidden data-testid="picture-input"
+            onChange={(e) => { void addPictures(Array.from(e.target.files ?? [])); e.target.value = ""; }} />
+          <button className="rounded p-0.5 text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 disabled:opacity-40" onClick={() => picker.current?.click()}
+            disabled={s.pictures.length >= PICTURE_LIMITS.count} title={`Attach pictures of the drawing's context (PNG, JPEG, WebP; up to ${PICTURE_LIMITS.count}) — or paste or drop them here`}
+            aria-label="Attach pictures" data-testid="attach">
+            <svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+              <rect x="2.5" y="4" width="15" height="12" rx="2" /><circle cx="7.5" cy="8.5" r="1.5" /><path d="M3 14l4.5-4 3.5 3 2.5-2 3.5 3" />
+            </svg>
+          </button>
           <select className="min-w-0 max-w-[9rem] truncate rounded bg-transparent text-[11px] text-slate-500 hover:text-slate-800 dark:hover:text-slate-200" value={s.scopeKind} onChange={(e) => setScopeKind(e.target.value as typeof s.scopeKind)} title="Where the instruction applies" data-testid="scope">
             <option value="auto">Scope: {scopeLabel}</option>
             <option value="drawing">Whole drawing</option>

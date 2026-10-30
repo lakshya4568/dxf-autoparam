@@ -680,8 +680,9 @@ def stack(prog: Program, axis: str, drivers: list[Driver], members: set[str], st
             continue
         placed[d] = {n: cur[n].get(d, 0.0) for n in cur}
     # protected members that stand on their own must already do what the policy asks of them (those hanging on a
-    # rewritten line are measured after)
-    for d in members - rer - tainted:
+    # rewritten line are measured after) — in their order along the axis: a set's order changes from one process to the next, and a refused side
+    # named other lines in its way each time it was asked
+    for d in sorted(members - rer - tainted, key=lambda d: (an.datums[d].value if d in an.datums else 0.0, d)):
         for drv in drivers:
             want, got = pred[drv.name].get(d, 0.0), cur[drv.name].get(d, 0.0)
             if abs(want - got) > 1e-6:

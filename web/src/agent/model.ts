@@ -2,7 +2,7 @@
 // person gave, a step is one model turn (what it said it was doing, its thinking summary, the tools it called — by name), a notice
 // is a state change, a question or an error the run reported. Everything is a pure function of the run's events and progress, so
 // it is tested without a browser. Tool inputs and outputs are not kept here: the page shows which tool, never what it returned.
-import type { RunEvent, RunProgress, RunQuestion, RunSummary, RunVerdict } from "../api/types";
+import type { AttachedPicture, RunEvent, RunProgress, RunQuestion, RunSummary, RunVerdict } from "../api/types";
 
 export const ACTIVE = new Set(["queued", "running", "stopping"]);
 
@@ -45,6 +45,11 @@ export interface UserMessage {
   /** said while the agent worked (a note), not an instruction or an answer */
   note?: boolean;
   t?: number;
+  runId?: string;
+  /** the pictures the person attached to it */
+  pictures?: AttachedPicture[];
+  /** what went to the model with these words: the engine's brief of the sheet (a `brief` event), written by the engine, not a model */
+  brief?: string;
 }
 
 export interface AgentMessage {
@@ -173,7 +178,8 @@ export function buildRunMessages(run: RunData, isLastRun: boolean): Message[] {
     m.items.push(item);
   };
   const user = (e: RunEvent, text: string): AgentMessage => {
-    messages.push({ type: "user", key: `${run.id}/u${e.seq ?? messages.length}`, text, scope: e.scope, answers: e.answers, note: !!e.while_working, t: e.t });
+    messages.push({ type: "user", key: `${run.id}/u${e.seq ?? messages.length}`, text, scope: e.scope, answers: e.answers, note: !!e.while_working, t: e.t,
+      runId: run.id, ...(e.pictures?.length ? { pictures: e.pictures } : {}) });
     return open(`${run.id}/a${e.seq ?? messages.length}`);
   };
   const said = (e: RunEvent): string => {
@@ -190,6 +196,11 @@ export function buildRunMessages(run: RunData, isLastRun: boolean): Message[] {
       case "user":
         seg = user(e, str(e.text));
         continue;
+      case "brief": { // what went to the model with the instruction: shown with it, folded
+        const u = [...messages].reverse().find((x): x is UserMessage => x.type === "user");
+        if (u && e.text) u.brief = str(e.text);
+        continue;
+      }
       default:
         break;
     }

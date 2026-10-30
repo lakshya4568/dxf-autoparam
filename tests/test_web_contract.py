@@ -14,6 +14,10 @@ from dxf_autoparam.plan_bench import Box
 from dxf_autoparam.production.bench import _sheet
 from dxf_autoparam.workspace import STATIC, SheetSession
 
+# these tests measure the engine within ONE unit made of a section and its plan (conftest.joined_units): local systems, each view its own,
+# are test_local_systems.py
+pytestmark = pytest.mark.usefixtures("joined_units")
+
 ROOT = Path(__file__).resolve().parents[1]
 TYPES = ROOT / "web" / "src" / "api" / "types.ts"
 

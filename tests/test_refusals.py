@@ -22,6 +22,10 @@ from dxf_autoparam.production.bench import _sheet, truth_binding
 from dxf_autoparam.production.bridge import default_bridge
 from dxf_autoparam.refusal import KINDS, summary
 
+# these tests measure the engine within ONE unit made of a section and its plan (conftest.joined_units): local systems, each view its own,
+# are test_local_systems.py
+pytestmark = pytest.mark.usefixtures("joined_units")
+
 BRIDGE = default_bridge().status()
 
 

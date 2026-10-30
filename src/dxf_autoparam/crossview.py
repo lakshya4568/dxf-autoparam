@@ -11,9 +11,12 @@ The layers:
   DRAWING     the sheet as read (entities, coordinates) — never edited; views are lists of its entity indices
   SEMANTIC    views (sheet.py), PROJECTION LINKS between views that show the same planes (a plan under its elevation
               shares its vertical set-out lines; a section beside an elevation shares its levels), shared parameters
-  PARAMETRIC  one program per UNIT (a view, or views linked by projection, analysed together so that a plane they
-              share is ONE set-out line: changing it in one view changes it in the other by construction), plus SHARED
-              parameters bound by name into several units (a size stated in two views that are not drawn in line)
+  PARAMETRIC  one program per UNIT, plus SHARED parameters bound by name into several units — the one authoritative value of a
+              quantity several views show. With LOCAL SYSTEMS (`systems="views"`, the default) a unit is one view: its own
+              set-out, dependency graph, parameters and frame, and a projection link is an explicit constraint between two
+              of them (projection.py: its faces matched, its values shared, its faces kept in line). A sheet saved with
+              JOINED units (`systems="joined"`, before local systems) keeps them: views linked by projection analysed
+              together, a plane they share ONE set-out line.
 
 Nothing here knows a structure type: links come from coinciding set-out lines, shared sizes from what two views both
 state; a person (or the AI) accepts, rejects or renames, and every change is checked on the regenerated sheet.
@@ -158,7 +161,8 @@ class SharedParam:
 
 @dataclass
 class Unit:
-    """Views analysed as one: a view on its own, or views linked by projection (their common planes are one line)."""
+    """Views analysed as one: a view on its own (a local system), or — on a sheet saved with joined units — views linked by projection (their common
+    planes are one line)."""
 
     id: str
     views: list[str]
@@ -214,11 +218,25 @@ class SheetRegen:
         return not self.errors
 
 
+SYSTEMS = ("views", "joined")  # every view a local system of its own, linked by explicit constraints | views in projection joined in one unit
+
+
+def default_systems() -> str:
+    """How a sheet opened fresh is made into units: local systems ("views"), unless AUTOPARAM_SYSTEMS says "joined" (the way sheets were made before
+    local systems — kept for work saved that way, and for the tests that measure a joined unit)."""
+    v = os.environ.get("AUTOPARAM_SYSTEMS", "").strip().lower()
+    return v if v in SYSTEMS else "views"
+
+
 class SheetModel:
-    def __init__(self, dr: Drawing, layout: SheetLayout | None = None, unlinked: set[tuple[str, str]] | None = None):
+    def __init__(self, dr: Drawing, layout: SheetLayout | None = None, unlinked: set[tuple[str, str]] | None = None, systems: str | None = None):
+        systems = systems or default_systems()
+        if systems not in SYSTEMS:
+            raise SheetError(f"systems is one of {', '.join(SYSTEMS)}")
         self.dr = dr
         self.path = dr.path
         self.layout = layout or segment(dr)
+        self.systems = systems
         self.unlinked: set[tuple[str, str]] = set(unlinked or ())
         self.links = view_links(dr, self.layout)
         self.units: dict[str, Unit] = {}
@@ -264,9 +282,9 @@ class SheetModel:
         self.runs: list[dict] = []  # finished agent runs (a log, not state: undo does not touch it)
 
     @classmethod
-    def open(cls, path: str) -> SheetModel:
+    def open(cls, path: str, systems: str | None = None) -> SheetModel:
         dr, _ = read_dxf(path)
-        return cls(dr)
+        return cls(dr, systems=systems)
 
     # ── units ────────────────────────────────────────────────────────────────
 
@@ -285,7 +303,7 @@ class SheetModel:
             return x
 
         for lk in self.links:
-            if self.is_linked(lk):
+            if self.systems == "joined" and self.is_linked(lk):  # local systems: a link is a constraint between two units (projection.py)
                 parent[find(lk["b"])] = find(lk["a"])
         groups: dict[str, list[Group]] = {}
         for v in views:
@@ -491,9 +509,25 @@ class SheetModel:
                 raise SheetError(f"no value {name}: a shared name, or unit.name")
         return out
 
+    @staticmethod
+    def _memo_unit(u: Unit, key: tuple, fn):
+        """What depends only on a unit's program and the values it is regenerated at — its regeneration, its plans' checks, the members it runs into
+        each other, the corners it pulls apart — kept while the program is the same object (a rebuilt unit is a new program): a change of one view
+        regenerates that view, and a view it does not reach is not worked out again for every preview."""
+        m = u.__dict__.get("_regen_memo")
+        if m is None or m[0] is not u.prog:
+            m = u.__dict__["_regen_memo"] = (u.prog, {})
+        store = m[1]
+        if key not in store:
+            if len(store) >= 64:
+                store.clear()
+            store[key] = fn()
+        return store[key]
+
     def regenerate(self, changes: dict[str, float] | None = None, units: set[str] | None = None) -> SheetRegen:
         """The sheet with `changes` (shared names, or "U…" + "." + local names) on top of the current values. Only units
-        that are built and have values (or are touched) are regenerated; every other entity stays as drawn."""
+        that are built and have values (or are touched) are regenerated; every other entity stays as drawn — and a unit whose program and values
+        are those of an earlier regeneration is not worked out again (_memo_unit)."""
         changes = changes or {}
         todo = (units or set()) | self._touched(changes)
         pts, radius, texts, turns = {}, {}, {}, {}
@@ -506,14 +540,16 @@ class SheetModel:
 
         by_view: dict[str, int] = {}
         measured: dict[str, dict[str, float]] = {}
+        own: dict[str, dict[str, float]] = {}  # shared name → unit → that view's own value of it at these values
         regenerated: dict[str, tuple] = {}
         absent: set[int] = set()
         for uid in sorted(todo):
             u = self.unit(uid)
             assert u.prog is not None
             vals = self._values_for(u, changes)
+            vkey = tuple(sorted(vals.items()))
             try:
-                r = regenerate_program(u.prog, vals)
+                r = self._memo_unit(u, ("regen", vkey), lambda u=u, vals=vals: regenerate_program(u.prog, vals))
             except (KeyError, ExprError, ArithmeticError) as exc:
                 fail("SOLVER", uid, f"{uid}: cannot regenerate: {exc}")
                 continue
@@ -541,14 +577,17 @@ class SheetModel:
                                 + ("; a value above 0 draws them again" if r.absent else ""))
             plans = [p for p in (u.answer or {}).get("plans", []) if p.get("status") == "accepted"]
             if plans:  # what a person accepted for this unit holds at the values asked for, not only at the ones tested
-                for e in plan_errors_at(u.prog, plans, vals):
+                for e in self._memo_unit(u, ("plans", vkey), lambda u=u, plans=plans, vals=vals: plan_errors_at(u.prog, plans, vals)):
                     fail("SOLVER" if e.startswith("cannot evaluate") else "PLAN", uid, f"{uid}: {e}", issue=e)
                 if any(not design_intent.derived(p) for p in plans):
                     # the crossing check belongs to a plan a person accepted: the engine's own plans (design intent) say which side of a size stays and
                     # must not make the unit stricter than it was — a size that crosses members was said, when the intent was derived, and is still allowed
-                    moved_k = {k for k, p in r.pts.items() if any(abs(a[0] - b[0]) > 1e-9 or abs(a[1] - b[1]) > 1e-9
-                                                                  for a, b in zip(p, u.sub.items[k].pts, strict=False))}
-                    found = clashes(u.prog, r.pts, moved_k)[:5]
+                    def crossed(u=u, r=r) -> list:
+                        moved_k = {k for k, p in r.pts.items() if any(abs(a[0] - b[0]) > 1e-9 or abs(a[1] - b[1]) > 1e-9
+                                                                      for a, b in zip(p, u.sub.items[k].pts, strict=False))}
+                        return clashes(u.prog, r.pts, moved_k)[:5]
+
+                    found = self._memo_unit(u, ("clash", vkey), crossed)
                     if found:
                         from .coverage import _entity_parts
 
@@ -562,7 +601,7 @@ class SheetModel:
                                             "should follow, say which part it is")
             if (u.prog.intent.get("parts") or {}) and any(abs(vals.get(n, p.value) - p.value) > 1e-12 for n, p in u.prog.params.items()):
                 # parts met along a line they share stay met as it moves; entities that touched as drawn without one can come apart: said
-                for t in torn(u.prog, r.pts, limit=4):
+                for t in self._memo_unit(u, ("torn", vkey), lambda u=u, r=r: torn(u.prog, r.pts, limit=4)):
                     i, j = t["entities"]
                     who = [f"{entity_id(u.sub.items[k])} ({', '.join(ps) if ps else 'no part'})" for k, ps in zip((i, j), t["parts"], strict=True)]
                     warnings.append(f"{uid}: {who[0]} no longer touches {who[1]}: the change pulled them apart — look at the corner")
@@ -600,17 +639,32 @@ class SheetModel:
                     a, c = prm.measures
                     got = abs(r.datum[c] - r.datum[a]) * um
                     measured.setdefault(p.name, {})[uid] = got
+                    own.setdefault(p.name, {})[uid] = vals.get(b.param, prm.value)  # what this view's own value is at these values
             for p in self.shared.values():
                 want = changes.get(p.name, self._shared_now(p))
                 for b in p.bindings:
                     if b.unit == uid and b.status == "worked_out" and abs(want - p.value) > 1e-9:
                         fail("WORKED_OUT", uid, f"{p.name} cannot change in {uid}: {b.reason}", value=p.name, param=b.param)
         for name, per in measured.items():
-            want = changes.get(name, self._shared_now(self._shared_by_name()[name]))
+            p = self._shared_by_name()[name]
+            want = changes.get(name, self._shared_now(p))
             for uid, got in per.items():
-                if abs(got - want) > max(0.5, 1e-4 * abs(want)):
-                    fail("FOLLOW", uid, f"{name}: {uid} measures {got:.1f} mm, not {want:g} — that view did not follow", value=name,
-                         measured_mm=round(got, 3), wanted_mm=want)
+                # a view follows the shared value once it is changed; while it is the value as drawn, each view measures its own drawn size —
+                # views share a size they state within a millimetre (share), and one drawn 251 beside 250 is that view as drawn, not a view that
+                # did not follow (every view was refused there, the sheet untouched)
+                mine = own.get(name, {}).get(uid, want)
+                drawn_alike = abs(mine - p.value) <= max(1.0, 2e-3 * abs(p.value))  # what share takes for one size: never another size of the view
+                target = want if abs(want - p.value) > 1e-9 or not drawn_alike else mine
+                if abs(got - target) > max(0.5, 1e-4 * abs(target)):
+                    fail("FOLLOW", uid, f"{name}: {uid} measures {got:.1f} mm, not {target:g} — that view did not follow", value=name,
+                         measured_mm=round(got, 3), wanted_mm=target)
+        if self.systems == "views" and self.shared and regenerated:
+            # local systems drawn in projection: the faces of a value they share stand in line after the change as they did as drawn — measuring
+            # the same size is not enough (one view growing it from the left, the other about its centre, both measure it)
+            from .projection import misaligned
+
+            for f in misaligned(self, {uid: dict(d) for uid, (_u, _v, d) in regenerated.items()}):
+                fail(f.pop("check"), f.pop("unit"), f.pop("message"), **f)
         for e in self._domain_errors(regenerated):
             fail("RULE", e.split(": ", 1)[0], e)
         warnings += self._overlaps(changed, pts)
@@ -868,18 +922,38 @@ class SheetModel:
         before = self._state()
         measured = []
         bindings = []
+        levels = 0  # how many targets are levels: a level is shared with levels only, in metres
         for t in targets:
             uid = t[0]
             u = self.unit(uid)
             assert u.an is not None
             assert u.prog is not None
             an, um = u.an, u.sub.units_mm
+            if len(t) == 2 and t[1] in u.prog.params and u.prog.params[t[1]].kind == "level":
+                # a level: the same reduced level in another view (a section beside its elevation shows it on one face) — bound by its name, its
+                # own name giving way to the shared one
+                if t[1] != name:
+                    if name in u.prog.params:
+                        self._restore(before)
+                        raise SheetError(f"{name} already names something else in {uid}: rename it there first")
+                    u.answer = rename_in_answer(u.answer or copy.deepcopy(EMPTY_ANSWER), t[1], name)
+                    u.prog = None
+                    u = self.unit(uid)
+                    assert u.prog is not None
+                measured.append((uid, u.prog.params[name].value))
+                bindings.append(Binding(unit=uid, param=name))
+                levels += 1
+                continue
             if len(t) == 2 and t[1] not in an.clusters and t[1] in u.prog.params:  # the unit's own value, by its name
                 prm = u.prog.params[t[1]]
                 measures = prm.measures
                 cid = next((c.id for c in an.clusters.values() if c.name == t[1]), None)
                 if cid is None and measures is None:
                     raise SheetError(f"{t[1]} in {uid} is not measured between two lines")
+                if t[1] != name and (name in u.prog.params or any(r.name == name for r in u.prog.relations)):
+                    # the unit already calls ANOTHER size by the shared name: renaming its own value to it would give two sizes one name
+                    self._restore(before)
+                    raise SheetError(f"{name} already names something else in {uid}: rename it there first")
                 if u.answer and t[1] != name and any(p.get("name") == t[1] for p in u.answer.get("parameters", [])):
                     u.answer = rename_in_answer(u.answer, t[1], name)  # its own name gives way to the shared one
                     u.prog = None
@@ -920,13 +994,17 @@ class SheetModel:
             u.answer = answer
             u.prog = None
             bindings.append(b)
+        if levels and levels != len(targets) or existing is not None and (existing.unit == "m") != bool(levels):
+            self._restore(before)
+            raise SheetError(f"{name}: a level is shared with levels only")
         ref = existing.value if existing is not None else measured[0][1]
-        bad = [(uid, v) for uid, v in measured if abs(v - ref) > max(1.0, 2e-3 * ref)]
+        unit_word = "m" if levels else "mm"
+        bad = [(uid, v) for uid, v in measured if abs(v - ref) > (1e-3 if levels else max(1.0, 2e-3 * ref))]
         if bad:
             self._restore(before)
-            shown = ([f"{', '.join(b.unit for b in existing.bindings)}: {existing.value:.1f} mm"] if existing is not None else []) + \
-                [f"{u}: {v:.1f} mm" for u, v in measured]
-            raise SheetError(f"{name}: the views do not state one size ({', '.join(shown)})")
+            shown = ([f"{', '.join(b.unit for b in existing.bindings)}: {existing.value:.3f} {unit_word}"] if existing is not None else []) + \
+                [f"{u}: {v:.3f} {unit_word}" for u, v in measured]
+            raise SheetError(f"{name}: the views do not state one {'level' if levels else 'size'} ({', '.join(shown)})")
         if existing is not None:
             p = existing
             now = self._shared_now(p)
@@ -936,7 +1014,7 @@ class SheetModel:
             sid = f"S{len(self.shared) + 1}"
             while sid in self.shared:
                 sid = f"S{int(sid[1:]) + 1}"
-            p = SharedParam(id=sid, name=name, label=label or name, value=ref, unit="mm", bindings=bindings, evidence=list(evidence or []), source=source)
+            p = SharedParam(id=sid, name=name, label=label or name, value=ref, unit=unit_word, bindings=bindings, evidence=list(evidence or []), source=source)
             self.shared[sid] = p
             now = ref
         for b in bindings:
@@ -956,6 +1034,14 @@ class SheetModel:
         self.history.append(before)
         self.future.clear()
         self.revision += 1
+        if self.systems == "views" and not self._trial and not getattr(self, "_projecting", False):
+            # local systems, in this step: each view just bound works out which side of the value stays (its design intent, around the value —
+            # the side a view drawn in projection already gives it first), then binds what it names across its projection links (projection.bind)
+            depth = len(self.history)
+            for uid in dict.fromkeys(b.unit for b in bindings if b.status == "drives"):
+                self.resolve_intent(uid)
+                self._project(uid)
+            del self.history[depth:]
         return p
 
     @staticmethod
@@ -1022,6 +1108,54 @@ class SheetModel:
 
     def anchor(self, name: str, uid: str, mode: str, decisions: dict[str, str] | None = None, keep_as_drawn: list[str] | None = None,
                dry: bool = False, dismantle: list[str] | None = None) -> dict:
+        """Choose how a value grows (`_anchor_one`, below) — on local systems in every view drawn in projection with this one that shares it as well,
+        in that view's own set-out: the views show one structure and must grow alike (projection.py). All or nothing, one undo: a view that cannot
+        take the side refuses the choice, and the refusal says which view and why (its failures, for the question a person is asked)."""
+        others = self._projected(name, uid) if self.systems == "views" else []
+        if not others:
+            return self._anchor_one(name, uid, mode, decisions, keep_as_drawn, dry, dismantle)
+        before, rev, depth, future, live = self._state(), self.revision, len(self.history), list(self.future), self._live
+        touched = [uid, *others]
+
+        def put_back() -> None:
+            self._restore(before)
+            del self.history[depth:]
+            self.future, self.revision, self._live = future, rev, live
+            for k in touched:
+                self.units[k].prog = None
+
+        try:
+            res = self._anchor_one(name, uid, mode, decisions, keep_as_drawn, False, dismantle)
+            also = []
+            for other in others:
+                try:
+                    got = self._anchor_one(name, other, mode)
+                except SheetError as exc:
+                    raise SheetError(f"{name}: {mode} holds in {uid}, but {other} is drawn in projection with it and cannot take it — {exc}",
+                                     failures=exc.failures) from exc
+                also.append({"unit": other, "mode": got.get("mode"), "why": got.get("why")})
+        except SheetError:
+            put_back()
+            raise
+        if dry:
+            put_back()
+            return {"ok": True, "dry": True, "plan": res.get("plan"), "projection": others}
+        del self.history[depth + 1:]  # one choice, one undo, in every view it was made in
+        return {**res, "projection": also}
+
+    def _projected(self, name: str, uid: str) -> list[str]:
+        """The other units a shared value is bound in that are drawn in projection with this one on the value's own axis."""
+        from .projection import ends, link_between
+
+        p = self._shared_by_name().get(name)
+        mine = next((b for b in p.bindings if b.unit == uid), None) if p else None
+        here = ends(self, mine) if mine is not None else None
+        if here is None:
+            return []
+        return sorted(b.unit for b in p.bindings if b.unit != uid and b.status == "drives" and link_between(self, uid, b.unit, here[0]) is not None)
+
+    def _anchor_one(self, name: str, uid: str, mode: str, decisions: dict[str, str] | None = None, keep_as_drawn: list[str] | None = None,
+                    dry: bool = False, dismantle: list[str] | None = None) -> dict:
         """Choose how a value grows in one unit: `start` — its start line stays and everything beyond grows away from it;
         `end` — the other way; `centre` — the assembly stays about the centre line. Written as an accepted plan for the
         WHOLE assembly the value belongs to (every other size keeps its drawn value: walls, haunches, slabs), committed
@@ -1742,11 +1876,25 @@ class SheetModel:
         lk = next((x for x in self.links if {x["a"], x["b"]} == {a, b}), None)
         if lk is None:
             raise SheetError(f"{a} and {b} share no set-out lines: they cannot be drawn in projection")
+        depth = len(self.history)
         self._push()
         key = (lk["a"], lk["b"])
         self.accepted.add(key)
         self.unlinked.discard(key)
         self._group_units(self.units)
+        self._project_link(lk, depth)
+
+    def _project_link(self, lk: dict, depth: int) -> list[dict]:
+        """On local systems, a link just taken binds what its two views already name (projection.bind), in the step that took it."""
+        if self.systems != "views" or not self.is_linked(lk):
+            return []
+        rows: list[dict] = []
+        for v in (lk["a"], lk["b"]):
+            uid = self.unit_of_view.get(v)
+            if uid and self.units[uid].answer:
+                rows += self._project(uid)
+        del self.history[depth + 1:]
+        return rows
 
     def set_answer(self, uid: str, answer: dict) -> None:
         """A unit's parametrization replaced (the AI agent's, or a person's), undoable."""
@@ -1807,7 +1955,12 @@ class SheetModel:
         build = self._trial_builder(uid)
         base = design_intent.strip(answer)
         prog, _rep = build(base)
-        found = design_intent.resolve(prog, base, build, sheet=self._plan_sheet(uid))
+        prefer = None
+        if self.systems == "views":  # a value shared with a view drawn in projection grows here first as it grows there
+            from .projection import preferred
+
+            prefer = preferred(self, uid)
+        found = design_intent.resolve(prog, base, build, sheet=self._plan_sheet(uid), prefer=prefer)
         return design_intent.with_intent(base, found), found
 
     def _plain(self, uid: str) -> tuple[Program, dict]:
@@ -1838,7 +1991,38 @@ class SheetModel:
         (unless `discard_values`: the person said so) — a person's edit is never dropped silently.
 
         `keep_unnamed_as_drawn`: in the same step, the measured sizes nobody named or used are kept as drawn (generic.py) — the unit is
-        left with the values somebody chose. Only when the drawing comes out exactly as it was; otherwise they stay inputs, and it is said."""
+        left with the values somebody chose. Only when the drawing comes out exactly as it was; otherwise they stay inputs, and it is said.
+
+        On local systems the values the unit names on the axis of a projection link are then bound into the view drawn in projection with it,
+        in the same step (one undo): one shared value each, and that view's design intent derived again around them — tried first on the side this
+        view takes (projection.py). What could not be bound is said (`projection`), never forced."""
+        depth = len(self.history)
+        res = self._commit_with_intent(uid, answer, expected_revision, discard_values, keep_unnamed_as_drawn, intent)
+        if self.systems == "views" and not self._trial and not getattr(self, "_projecting", False):
+            rows = self._project(uid)
+            if rows:
+                res["projection"] = rows
+                del self.history[depth + 1:]  # the binding is part of the commit: one undo takes both back
+        return res
+
+    def _project(self, uid: str) -> list[dict]:
+        """projection.bind for a unit just committed, and the design intent of every view it bound something into derived again."""
+        from . import projection
+
+        self._projecting = True
+        try:
+            rows = projection.bind(self, uid)
+            into = sorted({r["into"] for r in rows if r.get("bound")})
+            for other in into:
+                got = self.resolve_intent(other).get(other) or {}
+                if got.get("skipped"):
+                    rows.append({"into": other, "intent_skipped": got["skipped"][:300]})
+        finally:
+            self._projecting = False
+        return rows
+
+    def _commit_with_intent(self, uid: str, answer: dict, expected_revision: int | None, discard_values: bool, keep_unnamed_as_drawn: bool,
+                            intent: bool) -> dict:
         if not intent or os.environ.get("AUTOPARAM_DESIGN_INTENT", "").strip().lower() in ("0", "off", "no", "false"):
             return self._commit_answer(uid, answer, expected_revision, discard_values, keep_unnamed_as_drawn)
         base = design_intent.strip(answer)
@@ -2115,15 +2299,18 @@ class SheetModel:
         if lk is None:
             raise SheetError(f"{a} and {b} have no projection link")
         key = (lk["a"], lk["b"])
+        depth = len(self.history)
         self._push()
         if linked:
             self.unlinked.discard(key)
             if not lk["strong"]:
                 self.accepted.add(key)
-        else:
+        else:  # on local systems the values bound across it stay shared (each a binding of its own, `unshare` takes one apart)
             self.accepted.discard(key)
             self.unlinked.add(key)
         self._group_units(self.units)
+        if linked:
+            self._project_link(lk, depth)
 
     # ── the views themselves: a person's corrections ─────────────────────────
 
@@ -2367,7 +2554,7 @@ class SheetModel:
                             "confidence": g.confidence, "evidence": g.evidence, "questions": g.questions, "counts": g.counts})
             views.append(row)
         return {"format": "dxf-autoparam/sheet-1", "dxf": self.path, "fingerprint": self.fingerprint(), "revision": self.revision,
-                "reader": {"curves": self.dr.curves},
+                "reader": {"curves": self.dr.curves}, "systems": self.systems,
                 "unlinked": sorted(list(k) for k in self.unlinked),
                 "answers": {uid: u.answer for uid, u in self.units.items() if u.answer},
                 "shared": [asdict(p) for p in self.shared.values()], "values": self.values, "originals": originals,
@@ -2384,7 +2571,11 @@ class SheetModel:
         # read as the work was made: its datum, gap, candidate and region ids number the structure as it was read then (a project saved
         # before free curves were read as structure has no "reader" record, and keeps reading them as marks; a fresh start reads them)
         dr, _ = read_dxf(dxf or d["dxf"], ReadOptions(curves=bool((d.get("reader") or {}).get("curves", False))))
-        sm = cls(dr, unlinked={tuple(k) for k in d.get("unlinked", [])})
+        # read as the work was made, again: a project saved before local systems whose units joined views in projection (a unit named by two
+        # views, U01_03) keeps them joined — its answers number lines, candidates and entities of the joined unit; one without such a unit
+        # (every unit one view) is the same units either way and reads as local systems
+        joined = any("_" in k for k in [*d.get("answers", {}), *d.get("values", {}), *(b["unit"] for p in d.get("shared", []) for b in p["bindings"])])
+        sm = cls(dr, unlinked={tuple(k) for k in d.get("unlinked", [])}, systems=d.get("systems") or ("joined" if joined else "views"))
         if sm.fingerprint() != d.get("fingerprint"):
             raise SheetError("the DXF has changed since this project was saved: its views and values may not match")
         if d.get("accepted"):

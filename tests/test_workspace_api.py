@@ -18,6 +18,10 @@ from test_sheet import built_sheet
 from dxf_autoparam.server import Session, make_handler
 from dxf_autoparam.workspace import SheetSession
 
+# these tests measure the engine within ONE unit made of a section and its plan (conftest.joined_units): local systems, each view its own,
+# are test_local_systems.py
+pytestmark = pytest.mark.usefixtures("joined_units")
+
 
 class _InProcessServer:
     """In-process HTTP dispatch through the real BaseHTTPRequestHandler when socket.bind is blocked by a sandbox."""

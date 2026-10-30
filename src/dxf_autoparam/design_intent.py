@@ -324,7 +324,8 @@ def _named(prog: Program, blocked: list[dict]) -> list[dict]:
 
 
 def _plans_for(prog: Program, base: dict, sheet: dict | None, group: list[Driver], asm: str, suffix: str, policy: str, centre: str | None,
-               evidence: list[str], status: str, follow_all: bool, memo: dict | None = None) -> tuple[list[dict] | None, str, str | None, dict]:
+               evidence: list[str], status: str, follow_all: bool, memo: dict | None = None,
+               projected: list[str] | None = None) -> tuple[list[dict] | None, str, str | None, dict]:
     """One accepted plan per driver of the group, all with this anchor: (plans, "", None, {}); or (None, why, the driver that has none, what stood
     in the way: {names: the sizes it is about, blocked: the lines nothing may move}). `memo`: plans already built for the same request on the
     same program — a driver's plan depends on its own request only, not on the others of the group, and the group is tried again as it shrinks."""
@@ -341,7 +342,8 @@ def _plans_for(prog: Program, base: dict, sheet: dict | None, group: list[Driver
     for d in group:
         req: dict = {"id": f"I_{d.name}{suffix}", "driver": {"parameter": d.name, "pairs": [list(p) for p in d.pairs],
                                                              "extra_pairs": [list(p) for p in d.extra]},
-                     "anchor": {"policy": policy, "centre": centre, "source": SOURCE}, "directives": [dict(FOLLOW)]}
+                     "anchor": {"policy": policy, "centre": centre, "source": SOURCE}, "directives": [dict(FOLLOW)],
+                     **({"members_from_projection": sorted(projected)} if projected else {})}
         plan = plan_of(req)
         if plan["status"] == "needs_decision":
             if any(not str(q["about"]).startswith("attached:") for q in plan["questions"]):
@@ -401,19 +403,21 @@ def _holds(prog1: Program, base: dict, plans: list[dict], build: Build, group: l
 
 
 def _culprit(prog: Program, base: dict, sheet: dict | None, build: Build, asm: Assembly, suffix: str, policy: str, centre: str | None,
-             evidence: list[str], status: str, group: list[Driver], watch: list[Driver] | None, memo: dict | None = None) -> Driver | None:
+             evidence: list[str], status: str, group: list[Driver], watch: list[Driver] | None, memo: dict | None = None,
+             projected: list[str] | None = None) -> Driver | None:
     """The size of the group the rest can do without: with it left out the candidate holds. None when no single size is the cause. `memo`: the
     attempt's plans per driver (each depends on its own request only) — leaving each size out in turn otherwise built every other one's again."""
     for d in group:
         rest = [x for x in group if x is not d]
-        plans, _why, _who, _x = _plans_for(prog, base, sheet, rest, asm.id, suffix, policy, centre, evidence, status, False, memo)
+        plans, _why, _who, _x = _plans_for(prog, base, sheet, rest, asm.id, suffix, policy, centre, evidence, status, False, memo, projected)
         if plans is not None and _holds(prog, base, plans, build, rest, watch)[0]:
             return d
     return None
 
 
 def _attempt(prog: Program, base: dict, sheet: dict | None, build: Build, asm: Assembly, suffix: str, policy: str, centre: str | None,
-             evidence: list[str], status: str, tried: list[dict], watch: list[Driver] | None = None) -> tuple[list[dict], list[dict]] | None:
+             evidence: list[str], status: str, tried: list[dict], watch: list[Driver] | None = None,
+             projected: list[str] | None = None) -> tuple[list[dict], list[dict]] | None:
     """This anchor for the assembly: (its plans, the sizes left out of it), or None. A size that breaks it is left out — it keeps the set-out's
     direction, and is said — and the rest are tried again: one size must not undo the intent of all the others."""
     group = list(asm.drivers)
@@ -424,7 +428,7 @@ def _attempt(prog: Program, base: dict, sheet: dict | None, build: Build, asm: A
         who: str | None = None
         why = ""
         for follow_all in (False, True):  # a part only hung on the assembly by the set-out stays; when that breaks a binding, it follows
-            plans, why, who, extra = _plans_for(prog, base, sheet, group, asm.id, suffix, policy, centre, evidence, status, follow_all, memo)
+            plans, why, who, extra = _plans_for(prog, base, sheet, group, asm.id, suffix, policy, centre, evidence, status, follow_all, memo, projected)
             if plans is None:
                 tried.append({"policy": policy, "centre": centre, "why": why, "left_out": [d["name"] for d in dropped],
                               "names": extra.get("names", []), "blocked": extra.get("blocked", [])})
@@ -441,7 +445,7 @@ def _attempt(prog: Program, base: dict, sheet: dict | None, build: Build, asm: A
             group = [d for d in group if d.name != who]
             continue
         # a size that is NOT being planned lost its binding (or now hangs on what the others move): one size of the group is the cause
-        culprit = _culprit(prog, base, sheet, build, asm, suffix, policy, centre, evidence, status, group, watch, memo)
+        culprit = _culprit(prog, base, sheet, build, asm, suffix, policy, centre, evidence, status, group, watch, memo, projected)
         if culprit is None:
             return None
         dropped.append({"name": culprit.name, "why": f"it would take the binding of {who or 'another size'} away: {why}"})
@@ -497,9 +501,13 @@ def _settled_for(answer: dict, axis: str, names: set[str]) -> list[dict]:
     return [s for s in answer.get("settled", []) if s.get("axis") == axis and set(s.get("drivers") or []) & names]
 
 
+_GROWS = {"start_fixed": "keeps its start", "end_fixed": "keeps its end", "centered": "grows about its centre"}
+
+
 def _decide(prog: Program, base: dict, sheet: dict | None, build: Build, axis: str, asm: Assembly, suffix: str,
-            watch: list[Driver]) -> tuple[list[dict], AxisDecision]:
-    """The anchor of one assembly on one axis: its plans, and the decision with its evidence."""
+            watch: list[Driver], prefer: dict[str, dict] | None = None) -> tuple[list[dict], AxisDecision]:
+    """The anchor of one assembly on one axis: its plans, and the decision with its evidence. `prefer`: the side a size already has in a view drawn
+    in projection with this one (projection.preferred) — tried before anything this view's own drawing says, after a person's choice here."""
     parts = prog.intent.get("parts") or {}
     names = [d.name for d in asm.drivers]
     sides = SIDES[axis]
@@ -524,6 +532,16 @@ def _decide(prog: Program, base: dict, sheet: dict | None, build: Build, axis: s
                 return got[0], AxisDecision(axis, asm.id, pol, centre, "person", ev, names, got[1], tried)
         return [], AxisDecision(axis, asm.id, pol, centre, "person", ev, names, [], tried)
 
+    # 0. drawn in projection with a view where a size of this assembly already grows one way: the two views show one structure, and grow alike
+    pref = next(((d.name, (prefer or {})[d.name]) for d in asm.drivers if d.name in (prefer or {})), None)
+    if pref is not None:
+        who, p = pref
+        ev = [f"drawn in projection with {p['view']}, where {'a person chose that ' if p.get('person') else ''}{who} {_GROWS[p['policy']]}"
+              + (f" ({p['centre']} here)" if p.get("centre") and p["policy"] == "centered" else "") + ": the views grow alike"]
+        # the faces the other view moves with this value are members here too (projection.preferred): both views move them alike
+        got = _attempt(prog, base, sheet, build, asm, suffix, p["policy"], p.get("centre"), ev, "decided", tried, watch, p.get("members"))
+        if got:
+            return done(got, p["policy"], p.get("centre"), "decided", ev)
     for c, n, total in _centres(prog, asm):  # 1. symmetry
         of_all = f"{n} of the {total} faces" if n < total else f"the {n} faces"
         ev = [f"{of_all} of the structure mirror about {c} ({_centre_kind(prog, c)}): it stays about it, each side moves half"]
@@ -558,10 +576,11 @@ def _decide(prog: Program, base: dict, sheet: dict | None, build: Build, axis: s
 
 
 def resolve(prog: Program, answer: dict, build: Build, sheet: dict | None = None, axes: tuple[str, ...] = ("x", "y"),
-            seed: list[dict] | None = None) -> Intent:
+            seed: list[dict] | None = None, prefer: dict[str, dict] | None = None) -> Intent:
     """The design intent of every assembly of a unit. `prog` is the program of `answer` WITHOUT derived plans; `build(answer)` makes the program of
     any other answer (to try a candidate for real). Nothing is changed: the plans come back, the caller stores them.
-    `axes`: only these are decided; `seed`: the derived plans of the others, already decided, which the ones decided here are tried beside."""
+    `axes`: only these are decided; `seed`: the derived plans of the others, already decided, which the ones decided here are tried beside;
+    `prefer`: size → the side it has in a view drawn in projection with this one ({policy, centre, view, person}), tried first (_decide)."""
     base = strip(answer)
     for p in seed or []:
         base = _add(base, p)
@@ -575,7 +594,7 @@ def resolve(prog: Program, answer: dict, build: Build, sheet: dict | None = None
         asms = assemblies(prog, parts, axis, group, sheet)
         for asm in asms:
             suffix = f"@{asm.id}" if len(asms) > 1 else ""
-            plans, decision = _decide(prog, base, sheet, build, axis, asm, suffix, found)
+            plans, decision = _decide(prog, base, sheet, build, axis, asm, suffix, found, prefer)
             intent.plans += plans
             intent.axes.append(decision)
             for p in plans:  # the next assembly is tried with this one's plans in place

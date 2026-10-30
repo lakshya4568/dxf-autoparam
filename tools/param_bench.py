@@ -22,6 +22,9 @@ The metrics (docs/PARAM_BENCH.md), all measured by the engine on the drawing's o
   cost           (cases with a recorded run) the run's model calls and tokens from the ledger, and per parametrized dimension. The ledger has no
                  price unless VERTEX_PRICES was set: tokens are the cost measure then
 
+  units      a drawing without saved work is read as local systems (every view a unit; views drawn in projection linked, the values named across
+             their common faces shared — projection.py), as the server opens it; saved work is read as it was made (joined units stay joined).
+             AUTOPARAM_SYSTEMS=joined measures the joined reading instead
   baseline   the saved work as it is (a drawing without saved work: the engine's own reading, which names nothing — 0 by definition)
   ceiling    every dimension the agent's `coverage` tool lists as not driven, bound through the same tool path a model's call takes
              (define_parameters with the dimension's id, validated, taken back if it breaks the drawing), then committed with the whole-sheet
@@ -378,10 +381,14 @@ def run_case(case: dict, ceiling: bool, domain: str | None, annotation_limit: in
     saved = str(Path(case["saved"]).expanduser()) if case.get("saved") else None
     sm = SheetModel.load(saved, dxf=dxf) if saved else SheetModel.open(dxf)
     if gen is not None and case.get("expert"):  # the generator's own parametrization: the right names on every occurrence, its parts
-        from dxf_autoparam.plan_bench import box_answer
+        from dxf_autoparam.plan_bench import box_answer, box_answers
 
-        uid = next(k for k, u in sm.units.items() if len(u.views) >= 2)
-        sm.commit_answer(uid, box_answer(sm, uid, gen["box"], gen["handles"]))
+        if sm.systems == "joined":  # its section and plan one unit
+            uid = next(k for k, u in sm.units.items() if len(u.views) >= 2)
+            sm.commit_answer(uid, box_answer(sm, uid, gen["box"], gen["handles"]))
+        else:  # local systems: an answer per view, the section first (what both show is bound across the projection)
+            for uid, ans in box_answers(sm, gen["box"], gen["handles"]).items():
+                sm.commit_answer(uid, ans)
         saved = "the generator's own answer"
     row: dict = {"case": case["name"], "dxf": Path(dxf).name, "saved_work": bool(saved), "units": len(sm.units), **({"note": case["note"]} if case.get("note") else {})}
     views_ = [uid for uid, u in sm.units.items() if u.views]
